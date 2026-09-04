@@ -6,3 +6,11 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+ulpf-parse = { path = "../ulpf-parse" }
+ulpf-time = { path = "../ulpf-time" }
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
+
+[dev-dependencies]
+ulpf-store = { path = "../ulpf-store" }

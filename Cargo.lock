@@ -479,6 +479,14 @@ dependencies = [
 [[package]]
 name = "ulpf-normalize"
 version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "toml",
+ "ulpf-parse",
+ "ulpf-store",
+ "ulpf-time",
+]
 
 [[package]]
 name = "ulpf-parse"
