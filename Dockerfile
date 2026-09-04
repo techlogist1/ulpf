@@ -16,6 +16,6 @@ FROM scratch
 COPY --from=build /src/target/release/ulpf /ulpf
 COPY parsers /parsers
 COPY mappings /mappings
-WORKDIR /data
+WORKDIR /
 ENTRYPOINT ["/ulpf"]
 CMD ["--help"]

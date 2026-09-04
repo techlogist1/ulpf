@@ -55,7 +55,7 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] throughput measurement (printed every run; bench file pending fan-out 2)
 - [x] end-to-end CLI: run / check / verify / raw / fixture — e2e + fixture harness tests
 - [x] adversarial pass — crates/ulpf/tests/adversarial.rs (4 tests): empty file, 8 MiB single line, unknown format, binary garbage, BOM+CRLF, nested dirs, hidden files, truncated KV, broken/bad-regex/bad-format parser files, zero parsers, missing dirs, batch-boundary parity. Found and fixed: BOM defeats envelope; uncovered message ids invisible; queue depth off by one.
-- [~] Dockerfile static build — written (rust:1.95-alpine → scratch), build running
+- [x] Dockerfile static build — rust:1.95-alpine → scratch, 7.3 MB image, `file` confirms statically linked aarch64; `docker run ulpf:static run /data/samples` processed 142 events and `verify` reported 0 corrupt (2026-09-04)
 
 ## Parallel work
 ### Fan-out 1 (independent of the format; starts right after scaffold)

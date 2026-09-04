@@ -110,6 +110,28 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 - `notify` 9.x for directory watching: verify the API; v0.1 scans directories once.
 - `Metrics` in `crates/ulpf/src/metrics.rs` is the struct to expose over the wire.
 
+## CLI (what exists)
+```
+ulpf run <files|dirs>... --store DIR --output FILE.jsonl [--parsers parsers] [--mappings mappings]
+         [--tz +05:30] [-j THREADS] [--batch 1024] [--queue 64] [--report-json report.json]
+ulpf check                 # load every parser and mapping file, report path:line problems
+ulpf verify --store DIR    # recompute every SHA-256 in the raw store
+ulpf raw <ID> --store DIR  # exact bytes of one raw record (header on stderr)
+ulpf fixture samples/x.log # fixture skeleton for review (never commit blind)
+```
+Every `run` ends with the counter block: files, bytes, events/s, MB/s; per-stage counts
+(framed, stored, detected, no_parser, parsed, parse_failed by reason, normalized, emitted);
+signals (sub_matched, sub_no_match, sub_uncovered, time_from_receipt, time_error by reason,
+class_unknown, enum_other, unmapped_fields, utf8_lossy); queue batches and high-water.
+When output looks plausible but wrong, read that block first: `no_parser` means the format
+was not recognised, `sub_uncovered` means a message id has no pattern yet, `sub_no_match`
+means a pattern exists and failed, `time_from_receipt` means the device time was not found,
+`class_unknown` means no class rule matched the fields. `ulpf raw <id>` shows the exact
+input for any output line (`ulpf.raw_id`).
+
 ## Working files
 - `PROGRESS.md` — checklist, verified state, in-flight work, next action.
-- `docs/DECISIONS.md` — every structural decision with the alternative it ruled out.
+- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out.
+- `docs/parser-format.md` — the definition format reference for teammates.
+- `docs/timestamps.md` — timestamp survey, auto-detection order, zone table, policies.
+- `docs/inference-prototype-report.md` — honest result of the prefix-tree clustering trial.
