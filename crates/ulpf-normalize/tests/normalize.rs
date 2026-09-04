@@ -212,3 +212,56 @@ fn fragments_merge_and_bad_files_are_reported() {
     let none = load_files(&[]);
     assert!(none.mappings.is_empty() && none.errors.is_empty());
 }
+
+#[test]
+fn absent_values_are_neither_mapped_nor_unmapped_nor_class_evidence() {
+    let map = mapping();
+    let mut parsed = Parsed::default();
+    parsed.push(&b"user"[..], &b"-"[..]);
+    parsed.push(&b"src_ip"[..], &b"N/A"[..]);
+    parsed.push(&b"dst_ip"[..], &b"10.0.0.7"[..]);
+    parsed.push(&b"method"[..], &b"GET"[..]);
+    parsed.push(&b"url"[..], &b""[..]);
+    let prov = Provenance {
+        raw_id: 1,
+        source: "t.log",
+        parser: None,
+        vendor: None,
+        product: None,
+        receipt_nanos: RECEIPT,
+        parse_status: "parsed",
+        sub_status: "not_applicable",
+    };
+    let mut out = Vec::new();
+    let stats = map.normalize(&parsed, &prov, &mut out);
+    let v: Value = serde_json::from_slice(out.trim_ascii_end()).unwrap();
+    assert!(v.get("user").is_none());
+    assert!(v.pointer("/src_endpoint/ip").is_none());
+    assert_eq!(v.pointer("/dst_endpoint/ip").unwrap(), "10.0.0.7");
+    assert!(v.get("unmapped").is_none(), "{v}");
+    assert_eq!(v["class_uid"], 0, "method + url would be HTTP Activity, but an empty url is not evidence");
+    assert_eq!(stats.mapped, 2);
+    assert_eq!(stats.unmapped, 0);
+}
+
+#[test]
+fn class_rule_wildcard_means_present() {
+    let map = mapping();
+    let mut parsed = Parsed::default();
+    parsed.push(&b"source-address"[..], &b"10.0.0.5"[..]);
+    parsed.push(&b"destination-address"[..], &b"8.8.8.8"[..]);
+    let prov = Provenance {
+        raw_id: 2,
+        source: "t.log",
+        parser: None,
+        vendor: None,
+        product: None,
+        receipt_nanos: RECEIPT,
+        parse_status: "parsed",
+        sub_status: "not_applicable",
+    };
+    let mut out = Vec::new();
+    map.normalize(&parsed, &prov, &mut out);
+    let v: Value = serde_json::from_slice(out.trim_ascii_end()).unwrap();
+    assert_eq!(v["class_uid"], 4001, "{v}");
+}

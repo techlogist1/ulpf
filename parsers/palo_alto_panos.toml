@@ -1,0 +1,116 @@
+# Palo Alto Networks PAN-OS syslog: positional CSV after a BSD or IETF syslog header.
+# Source: PAN-OS 10.2 Administrator's Guide, "Syslog Field Descriptions" (Traffic,
+# Threat, System, Config log fields), with the documented syslog field names as column
+# names; zone columns use src_zone/dst_zone rather than the docs' from/to.
+# The first seven columns are shared by every log type; the tail is split per `type`.
+# Fields quoted with " may contain commas (URLs in misc).
+
+[parser]
+name = "palo_alto_panos"
+vendor = "Palo Alto Networks"
+product = "PAN-OS"
+
+[match]
+regex = ',[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{9,},(?:TRAFFIC|THREAT|SYSTEM|CONFIG|USERID|HIPMATCH|GLOBALPROTECT|CORRELATION|DECRYPTION|AUTHENTICATION|IPTAG|SCTP|TUNNEL|GTP),'
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "delimiter"
+delimiter = ","
+quote = '"'
+fields = ["_", "receive_time", "serial", "type", "subtype", "_", "generated_time"]
+rest = "log_fields"
+
+# high_res_timestamp (PAN-OS 9.0+) carries an offset; generated_time does not.
+[[timestamp]]
+field = "high_res_timestamp"
+format = "rfc3339"
+
+[[timestamp]]
+field = "generated_time"
+format = "%Y/%m/%d %H:%M:%S"
+
+[[timestamp]]
+field = "receive_time"
+format = "%Y/%m/%d %H:%M:%S"
+
+[[sub]]
+field = "log_fields"
+when = { type = "TRAFFIC" }
+kind = "delimiter"
+delimiter = ","
+quote = '"'
+fields = [
+  "src", "dst", "natsrc", "natdst", "rule", "srcuser", "dstuser", "app", "vsys", "src_zone",
+  "dst_zone", "inbound_if", "outbound_if", "logset", "_", "sessionid", "repeatcnt", "sport",
+  "dport", "natsport", "natdport", "flags", "proto", "action", "bytes", "bytes_sent",
+  "bytes_received", "packets", "start", "elapsed", "category", "_", "seqno", "actionflags",
+  "srcloc", "dstloc", "_", "pkts_sent", "pkts_received", "session_end_reason",
+  "dg_hier_level_1", "dg_hier_level_2", "dg_hier_level_3", "dg_hier_level_4", "vsys_name",
+  "device_name", "action_source", "src_uuid", "dst_uuid", "tunnelid", "monitortag",
+  "parent_session_id", "parent_start_time", "tunnel", "assoc_id", "chunks", "chunks_sent",
+  "chunks_received", "rule_uuid", "http2_connection", "link_change_count", "policy_id",
+  "link_switches", "sdwan_cluster", "sdwan_device_type", "sdwan_cluster_type", "sdwan_site",
+  "dynusergroup_name", "xff_ip", "src_category", "src_profile", "src_model", "src_vendor",
+  "src_osfamily", "src_osversion", "src_host", "src_mac", "dst_category", "dst_profile",
+  "dst_model", "dst_vendor", "dst_osfamily", "dst_osversion", "dst_host", "dst_mac",
+  "container_id", "pod_namespace", "pod_name", "src_edl", "dst_edl", "hostid", "serialnumber",
+  "src_dag", "dst_dag", "session_owner", "high_res_timestamp", "nsdsai_sst", "nsdsai_sd",
+  "subcategory_of_app", "category_of_app", "technology_of_app", "risk_of_app",
+  "characteristic_of_app", "container_of_app", "tunneled_app", "is_saas_of_app",
+  "sanctioned_state_of_app", "offloaded", "flow_type", "cluster_name"
+]
+
+[[sub]]
+field = "log_fields"
+when = { type = "THREAT" }
+kind = "delimiter"
+delimiter = ","
+quote = '"'
+fields = [
+  "src", "dst", "natsrc", "natdst", "rule", "srcuser", "dstuser", "app", "vsys", "src_zone",
+  "dst_zone", "inbound_if", "outbound_if", "logset", "_", "sessionid", "repeatcnt", "sport",
+  "dport", "natsport", "natdport", "flags", "proto", "action", "misc", "threatid", "category",
+  "severity", "direction", "seqno", "actionflags", "srcloc", "dstloc", "_", "contenttype",
+  "pcap_id", "filedigest", "cloud", "url_idx", "user_agent", "filetype", "xff", "referer",
+  "sender", "subject", "recipient", "reportid", "dg_hier_level_1", "dg_hier_level_2",
+  "dg_hier_level_3", "dg_hier_level_4", "vsys_name", "device_name", "file_url", "src_uuid",
+  "dst_uuid", "http_method", "tunnel_id", "monitortag", "parent_session_id",
+  "parent_start_time", "tunnel", "thr_category", "contentver", "sig_flags", "rule_uuid",
+  "http2_connection", "dynusergroup_name", "xff_ip", "src_category", "src_profile",
+  "src_model", "src_vendor", "src_osfamily", "src_osversion", "src_host", "src_mac",
+  "dst_category", "dst_profile", "dst_model", "dst_vendor", "dst_osfamily", "dst_osversion",
+  "dst_host", "dst_mac", "container_id", "pod_namespace", "pod_name", "src_edl", "dst_edl",
+  "hostid", "serialnumber", "domain_edl", "src_dag", "dst_dag", "partial_hash",
+  "high_res_timestamp", "reason", "justification", "nsdsai_sst", "subcategory_of_app",
+  "category_of_app", "technology_of_app", "risk_of_app", "characteristic_of_app",
+  "container_of_app", "tunneled_app", "is_saas_of_app", "sanctioned_state_of_app",
+  "cloud_report_id", "cluster_name", "flow_type"
+]
+
+[[sub]]
+field = "log_fields"
+when = { type = "SYSTEM" }
+kind = "delimiter"
+delimiter = ","
+quote = '"'
+fields = [
+  "vsys", "eventid", "object", "_", "_", "module", "severity", "description", "seqno",
+  "actionflags", "dg_hier_level_1", "dg_hier_level_2", "dg_hier_level_3", "dg_hier_level_4",
+  "vsys_name", "device_name", "dg_id", "tpl_id", "high_res_timestamp"
+]
+
+[[sub]]
+field = "log_fields"
+when = { type = "CONFIG" }
+kind = "delimiter"
+delimiter = ","
+quote = '"'
+fields = [
+  "host", "vsys", "cmd", "admin", "client", "result", "path", "seqno", "actionflags",
+  "before_change_detail", "after_change_detail", "dg_hier_level_1", "dg_hier_level_2",
+  "dg_hier_level_3", "dg_hier_level_4", "vsys_name", "device_name", "dg_id", "comment",
+  "high_res_timestamp"
+]

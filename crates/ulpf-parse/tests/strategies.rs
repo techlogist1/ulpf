@@ -266,3 +266,198 @@ pattern = '{message:rest}'
     assert_field(&out, "syslog_pri", b"13");
     assert_field(&out, "message", b"date=2026-09-04 time=1");
 }
+
+#[test]
+fn rfc5424_structured_data_params_become_fields_and_odd_brackets_stay_message() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = [" "]
+[envelope]
+syslog = true
+[strategy]
+kind = "pattern"
+pattern = '{message:rest}'
+"#);
+    let mut out = Parsed::default();
+    // Junos-shaped: every field is an SD-PARAM, the message part is empty
+    run(&p, b"<14>1 2026-09-04T10:15:23.123Z srx RT_FLOW - RT_FLOW_SESSION_CREATE [junos@2636.1.1.1.2.129 source-address=\"10.0.0.5\" reason=\"a \\\"quoted\\\" \\] end\"]", &mut out).unwrap();
+    assert_field(&out, "syslog_msgid", b"RT_FLOW_SESSION_CREATE");
+    assert_field(&out, "source-address", b"10.0.0.5");
+    assert_field(&out, "reason", b"a \"quoted\" ] end");
+    assert!(field(&out, "message").is_none(), "an empty rest capture is no field");
+    assert_eq!(out.timestamp.unwrap().epoch_nanos, 1_788_516_923_123_000_000);
+
+    // Check Point-shaped: space inside the timestamp, bracketed body is not SD
+    run(&p, b"<134>1 2026-09-04 10:15:20 gw-01 CheckPoint 13752 - [action:\"Accept\"; src:\"10.0.0.5\"]", &mut out).unwrap();
+    assert_field(&out, "syslog_timestamp", b"2026-09-04 10:15:20");
+    assert_field(&out, "syslog_host", b"gw-01");
+    assert_field(&out, "syslog_app", b"CheckPoint");
+    assert_field(&out, "syslog_procid", b"13752");
+    assert!(field(&out, "syslog_msgid").is_none());
+    assert!(field(&out, "syslog_sd").is_none());
+    assert_field(&out, "message", b"[action:\"Accept\"; src:\"10.0.0.5\"]");
+    assert_eq!(out.timestamp.unwrap().epoch_nanos, 1_788_516_920_000_000_000);
+
+    // truncated element: the header still parses, the remainder is message text
+    run(&p, b"<14>1 2026-09-04T10:15:23Z srx RT_FLOW - RT_FLOW_SESSION_CREATE [junos@2636.1.1.1.2.129 source-address=\"10.0.0.5\" sour", &mut out).unwrap();
+    assert_field(&out, "syslog_msgid", b"RT_FLOW_SESSION_CREATE");
+    assert!(field(&out, "source-address").is_none());
+    assert_field(&out, "message", b"[junos@2636.1.1.1.2.129 source-address=\"10.0.0.5\" sour");
+}
+
+#[test]
+fn delimiter_rest_feeds_subs_gated_on_earlier_columns() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = [","]
+[strategy]
+kind = "delimiter"
+delimiter = ","
+fields = ["rule", "proto"]
+rest = "tail"
+[[sub]]
+field = "tail"
+when = { proto = "tcp" }
+kind = "delimiter"
+delimiter = ","
+fields = ["src_port", "dst_port"]
+[[sub]]
+field = "tail"
+when = { proto = "udp" }
+kind = "delimiter"
+delimiter = ","
+fields = ["src_port"]
+"#);
+    let mut out = Parsed::default();
+    run(&p, b"1,tcp,100,200,x", &mut out).unwrap();
+    assert_field(&out, "tail", b"100,200,x");
+    assert_field(&out, "src_port", b"100");
+    assert_field(&out, "dst_port", b"200");
+    assert_field(&out, "column_3", b"x");
+    assert_eq!(out.sub, ulpf_parse::SubStatus::Matched);
+
+    run(&p, b"2,udp,53", &mut out).unwrap();
+    assert_field(&out, "src_port", b"53");
+    assert!(field(&out, "dst_port").is_none());
+    assert_eq!(out.sub, ulpf_parse::SubStatus::Matched);
+
+    run(&p, b"3,icmp,8,0", &mut out).unwrap();
+    assert_field(&out, "tail", b"8,0");
+    assert_eq!(out.sub, ulpf_parse::SubStatus::Uncovered, "a tail nobody is gated for");
+
+    run(&p, b"4,tcp", &mut out).unwrap();
+    assert!(field(&out, "tail").is_none(), "no columns after the named ones: no rest field");
+    assert_eq!(out.sub, ulpf_parse::SubStatus::NotApplicable, "nothing for any sub to re-parse");
+
+    run(&p, b"5,tcp,", &mut out).unwrap();
+    assert_field(&out, "tail", b"");
+    assert_eq!(out.sub, ulpf_parse::SubStatus::NoMatch, "a gated sub ran on an empty tail and found nothing");
+}
+
+#[test]
+fn subs_on_different_fields_all_run_and_same_field_subs_are_alternatives() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = ["src="]
+[strategy]
+kind = "kv"
+quote = "\"'"
+[[sub]]
+field = "src"
+kind = "pattern"
+anchor = "full"
+pattern = '{src_ip:ip}:{src_port:int}:{src_if:word}'
+[[sub]]
+field = "dst"
+kind = "pattern"
+anchor = "full"
+pattern = '{dst_ip:ip}:{dst_port:int}:{dst_if:word}'
+[[sub]]
+field = "proto"
+kind = "pattern"
+anchor = "full"
+pattern = '{protocol:word}/{service:word}'
+[[sub]]
+field = "proto"
+kind = "pattern"
+anchor = "full"
+pattern = '{protocol:word}'
+constants = { service = "none" }
+"#);
+    let mut out = Parsed::default();
+    run(&p, b"src=10.0.0.5:51234:X0 dst=1.1.1.1:443:X1 proto=tcp/https appName='General HTTPS' msg=\"a b\"", &mut out).unwrap();
+    assert_field(&out, "src_ip", b"10.0.0.5");
+    assert_field(&out, "dst_port", b"443");
+    assert_field(&out, "protocol", b"tcp");
+    assert_field(&out, "service", b"https");
+    assert_field(&out, "appName", b"General HTTPS");
+    assert_field(&out, "msg", b"a b");
+    assert_eq!(out.sub, ulpf_parse::SubStatus::Matched);
+
+    // first sub on `proto` fails, the alternative matches; dst has a gated sub that fails
+    run(&p, b"src=10.0.0.5:51234:X0 dst=bogus proto=icmp", &mut out).unwrap();
+    assert_field(&out, "src_if", b"X0");
+    assert_field(&out, "protocol", b"icmp");
+    assert_field(&out, "service", b"none");
+    assert!(field(&out, "dst_ip").is_none());
+    assert_eq!(out.sub, ulpf_parse::SubStatus::NoMatch);
+
+    // a field with subs is absent: the others still decide the status
+    run(&p, b"src=10.0.0.5:51234:X0 proto=udp/dns", &mut out).unwrap();
+    assert_eq!(out.sub, ulpf_parse::SubStatus::Matched);
+}
+
+#[test]
+fn timestamp_slot_accepts_ctime_and_cisco_ios_shapes_without_eating_hostnames() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = [" "]
+[strategy]
+kind = "pattern"
+patterns = [
+  '{ts:timestamp}: %{facility:word}-{sev:int}-{mn:word}: {message:rest}',
+  '{ts:timestamp} {host:word} {message:rest}',
+]
+[[timestamp]]
+field = "ts"
+format = "auto"
+"#);
+    let mut out = Parsed::default();
+    run(&p, b"Thu Sep  4 10:15:23 2026 gw hello", &mut out).unwrap();
+    assert_field(&out, "ts", b"Thu Sep  4 10:15:23 2026");
+    assert_field(&out, "host", b"gw");
+    let ts = out.timestamp.unwrap();
+    assert_eq!(ts.epoch_nanos, 1_788_516_923_000_000_000);
+    assert_eq!(ts.policies, ulpf_parse::Policies::TZ_ASSUMED);
+
+    run(&p, b"*Sep  4 10:15:23.123 UTC: %SEC-6-IPACCESSLOGP: list 1 denied", &mut out).unwrap();
+    assert_field(&out, "ts", b"*Sep  4 10:15:23.123 UTC");
+    assert_field(&out, "facility", b"SEC");
+    assert_field(&out, "mn", b"IPACCESSLOGP");
+    let ts = out.timestamp.unwrap();
+    assert_eq!(ts.epoch_nanos, 1_788_516_923_123_000_000);
+    assert_eq!(ts.policies, ulpf_parse::Policies::YEAR_ASSUMED);
+
+    run(&p, b"Sep  4 10:15:23 CET1 not a zone", &mut out).unwrap();
+    assert_field(&out, "ts", b"Sep  4 10:15:23");
+    assert_field(&out, "host", b"CET1");
+    run(&p, b"Sep  4 10:15:23 CET zone then host", &mut out).unwrap();
+    assert_field(&out, "ts", b"Sep  4 10:15:23 CET");
+    assert_field(&out, "host", b"zone");
+}

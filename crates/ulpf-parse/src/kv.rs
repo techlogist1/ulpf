@@ -1,6 +1,6 @@
 //! Key/value strategy. Lenient: bare tokens without a separator are skipped, quoted
-//! values may contain separators, `\"` inside quotes is unescaped (the only case that
-//! allocates).
+//! values may contain separators and close with whichever quote byte opened them, `\"`
+//! inside quotes is unescaped (the only case that allocates).
 
 use std::borrow::Cow;
 
@@ -10,7 +10,8 @@ pub(crate) struct KvConfig {
     pub kv_sep: Vec<u8>,
     /// Treated as a set of separator bytes; a space also implies tab, CR and LF.
     pub pair_seps: [bool; 256],
-    pub quote: Option<u8>,
+    /// Quote bytes; a value opened by one closes with the same one.
+    pub quotes: [bool; 256],
 }
 
 impl KvConfig {
@@ -27,12 +28,11 @@ impl KvConfig {
                 }
             }
         }
-        let quote = match quote {
-            None | Some("") => None,
-            Some(q) if q.len() == 1 => Some(q.as_bytes()[0]),
-            Some(q) => return Err(format!("quote must be a single byte, got `{q}`")),
-        };
-        Ok(KvConfig { kv_sep: kv_sep.as_bytes().to_vec(), pair_seps, quote })
+        let mut quotes = [false; 256];
+        for b in quote.unwrap_or("").bytes() {
+            quotes[b as usize] = true;
+        }
+        Ok(KvConfig { kv_sep: kv_sep.as_bytes().to_vec(), pair_seps, quotes })
     }
 
     #[inline]
@@ -71,8 +71,8 @@ impl KvConfig {
                 continue;
             };
             let mut v = key_end + self.kv_sep.len();
-            let value: Cow<'a, [u8]> = match self.quote {
-                Some(q) if v < n && text[v] == q => {
+            let value: Cow<'a, [u8]> = match text.get(v) {
+                Some(&q) if self.quotes[q as usize] => {
                     let vs = v + 1;
                     let mut k = vs;
                     let mut escaped = false;
@@ -105,7 +105,7 @@ impl KvConfig {
     }
 }
 
-fn unescape(raw: &[u8]) -> Vec<u8> {
+pub(crate) fn unescape(raw: &[u8]) -> Vec<u8> {
     let mut v = Vec::with_capacity(raw.len());
     let mut i = 0;
     while i < raw.len() {

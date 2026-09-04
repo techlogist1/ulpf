@@ -125,11 +125,17 @@ impl Mapping {
         &self.file
     }
 
+    fn absent(&self, value: &[u8]) -> bool {
+        self.file.values.absent.iter().any(|a| a.as_bytes().eq_ignore_ascii_case(value))
+    }
+
     fn select_class(&self, parsed: &Parsed<'_>) -> &ClassRule {
         for rule in &self.file.class {
             for alt in &rule.when {
                 let hit = alt.iter().all(|(field, values)| {
-                    parsed.get(field.as_bytes()).is_some_and(|v| values.iter().any(|x| x.as_bytes().eq_ignore_ascii_case(v)))
+                    parsed
+                        .get(field.as_bytes())
+                        .is_some_and(|v| !self.absent(v) && values.iter().any(|x| x == "*" || x.as_bytes().eq_ignore_ascii_case(v)))
                 });
                 if hit {
                     return rule;
@@ -151,6 +157,9 @@ impl Mapping {
         let mut chosen: Vec<Option<(usize, Value)>> = (0..self.fields.len()).map(|_| None).collect();
         let mut chosen_src: Vec<Option<Vec<u8>>> = (0..self.fields.len()).map(|_| None).collect();
         for f in &parsed.fields {
+            if self.absent(&f.value) {
+                continue;
+            }
             let key = lossy(&f.key, &mut stats);
             let value_text = lossy(&f.value, &mut stats);
             match self.aliases.get(&*f.key) {

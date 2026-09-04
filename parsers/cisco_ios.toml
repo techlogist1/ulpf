@@ -1,0 +1,118 @@
+# Cisco IOS / IOS-XE syslog. Message header: %FACILITY-SEVERITY-MNEMONIC: text.
+# Sources: Cisco IOS System Message Guide; "Cisco IOS Configuration Fundamentals: logging"
+# for the optional prefixes: sequence number (service sequence-numbers), origin id
+# (logging origin-id), timestamp (service timestamps log datetime msec show-timezone,
+# with a leading * = clock never set, . = clock lost sync) or uptime (1d03h, 00:01:23).
+# ASA and FTD share the %X-n-Y header shape; their own definitions win at priority 0.
+
+[parser]
+name = "cisco_ios"
+vendor = "Cisco"
+product = "IOS"
+
+[match]
+regex = '%[A-Z][A-Z0-9_]*-[0-7]-[A-Z0-9_]+: '
+priority = -1
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "pattern"
+patterns = [
+  '{sequence:int}: {origin:word}: {timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
+  '{sequence:int}: {timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
+  '{origin:word}: {timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
+  '{timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
+  '{sequence:int}: {uptime:word}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
+  '{uptime:word}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
+  '%{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
+]
+
+# "syslog" accepts the IOS clock mark, milliseconds, an optional year and a zone name.
+# Uptime stamps carry no wall-clock time: those events fall back to the receipt time.
+[[timestamp]]
+field = "timestamp"
+format = "syslog"
+
+# --- access-list logging (SEC facility) -------------------------------------------
+# IPACCESSLOGP: tcp/udp with ports; the log-input form adds (interface mac) after src.
+[[sub]]
+field = "message"
+when = { mnemonic = "IPACCESSLOGP" }
+kind = "pattern"
+patterns = [
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip}({src_port:int}) ({src_interface:word} {src_mac:word}) -> {dst_ip:ip}({dst_port:int}), {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip}({src_port:int}) -> {dst_ip:ip}({dst_port:int}), {packet_count:int} packet{_:rest}',
+]
+
+# IPACCESSLOGDP: icmp with (type/code).
+[[sub]]
+field = "message"
+when = { mnemonic = "IPACCESSLOGDP" }
+kind = "pattern"
+patterns = [
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip} ({src_interface:word} {src_mac:word}) -> {dst_ip:ip} ({icmp_type:int}/{icmp_code:int}), {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip} -> {dst_ip:ip} ({icmp_type:int}/{icmp_code:int}), {packet_count:int} packet{_:rest}',
+]
+
+# IPACCESSLOGNP: any other protocol, given by number, no ports.
+[[sub]]
+field = "message"
+when = { mnemonic = "IPACCESSLOGNP" }
+kind = "pattern"
+pattern = 'list {acl:word} {action:word} {protocol:word} {src_ip:ip} -> {dst_ip:ip}, {packet_count:int} packet{_:rest}'
+
+# IPACCESSLOGS: standard access list, source only.
+[[sub]]
+field = "message"
+when = { mnemonic = "IPACCESSLOGS" }
+kind = "pattern"
+pattern = 'list {acl:word} {action:word} {src_ip:ip} {packet_count:int} packet{_:rest}'
+
+[[sub]]
+field = "message"
+when = { mnemonic = "IPACCESSLOGRL" }
+kind = "pattern"
+pattern = 'access-list logging rate-limited or missed {packet_count:int} packet{_:rest}'
+
+# --- login and configuration (SEC_LOGIN, SYS facilities) ---------------------------
+[[sub]]
+field = "message"
+when = { mnemonic = "LOGIN_SUCCESS" }
+kind = "pattern"
+pattern = 'Login Success [user: {user:text}] [Source: {src_ip:ip}] [localport: {dst_port:int}] at {login_time:rest}'
+constants = { auth_status = "success", action = "login" }
+
+[[sub]]
+field = "message"
+when = { mnemonic = "LOGIN_FAILED" }
+kind = "pattern"
+pattern = 'Login failed [user: {user:text}] [Source: {src_ip:ip}] [localport: {dst_port:int}] [Reason: {reason:text}] at {login_time:rest}'
+constants = { auth_status = "failure", action = "failed" }
+
+[[sub]]
+field = "message"
+when = { mnemonic = "LOGOUT" }
+kind = "pattern"
+pattern = 'User {user:word} has exited tty session {session:int}({src_ip:ip})'
+constants = { action = "logout" }
+
+[[sub]]
+field = "message"
+when = { mnemonic = "CONFIG_I" }
+kind = "pattern"
+patterns = [
+  'Configured from {config_source:text} by {user:word} on {line:word} ({src_ip:ip})',
+  'Configured from {config_source:text} by {user:rest}',
+]
+
+# --- interface state (LINK and LINEPROTO share the UPDOWN mnemonic) ----------------
+[[sub]]
+field = "message"
+when = { mnemonic = "UPDOWN" }
+kind = "pattern"
+patterns = [
+  'Line protocol on Interface {interface:text}, changed state to {state:word}',
+  'Interface {interface:text}, changed state to {state:word}',
+]

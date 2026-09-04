@@ -3,8 +3,15 @@
 Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 
 ## Definition of done (each item is checked only after running it)
-- [~] 1. CLI processes a directory of mixed-format logs end to end, writes JSON Lines,
-      reports sustained events/sec measured ingest→output on this machine.
+- [x] 1. CLI processes a directory of mixed-format logs end to end, writes JSON Lines,
+      reports sustained events/sec measured ingest→output on this machine. Measured
+      2026-09-05 on the M1 Pro (8 cores, 7 workers), release build, 5,000,000-line
+      synthetic mix of all 12 families (1431 MB, `bench/mixed-5000000.log`):
+      233,128 events/s, 66.7 MB/s, 21.4 s wall, SHA-256 + raw store + JSON Lines
+      included; queue high-water 64/64, so the workers (parse+normalize+serialize) are
+      the bottleneck, not ingest. Signals on that run: detected 98.9%, no_parser 52,650
+      (generator-mutated lines), sub_no_match 74,650, sub_uncovered 166,907,
+      time_from_receipt 182,107, class_unknown 842,565.
 - [x] 2. Every raw event reconstructs byte-identically from the append-only store;
       proven by a test reading back bytes and digests across all fixtures including
       multi-line events, non-UTF-8 input, and chunk boundaries mid-event.
@@ -12,17 +19,20 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
       delimiter / key-value / structured (JSON, CEF, LEEF) / pattern-with-named-slots,
       and round-trips: a definition emitted from a `Template` parses back and runs
       identically to a hand-written one.
-- [ ] 4. 10–12 parser definitions for common perimeter families, each with paired
-      sample and fixture asserting parsed + normalized output.
+- [x] 4. 12 parser definitions, each with a paired synthetic sample and a reviewed
+      fixture: cisco_asa, cisco_ios, fortinet_fortigate, openvpn, palo_alto_panos,
+      pfsense_filterlog, check_point, juniper_srx, sonicwall, sophos_xg, squid_access,
+      suricata_eve (189 sample events, all asserted by `cargo test -p ulpf --test fixtures`).
 - [x] 5. Dedicated timestamp module handles the sample formats (syslog no-year,
       no-timezone) with its own corpus; every policy decision explicit and recorded;
       original string retained on the event.
-- [ ] 6. Full test suite passes, clean build, Dockerfile producing a static build has
-      been built successfully at least once.
+- [x] 6. `cargo test --workspace` passes (2026-09-05: 45 tests across 9 binaries, 0
+      failed), `cargo clippy --workspace --all-targets -- -D warnings` clean, Dockerfile
+      static build built and run 2026-09-04 (ulpf:static, 7.3 MB, scratch base).
 - [x] 7. Throwaway inference prototype run on unseen samples; honest report in docs on
       whether prefix-tree clustering produced usable templates.
-- [ ] 8. CLAUDE.md, this file, and docs/DECISIONS.md current; every milestone
-      committed and pushed.
+- [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D32, each with an anchor)
+      current; every milestone committed and pushed to techlogist1/ulpf main.
 
 ## Environment (Phase 0 findings, 2026-09-04)
 - rustc/cargo 1.95.0, rustup 1.29; only `aarch64-apple-darwin` installed locally;
@@ -52,7 +62,7 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] signature detection (Registry::detect with per-source hint)
 - [x] mapping stage + OCSF subset mapping (mappings/ocsf.toml, fragments merge) — 4 tests
 - [x] JSON Lines output (ordered by raw id, unknown formats emitted as Base Event)
-- [x] throughput measurement (printed every run; bench file pending fan-out 2)
+- [x] throughput measurement (printed every run; 5M-line bench measured, see done item 1)
 - [x] end-to-end CLI: run / check / verify / raw / fixture — e2e + fixture harness tests
 - [x] adversarial pass — crates/ulpf/tests/adversarial.rs (4 tests): empty file, 8 MiB single line, unknown format, binary garbage, BOM+CRLF, nested dirs, hidden files, truncated KV, broken/bad-regex/bad-format parser files, zero parsers, missing dirs, batch-boundary parity. Found and fixed: BOM defeats envelope; uncovered message ids invisible; queue depth off by one.
 - [x] Dockerfile static build — rust:1.95-alpine → scratch, 7.3 MB image, `file` confirms statically linked aarch64; `docker run ulpf:static run /data/samples` processed 142 events and `verify` reported 0 corrupt (2026-09-04)
@@ -72,13 +82,37 @@ made, uncertainties.
 Split: parser-definition workers by device family (3–4 each) plus one bench-file
 generator. Each parser worker touches only `parsers/`, `samples/`, `fixtures/` for its
 families; no shared state. The bench generator touches `crates/ulpf/examples/` only.
-- [ ] parser workers A/B/C
-- [ ] bench generator worker
+- [x] parser workers A/B/C (haiku/low, confirmed from transcripts) — returned 10
+  families, every one "all fixtures pass". Lead review of the generated output found the
+  fixtures had snapshotted wrong parsing (D30): Palo Alto written as key=value, Check
+  Point/Juniper hacks around missing engine support, Cisco IOS and OpenVPN with invented
+  message texts and no device time, pfSense misparsing every row, SonicWall's second sub
+  never running. Seven families rewritten by the lead from vendor references; Sophos,
+  Squid, Suricata kept. Engine gaps the review exposed were fixed: per-field sub groups
+  (D24), delimiter `rest` (D25), RFC 5424 SD params as fields (D26), timestamp slot from
+  the zone table (D27), empty captures (D28), absent values and the never-implemented
+  class wildcard (D29), kv quote set (D32).
+- [x] bench generator worker (haiku/low) — `crates/ulpf/examples/gen_bench.rs`, kept as
+  delivered (D31); 5M lines in 25 s.
+- [ ] Opus reviewers (3, read-only, web) verifying the seven rewritten definitions
+  against vendor documentation; findings to be applied on return.
 
 ## Tried and abandoned
 - Internally-tagged `Strategy` enum with `#[serde(flatten)]` inside `[[sub]]`: serde cannot combine flatten with deny_unknown_fields; replaced by one flat validated struct (D13).
 - Per-event SQLite rows for the raw index: ruled out on throughput math before writing it (D5).
 
+## Known limits carried into the next session
+- Throughput ceiling is the worker side: normalization builds a `serde_json::Map` per
+  event. Profile before the server session; the parse path itself allocates nothing.
+- `class_unknown` on the bench mix comes from families with no OCSF class for their
+  events (IOS config/interface messages, OpenVPN control-channel lines) and from
+  generator-mutated lines; not a mapping bug.
+- Check Point `origin` (gateway IP) maps to `device.hostname` only when no syslog host is
+  present; Cisco IOS `origin` is a hostname. One alias, two meanings; acceptable for now.
+- Fixtures are reviewed snapshots; a deliberate mapping change regenerates them with
+  `ulpf fixture` and a diff review.
+
 ## Next action
-Fan-out 2 running (haiku/low): parser workers A/B/C + bench generator. On return: run the
-suite, run the bench file for the throughput number, adversarial pass, Dockerfile.
+Apply the three Opus vendor-documentation reviews when they return (fix, regenerate the
+affected fixtures, re-run the suite, commit). Then the deferred `aposd-critique` review
+pass, then the server session (see CLAUDE.md "Verify before building the server").

@@ -1,0 +1,26 @@
+Thu Sep  4 10:15:23 2026 203.0.113.9:44321 TLS: Initial packet from [AF_INET]203.0.113.9:44321, sid=1a2b3c4d 5e6f7a8b
+Thu Sep  4 10:15:23 2026 203.0.113.9:44321 VERIFY OK: depth=1, CN=ULPF Test CA
+Thu Sep  4 10:15:23 2026 203.0.113.9:44321 VERIFY OK: depth=0, CN=jdoe
+Thu Sep  4 10:15:24 2026 203.0.113.9:44321 peer info: IV_VER=2.6.12
+Thu Sep  4 10:15:24 2026 203.0.113.9:44321 [jdoe] Peer Connection Initiated with [AF_INET]203.0.113.9:44321
+Thu Sep  4 10:15:24 2026 jdoe/203.0.113.9:44321 MULTI_sva: pool returned IPv4=10.8.0.6, IPv6=(Not enabled)
+Thu Sep  4 10:15:24 2026 jdoe/203.0.113.9:44321 MULTI: Learn: 10.8.0.6 -> jdoe/203.0.113.9:44321
+Thu Sep  4 10:15:24 2026 jdoe/203.0.113.9:44321 MULTI: primary virtual IP for jdoe/203.0.113.9:44321: 10.8.0.6
+Thu Sep  4 10:15:25 2026 jdoe/203.0.113.9:44321 PUSH: Received control message: 'PUSH_REQUEST'
+Thu Sep  4 10:15:25 2026 jdoe/203.0.113.9:44321 SENT CONTROL [jdoe]: 'PUSH_REPLY,route 10.0.0.0 255.255.255.0,dhcp-option DNS 10.0.0.53,ifconfig 10.8.0.6 255.255.255.0' (status=1)
+Thu Sep  4 10:15:25 2026 jdoe/203.0.113.9:44321 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+Thu Sep  4 10:16:02 2026 198.51.100.7:51234 TLS: Initial packet from [AF_INET]198.51.100.7:51234, sid=9f8e7d6c 5b4a3928
+Thu Sep  4 10:16:02 2026 198.51.100.7:51234 VERIFY ERROR: depth=0, error=certificate has expired: CN=olduser
+Thu Sep  4 10:16:02 2026 198.51.100.7:51234 TLS Error: TLS object -> incoming plaintext read error
+Thu Sep  4 10:16:02 2026 198.51.100.7:51234 TLS Error: TLS handshake failed
+Thu Sep  4 10:16:03 2026 198.51.100.7:51234 SIGUSR1[soft,tls-error] received, client-instance restarting
+Thu Sep  4 10:17:40 2026 192.0.2.44:40000 TLS Auth Error: Auth Username/Password verification failed for peer
+Thu Sep  4 10:17:40 2026 192.0.2.44:40000 Delayed exit in 5 seconds
+Thu Sep  4 10:17:45 2026 192.0.2.44:40000 SIGTERM[soft,delayed-exit] received, client-instance exiting
+Thu Sep  4 11:30:00 2026 jdoe/203.0.113.9:44321 [jdoe] Inactivity timeout (--ping-restart), restarting
+Thu Sep  4 11:30:00 2026 jdoe/203.0.113.9:44321 SIGUSR1[soft,ping-restart] received, client-instance restarting
+Thu Sep  4 09:59:58 2026 OpenVPN 2.6.12 x86_64-pc-linux-gnu [SSL (OpenSSL)] [LZO] [LZ4] [EPOLL] [PKCS11] [MH/PKTINFO] [AEAD] [DCO]
+Thu Sep  4 09:59:58 2026 TUN/TAP device tun0 opened
+Thu Sep  4 09:59:58 2026 Initialization Sequence Completed
+Thu Sep  4 10:18:10 2026 jdøe/203.0.113.9:44321 MULTI: Learn: 10.8.0.6 -> jdøe/203.0.113.9:44321
+Thu Sep  4 10:18:11 2026 203.0.113.9:44321 [jdoe] Peer Connection Initiated with [AF_IN

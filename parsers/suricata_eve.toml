@@ -1,0 +1,20 @@
+# Suricata EVE JSON: event logs in JSON format with various event types.
+# Source: https://docs.suricata.io/en/latest/output/eve/eve-json-format.html
+# Common fields: timestamp, flow_id, event_type, src_ip, src_port, dest_ip, dest_port, proto, app_proto
+# Type-specific sections: alert (with signature), dns (with queries), http, tls, flow, etc.
+
+[parser]
+name = "suricata_eve"
+vendor = "Suricata"
+product = "Suricata"
+
+[match]
+starts_with = "{"
+contains = ["\"event_type\""]
+
+[strategy]
+kind = "json"
+
+[[timestamp]]
+field = "timestamp"
+format = "rfc3339"

@@ -4,6 +4,7 @@
 //! construction, expressible in a definition file.
 
 use std::fmt::Write as _;
+use std::sync::OnceLock;
 
 use crate::def::{Envelope, Matcher, Meta, ParserDefinition, Strategy};
 
@@ -81,10 +82,24 @@ impl SlotKind {
             SlotKind::Port => r"[0-9]{1,5}",
             SlotKind::Hex => r"(?:0[xX])?[0-9A-Fa-f]+",
             SlotKind::Mac => r"(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}",
-            SlotKind::Timestamp => r"(?:[A-Z][a-z]{2} +[0-9]{1,2}(?: +[0-9]{4})? +[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?: +[0-9]{4})?|[0-9]{4}[-/][0-9]{2}[-/][0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:?[0-9]{2})?|[0-9]{9,19}(?:\.[0-9]+)?)",
+            SlotKind::Timestamp => timestamp_regex(),
             SlotKind::Quoted => r#""(?:[^"\\]|\\.)*""#,
         }
     }
+}
+
+/// The shapes `ulpf_time::parse` understands: syslog/ctime (optional weekday, Cisco IOS
+/// `*`/`.` clock mark, fraction, year before or after the time, a known zone name or an
+/// offset), ISO 8601, epoch. Zone names come from the time module's table so this slot
+/// cannot swallow a following all-caps token that is not a zone.
+fn timestamp_regex() -> &'static str {
+    static RE: OnceLock<String> = OnceLock::new();
+    RE.get_or_init(|| {
+        let zones = ulpf_time::zone_names().join("|");
+        format!(
+            r"(?:(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) +)?[*.]?[A-Z][a-z]{{2}} +[0-9]{{1,2}}(?: +[0-9]{{4}})? +[0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}(?:\.[0-9]+)?(?: +[0-9]{{4}})?(?: +(?:{zones}|[+-][0-9]{{2}}:?[0-9]{{2}}))?|[0-9]{{4}}[-/][0-9]{{2}}[-/][0-9]{{2}}[T ][0-9]{{2}}:[0-9]{{2}}:[0-9]{{2}}(?:\.[0-9]+)?(?:Z|[+-][0-9]{{2}}:?[0-9]{{2}})?|[0-9]{{9,19}}(?:\.[0-9]+)?)"
+        )
+    })
 }
 
 impl Template {

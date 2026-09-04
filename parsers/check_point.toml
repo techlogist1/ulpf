@@ -1,0 +1,45 @@
+# Check Point Log Exporter, "syslog" format: an RFC 5424-style header (older exporters
+# write the timestamp with a space) followed by one bracketed body of key:"value" pairs
+# separated by "; ". Sources: Check Point sk122323 (Log Exporter), R81 Logging and
+# Monitoring Administration Guide (log field reference).
+# `service` is the destination port in Check Point's vocabulary; a sub exposes it as
+# dst_port as well. The body is not RFC 5424 structured data, so the envelope leaves it
+# in the message for the pattern to unwrap.
+
+[parser]
+name = "check_point"
+vendor = "Check Point"
+product = "Log Exporter"
+
+[match]
+contains = ["CheckPoint"]
+regex = '\[[A-Za-z_]+:"'
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "pattern"
+anchor = "full"
+patterns = [
+  '[{body:text}]',
+  '[{body:rest}',
+]
+
+# time is epoch seconds on the gateway; the header timestamp is the exporter's.
+[[timestamp]]
+field = "time"
+format = "epoch"
+
+[[sub]]
+field = "body"
+kind = "kv"
+key_value_separator = ":"
+pair_separator = "; "
+quote = '"'
+
+[[sub]]
+field = "service"
+kind = "pattern"
+anchor = "full"
+pattern = '{dst_port:port}'

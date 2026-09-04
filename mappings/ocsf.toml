@@ -6,73 +6,81 @@
 name = "ocsf"
 version = "1.3.0"
 
+# Source values that mean "nothing here". Dropped before mapping, never in `unmapped`.
+[values]
+absent = ["", "-", "N/A", "n/a", "(none)", "0.0.0.0"]
+
 [fields]
-"src_endpoint.ip" = ["srcip", "src_ip", "src", "source_ip", "source_address", "srcaddr", "SourceIP", "client_ip", "c-ip", "shost_ip", "remote_ip", "peer_ip", "ip_src"]
-"src_endpoint.port" = ["srcport", "src_port", "spt", "source_port", "SourcePort", "sport", "s_port", "client_port", "src_port_num"]
-"src_endpoint.interface_name" = ["srcintf", "src_interface", "in_interface", "in_intf", "deviceInboundInterface", "inif", "src_zone_interface"]
-"src_endpoint.location.country" = ["srccountry", "src_country", "SourceCountry"]
-"src_endpoint.mac" = ["srcmac", "src_mac", "smac", "source_mac"]
+"src_endpoint.ip" = ["srcip", "src_ip", "src", "source_ip", "source_address", "source-address", "srcaddr", "SourceIP", "client_ip", "c-ip", "shost_ip", "remote_ip", "peer_ip", "peer_addr", "ip_src"]
+"src_endpoint.port" = ["srcport", "src_port", "spt", "source_port", "source-port", "SourcePort", "sport", "s_port", "client_port", "peer_port", "src_port_num"]
+"src_endpoint.interface_name" = ["srcintf", "src_interface", "in_interface", "in_intf", "inbound_if", "packet-incoming-interface", "source-interface-name", "deviceInboundInterface", "inif", "src_zone_interface"]
+"src_endpoint.zone" = ["srczone", "src_zone", "source-zone-name", "inzone", "inzone_name", "src_zone_name", "from_zone"]
+"src_endpoint.location.country" = ["srccountry", "src_country", "srcloc", "SourceCountry"]
+"src_endpoint.mac" = ["srcmac", "src_mac", "smac", "srcMac", "source_mac"]
 "src_endpoint.hostname" = ["srcname", "src_host", "shost", "source_host", "client_name"]
 "src_endpoint.svc_name" = ["src_service", "sproc"]
-"dst_endpoint.ip" = ["dstip", "dst_ip", "dst", "destination_ip", "destination_address", "dstaddr", "DestinationIP", "server_ip", "dest_ip", "ip_dst", "assigned_ip"]
-"dst_endpoint.port" = ["dstport", "dst_port", "dpt", "destination_port", "DestinationPort", "dport", "d_port", "server_port", "dest_port", "dst_port_num"]
-"dst_endpoint.interface_name" = ["dstintf", "dst_interface", "out_interface", "out_intf", "deviceOutboundInterface", "outif", "dst_zone_interface"]
-"dst_endpoint.location.country" = ["dstcountry", "dst_country", "DestinationCountry"]
-"dst_endpoint.mac" = ["dstmac", "dst_mac", "dmac", "destination_mac"]
-"dst_endpoint.hostname" = ["dstname", "dst_host", "dhost", "destination_host", "server_name", "hostname_dst"]
-"dst_endpoint.svc_name" = ["service", "dst_service", "dproc"]
-"connection_info.protocol_name" = ["proto", "protocol", "Protocol", "transport", "ip_proto", "proto_name", "IPProtocol"]
-"connection_info.direction" = ["direction", "ifdir", "Direction", "flow_direction"]
-"connection_info.uid" = ["sessionid", "connection_id", "session_id", "flow_id", "conn_id", "flowid", "session"]
-"connection_info.tcp_flags" = ["tcpflags", "tcp_flags", "flags"]
-"action" = ["action", "act", "utmaction", "disposition", "Action", "verdict", "filter_action", "fw_action", "result_action"]
-"severity" = ["severity", "level", "priority", "crlevel", "alert.severity", "Severity", "syslog_severity"]
-"status" = ["status", "result", "auth_status", "aaa_status", "login_status"]
-"status_detail" = ["reason", "teardown_reason", "status_reason", "termination_reason"]
-"device.hostname" = ["devname", "device_name", "hostname", "dvchost", "fw", "syslog_host", "device", "dvc_host", "node", "host"]
+"dst_endpoint.ip" = ["dstip", "dst_ip", "dst", "destination_ip", "destination_address", "destination-address", "dstaddr", "DestinationIP", "server_ip", "dest_ip", "ip_dst", "assigned_ip", "remote_ip_dst"]
+"dst_endpoint.port" = ["dstport", "dst_port", "dpt", "destination_port", "destination-port", "DestinationPort", "dport", "d_port", "server_port", "dest_port", "dst_port_num"]
+"dst_endpoint.interface_name" = ["dstintf", "dst_interface", "out_interface", "out_intf", "outbound_if", "destination-interface-name", "deviceOutboundInterface", "outif", "dst_zone_interface"]
+"dst_endpoint.zone" = ["dstzone", "dst_zone", "destination-zone-name", "outzone", "outzone_name", "dst_zone_name", "to_zone"]
+"dst_endpoint.location.country" = ["dstcountry", "dst_country", "dstloc", "DestinationCountry"]
+"dst_endpoint.mac" = ["dstmac", "dst_mac", "dmac", "dstMac", "destination_mac"]
+"dst_endpoint.hostname" = ["dstname", "dst_host", "dhost", "destination_host", "server_name", "server_host", "hostname_dst"]
+"dst_endpoint.svc_name" = ["service_id", "service", "dst_service", "service-name", "dproc"]
+"connection_info.protocol_name" = ["protocol", "proto", "Protocol", "protocol-id", "protocol-name", "protocol_id", "transport", "ip_proto", "proto_name", "IPProtocol"]
+"connection_info.direction" = ["direction", "ifdir", "conn_direction", "Direction", "flow_direction"]
+"connection_info.uid" = ["sessionid", "connection_id", "session_id", "session-id-32", "flow_id", "conn_id", "flowid", "session"]
+"connection_info.tcp_flags" = ["tcpflags", "tcp_flags"]
+"action" = ["action", "act", "utmaction", "disposition", "Action", "verdict", "filter_action", "fw_action", "result_action", "rule_action", "alert.action", "cache_status", "status"]
+"severity" = ["severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity"]
+"status" = ["result", "auth_status", "aaa_status", "login_status", "state", "session_end_reason"]
+"status_detail" = ["reason", "teardown_reason", "status_reason", "termination_reason", "note"]
+"device.hostname" = ["devname", "device_name", "hostname", "dvchost", "syslog_host", "device", "dvc_host", "node", "host", "origin"]
 "device.uid" = ["devid", "device_id", "serial", "sn", "serial_number", "dvc"]
-"device.ip" = ["devip", "device_ip", "dvc_ip", "fw_ip"]
+"device.ip" = ["devip", "device_ip", "dvc_ip", "fw", "fw_ip"]
+"device.interface_name" = ["interface", "ifname", "intf"]
 "device.vendor_name" = ["device_vendor"]
-"device.product_name" = ["device_product"]
-"traffic.bytes_in" = ["rcvdbyte", "bytes_received", "bytes_in", "in", "rcvd_bytes", "bytes_recv", "recv_bytes", "flow.bytes_toclient", "server_bytes", "response_bytes", "cn_bytes_in"]
-"traffic.bytes_out" = ["sentbyte", "bytes_sent", "bytes_out", "out", "sent_bytes", "flow.bytes_toserver", "client_bytes", "request_bytes", "cn_bytes_out"]
-"traffic.packets_in" = ["rcvdpkt", "packets_received", "packets_in", "pkts_received", "flow.pkts_toclient", "rcvd_pkts"]
-"traffic.packets_out" = ["sentpkt", "packets_sent", "packets_out", "pkts_sent", "flow.pkts_toserver", "sent_pkts"]
+"device.product_name" = ["device_product", "product"]
+"traffic.bytes_in" = ["rcvdbyte", "bytes_received", "bytes_in", "in", "rcvd", "rcvd_bytes", "bytes_recv", "recv_bytes", "bytes-from-server", "inbound-bytes", "server_outbound_bytes", "flow.bytes_toclient", "server_bytes", "response_bytes", "cn_bytes_in"]
+"traffic.bytes_out" = ["sentbyte", "bytes_sent", "bytes_out", "out", "sent", "sent_bytes", "bytes-from-client", "outbound-bytes", "client_outbound_bytes", "flow.bytes_toserver", "client_bytes", "request_bytes", "cn_bytes_out"]
+"traffic.packets_in" = ["rcvdpkt", "packets_received", "packets_in", "pkts_received", "rpkt", "packets-from-server", "inbound-packets", "flow.pkts_toclient", "rcvd_pkts"]
+"traffic.packets_out" = ["sentpkt", "packets_sent", "packets_out", "pkts_sent", "spkt", "packets-from-client", "outbound-packets", "flow.pkts_toserver", "sent_pkts"]
 "traffic.bytes" = ["bytes", "total_bytes", "size", "bytes_total"]
-"traffic.packets" = ["packets", "pkts", "total_packets"]
-"duration" = ["duration", "elapsed", "elapsed_time", "session_duration", "conn_duration"]
-"firewall_rule.name" = ["policyname", "rule_name", "acl", "access_list", "rule", "policy_name", "fw_rule_name", "rulename", "acl_name", "filter_name"]
-"firewall_rule.uid" = ["policyid", "rule_id", "fw_rule_id", "ruleid", "rule_uid", "policy_id", "rule_number", "rulenum", "policy_uid"]
-"app_name" = ["app", "application", "appcat", "app_name", "application_name", "appName", "service_name", "app_category"]
-"user.name" = ["user", "usrName", "suser", "srcuser", "user_name", "username", "duser", "src_user", "userName", "login", "common_name", "cn", "auth_user", "remote_user"]
-"user.domain" = ["domain", "user_domain", "realm", "group", "group_name"]
+"traffic.packets" = ["packets", "pkts", "packet_count", "total_packets"]
+"duration" = ["duration", "elapsed", "elapsed_time", "elapsed-time", "cdur", "session_duration", "conn_duration"]
+"firewall_rule.name" = ["policyname", "rule_name", "acl", "access_list", "rule", "policy_name", "policy-name", "fw_rule_name", "rulename", "acl_name", "filter_name"]
+"firewall_rule.uid" = ["policyid", "rule_id", "fw_rule_id", "ruleid", "rule_uid", "rule_uuid", "policy_id", "tracker", "rulenum", "policy_uid"]
+"app_name" = ["app", "application", "appcat", "app_name", "appi_name", "application_name", "application-name", "app_proto", "appName", "service_name", "app_category"]
+"user.name" = ["user", "usrName", "usr", "suser", "srcuser", "src_user_name", "user_name", "username", "duser", "src_user", "userName", "login", "common_name", "cn", "auth_user", "remote_user", "admin"]
+"user.domain" = ["domain", "user_domain", "realm", "group", "group_name", "roles"]
 "message" = ["msg", "message", "logdesc", "raw_message", "description", "event_description", "log_message", "text", "content"]
-"finding_info.title" = ["attack", "signature", "alert.signature", "threat_name", "threatname", "name", "sig_name", "signature_name", "ips_signature", "alert_name"]
-"finding_info.uid" = ["attackid", "alert.signature_id", "signature_id", "threat_id", "threatid", "sid", "sig_id", "ips_id"]
-"finding_info.types" = ["eventtype", "attack_category", "alert.category", "threat_category", "category", "class"]
-"finding_info.desc" = ["alert.metadata", "threat_desc", "vuln_desc"]
-"http_request.url.text" = ["url", "request_url", "requestUrl", "uri", "request_uri", "cs-uri", "URL"]
+"finding_info.title" = ["attack", "attack-name", "signature", "alert.signature", "threat_name", "threatname", "threatid", "protection_name", "name", "sig_name", "signature_name", "ips_signature", "alert_name"]
+"finding_info.uid" = ["attackid", "alert.signature_id", "signature_id", "threat_id", "sid", "sig_id", "ips_id", "protection_id"]
+"finding_info.types" = ["eventtype", "attack_category", "alert.category", "threat_category", "thr_category", "ipscat", "protection_type", "category", "class"]
+"finding_info.desc" = ["alert.metadata", "attack_info", "malware_action", "threat_desc", "vuln_desc"]
+"http_request.url.text" = ["url", "request_url", "requestUrl", "uri", "request_uri", "http.url", "resource", "cs-uri", "URL"]
 "http_request.url.hostname" = ["http.hostname", "hostname_http", "http_host", "cs-host", "site", "request_host"]
 "http_request.http_method" = ["method", "request_method", "requestMethod", "http_method", "cs-method", "http.http_method"]
 "http_request.user_agent" = ["user_agent", "agent", "requestClientApplication", "cs(User-Agent)", "http.http_user_agent", "ua"]
 "http_request.referrer" = ["referer", "referrer", "requestContext", "http.http_refer", "cs(Referer)"]
 "http_response.code" = ["status_code", "http_status", "response_code", "code", "sc-status", "http.status", "http_code", "http_response_code"]
-"http_response.content_type" = ["content_type", "mime_type", "http.http_content_type", "sc-content-type"]
+"http_response.content_type" = ["content_type", "contenttype", "mime_type", "http.http_content_type", "sc-content-type"]
 "tls.sni" = ["sni", "tls.sni", "server_name_indication"]
 "tls.version" = ["tls_version", "tls.version", "ssl_version"]
 "dns_query.hostname" = ["qname", "dns.rrname", "query", "dns_query", "domain_name", "qry_name"]
 "dns_query.type" = ["qtype", "dns.rrtype", "query_type", "qry_type"]
-"metadata.event_code" = ["msg_id", "logid", "event_id", "eventid", "message_id", "signature_id_header", "mnemonic", "log_id", "msgid", "code_id"]
+"metadata.event_code" = ["msg_id", "logid", "event_id", "eventid", "message_id", "signature_id_header", "mnemonic", "log_id", "msgid", "m", "code_id", "syslog_msgid"]
 "metadata.log_level" = ["log_level", "loglevel"]
-"metadata.uid" = ["uuid", "event_uid", "record_id", "eventuuid", "poluuid"]
+"metadata.uid" = ["uuid", "event_uid", "record_id", "eventuuid", "loguid", "poluuid"]
 "observer.hostname" = ["observer", "collector", "relay", "sensor", "sensor_name"]
-"type_name" = ["type", "log_type", "logtype", "subtype", "log_subtype", "event_type", "log_component", "record_type", "event_kind"]
+"type_name" = ["type", "log_type", "logtype", "subtype", "log_subtype", "event_type", "log_component", "record_type", "event_kind", "vpn_event"]
 
 [types]
 int = [
   "src_endpoint.port", "dst_endpoint.port", "traffic.bytes_in", "traffic.bytes_out",
   "traffic.packets_in", "traffic.packets_out", "traffic.bytes", "traffic.packets",
   "http_response.code", "connection_info.uid", "finding_info.uid", "firewall_rule.uid",
+  "duration",
 ]
 
 # ---------------------------------------------------------------------------- enums
@@ -84,14 +92,19 @@ unknown = { value = "Unknown", id = 0 }
 other = { value = "Other", id = 99 }
 
 [[enum.values]]
+value = "Unknown"
+id = 0
+raw = ["na", "n/a", "none", "unknown", "not-applicable"]
+
+[[enum.values]]
 value = "Allowed"
 id = 1
-raw = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "passed", "built", "teardown", "open", "opened", "closed", "close", "success", "successful", "succeeded", "login", "logout", "logon", "logoff", "start", "stop", "forward", "forwarded", "nat", "translate", "translated", "connected", "disconnected", "established", "monitor", "monitored", "detect", "detected", "alert", "log", "logged", "tcp_miss", "tcp_hit", "tcp_tunnel", "tcp_refresh_hit", "tcp_mem_hit", "tcp_client_refresh_miss", "tcp_ims_hit", "1"]
+raw = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "passed", "built", "teardown", "open", "opened", "closed", "close", "success", "successful", "succeeded", "login", "logout", "logon", "logoff", "start", "stop", "forward", "forwarded", "nat", "translate", "translated", "connected", "disconnected", "established", "monitor", "monitored", "detect", "detected", "alert", "log", "logged", "key install", "tcp_miss", "tcp_hit", "tcp_tunnel", "tcp_refresh_hit", "tcp_refresh_modified", "tcp_refresh_unmodified", "tcp_mem_hit", "tcp_client_refresh_miss", "tcp_ims_hit", "tcp_negative_hit", "tcp_miss_aborted", "tcp_refresh_miss", "tcp_refresh_fail_old", "tcp_refresh_fail_err", "tcp_offline_hit", "tcp_redirect", "tcp_swapfail_miss", "1"]
 
 [[enum.values]]
 value = "Denied"
 id = 2
-raw = ["deny", "denied", "drop", "dropped", "block", "blocked", "reject", "rejected", "discard", "discarded", "refuse", "refused", "prevent", "prevented", "quarantine", "quarantined", "reset", "reset-both", "reset-client", "reset-server", "fail", "failed", "failure", "invalid", "timeout", "timed_out", "expired", "tcp_denied", "unauthorized", "0"]
+raw = ["deny", "denied", "drop", "dropped", "block", "blocked", "block-url", "block-continue", "reject", "rejected", "discard", "discarded", "refuse", "refused", "prevent", "prevented", "quarantine", "quarantined", "reset", "reset-both", "reset-client", "reset-server", "fail", "failed", "failure", "invalid", "timeout", "timed_out", "expired", "tcp_denied", "tcp_denied_reply", "unauthorized", "sinkhole", "0"]
 
 [[enum]]
 field = "severity"
@@ -103,13 +116,13 @@ other = { value = "Other", id = 99 }
 value = "Informational"
 id = 1
 raw = ["informational", "information", "info", "notice", "debug", "debugging", "6", "7", "5", "verbose", "low-info"]
-raw_by_field = { "alert.severity" = ["4"] }
+raw_by_field = { "alert.severity" = ["4"], "ipspri" = ["3"] }
 
 [[enum.values]]
 value = "Low"
 id = 2
 raw = ["low", "minor", "warning", "warn", "4"]
-raw_by_field = { "alert.severity" = ["3"] }
+raw_by_field = { "alert.severity" = ["3"], "ipspri" = ["2"] }
 
 [[enum.values]]
 value = "Medium"
@@ -120,13 +133,13 @@ raw_by_field = { "alert.severity" = ["2"] }
 [[enum.values]]
 value = "High"
 id = 4
-raw = ["high", "major", "critical-low", "2", "crit", "critical"]
-raw_by_field = { "alert.severity" = ["1"] }
+raw = ["high", "major", "critical-low", "2", "crit"]
+raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"] }
 
 [[enum.values]]
 value = "Critical"
 id = 5
-raw = ["1", "alert", "severe"]
+raw = ["critical", "1", "alert", "severe"]
 
 [[enum.values]]
 value = "Fatal"
@@ -184,6 +197,11 @@ id = 2
 raw = ["igmp", "2"]
 
 [[enum.values]]
+value = "carp"
+id = 112
+raw = ["carp", "vrrp", "112"]
+
+[[enum.values]]
 value = "ip"
 id = 0
 raw = ["ip", "ipv4", "ipv6", "0", "41"]
@@ -197,12 +215,12 @@ other = { value = "Other", id = 99 }
 [[enum.values]]
 value = "Inbound"
 id = 1
-raw = ["inbound", "in", "incoming", "ingress", "to_server", "toserver", "server", "rx"]
+raw = ["inbound", "in", "incoming", "ingress", "to_server", "toserver", "server", "server-to-client", "rx"]
 
 [[enum.values]]
 value = "Outbound"
 id = 2
-raw = ["outbound", "out", "outgoing", "egress", "to_client", "toclient", "client", "tx"]
+raw = ["outbound", "out", "outgoing", "egress", "to_client", "toclient", "client", "client-to-server", "tx"]
 
 [[enum.values]]
 value = "Lateral"
@@ -210,26 +228,8 @@ id = 3
 raw = ["lateral", "internal", "local", "intrazone"]
 
 # --------------------------------------------------------------------------- classes
-# First rule with a satisfied alternative wins. Conditions name source fields only.
-
-[[class]]
-uid = 2004
-name = "Detection Finding"
-category_uid = 2
-category_name = "Findings"
-constants = { activity_id = 1, activity_name = "Create" }
-when = [
-  { type = ["utm"], subtype = ["ips", "virus", "webfilter", "app-ctrl", "anomaly", "dlp", "emailfilter", "waf"] },
-  { type = ["THREAT"] },
-  { event_type = ["alert", "anomaly"] },
-  { log_type = ["IDP", "IPS", "Anti-Virus", "Anti-Spam", "WAF", "ATP"] },
-  { log_component = ["IPS", "Anti-Virus", "Anti-Spam", "Web Filter", "Application Filter", "Web Content Policy"] },
-  { classification = ["*"], sid = ["*"] },
-  { attack_category = ["*"] },
-  { "alert.signature" = ["*"] },
-  { msg_id = ["733100", "733101", "733102", "733103", "733104", "733105", "400000", "400001", "400002", "400003", "400004", "400005", "400006", "400007", "400008", "400009", "400010", "400011", "400012", "400013", "400014", "400015", "400016", "400017", "400018", "400019", "400020", "400021", "400022", "400023", "400024", "400025", "400026", "400027", "400028", "400029", "400030", "400031", "400032", "400033", "400034", "400035", "400036", "400037", "400038", "400039", "400040", "400041", "400042", "400043", "400044", "400045", "400046", "400047", "400048", "400049", "400050"] },
-  { mnemonic = ["IPACCESSLOGP", "IPACCESSLOGDP", "IPACCESSLOGNP", "IPACCESSLOGS", "IPACCESSLOGRP"], attack = ["*"] },
-]
+# First rule with a satisfied alternative wins; order matters. Conditions name source
+# fields only; `*` means present (and not an absent value).
 
 [[class]]
 uid = 3002
@@ -240,12 +240,15 @@ constants = { activity_id = 1, activity_name = "Logon" }
 when = [
   { msg_id = ["113004", "113005", "113008", "113009", "113012", "113015", "113019", "113039", "722051", "722022", "722023", "722028", "722037", "716001", "716002", "605005", "605004", "611101", "611102", "111008", "111010"] },
   { type = ["event"], subtype = ["system", "user", "vpn"], action = ["login", "logout", "login-failed", "logon", "logoff", "tunnel-up", "tunnel-down", "ssl-login-fail", "auth-logon", "auth-logout"] },
-  { type = ["SYSTEM", "USERID", "AUTHENTICATION", "GLOBALPROTECT"] },
+  { type = ["SYSTEM"], subtype = ["auth", "sslvpn", "globalprotect", "ras", "userid", "vpn"] },
+  { type = ["USERID", "AUTHENTICATION", "GLOBALPROTECT"] },
   { log_type = ["Authentication", "Event"], log_component = ["Firewall Authentication", "VPN", "SSL VPN", "Authentication"] },
   { syslog_app = ["sshd", "pppd", "radiusd", "sudo", "login"] },
   { event_kind = ["auth", "vpn"] },
   { mnemonic = ["LOGIN_SUCCESS", "LOGIN_FAILED", "LOGOUT", "SSH2_USERAUTH", "AUTHPRIV"] },
-  { vpn_event = ["*"] },
+  { vpn_event = ["connection_initiated", "auth_failed", "certificate_rejected", "tls_failed", "disconnected", "inactivity_timeout", "address_assigned"] },
+  { vpn_feature_name = ["*"] },
+  { msg = ["Administrator login allowed", "Administrator login denied due to bad credentials", "User login successful", "User login failed"] },
   { auth_status = ["*"] },
   { aaa_status = ["*"] },
 ]
@@ -258,13 +261,16 @@ category_name = "Network Activity"
 constants = { activity_id = 6, activity_name = "Traffic" }
 when = [
   { event_type = ["http"] },
-  { type = ["URL"] },
+  { type = ["THREAT"], subtype = ["url"] },
+  { product = ["URL Filtering"] },
   { request_method = ["*"] },
   { method = ["*"], url = ["*"] },
   { cache_result = ["*"] },
   { cache_status = ["*"] },
   { "http.http_method" = ["*"] },
+  { http_host = ["*"] },
   { log_component = ["HTTP", "HTTPS", "Web Filter"] },
+  { msg = ["Web site hit", "Web site access denied", "Web site blocked"] },
 ]
 
 [[class]]
@@ -281,6 +287,28 @@ when = [
 ]
 
 [[class]]
+uid = 2004
+name = "Detection Finding"
+category_uid = 2
+category_name = "Findings"
+constants = { activity_id = 1, activity_name = "Create" }
+when = [
+  { type = ["utm"], subtype = ["ips", "virus", "webfilter", "app-ctrl", "anomaly", "dlp", "emailfilter", "waf"] },
+  { type = ["THREAT"] },
+  { event_type = ["alert", "anomaly"] },
+  { log_type = ["IDP", "IPS", "Anti-Virus", "Anti-Spam", "WAF", "ATP"] },
+  { log_component = ["IPS", "Anti-Virus", "Anti-Spam", "Web Filter", "Application Filter", "Web Content Policy"] },
+  { classification = ["*"], sid = ["*"] },
+  { attack_category = ["*"] },
+  { "alert.signature" = ["*"] },
+  { "attack-name" = ["*"] },
+  { protection_name = ["*"] },
+  { ipscat = ["*"] },
+  { sid = ["*"] },
+  { msg_id = ["733100", "733101", "733102", "733103", "733104", "733105", "400000", "400001", "400002", "400003", "400004", "400005", "400006", "400007", "400008", "400009", "400010", "400011", "400012", "400013", "400014", "400015", "400016", "400017", "400018", "400019", "400020", "400021", "400022", "400023", "400024", "400025", "400026", "400027", "400028", "400029", "400030", "400031", "400032", "400033", "400034", "400035", "400036", "400037", "400038", "400039", "400040", "400041", "400042", "400043", "400044", "400045", "400046", "400047", "400048", "400049", "400050"] },
+]
+
+[[class]]
 uid = 4001
 name = "Network Activity"
 category_uid = 4
@@ -293,13 +321,13 @@ when = [
   { log_component = ["Firewall Rule", "Firewall", "Invalid Traffic", "Appliance Access", "ICMP Error", "DoS", "Local ACLs", "NAT"] },
   { msg_id = ["302013", "302014", "302015", "302016", "302020", "302021", "106001", "106002", "106006", "106007", "106010", "106012", "106013", "106014", "106015", "106016", "106017", "106018", "106020", "106021", "106022", "106023", "106100", "305009", "305010", "305011", "305012", "313001", "313004", "313005", "313008", "710002", "710003", "710005", "710006", "609001", "609002", "419001", "419002", "420002", "420003", "710001"] },
   { mnemonic = ["IPACCESSLOGP", "IPACCESSLOGDP", "IPACCESSLOGNP", "IPACCESSLOGS", "IPACCESSLOGRP", "IPACCESSLOGRL", "FW_SESSION", "NAT", "SESSION_OPEN", "SESSION_CLOSE"] },
-  { filterlog_action = ["*"] },
-  { rule_number = ["*"], action = ["*"] },
+  { tracker = ["*"] },
   { src_ip = ["*"], dst_ip = ["*"] },
   { srcip = ["*"], dstip = ["*"] },
   { src = ["*"], dst = ["*"] },
   { source_ip = ["*"], destination_ip = ["*"] },
   { source_address = ["*"], destination_address = ["*"] },
+  { "source-address" = ["*"], "destination-address" = ["*"] },
   { proto = ["*"] },
   { protocol = ["*"] },
 ]

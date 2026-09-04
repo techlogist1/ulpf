@@ -1,0 +1,24 @@
+# Sophos XG/SFOS firewall syslog in key=value format.
+# Source: https://docs.sophos.com/nsg/sophos-firewall/21.5/syslog/index.html
+# Timestamp from three fields: date, time, timezone (all present in log events).
+
+[parser]
+name = "sophos_xg"
+vendor = "Sophos"
+product = "Sophos Firewall"
+
+[match]
+contains = ["device=\"SFW\""]
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "kv"
+key_value_separator = "="
+pair_separator = " "
+quote = '"'
+
+[[timestamp]]
+fields = ["date", "time", "timezone"]
+format = "%Y-%m-%d %H:%M:%S %Z"

@@ -71,7 +71,8 @@ pub struct Strategy {
     pub key_value_separator: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pair_separator: Option<String>,
-    /// kv and delimiter: quote character; kv defaults to `"`, delimiter to none.
+    /// kv and delimiter: quote character; kv defaults to `"` and accepts several (`"'`,
+    /// SonicWall quotes one field with `'`), delimiter to none.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quote: Option<String>,
     // kind = "delimiter": positional columns. Palo Alto CSV, pfSense filterlog, Squid.
@@ -80,6 +81,11 @@ pub struct Strategy {
     /// Column names in order; `_` skips a column. Extra columns become `column_N`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub fields: Vec<String>,
+    /// Everything after the last named column, unsplit, under this name. A `[[sub]]` gated
+    /// on one of the named columns then splits it (pfSense, PAN-OS: the tail's layout
+    /// depends on a column near the front).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rest: Option<String>,
     // kind = "pattern": constant text with `{name:type}` slots (docs/parser-format.md).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pattern: Option<String>,
@@ -91,8 +97,9 @@ pub struct Strategy {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub anchor: Option<Anchor>,
     // `[[sub]]` only: which field to re-parse, gated by `when` (every listed field must
-    // equal one of the listed values). The first sub whose strategy matches wins and its
-    // `constants` are added as fields.
+    // equal one of the listed values). Subs run in file order; each field is re-parsed by
+    // at most one sub, the first eligible one whose strategy matches, which then adds its
+    // `constants`. A later sub may gate on a field an earlier sub produced.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub field: Option<String>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
@@ -133,6 +140,7 @@ impl Strategy {
         if !kv && !delim && self.quote.is_some() { bad.push("quote"); }
         if !delim && self.delimiter.is_some() { bad.push("delimiter"); }
         if !delim && !self.fields.is_empty() { bad.push("fields"); }
+        if !delim && self.rest.is_some() { bad.push("rest"); }
         if !pat && self.pattern.is_some() { bad.push("pattern"); }
         if !pat && !self.patterns.is_empty() { bad.push("patterns"); }
         if !pat && self.regex.is_some() { bad.push("regex"); }

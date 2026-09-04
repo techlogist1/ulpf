@@ -1,0 +1,141 @@
+# OpenVPN server file log (--log / --log-append, verb 3): a ctime stamp, then either
+# nothing (daemon lines), "ip:port" (peer before authentication), "cn/ip:port" (peer
+# after authentication) or "ip:port [cn]" while the client instance is being named.
+# Sources: OpenVPN 2.6 reference manual (--log, --verb) and openvpn/src/openvpn/
+# multi.c, ssl.c, ssl_verify.c message strings.
+# Detection is the ctime prefix alone (other daemons rarely log this way to a file),
+# so this definition sits below every syslog-framed one.
+
+[parser]
+name = "openvpn"
+vendor = "OpenVPN"
+product = "OpenVPN"
+
+[match]
+regex = '^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun) [A-Z][a-z]{2} +[0-9]{1,2} [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4} '
+priority = -1
+
+[strategy]
+kind = "pattern"
+patterns = [
+  '{timestamp:timestamp} {user:word}/{peer_ip:ip}:{peer_port:port} [{_:text}] {message:rest}',
+  '{timestamp:timestamp} {user:word}/{peer_ip:ip}:{peer_port:port} {message:rest}',
+  '{timestamp:timestamp} {peer_ip:ip}:{peer_port:port} [{user:text}] {message:rest}',
+  '{timestamp:timestamp} {peer_ip:ip}:{peer_port:port} {message:rest}',
+  '{timestamp:timestamp} {message:rest}',
+]
+
+# ctime carries no zone: the server's local zone is assumed (--tz on the CLI).
+[[timestamp]]
+field = "timestamp"
+format = "ctime"
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'Peer Connection Initiated with [{address_family:word}]{remote_ip:ip}:{remote_port:port}'
+constants = { vpn_event = "connection_initiated", action = "connected" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'TLS: Initial packet from [{address_family:word}]{remote_ip:ip}:{remote_port:port}{_:rest}'
+constants = { vpn_event = "tls_initial_packet" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'VERIFY OK: depth={cert_depth:int}, {cert_subject:rest}'
+constants = { vpn_event = "certificate_verified" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'VERIFY ERROR: depth={cert_depth:int}, error={reason:text}: {cert_subject:rest}'
+constants = { vpn_event = "certificate_rejected", action = "failed" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'TLS Auth Error: {reason:rest}'
+constants = { vpn_event = "auth_failed", action = "failed" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'TLS Error: {reason:rest}'
+constants = { vpn_event = "tls_failed", action = "failed" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'MULTI_sva: pool returned IPv4={assigned_ip:word}, IPv6={assigned_ipv6:rest}'
+constants = { vpn_event = "address_assigned" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'MULTI: Learn: {learned_ip:ip} -> {_:rest}'
+constants = { vpn_event = "route_learned" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+patterns = [
+  "Outgoing Data Channel: Cipher '{cipher:text}' initialized with {key_bits:int} bit key",
+  "Data Channel Encrypt: Cipher '{cipher:text}' initialized with {key_bits:int} bit key",
+]
+constants = { vpn_event = "cipher_negotiated" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'Inactivity timeout ({_:text}), restarting'
+constants = { vpn_event = "inactivity_timeout" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = '{signal:word}[{signal_detail:text}] received, client-instance {_:rest}'
+constants = { vpn_event = "disconnected", action = "disconnected" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'MULTI: primary virtual IP for {_:text}: {assigned_ip:ip}'
+constants = { vpn_event = "primary_virtual_ip" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'peer info: {peer_info:rest}'
+constants = { vpn_event = "peer_info" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = "PUSH: Received control message: '{push_message:text}'"
+constants = { vpn_event = "push_request" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = "SENT CONTROL [{_:text}]: '{push_reply:text}' (status={push_status:int})"
+constants = { vpn_event = "push_reply" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+pattern = 'Delayed exit in {delay_seconds:int} seconds'
+constants = { vpn_event = "delayed_exit" }
+
+# Daemon lines (no peer): version banner, tunnel device, ready.
+[[sub]]
+field = "message"
+kind = "pattern"
+patterns = [
+  'OpenVPN {daemon_version:word} {build_info:rest}',
+  'TUN/TAP device {tun_device:word} opened',
+  'Initialization Sequence Completed',
+]
+constants = { vpn_event = "daemon" }

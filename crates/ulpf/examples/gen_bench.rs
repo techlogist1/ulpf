@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{BufWriter, Write, BufRead, BufReader};
+use std::io::{BufWriter, Write};
 use std::path::Path;
 use std::time::Instant;
 
@@ -81,137 +81,106 @@ fn read_samples(samples_dir: &Path) -> std::io::Result<Vec<String>> {
 }
 
 /// Mutate an event: replace IPs and specific numeric values.
-/// Keep mutations minimal to preserve parser detection.
+/// Keep mutations minimal and fast.
 fn mutate_event(event: &str, rng: &mut Rng, _time_offset_secs: u64) -> String {
     let mut result = event.to_string();
 
-    // Replace IPv4 addresses carefully
-    result = replace_ipv4(&result, rng);
+    // Replace IPv4 addresses (simple regex-like scan)
+    result = replace_ipv4_simple(&result, rng);
 
-    // Replace specific numeric fields: srcport=, dstport=, sessionid=, port=
-    result = replace_keyword_numbers(&result, rng);
+    // Replace specific keyword patterns
+    result = simple_replace_pattern(&result, "srcport=", rng);
+    result = simple_replace_pattern(&result, "dstport=", rng);
+    result = simple_replace_pattern(&result, "port=", rng);
+    result = simple_replace_pattern(&result, "sessionid=", rng);
+    result = simple_replace_pattern(&result, "connid=", rng);
 
     result
 }
 
-/// Replace IPv4 addresses with random ones
-fn replace_ipv4(event: &str, rng: &mut Rng) -> String {
+/// Fast IPv4 replacement using char iteration
+fn replace_ipv4_simple(event: &str, rng: &mut Rng) -> String {
     let mut result = String::new();
-    let bytes = event.as_bytes();
-    let mut i = 0;
+    let mut chars = event.chars().peekable();
 
-    while i < bytes.len() {
-        if (bytes[i] as char).is_ascii_digit() {
-            let start = i;
-            let mut num_parts = Vec::new();
-            let mut valid_ip = true;
+    while let Some(ch) = chars.next() {
+        if ch.is_ascii_digit() {
+            let mut potential_ip = String::from(ch);
 
-            // Try to parse X.Y.Z.W pattern
-            for _ in 0..4 {
-                let part_start = i;
-                while i < bytes.len() && (bytes[i] as char).is_ascii_digit() {
-                    i += 1;
-                }
-
-                if i == part_start {
-                    valid_ip = false;
-                    break;
-                }
-
-                let part_str = std::str::from_utf8(&bytes[part_start..i]).unwrap_or("");
-                if let Ok(num) = part_str.parse::<u16>() {
-                    if num <= 255 {
-                        num_parts.push(num);
-                    } else {
-                        valid_ip = false;
-                        break;
-                    }
+            // Peek ahead for possible IP pattern
+            while let Some(&next_ch) = chars.peek() {
+                if next_ch.is_ascii_digit() || next_ch == '.' {
+                    potential_ip.push(chars.next().unwrap());
                 } else {
-                    valid_ip = false;
                     break;
-                }
-
-                // Check for dot separator (except after last octet)
-                if num_parts.len() < 4 {
-                    if i < bytes.len() && bytes[i] == b'.' {
-                        i += 1;
-                    } else {
-                        valid_ip = false;
-                        break;
-                    }
                 }
             }
 
-            if valid_ip && num_parts.len() == 4 {
+            // Check if it's a valid IP
+            if is_ipv4(&potential_ip) {
                 let new_ip = generate_random_ip(rng);
                 result.push_str(&new_ip);
             } else {
-                result.push_str(&event[start..i]);
+                result.push_str(&potential_ip);
             }
         } else {
-            result.push(bytes[i] as char);
-            i += 1;
+            result.push(ch);
         }
     }
 
     result
 }
 
-/// Replace numbers after specific keywords: srcport=, dstport=, sessionid=, connid=, etc.
-fn replace_keyword_numbers(event: &str, rng: &mut Rng) -> String {
-    let keywords = [
-        "srcport=", "dstport=", "port=",
-        "sessionid=", "connid=", "connection ",
-        "srcport:", "dstport:",
-    ];
-
-    let mut result = event.to_string();
-
-    for keyword in &keywords {
-        let keyword_bytes = keyword.as_bytes();
-        let mut new_result = String::new();
-        let bytes = result.as_bytes();
-        let mut i = 0;
-
-        while i < bytes.len() {
-            if i + keyword_bytes.len() <= bytes.len() && &bytes[i..i + keyword_bytes.len()] == keyword_bytes {
-                new_result.push_str(keyword);
-                i += keyword_bytes.len();
-
-                let num_start = i;
-                while i < bytes.len() && (bytes[i] as char).is_ascii_digit() {
-                    i += 1;
-                }
-
-                if i > num_start {
-                    let num_str = std::str::from_utf8(&bytes[num_start..i]).unwrap_or("");
-                    if let Ok(_num) = num_str.parse::<u64>() {
-                        let new_id = rng.next();
-                        new_result.push_str(&new_id.to_string());
-                    } else {
-                        new_result.push_str(num_str);
-                    }
-                }
-            } else {
-                new_result.push(bytes[i] as char);
-                i += 1;
-            }
-        }
-
-        result = new_result;
-    }
-
-    result
-}
-
-fn is_valid_ipv4(s: &str) -> bool {
+fn is_ipv4(s: &str) -> bool {
     let parts: Vec<&str> = s.split('.').collect();
     if parts.len() != 4 {
         return false;
     }
     parts.iter().all(|p| {
-        p.parse::<u8>().is_ok()
+        !p.is_empty() && p.parse::<u8>().is_ok()
     })
+}
+
+/// Simple pattern replacement: find "keyword" followed by digits, replace the digits
+fn simple_replace_pattern(event: &str, keyword: &str, rng: &mut Rng) -> String {
+    let mut result = String::new();
+    let mut remaining = event;
+
+    while let Some(pos) = remaining.find(keyword) {
+        result.push_str(&remaining[..pos + keyword.len()]);
+        remaining = &remaining[pos + keyword.len()..];
+
+        // Extract digits by character iteration
+        let mut num_str = String::new();
+        let mut chars_to_skip = 0;
+
+        for ch in remaining.chars() {
+            if ch.is_ascii_digit() {
+                num_str.push(ch);
+                chars_to_skip += ch.len_utf8();
+            } else {
+                break;
+            }
+        }
+
+        if !num_str.is_empty() {
+            if num_str.parse::<u64>().is_ok() {
+                // For ports, constrain to reasonable range
+                let new_val = if keyword.contains("port") {
+                    ((rng.next() % 65535) as u16 + 1).to_string()
+                } else {
+                    rng.next().to_string()
+                };
+                result.push_str(&new_val);
+            } else {
+                result.push_str(&num_str);
+            }
+            remaining = &remaining[chars_to_skip..];
+        }
+    }
+
+    result.push_str(remaining);
+    result
 }
 
 fn generate_random_ip(rng: &mut Rng) -> String {
@@ -222,45 +191,6 @@ fn generate_random_ip(rng: &mut Rng) -> String {
         (rng.next() % 256) as u8,
     ];
     format!("{}.{}.{}.{}", octets[0], octets[1], octets[2], octets[3])
-}
-
-fn advance_timestamps(event: &str, secs: u64) -> String {
-    let mut result = String::new();
-    let bytes = event.as_bytes();
-    let mut i = 0;
-
-    while i < bytes.len() {
-        if (bytes[i] as char).is_ascii_digit() {
-            let start = i;
-            while i < bytes.len() && (bytes[i] as char).is_ascii_digit() {
-                i += 1;
-            }
-
-            let num_str = std::str::from_utf8(&bytes[start..i]).unwrap_or("");
-            if num_str.len() >= 10 && num_str.len() <= 19 {
-                if let Ok(ts) = num_str.parse::<u64>() {
-                    // Epoch timestamp; add secs (treating as seconds, adjust for scale)
-                    // For nanoseconds (19 digits), add secs * 1e9
-                    // For milliseconds (13 digits), add secs * 1e3
-                    // For seconds (10 digits), add secs directly
-                    let new_ts = match num_str.len() {
-                        19 => ts + secs * 1_000_000_000,
-                        13 => ts + secs * 1_000,
-                        _ => ts + secs,
-                    };
-                    result.push_str(&new_ts.to_string());
-                    continue;
-                }
-            }
-
-            result.push_str(num_str);
-        } else {
-            result.push(bytes[i] as char);
-            i += 1;
-        }
-    }
-
-    result
 }
 
 fn main() -> std::io::Result<()> {
@@ -314,9 +244,10 @@ fn main() -> std::io::Result<()> {
         if mess_chance < 1 {
             match mess_chance % 4 {
                 0 => {
-                    // Truncate line
-                    let truncate_at = rng.range(mutated.len().max(1)) + 1;
-                    let truncated = &mutated[..truncate_at.min(mutated.len())];
+                    // Truncate line - use character-based truncation
+                    let char_len = mutated.chars().count();
+                    let truncate_at = rng.range(char_len.max(1)) + 1;
+                    let truncated = mutated.chars().take(truncate_at.min(char_len)).collect::<String>();
                     writer.write_all(truncated.as_bytes())?;
                     byte_count += truncated.len() as u64;
                 }

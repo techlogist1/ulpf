@@ -81,6 +81,10 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 ## Plain-text folder contract (for teammates)
 - `parsers/*.toml` — one parser definition per device family. Loaded by directory scan
   at startup. A malformed file is reported with path and line; the others still load.
+  v0.1 ships 12: cisco_asa, cisco_ios, fortinet_fortigate, openvpn, palo_alto_panos,
+  pfsense_filterlog, check_point, juniper_srx, sonicwall, sophos_xg, squid_access,
+  suricata_eve. Every one was written from the vendor's log reference, not from a
+  worker's memory; a fixture that passes only proves the code is self-consistent.
 - `mappings/*.toml` — one per output schema (`ocsf.toml`). Same loading rules.
 - `samples/<parser>.log` — paired sample for each parser. Synthetic until real samples
   arrive (see `samples/README.md`).
@@ -125,7 +129,8 @@ signals (sub_matched, sub_no_match, sub_uncovered, time_from_receipt, time_error
 class_unknown, enum_other, unmapped_fields, utf8_lossy); queue batches and high-water.
 When output looks plausible but wrong, read that block first: `no_parser` means the format
 was not recognised, `sub_uncovered` means a message id has no pattern yet, `sub_no_match`
-means a pattern exists and failed, `time_from_receipt` means the device time was not found,
+means a gated sub ran and failed (or an ungated sub met a message you have not modelled),
+`time_from_receipt` means the device time was not found,
 `class_unknown` means no class rule matched the fields. `ulpf raw <id>` shows the exact
 input for any output line (`ulpf.raw_id`).
 

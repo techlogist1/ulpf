@@ -1,0 +1,38 @@
+# Squid native access.log format
+# Source: Squid documentation access.log configuration directive
+# Format: %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<a %mt
+# Example: 1756980923.123    120 10.0.0.5 TCP_MISS/200 1234 GET http://example.com/ - HIER_DIRECT/93.184.216.34 text/html
+
+[parser]
+name = "squid_access"
+vendor = "Squid"
+product = "Cache"
+description = "Squid native access.log format"
+
+[match]
+regex = "^\\d{10,}\\.\\d{3}\\s+\\d+\\s+[0-9.]+\\s+\\w+/\\d{3}\\s"
+
+[strategy]
+kind = "pattern"
+pattern = '{timestamp:float} {response_time:int} {src_ip:ip} {cache_result:word} {bytes:int} {method:word} {url:word} {user:word} {hierarchy:word} {content_type:word}'
+
+[[timestamp]]
+field = "timestamp"
+format = "epoch"
+
+# %Ss/%>Hs packs the cache result code with the HTTP status; %Sh/%<a packs the
+# hierarchy code with the peer or origin address.
+[[sub]]
+field = "cache_result"
+kind = "pattern"
+anchor = "full"
+pattern = '{cache_status:word}/{http_status:int}'
+
+[[sub]]
+field = "hierarchy"
+kind = "pattern"
+anchor = "full"
+patterns = [
+  '{hierarchy_code:word}/{server_ip:ip}',
+  '{hierarchy_code:word}/{server_host:rest}',
+]

@@ -1,0 +1,56 @@
+# SonicWall SonicOS enhanced syslog: key=value after <pri>, usually with no RFC 3164
+# header (relays may add one). Source: SonicOS Log Events Reference Guide.
+# src/dst pack ip:port:interface[:hostname]; proto packs transport/service; appName
+# alone is single-quoted, hence the two quote characters.
+
+[parser]
+name = "sonicwall"
+vendor = "SonicWall"
+product = "SonicOS"
+
+[match]
+contains = ["id=firewall", "sn="]
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "kv"
+key_value_separator = "="
+pair_separator = " "
+quote = "\"'"
+
+[[timestamp]]
+field = "time"
+format = "%Y-%m-%d %H:%M:%S %Z"
+
+[[timestamp]]
+field = "time"
+format = "%Y-%m-%d %H:%M:%S"
+
+[[sub]]
+field = "src"
+kind = "pattern"
+anchor = "full"
+patterns = [
+  '{src_ip:ip}:{src_port:int}:{src_interface:text}:{src_host:rest}',
+  '{src_ip:ip}:{src_port:int}:{src_interface:rest}',
+]
+
+[[sub]]
+field = "dst"
+kind = "pattern"
+anchor = "full"
+patterns = [
+  '{dst_ip:ip}:{dst_port:int}:{dst_interface:text}:{dst_host:rest}',
+  '{dst_ip:ip}:{dst_port:int}:{dst_interface:rest}',
+]
+
+[[sub]]
+field = "proto"
+kind = "pattern"
+anchor = "full"
+patterns = [
+  '{protocol:word}/{service:word}',
+  '{protocol:word}',
+]

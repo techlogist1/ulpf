@@ -245,3 +245,119 @@ engine (`crates/ulpf/tests/adversarial.rs`). **Anchor.** `send_batch` in
 plausible-looking counter (`2/1`) is exactly the kind of wrong output only a run reveals.
 **Ruled out.** Counting before send (reports capacity+1 under load); treating a BOM as
 message bytes (a Windows-exported ASA log parses as `pattern_no_match` for every line).
+
+## D24. Subs run per field: file order, one winner per field, later subs may gate on earlier subs' output
+**Decision.** Every `[[sub]]` whose gate passes runs, in file order, except that a field
+already re-parsed by an earlier matching sub is not re-parsed again. A later sub may gate
+on a field an earlier sub produced. The status is the worst outcome over the fields that
+have subs: `no_match` beats `uncovered` beats `matched`; when none of the sub fields is
+present the status is `not_applicable`. **Anchor.** `Parser::run_subs` and `SubStatus` in
+`crates/ulpf-parse/src/compile.rs`; `subs_on_different_fields_all_run_and_same_field_subs_are_alternatives`
+and `delimiter_rest_feeds_subs_gated_on_earlier_columns` in
+`crates/ulpf-parse/tests/strategies.rs`. **Principle.** General-purpose over
+special-purpose: the same rule serves ASA-style alternatives on one `message`, SonicWall's
+three packed fields, and pfSense's three-level CSV tail, with no new syntax. **Ruled out.**
+First-match-wins across all subs (SonicWall's `dst` never ran; found in the worker's
+fixture); running every eligible sub (ASA's outbound and inbound alternatives on one field
+would report `no_match` for every event).
+
+## D25. Delimiter strategy keeps the unsplit tail under `rest` for a gated sub to split
+**Decision.** `rest = "name"` on a delimiter strategy emits everything after the last named
+column as one span; a `[[sub]]` gated on an earlier column splits it with the layout that
+row type uses. **Anchor.** `DelimConfig` in `crates/ulpf-parse/src/delimiter.rs`;
+`Strategy::rest` in `crates/ulpf-parse/src/def.rs`; `parsers/pfsense_filterlog.toml`,
+`parsers/palo_alto_panos.toml`. **Principle.** Pull complexity downward: PAN-OS's four
+log types share seven columns and diverge after; pfSense's tail depends on IP version,
+then protocol, then ICMP type. One definition per device family, not one per shape.
+**Ruled out.** One parser file per PAN-OS log type (the worker's two files; detection by
+`contains = ["TRAFFIC"]` claims any line with that word); a pattern with `{interface:word}`
+over CSV (`word` swallows commas: the worker's pfSense fixture had the interface column
+holding twenty fields).
+
+## D26. The envelope exposes RFC 5424 structured-data parameters as fields; brackets that are not SD stay in the message
+**Decision.** `[SD-ID name="value" ...]` elements push each parameter under its own name
+(`source-address`) and keep `syslog_sd` as the raw text; a bracket run whose first
+element is not RFC 5424 structured data (Check Point's `[key:"value"; ...]`, a truncated
+element) is treated as message text so the strategy sees it. A 5424 timestamp written
+`YYYY-MM-DD HH:MM:SS` (older Check Point exporters) is accepted. **Anchor.** `rfc5424`,
+`sd_params` in `crates/ulpf-parse/src/envelope.rs`;
+`rfc5424_structured_data_params_become_fields_and_odd_brackets_stay_message` in
+`crates/ulpf-parse/tests/strategies.rs`; `parsers/juniper_srx.toml`, `parsers/check_point.toml`.
+**Principle.** Information hiding: RFC 5424's escaping and grammar are the envelope's
+knowledge; a definition should not re-parse `syslog_sd` with a key=value strategy (the
+worker's Juniper file did, and would have broken on `\"`). **Ruled out.** A new strategy
+kind for "the envelope is the whole event" (a catch-all `{message:rest}` pattern is
+standard syntax and also covers the unstructured form of the same device); rejecting
+Check Point's header as not-5424 (loses host, app and procid on every line).
+
+## D27. The `timestamp` slot is generated from the time module's own shapes and zone table
+**Decision.** The pattern slot regex is built once from `ulpf_time::zone_names()` and
+accepts the ctime weekday, the Cisco IOS `*`/`.` clock mark, a year before or after the
+time, a fraction, and a known zone name or numeric offset. **Anchor.** `timestamp_regex`
+in `crates/ulpf-parse/src/template.rs`; `zone_names` in `crates/ulpf-time/src/lib.rs`;
+`timestamp_slot_accepts_ctime_and_cisco_ios_shapes_without_eating_hostnames` in
+`crates/ulpf-parse/tests/strategies.rs`. **Principle.** One source of truth: the slot
+recognises exactly what `ulpf_time::parse` can read, so a slot that matches always yields
+a time. **Ruled out.** `[A-Z]{1,5}` for the zone (a pattern `{ts:timestamp} {host:word}`
+would swallow an all-caps hostname as a zone); leaving the weekday and mark to `{text}`
+slots (the worker's IOS and OpenVPN definitions did, and never parsed a device time).
+
+## D28. A pattern slot that captures nothing emits no field
+**Decision.** An empty capture (`rest` with nothing left, `quoted` of `""`) is the absence
+of a field. **Anchor.** `CompiledPattern::apply` in `crates/ulpf-parse/src/pattern.rs`.
+**Principle.** Define errors out of existence: Junos structured lines have an empty
+message part; with an empty `message` field present, every such line would read as
+`sub_uncovered`. kv and delimiter keep empty values because there the device wrote the
+key or the column. **Ruled out.** Special-casing `rest` only (a `quoted` empty string
+would then behave differently for no reason a definition author could predict).
+
+## D29. Mapping: `[values] absent` list, `*` class conditions mean present, explicit `Unknown` enum value
+**Decision.** The mapping file declares source values that carry no information (`-`,
+`N/A`, empty, `0.0.0.0`); they are neither mapped nor reported as unmapped and do not
+satisfy a class condition. A class condition value of `*` means "field present"; this was
+documented from the start but never implemented, so every wildcard rule was dead until the
+fixture review of this session. The action enum has an explicit `Unknown` value for
+`NA`/`none`, so a SonicWall `fw_action="NA"` is neither `Allowed` nor `Other`. **Anchor.**
+`Mapping::absent`, `select_class` in `crates/ulpf-normalize/src/mapping.rs`; `[values]`
+and the `Unknown` action value in `mappings/ocsf.toml`;
+`absent_values_are_neither_mapped_nor_unmapped_nor_class_evidence` and
+`class_rule_wildcard_means_present` in `crates/ulpf-normalize/tests/normalize.rs`.
+**Principle.** Canonicalisation belongs to the mapping stage; a parser must not drop
+vendor values. **Ruled out.** Dropping `-` in the Squid parser (parser knows output
+semantics); listing `na` under `Allowed` (the worker-era fixture showed a denied admin
+login normalised as Allowed).
+
+## D30. Worker-produced parser files were reviewed against their generated output and mostly rewritten
+**Decision.** Fan-out 2 (haiku, low effort) returned ten families. The review compared each
+fixture line with the sample and the vendor format: Palo Alto was written as key=value
+(PAN-OS is positional CSV), Check Point and Juniper worked around engine gaps with
+`{_:rest}` hacks, Cisco IOS and OpenVPN used invented message texts and never parsed the
+device time, pfSense misparsed every row, SonicWall's second sub never ran, and fixtures
+had snapshotted all of it as expected. Seven families were rewritten by the lead from the
+vendor references; Sophos, Squid and Suricata were kept with mapping fixes. Fixtures are
+generated by `ulpf fixture` and reviewed line by line before commit; they stay full
+snapshots as regression tests. **Anchor.** `parsers/*.toml`, `samples/*.log`,
+`fixtures/*.expected.jsonl`; `skeleton` in `crates/ulpf/src/fixture.rs`. **Principle.**
+Never report a test as passing that only proves the code does what the code does: a
+fixture generated from wrong output passes by construction. Cheap workers are for work
+whose correctness the lead can verify mechanically; format fidelity is not that.
+**Ruled out.** Trusting the workers' "all fixtures pass" (true and meaningless).
+
+## D31. Throughput file: deterministic mutation of the committed samples, regenerated on demand, never committed
+**Decision.** `cargo run --release -p ulpf --example gen_bench -- 5000000 bench` reads
+`samples/`, frames multi-line events, and writes N lines by picking events with a fixed-seed
+xorshift generator, rewriting IPv4 addresses, ports and session ids, and injecting ~0.1%
+mess (truncation, a non-UTF-8 byte, doubled spaces, empty lines). `bench/*.log` is
+gitignored. The measured number lives in `PROGRESS.md` with the machine it was measured on.
+**Anchor.** `crates/ulpf/examples/gen_bench.rs`, `bench/README.md`, `.gitignore`.
+**Principle.** A throughput claim is reproducible or it is not a claim. **Ruled out.**
+Committing a large file (repo weight, and it goes stale as samples change); timing the
+samples directory (142 events cannot show sustained throughput or backpressure).
+
+## D32. kv strategy accepts several quote characters
+**Decision.** `quote` may list more than one byte; a value closes with the byte that
+opened it. **Anchor.** `KvConfig::quotes` in `crates/ulpf-parse/src/kv.rs`;
+`parsers/sonicwall.toml`. **Principle.** Pull complexity downward: SonicOS single-quotes
+exactly one field (`appName='General HTTPS'`) and double-quotes the rest; the alternative
+is every SonicWall author learning that one field splits on its space. **Ruled out.**
+A second `quote2` key (two keys for one concept).

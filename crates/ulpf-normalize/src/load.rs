@@ -94,6 +94,11 @@ fn merge(base: &mut MappingFile, add: MappingFile) {
             base.types.int.push(t);
         }
     }
+    for a in add.values.absent {
+        if !base.values.absent.contains(&a) {
+            base.values.absent.push(a);
+        }
+    }
     for e in add.enums {
         match base.enums.iter_mut().find(|b| b.field == e.field) {
             Some(b) => {

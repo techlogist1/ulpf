@@ -18,6 +18,8 @@ pub struct MappingFile {
     pub fields: BTreeMap<String, Vec<String>>,
     #[serde(default)]
     pub types: Types,
+    #[serde(default)]
+    pub values: Values,
     #[serde(default, rename = "enum", skip_serializing_if = "Vec::is_empty")]
     pub enums: Vec<EnumSpec>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -40,6 +42,17 @@ pub struct Schema {
 pub struct Types {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub int: Vec<String>,
+}
+
+/// Source values that carry no information.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Values {
+    /// Values meaning "not present" (`-`, `N/A`, empty), compared case-insensitively. A
+    /// field holding one is neither mapped nor reported as unmapped, and does not satisfy
+    /// a class condition.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub absent: Vec<String>,
 }
 
 /// Canonical values for one schema field, plus the sibling id field OCSF pairs with it.

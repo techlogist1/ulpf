@@ -42,12 +42,14 @@ impl ParseFailure {
     }
 }
 
-/// Outcome of the `[[sub]]` stage. `NoMatch` (a gate matched but no pattern did) and
-/// `Uncovered` (the definition has subs but none is gated for this event) are the 4am
-/// signals that a device emitted a message shape the definition has not seen.
+/// Outcome of the `[[sub]]` stage over every field that has subs. `NoMatch` (a gate
+/// matched but no strategy did) and `Uncovered` (a field with subs exists but none is
+/// gated for this event) are the 4am signals that a device emitted a message shape the
+/// definition has not seen. `NoMatch` wins over `Uncovered`, which wins over `Matched`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SubStatus {
-    /// The definition declares no subs.
+    /// The definition declares no subs, or none of the fields its subs re-parse is present
+    /// in this event (Junos structured logs carry no message part at all).
     #[default]
     NotApplicable,
     Matched,
@@ -75,7 +77,7 @@ impl CompiledStrategy {
             )?)),
             StrategyKind::Delimiter => {
                 let d = s.delimiter.as_deref().ok_or("delimiter strategy needs `delimiter`")?;
-                CompiledStrategy::Delimiter(DelimConfig::new(d, s.quote.as_deref(), &s.fields)?)
+                CompiledStrategy::Delimiter(DelimConfig::new(d, s.quote.as_deref(), &s.fields, s.rest.as_deref())?)
             }
             StrategyKind::Json => CompiledStrategy::Json,
             StrategyKind::Cef => CompiledStrategy::Cef,
@@ -129,6 +131,8 @@ struct CompiledTimestamp {
 
 struct CompiledSub {
     field: Vec<u8>,
+    /// Index of the first sub on the same field; subs on one field are alternatives.
+    group: usize,
     when: Vec<(Vec<u8>, OneOrMany)>,
     strategy: CompiledStrategy,
     constants: Vec<(Vec<u8>, Vec<u8>)>,
@@ -148,6 +152,7 @@ pub struct Parser {
 pub struct Scratch {
     locs: Vec<Option<CaptureLocations>>,
     join: Vec<u8>,
+    sub_state: Vec<u8>,
 }
 
 impl Scratch {
@@ -177,7 +182,8 @@ impl Parser {
         }
         let mut subs = Vec::new();
         for (i, s) in def.sub.iter().enumerate() {
-            subs.push(compile_sub(s).map_err(|e| format!("[[sub]] #{}: {e}", i + 1))?);
+            let group = def.sub[..i].iter().position(|p| p.field == s.field).unwrap_or(i);
+            subs.push(compile_sub(s, group).map_err(|e| format!("[[sub]] #{}: {e}", i + 1))?);
         }
         Ok(Parser { def, matcher, strategy, timestamps, subs })
     }
@@ -218,27 +224,46 @@ impl Parser {
         result
     }
 
+    /// Subs run in file order. Each field is re-parsed by at most one sub: the first
+    /// eligible one whose strategy matches it. A later sub may gate on fields an earlier
+    /// one produced (pfSense: the IP-version column decides how the tail is split).
     fn run_subs<'a>(&'a self, scratch: &mut Scratch, out: &mut Parsed<'a>) -> SubStatus {
-        let mut eligible = false;
+        // per field group: 0 field absent, 1 present but no sub gated, 2 gated sub failed, 3 matched
+        scratch.sub_state.clear();
+        scratch.sub_state.resize(self.subs.len(), 0);
         for sub in &self.subs {
-            if !sub.when.iter().all(|(k, v)| out.get(k).is_some_and(|val| v.contains(val))) {
+            if scratch.sub_state[sub.group] == 3 {
                 continue;
             }
             // Subs run on spans of the event only; an owned (unescaped/JSON) value cannot
             // be borrowed for the event's lifetime.
             let Some(Cow::Borrowed(input)) = out.get(&sub.field) else { continue };
             let input: &'a [u8] = input;
-            eligible = true;
+            if !sub.when.iter().all(|(k, v)| out.get(k).is_some_and(|val| v.contains(val))) {
+                scratch.sub_state[sub.group] = scratch.sub_state[sub.group].max(1);
+                continue;
+            }
             let mark = out.fields.len();
             if sub.strategy.apply(input, scratch, out).is_ok() {
                 for (k, v) in &sub.constants {
                     out.push(k.as_slice(), v.as_slice());
                 }
-                return SubStatus::Matched;
+                scratch.sub_state[sub.group] = 3;
+            } else {
+                out.fields.truncate(mark);
+                scratch.sub_state[sub.group] = 2;
             }
-            out.fields.truncate(mark);
         }
-        if eligible { SubStatus::NoMatch } else { SubStatus::Uncovered }
+        let state = &scratch.sub_state;
+        if state.contains(&2) {
+            SubStatus::NoMatch
+        } else if state.contains(&1) {
+            SubStatus::Uncovered
+        } else if state.contains(&3) {
+            SubStatus::Matched
+        } else {
+            SubStatus::NotApplicable
+        }
     }
 
     fn resolve_timestamp<'a>(&self, ctx: &Context, scratch: &mut Scratch, out: &mut Parsed<'a>) {
@@ -295,10 +320,11 @@ impl Parser {
     }
 }
 
-fn compile_sub(s: &Strategy) -> Result<CompiledSub, String> {
+fn compile_sub(s: &Strategy, group: usize) -> Result<CompiledSub, String> {
     let strategy = CompiledStrategy::compile(s, true)?;
     Ok(CompiledSub {
         field: s.field.as_deref().unwrap_or_default().as_bytes().to_vec(),
+        group,
         when: s.when.iter().map(|(k, v)| (k.as_bytes().to_vec(), v.clone())).collect(),
         strategy,
         constants: s.constants.iter().map(|(k, v)| (k.as_bytes().to_vec(), v.as_bytes().to_vec())).collect(),

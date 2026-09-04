@@ -1,5 +1,6 @@
 //! Delimiter strategy: positional columns. Short rows emit what is present; extra
-//! columns are named `column_N` (1-based) so nothing is dropped.
+//! columns are named `column_N` (1-based) so nothing is dropped, or, when `rest` is set,
+//! stay together as one unsplit span for a `[[sub]]` to split by the row's own type.
 
 use std::borrow::Cow;
 
@@ -10,10 +11,12 @@ pub(crate) struct DelimConfig {
     pub quote: Option<u8>,
     /// `None` entries are skipped columns (`_`).
     pub fields: Vec<Option<Vec<u8>>>,
+    /// Name for everything after the last named column, unsplit.
+    pub rest: Option<Vec<u8>>,
 }
 
 impl DelimConfig {
-    pub(crate) fn new(delimiter: &str, quote: Option<&str>, fields: &[String]) -> Result<Self, String> {
+    pub(crate) fn new(delimiter: &str, quote: Option<&str>, fields: &[String], rest: Option<&str>) -> Result<Self, String> {
         let delimiter = match delimiter {
             "\\t" | "tab" => b'\t',
             d if d.len() == 1 => d.as_bytes()[0],
@@ -28,15 +31,37 @@ impl DelimConfig {
             return Err("delimiter strategy needs a non-empty `fields` list".into());
         }
         let fields = fields.iter().map(|f| if f == "_" || f.is_empty() { None } else { Some(f.as_bytes().to_vec()) }).collect();
-        Ok(DelimConfig { delimiter, quote, fields })
+        let rest = match rest {
+            None | Some("") | Some("_") => None,
+            Some(r) => Some(r.as_bytes().to_vec()),
+        };
+        Ok(DelimConfig { delimiter, quote, fields, rest })
     }
 
-    /// Returns the number of columns found.
+    fn emit<'a>(&'a self, col: usize, value: &'a [u8], out: &mut Parsed<'a>) {
+        match self.fields.get(col) {
+            Some(Some(name)) => out.push(name.as_slice(), value),
+            Some(None) => {}
+            None => match &self.rest {
+                Some(rest) if col == self.fields.len() => out.push(rest.as_slice(), value),
+                _ => out.push(Cow::Owned(format!("column_{}", col + 1).into_bytes()), value),
+            },
+        }
+    }
+
+    /// Returns the number of columns found (the `rest` span counts as one).
     pub(crate) fn apply<'a>(&'a self, text: &'a [u8], out: &mut Parsed<'a>) -> usize {
         let n = text.len();
         let mut i = 0;
         let mut col = 0;
         loop {
+            if col == self.fields.len()
+                && let Some(rest) = &self.rest
+            {
+                out.push(rest.as_slice(), &text[i..]);
+                col += 1;
+                break;
+            }
             let (value, next): (&'a [u8], usize) = match self.quote {
                 Some(q) if i < n && text[i] == q => {
                     let mut k = i + 1;
@@ -55,11 +80,7 @@ impl DelimConfig {
                     (&text[i..end], end)
                 }
             };
-            match self.fields.get(col) {
-                Some(Some(name)) => out.push(name.as_slice(), value),
-                Some(None) => {}
-                None => out.push(Cow::Owned(format!("column_{}", col + 1).into_bytes()), value),
-            }
+            self.emit(col, value, out);
             col += 1;
             if next >= n {
                 break;
@@ -67,11 +88,7 @@ impl DelimConfig {
             i = next + 1;
             if i >= n {
                 // trailing delimiter: one final empty column
-                match self.fields.get(col) {
-                    Some(Some(name)) => out.push(name.as_slice(), &text[n..]),
-                    Some(None) => {}
-                    None => out.push(Cow::Owned(format!("column_{}", col + 1).into_bytes()), &text[n..]),
-                }
+                self.emit(col, &text[n..], out);
                 col += 1;
                 break;
             }

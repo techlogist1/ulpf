@@ -80,13 +80,17 @@ impl CompiledPattern {
         self.regex.capture_locations()
     }
 
-    /// Runs the pattern on `text`. On a match, pushes every named group as a field.
+    /// Runs the pattern on `text`. On a match, pushes every named group that captured
+    /// something as a field; an empty capture (`rest` with nothing left, `quoted` of `""`)
+    /// is the absence of a field, not a field with no value.
     pub(crate) fn apply<'a>(&'a self, text: &'a [u8], locs: &mut CaptureLocations, out: &mut Parsed<'a>) -> bool {
         if self.regex.captures_read(locs, text).is_none() {
             return false;
         }
         for (i, name) in self.names.iter().enumerate().skip(1) {
-            if let (Some(name), Some((s, e))) = (name, locs.get(i)) {
+            if let (Some(name), Some((s, e))) = (name, locs.get(i))
+                && s < e
+            {
                 out.push(name.as_slice(), &text[s..e]);
             }
         }

@@ -1,0 +1,45 @@
+# Juniper SRX (Junos) security logs. With `structured-data` every field is an RFC 5424
+# SD-PARAM (source-address="..."), which the syslog envelope exposes as fields; the
+# message part is empty. Without it, RT_FLOW writes positional text after the message
+# name. Source: Junos OS Security Flow Session logs and IDP logs field references
+# (RT_FLOW_SESSION_CREATE/CLOSE/DENY, IDP_ATTACK_LOG_EVENT).
+
+[parser]
+name = "juniper_srx"
+vendor = "Juniper"
+product = "SRX"
+
+[match]
+regex = 'junos@2636\.|RT_FLOW|RT_IDP|RT_UTM'
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "pattern"
+patterns = [
+  '{process:word}: {event:word}: {message:rest}',
+  '{message:rest}',
+]
+
+# Structured lines: the header time (ISO with zone). Unstructured lines: BSD header.
+
+# The NAT rule types are two words ("source rule", "destination rule", "static rule") or
+# N/A, so the slot syntax cannot split them unambiguously; these two use a raw regex.
+[[sub]]
+field = "message"
+when = { event = "RT_FLOW_SESSION_CREATE" }
+kind = "pattern"
+regex = 'session created (?P<src_ip>[^/ ]+)/(?P<src_port>\d+)->(?P<dst_ip>[^/ ]+)/(?P<dst_port>\d+) (?P<connection_tag>\S+) (?P<service_name>\S+) (?P<nat_src_ip>[^/ ]+)/(?P<nat_src_port>\d+)->(?P<nat_dst_ip>[^/ ]+)/(?P<nat_dst_port>\d+) (?P<nat_connection_tag>\S+) (?P<src_nat_rule_type>N/A|\S+ rule) (?P<src_nat_rule_name>\S+) (?P<dst_nat_rule_type>N/A|\S+ rule) (?P<dst_nat_rule_name>\S+) (?P<protocol_id>\d+) (?P<policy_name>\S+) (?P<src_zone>\S+) (?P<dst_zone>\S+) (?P<session_id>\d+) (?P<user>[^( ]+)\((?P<roles>[^)]*)\) (?P<interface>\S+) (?P<application>\S+) (?P<nested_application>\S+) (?P<encrypted>\S+)'
+
+[[sub]]
+field = "message"
+when = { event = "RT_FLOW_SESSION_CLOSE" }
+kind = "pattern"
+regex = 'session closed (?P<reason>[^:]+): (?P<src_ip>[^/ ]+)/(?P<src_port>\d+)->(?P<dst_ip>[^/ ]+)/(?P<dst_port>\d+) (?P<connection_tag>\S+) (?P<service_name>\S+) (?P<nat_src_ip>[^/ ]+)/(?P<nat_src_port>\d+)->(?P<nat_dst_ip>[^/ ]+)/(?P<nat_dst_port>\d+) (?P<nat_connection_tag>\S+) (?P<src_nat_rule_type>N/A|\S+ rule) (?P<src_nat_rule_name>\S+) (?P<dst_nat_rule_type>N/A|\S+ rule) (?P<dst_nat_rule_name>\S+) (?P<protocol_id>\d+) (?P<policy_name>\S+) (?P<src_zone>\S+) (?P<dst_zone>\S+) (?P<session_id>\d+) (?P<packets_from_client>\d+)\((?P<bytes_from_client>\d+)\) (?P<packets_from_server>\d+)\((?P<bytes_from_server>\d+)\) (?P<elapsed_time>\d+) (?P<application>\S+) (?P<nested_application>\S+) (?P<user>[^( ]+)\((?P<roles>[^)]*)\) (?P<interface>\S+) (?P<encrypted>\S+)'
+
+[[sub]]
+field = "message"
+when = { event = "RT_FLOW_SESSION_DENY" }
+kind = "pattern"
+pattern = 'session denied {src_ip:ip}/{src_port:int}->{dst_ip:ip}/{dst_port:int} {connection_tag:word} {service_name:word} {protocol_id:int}({icmp_type:int}) {policy_name:word} {src_zone:word} {dst_zone:word} {application:word} {nested_application:word} {user:word}({roles:word}) {interface:word} {encrypted:word} {reason:rest}'

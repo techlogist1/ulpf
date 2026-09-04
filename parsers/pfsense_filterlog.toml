@@ -1,0 +1,121 @@
+# pfSense / OPNsense filterlog: CSV whose tail layout depends on columns near the front
+# (IP version, then protocol, then ICMP type). Source: Netgate docs, "Raw Filter Log
+# Format" (docs.netgate.com/pfsense/en/latest/monitoring/logs/raw-filter-format.html).
+# pfSense 2.5+ frames the line as RFC 5424 (`filterlog 12345 - -`), older releases as
+# RFC 3164 (`filterlog[12345]:`); both end in the same CSV.
+
+[parser]
+name = "pfsense_filterlog"
+vendor = "Netgate"
+product = "pfSense"
+
+[match]
+contains = ["filterlog"]
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "pattern"
+patterns = [
+  'filterlog[{pid:int}]: {csv:rest}',
+  '{csv:rest}',
+]
+
+# No [[timestamp]]: the syslog header carries the only time.
+
+# Common columns, then the IP-version-specific tail.
+[[sub]]
+field = "csv"
+kind = "delimiter"
+delimiter = ","
+fields = ["rulenum", "subrulenum", "anchor", "tracker", "interface", "reason", "action", "direction", "ipversion"]
+rest = "ip_fields"
+
+[[sub]]
+field = "ip_fields"
+when = { ipversion = "4" }
+kind = "delimiter"
+delimiter = ","
+fields = ["tos", "ecn", "ttl", "id", "offset", "flags", "protoid", "proto", "length", "src_ip", "dst_ip"]
+rest = "proto_fields"
+
+[[sub]]
+field = "ip_fields"
+when = { ipversion = "6" }
+kind = "delimiter"
+delimiter = ","
+fields = ["class", "flowlabel", "hoplimit", "proto", "protoid", "length", "src_ip", "dst_ip"]
+rest = "proto_fields"
+
+[[sub]]
+field = "proto_fields"
+when = { proto = "tcp" }
+kind = "delimiter"
+delimiter = ","
+fields = ["src_port", "dst_port", "datalen", "tcp_flags", "seq", "ack", "window", "urg", "options"]
+
+[[sub]]
+field = "proto_fields"
+when = { proto = "udp" }
+kind = "delimiter"
+delimiter = ","
+fields = ["src_port", "dst_port", "datalen"]
+
+[[sub]]
+field = "proto_fields"
+when = { proto = ["icmp", "ipv6-icmp"] }
+kind = "delimiter"
+delimiter = ","
+fields = ["icmp_type"]
+rest = "icmp_fields"
+
+[[sub]]
+field = "proto_fields"
+when = { proto = "carp" }
+kind = "delimiter"
+delimiter = ","
+fields = ["carp_type", "carp_ttl", "vhid", "carp_version", "advbase", "advskew"]
+
+# ICMP payload columns by type (echo, timestamp, unreachable variants, others).
+[[sub]]
+field = "icmp_fields"
+when = { icmp_type = ["request", "reply", "tstamp"] }
+kind = "delimiter"
+delimiter = ","
+fields = ["icmp_id", "icmp_seq"]
+
+[[sub]]
+field = "icmp_fields"
+when = { icmp_type = "tstampreply" }
+kind = "delimiter"
+delimiter = ","
+fields = ["icmp_id", "icmp_seq", "icmp_otime", "icmp_rtime", "icmp_ttime"]
+
+[[sub]]
+field = "icmp_fields"
+when = { icmp_type = "unreachproto" }
+kind = "delimiter"
+delimiter = ","
+fields = ["icmp_dst_ip", "icmp_protoid"]
+
+[[sub]]
+field = "icmp_fields"
+when = { icmp_type = "unreachport" }
+kind = "delimiter"
+delimiter = ","
+fields = ["icmp_dst_ip", "icmp_protoid", "icmp_port"]
+
+[[sub]]
+field = "icmp_fields"
+when = { icmp_type = "needfrag" }
+kind = "delimiter"
+delimiter = ","
+fields = ["icmp_dst_ip", "icmp_mtu"]
+
+[[sub]]
+field = "icmp_fields"
+when = { icmp_type = ["unreach", "timexceed", "paramprob", "redirect", "maskreply"] }
+kind = "delimiter"
+delimiter = ","
+fields = ["icmp_description"]

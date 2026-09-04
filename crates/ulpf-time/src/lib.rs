@@ -782,6 +782,14 @@ fn resolve(p: Parts, ctx: &Context) -> Result<Timestamp, TimeError> {
         .ok_or(TimeError::OutOfRange)
 }
 
+/// Zone abbreviations `parse` recognises, longest first so a regex alternation built
+/// from them prefers `CEST` over `CET`.
+pub fn zone_names() -> Vec<&'static str> {
+    let mut names: Vec<&str> = ZONES.iter().map(|z| z.0).collect();
+    names.sort_by(|a, b| b.len().cmp(&a.len()).then(a.cmp(b)));
+    names
+}
+
 pub fn parse(input: &[u8], format: &Format, ctx: &Context) -> Result<Timestamp, TimeError> {
     let s = std::str::from_utf8(input)
         .map_err(|_| TimeError::NoMatch)?

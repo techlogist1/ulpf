@@ -47,15 +47,21 @@ constants = { direction = "outbound" }
 year, or an ISO timestamp, then a hostname). Cisco's ` : ` after the hostname is
 skipped. Fields produced: `syslog_pri`, `syslog_facility`, `syslog_severity`,
 `syslog_timestamp`, `syslog_host`, and for 5424 `syslog_app`, `syslog_procid`,
-`syslog_msgid`, `syslog_sd`. Fortinet-style bodies that start with `date=` keep their
-whole body because no timestamp precedes them.
+`syslog_msgid`, `syslog_sd`. Every RFC 5424 structured-data parameter also becomes a
+field under its own name (`source-address="10.0.0.5"` is the field `source-address`), so
+a device that puts the whole event there (Junos) needs no strategy beyond a catch-all
+`{message:rest}`. Brackets that are not valid structured data (Check Point's
+`[key:"value"; ...]`, a truncated element) stay in the message for the strategy; a 5424
+timestamp written with a space (`2026-09-04 10:15:20`, older Check Point exporters) is
+accepted. Fortinet-style bodies that start with `date=` keep their whole body because no
+timestamp precedes them.
 
 ## Strategies
 
 | kind | keys | notes |
 |---|---|---|
-| `kv` | `key_value_separator` (default `=`), `pair_separator` (default space; a space also means tab/CR/LF), `quote` (default `"`) | Bare tokens without a separator are skipped. `\"` inside quotes is unescaped. Check Point: separator `:`, pair `"; "`. |
-| `delimiter` | `delimiter` (one byte or `tab`), `quote` (optional), `fields` (column names in order, `_` skips) | Short rows emit what exists; extra columns become `column_N`. |
+| `kv` | `key_value_separator` (default `=`), `pair_separator` (default space; a space also means tab/CR/LF), `quote` (default `"`; may list several, `"'`, each closing itself) | Bare tokens without a separator are skipped. `\"` inside quotes is unescaped. Check Point: separator `:`, pair `"; "`. |
+| `delimiter` | `delimiter` (one byte or `tab`), `quote` (optional), `fields` (column names in order, `_` skips), `rest` (optional name for everything after the last named column, unsplit) | Short rows emit what exists; extra columns become `column_N`. With `rest`, a `[[sub]]` gated on an earlier column splits the tail by the row's own type (pfSense, PAN-OS). |
 | `json` | none | Nested keys flatten with `.`; arrays index from 0 (`tags.0`). Nulls are dropped. |
 | `cef` | none | Header fields: `cef_version`, `device_vendor`, `device_product`, `device_version`, `signature_id`, `name`, `severity`; extension pairs as-is. |
 | `leef` | none | LEEF 1.0 (tab) and 2.0 (declared delimiter, `xHH` form allowed). |
@@ -81,8 +87,14 @@ and tabs, because real devices jitter their spacing (`server =  10.0.0.2`).
 | `port` | 1–5 digits |
 | `hex` | optional `0x`, hex digits |
 | `mac` | `aa:bb:cc:dd:ee:ff` or dashes |
-| `timestamp` | syslog, ISO 8601 or epoch shapes |
+| `timestamp` | the shapes the time module reads: syslog/ctime (optional weekday, Cisco IOS `*`/`.` clock mark, fraction, year before or after the time, a known zone name or a numeric offset), ISO 8601, epoch |
 | `quoted` | a double-quoted string; the field excludes the quotes |
+
+A slot that captures nothing (`rest` with nothing left, `quoted` of `""`) emits no field:
+the absence of text is the absence of a field. When the slot syntax cannot split a
+message unambiguously (Junos writes `source rule nat-out N/A N/A`, two-word tokens next
+to one-word ones), use `regex` with `(?P<name>...)` groups instead; the file stays the
+same kind of file.
 
 The same syntax is what the inference engine emits (`Template::to_pattern`), so a
 generated file and a hand-written one are the same kind of file.
@@ -100,12 +112,18 @@ flag, and the original text is kept. Policies: `docs/timestamps.md`.
 ## Sub-parsers
 
 `[[sub]]` re-parses one already-extracted field (usually `message`) with any strategy.
-`when` lists field/value gates; a value may be a string or a list. Subs are tried in
-file order; the first whose strategy matches wins and adds its `constants`. The event is
-always emitted with its top-level fields; two counters tell you when the definition is
-behind the device: `sub_no_match` (a gate matched but no pattern did — a pattern bug or a
-truncated line) and `sub_uncovered` (subs exist but none is gated for this event — a
-message id you have not written yet).
+`when` lists field/value gates; a value may be a string or a list; a sub with no `when`
+applies to every event. Subs run in file order, and each field is re-parsed by at most
+one sub: the first eligible one whose strategy matches it, which then adds its
+`constants`. Subs on different fields all run (SonicWall splits `src`, `dst` and `proto`
+in one definition), and a later sub may gate on a field an earlier sub produced (pfSense
+splits the CSV, then the IP-version tail, then the protocol tail). The event is always
+emitted with its top-level fields. The status, per event and as counters, is the worst
+outcome over the fields that have subs: `sub_no_match` (a gated sub ran and its strategy
+failed: a pattern bug, a truncated line, or, for ungated subs, a message you have not
+modelled) beats `sub_uncovered` (a field with subs is present but no sub is gated for it:
+a message id you have not written yet) beats `matched`; when none of the sub fields is
+present at all the status is `not_applicable`, the same as a definition without subs.
 
 ## Naming fields
 
