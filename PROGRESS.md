@@ -14,12 +14,12 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
       identically to a hand-written one.
 - [ ] 4. 10–12 parser definitions for common perimeter families, each with paired
       sample and fixture asserting parsed + normalized output.
-- [ ] 5. Dedicated timestamp module handles the sample formats (syslog no-year,
+- [x] 5. Dedicated timestamp module handles the sample formats (syslog no-year,
       no-timezone) with its own corpus; every policy decision explicit and recorded;
       original string retained on the event.
 - [ ] 6. Full test suite passes, clean build, Dockerfile producing a static build has
       been built successfully at least once.
-- [ ] 7. Throwaway inference prototype run on unseen samples; honest report in docs on
+- [x] 7. Throwaway inference prototype run on unseen samples; honest report in docs on
       whether prefix-tree clustering produced usable templates.
 - [ ] 8. CLAUDE.md, this file, and docs/DECISIONS.md current; every milestone
       committed and pushed.
@@ -46,10 +46,10 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] scaffold workspace (5 crates: time, store, parse, normalize, cli)
 - [x] framing (lossless, multi-line by indentation, chunk-safe) — 3 tests
 - [x] raw store + index + round-trip tests — reopen, crash recovery, digest verify
-- [ ] two hand-written parsers (Fortinet KV, Cisco ASA pattern) → format freeze
-- [ ] parser format + runtime, four strategies
-- [ ] Template → definition round trip test
-- [ ] signature detection
+- [x] two hand-written parsers (Fortinet KV, Cisco ASA pattern) → format FROZEN (docs/parser-format.md)
+- [x] parser format + runtime, four strategies (kv, delimiter, json/cef/leef, pattern) — 15 tests
+- [x] Template → definition round trip test (crates/ulpf-parse/tests/roundtrip.rs)
+- [x] signature detection (Registry::detect with per-source hint)
 - [ ] mapping stage + OCSF subset mapping
 - [ ] JSON Lines output
 - [ ] throughput measurement
@@ -64,8 +64,9 @@ other or with the spine (time crate has a fixed interface; prototype lives in
 `scratch/`, outside the workspace). Fewer workers would serialise ~2h of independent
 work behind the spine. Each returns: files written, test counts pass/fail, decisions
 made, uncertainties.
-- [ ] ulpf-time worker
-- [ ] inference prototype worker → docs/inference-prototype-report.md
+- [x] ulpf-time worker — 118-case corpus + 4 unit tests, clippy clean, verified by lead's `cargo test --workspace`; policies D8–D12
+- [x] inference prototype worker → docs/inference-prototype-report.md (verdict: correct typed templates for fixed-layout lines, 61–71% line coverage, but fragments optional fields; usable only as a candidate generator). Prototype code deleted as required.
+- Tier note: both ran on the top tier; dispatched before the tier rule arrived. All later workers: haiku/low for mechanical work.
 
 ### Fan-out 2 (after format freeze + fixture harness)
 Split: parser-definition workers by device family (3–4 each) plus one bench-file
@@ -78,5 +79,5 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
 (none yet)
 
 ## Next action
-Hand-write parsers/fortinet_fortigate.toml and parsers/cisco_asa.toml with samples, then
-build ulpf-parse around what they need.
+Build ulpf-normalize (mappings/ocsf.toml, canonical values, class rules) and the JSON Lines
+output, then the engine + CLI in crates/ulpf. Then the fixture harness, then fan-out 2.

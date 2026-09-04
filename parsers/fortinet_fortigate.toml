@@ -1,0 +1,34 @@
+# Fortinet FortiGate, FortiOS 6.x/7.x syslog in the default key=value format.
+# Sources: FortiOS Log Reference (traffic / utm / event log fields).
+# Values may be quoted or bare; msg="..." may contain spaces and escaped quotes.
+
+[parser]
+name = "fortinet_fortigate"
+vendor = "Fortinet"
+product = "FortiGate"
+
+[match]
+contains = ["devname=", "logid="]
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "kv"
+key_value_separator = "="
+pair_separator = " "
+quote = '"'
+
+# eventtime is epoch nanoseconds on FortiOS 6.2+ and epoch seconds on 6.0; "auto"
+# picks the unit by magnitude. date/time/tz are the fallback for older firmware.
+[[timestamp]]
+field = "eventtime"
+format = "auto"
+
+[[timestamp]]
+fields = ["date", "time", "tz"]
+format = "%Y-%m-%d %H:%M:%S %z"
+
+[[timestamp]]
+fields = ["date", "time"]
+format = "%Y-%m-%d %H:%M:%S"

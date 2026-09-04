@@ -72,3 +72,124 @@ index entry is ignored. No record that was ever handed out as a `RawId` is touch
 that were never a record. **Ruled out.** Write-ahead journaling (a second file format for a
 case a fixed-width index already resolves); refusing to open a torn store (operator
 intervention at 4am for a routine crash).
+
+## D8. No-year timestamps take the receipt year in the resolved zone, with a 7-day rollover
+**Decision.** A timestamp with no year (BSD syslog, Cisco IOS default, Squid-relayed ASA)
+takes the year of the receipt time *after converting receipt to the timestamp's resolved
+offset*; if that instant lands more than 7 days after receipt, the previous year is used.
+A Feb 29 the receipt year lacks also falls back to the previous year. Result flagged
+`year_assumed`. **Anchor.** `crates/ulpf-time/src/lib.rs` (`resolve`, `YEAR_ROLLOVER_SLACK`).
+**Principle.** Define the error out of existence with a deterministic rule the engine owns,
+and expose the assumption as data (a flag), not a log line; receipt time (not wall clock)
+keeps re-runs reproducible. **Ruled out.** Receipt year unconditionally (December logs
+replayed in January land a year late). Rejecting no-year input (rejects the single most
+common perimeter format). Wall-clock "now" (non-reproducible across replays).
+
+## D9. No zone means `Context::default_offset_secs`, a fixed offset, never a region
+**Decision.** A timestamp with no zone information gets the caller's fixed default offset
+and the flag `tz_assumed`. The context carries an offset in seconds, not a zone name.
+**Anchor.** `crates/ulpf-time/src/lib.rs` (`resolve`, `Zone::None`, `Context`).
+**Principle.** A fixed offset is arithmetic; a region is a database (tzdata) and therefore a
+dependency plus DST rules that change. The operator sets one offset per source. **Ruled
+out.** Silently treating no-zone as UTC (wrong for every on-prem device and invisible
+afterwards). Shipping tzdata/`chrono-tz` (a dependency for a static binary, and DST
+guessing produces confidently wrong instants around transitions).
+
+## D10. Zone abbreviations: fixed table, documented picks for ambiguous names, flags for both
+**Decision.** ~50 abbreviations map to fixed offsets (table in `docs/timestamps.md`).
+Unambiguous names apply with no flag. IST, CST, CDT, BST, AST, GST apply the documented
+pick (India, US Central, US Central, British Summer, Atlantic, Gulf) and flag
+`zone_name_ambiguous`. Unknown names apply the default offset and flag `zone_name_unknown`.
+Names are 1–5 letters; a longer alphabetic tail (a hostname) is `no_match`, not a zone.
+**Anchor.** `crates/ulpf-time/src/lib.rs` (`ZONES`, `Cur::zone_name`, `resolve`).
+**Principle.** Abbreviations are not identifiers; the parser records what it guessed rather
+than pretending certainty, so a later stage can weight or override. **Ruled out.**
+Rejecting ambiguous names (drops the timestamp for the Sophos/Cisco sites most likely to
+use IST/CST). Guessing by proximity to the default offset (unexplainable results).
+A per-source override table (belongs in the caller's Context if a real sample needs it).
+
+## D11. Fractional seconds beyond nine digits are truncated, not rejected
+**Decision.** Any number of fraction digits is accepted; digit ten onward is dropped. Epoch
+inputs likewise truncate below the unit's nanosecond resolution.
+**Anchor.** `crates/ulpf-time/src/lib.rs` (`Cur::fraction`, `epoch`).
+**Principle.** Precision beyond the output type is not an error in the input. **Ruled out.**
+Rejecting (a log tool that drops an event over a tenth decimal). Rounding (can carry into
+the next second and needs a renormalisation pass for nothing).
+
+## D12. Range: civil year 1970..=9999, epoch nanos in i64, impossible dates are `out_of_range`
+**Decision.** Year < 1970 or > 9999, invalid day-of-month (Feb 30, Feb 29 in a non-leap
+year), hour 24, month 13, and any instant past 2262-04-11T23:47:16Z (i64 nanos) return
+`TimeError::OutOfRange`, distinct from `NoMatch`. Second 60 is accepted and rolls over.
+A syntactic match with an impossible date is never retried under another format.
+**Anchor.** `crates/ulpf-time/src/lib.rs` (`epoch_from_civil`, `resolve`, `TimeError`).
+**Principle.** Errors as values with a distinct reason: `out_of_range` counts separately in
+Metrics, so a device with a broken clock shows up as its own number. **Ruled out.**
+Clamping Feb 30 to Mar 1 like C `mktime` (fabricates an instant and hides the device bug).
+i128 or a (secs, nanos) pair for post-2262 (no perimeter log carries such a year; i64 is
+what the rest of the pipeline stores and what `epoch_millis` needs).
+
+## D13. Parser definitions are TOML with one flat `Strategy` struct for `[strategy]` and `[[sub]]`
+**Decision.** TOML, `deny_unknown_fields` on every table. A single flat `Strategy` struct
+(`kind` plus every strategy's optional keys) serves both the top-level strategy and each
+sub-parser; keys that do not belong to the `kind`, and sub-only keys at top level, are
+rejected when the definition compiles. **Anchor.** `crates/ulpf-parse/src/def.rs`
+(`Strategy`, `Strategy::validate`). **Principle.** Structural prevention over
+documentation: a typo or an output-schema key cannot load. Consistency: a sub is written
+exactly like a strategy. **Ruled out.** An internally-tagged enum with `#[serde(flatten)]`
+in the sub table — serde cannot combine `flatten` with `deny_unknown_fields`, so either
+typos pass silently or subs need a nested `[sub.strategy]` table humans would hate. YAML
+or JSON definitions (JSON has no comments; YAML's indentation is a 3am foot-gun and
+machine emission needs a second serializer).
+
+## D14. Pattern strategy: `{name:type}` slots compiled to one bytes regex; `Template` is the single syntax authority
+**Decision.** Patterns are constant text with typed slots; `Template::from_pattern` /
+`to_pattern` is a bijection, and the compiler goes through `Template`, so anything the
+inference engine can represent is loadable by construction. A raw `regex` key remains as
+an escape hatch. Spaces in constants match runs of spaces/tabs. **Anchor.**
+`crates/ulpf-parse/src/template.rs`, `crates/ulpf-parse/src/pattern.rs`; proof in
+`crates/ulpf-parse/tests/roundtrip.rs`. **Principle.** Deep module: one syntax, one
+compiler, human- and machine-writable. **Ruled out.** Raw regex as the primary format
+(humans misplace escapes; inference would need a regex-to-template parser for the UI);
+exact whitespace matching (Cisco ASA's documented `server =  10.0.0.2` double space breaks
+it).
+
+## D15. Parsed fields are `Cow<'a, [u8]>` borrowed from the event; per-thread `Scratch` holds regex capture buffers
+**Decision.** `Parsed` holds `Cow` key/value pairs referencing the memory-mapped event
+(or the definition, for constants). Only unescaping and JSON flattening allocate. Regex
+`CaptureLocations` live in a per-thread `Scratch`, grown on first use. **Anchor.**
+`crates/ulpf-parse/src/lib.rs` (`Field`, `Parsed`), `crates/ulpf-parse/src/compile.rs`
+(`Scratch`). **Principle.** Zero-copy hot path as a design constraint, measured by the
+CLI's throughput number. **Ruled out.** Owned `String` fields (an allocation per field
+per event); a custom span arena with three source tags (more code for the same borrow
+the compiler already checks).
+
+## D16. Syslog envelope is a lenient, format-agnostic pre-step, not a strategy
+**Decision.** `[envelope] syslog = true` strips `<pri>` and a 3164/5424 header with every
+part optional, emitting `syslog_*` fields; the hostname is consumed only after a
+timestamp was found, so Fortinet's `date=` body is left whole. **Anchor.**
+`crates/ulpf-parse/src/envelope.rs`. **Principle.** Pull complexity downward: relays add
+and strip headers unpredictably; every definition would otherwise re-encode the same
+optional header regex. **Ruled out.** Requiring authors to include the header in their
+pattern (twelve copies of one regex); strict RFC parsing (rejects the ASA `host : %ASA`
+form and headerless lines that real relays produce).
+
+## D17. Sub-parsers gated by `when`, first match wins, non-match is a counter not an error
+**Decision.** `[[sub]]` runs a strategy on one field when the listed gate fields match;
+the first matching sub adds its `constants`. Eligible-but-unmatched sets `SubStatus::NoMatch`,
+counted by the engine; the event is still emitted with its top-level fields. **Anchor.**
+`Parser::run_subs` in `crates/ulpf-parse/src/compile.rs`. **Principle.** Define errors out
+of existence: an unseen message shape is data about the device, not a failure of the
+event. Observability: `sub_no_match` on screen is the prompt to write the next pattern.
+**Ruled out.** One definition file per message id (Cisco ASA alone has hundreds; the
+matcher would run hundreds of times per event); slot types that recurse into strategies
+(`{body:kv}`), which is the same power with a less explicit gate.
+
+## D18. Timestamp extraction belongs to the parser definition, not the mapping
+**Decision.** `[[timestamp]]` candidates (field or joined fields plus a format) live in
+the parser file; `Parsed` carries one typed timestamp with policy flags and the original
+text; the syslog header time is the automatic fallback. **Anchor.**
+`Parser::resolve_timestamp` in `crates/ulpf-parse/src/compile.rs`. **Principle.** Knowing
+that FortiGate writes `date`+`time` with a separate `tz` is vendor knowledge; the mapping
+stage receives an instant and stays vendor-free. **Ruled out.** Mapping-side time
+extraction (every vendor's layout would leak into the schema file); receipt time only
+(loses the device clock, which is the whole point of a timestamp module).

@@ -1,0 +1,89 @@
+# Cisco ASA syslog. Header: %ASA-<severity>-<message_id>: <message>.
+# Sources: Cisco Secure Firewall ASA Series Syslog Messages guide (message ids below).
+# Per-message patterns run on the "message" field; the first matching sub wins.
+# Slot naming for connection messages follows the vendor's real/mapped vocabulary; the
+# src/dst assignment is direction-aware, which is why inbound and outbound are two subs.
+
+[parser]
+name = "cisco_asa"
+vendor = "Cisco"
+product = "ASA"
+
+[match]
+contains = ["%ASA-"]
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "pattern"
+pattern = '%ASA-{severity:int}-{msg_id:int}: {message:rest}'
+
+# No [[timestamp]] declared: the syslog envelope timestamp is used automatically.
+
+[[sub]]
+field = "message"
+when = { msg_id = ["302013", "302015"] }
+kind = "pattern"
+pattern = 'Built outbound {protocol:word} connection {connection_id:int} for {dst_interface:word}:{dst_ip:ip}/{dst_port:int} ({dst_mapped_ip:ip}/{dst_mapped_port:int}) to {src_interface:word}:{src_ip:ip}/{src_port:int} ({src_mapped_ip:ip}/{src_mapped_port:int}){_:rest}'
+constants = { direction = "outbound" }
+
+[[sub]]
+field = "message"
+when = { msg_id = ["302013", "302015"] }
+kind = "pattern"
+pattern = 'Built inbound {protocol:word} connection {connection_id:int} for {src_interface:word}:{src_ip:ip}/{src_port:int} ({src_mapped_ip:ip}/{src_mapped_port:int}) to {dst_interface:word}:{dst_ip:ip}/{dst_port:int} ({dst_mapped_ip:ip}/{dst_mapped_port:int}){_:rest}'
+constants = { direction = "inbound" }
+
+# Teardown carries no direction. The first pair is the lower-security side, which on a
+# perimeter ASA is the destination of the common outbound case.
+[[sub]]
+field = "message"
+when = { msg_id = ["302014", "302016"] }
+kind = "pattern"
+pattern = 'Teardown {protocol:word} connection {connection_id:int} for {dst_interface:word}:{dst_ip:ip}/{dst_port:int} to {src_interface:word}:{src_ip:ip}/{src_port:int} duration {duration:word} bytes {bytes:int}{teardown_reason:rest}'
+
+[[sub]]
+field = "message"
+when = { msg_id = "106023" }
+kind = "pattern"
+pattern = 'Deny {protocol:word} src {src_interface:word}:{src_ip:ip}/{src_port:int} dst {dst_interface:word}:{dst_ip:ip}/{dst_port:int} by access-group "{acl:text}" [{hash_1:hex}, {hash_2:hex}]'
+constants = { action = "deny" }
+
+[[sub]]
+field = "message"
+when = { msg_id = "106023" }
+kind = "pattern"
+pattern = 'Deny {protocol:word} src {src_interface:word}:{src_ip:ip} dst {dst_interface:word}:{dst_ip:ip} (type {icmp_type:int}, code {icmp_code:int}) by access-group "{acl:text}" [{hash_1:hex}, {hash_2:hex}]'
+constants = { action = "deny" }
+
+[[sub]]
+field = "message"
+when = { msg_id = "106100" }
+kind = "pattern"
+pattern = 'access-list {acl:word} {action:word} {protocol:word} {src_interface:word}/{src_ip:ip}({src_port:int}) -> {dst_interface:word}/{dst_ip:ip}({dst_port:int}) hit-cnt {hit_count:int} {hit_interval:text} [{hash_1:hex}, {hash_2:hex}]'
+
+[[sub]]
+field = "message"
+when = { msg_id = "305011" }
+kind = "pattern"
+pattern = 'Built {xlate_type:word} {protocol:word} translation from {src_interface:word}:{src_ip:ip}/{src_port:int} to {mapped_interface:word}:{mapped_ip:ip}/{mapped_port:int}'
+
+[[sub]]
+field = "message"
+when = { msg_id = "113004" }
+kind = "pattern"
+pattern = 'AAA user {aaa_type:word} {aaa_status:word} : server = {server_ip:ip} : user = {user:word}'
+
+[[sub]]
+field = "message"
+when = { msg_id = "710003" }
+kind = "pattern"
+pattern = '{protocol:word} access denied by ACL from {src_ip:ip}/{src_port:int} to {dst_interface:word}:{dst_ip:ip}/{dst_port:int}'
+constants = { action = "deny" }
+
+[[sub]]
+field = "message"
+when = { msg_id = "722051" }
+kind = "pattern"
+pattern = 'Group <{group:text}> User <{user:text}> IP <{src_ip:ip}> IPv4 Address <{assigned_ip:ip}> IPv6 address <{assigned_ipv6:text}> assigned to session'
