@@ -220,6 +220,7 @@ fn collapse(pc: Vec<Col>, mt: &[Tok<'_>], m: usize, n: usize, out: &mut Vec<Col>
     out.push(Col { kind: Kind::Word, text: pc[0].text.clone(), present, variable: true, region: true, values, optional: false });
 }
 
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Params {
     /// Word-level LCS similarity a line needs against a cluster's seed to join it. Loose
     /// on purpose: free-text tails must not fragment, and `enum_split` keeps dispositions
@@ -243,12 +244,13 @@ impl Default for Params {
     }
 }
 
-/// Decides optional columns, drops junk, forces rare absences to required. Returns the
-/// surviving columns and the decisions taken, as text for the evidence.
+/// Members below this count are damage or junk, not evidence of an optional field.
 pub fn rare_count(n: usize, params: &Params) -> usize {
     2.max((n as f64 * params.rare_share).ceil() as usize)
 }
 
+/// Decides optional columns, drops junk, forces rare absences to required. Returns the
+/// surviving columns and the decisions taken, as text for the evidence.
 pub fn presence_rules(cols: Vec<Col>, n: usize, params: &Params) -> (Vec<Col>, Vec<String>) {
     let rare = rare_count(n, params);
     let mut out = Vec::with_capacity(cols.len());
@@ -437,12 +439,12 @@ pub fn keyword_like(v: &[u8]) -> bool {
     !v.is_empty() && v.iter().all(u8::is_ascii_alphabetic)
 }
 
-/// The first slot that is really a keyword: few distinct values, all plain words, not
-/// named by an identity key, each seen at least twice. Returns the column and the member
-/// groups per value (members without the column form the `absent` group).
 /// `(value, member indices)` per distinct value of a keyword slot.
 pub type Groups = Vec<(Vec<u8>, Vec<usize>)>;
 
+/// The first slot that is really a keyword: few distinct values, all plain words, not
+/// named by an identity key, each seen at least twice. Returns the column and the member
+/// groups per value (members without the column form the `absent` group).
 pub fn enum_split(cols: &[Col], params: &Params) -> Option<(usize, Groups)> {
     for (idx, c) in cols.iter().enumerate() {
         if !c.is_slot() || c.region || !is_wordish_slot(c) {

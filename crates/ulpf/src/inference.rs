@@ -1,6 +1,6 @@
 //! Per-source buffers of unknown events and the thread that turns them into proposals.
-//! Workers copy an event here only when no parser claimed it (the one allocation the
-//! unknown path pays); the buffer is bounded, and overflow is counted, never a dropped
+//! Workers hand over a batch's unclaimed events in one call (one lock per batch, one
+//! copy per event); the buffer is bounded, and overflow is counted, never a dropped
 //! event: the raw store and the output already have it. In `live` mode a source that
 //! reaches the threshold (then double it, and so on) is clustered as it arrives; a
 //! source that goes quiet with a few lines is clustered after `idle`. In batch mode the
@@ -64,21 +64,35 @@ impl Inference {
         self.threshold > 0
     }
 
-    /// An event no parser claimed. Buffers a copy; a full buffer counts and drops the copy.
-    pub fn offer(&self, source: &str, raw_id: u64, event: &[u8], metrics: &Metrics) {
-        if !self.enabled() {
+    /// The events of one batch that no parser claimed. One lock and one map lookup per
+    /// batch; each event is copied once, or counted when the buffer is full.
+    pub fn offer_batch(&self, source: &str, events: &[(u64, &[u8])], metrics: &Metrics) {
+        if !self.enabled() || events.is_empty() {
             return;
         }
         let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
         let threshold = self.threshold;
-        let buf = st.sources.entry(source.to_string()).or_insert_with(|| Buffer { lines: Vec::new(), last_added: Instant::now(), next_run: threshold, ran_at: 0 });
-        if buf.lines.len() >= self.max_buffer {
-            metrics.infer_buffer_full.fetch_add(1, Relaxed);
-            return;
+        if !st.sources.contains_key(source) {
+            st.sources.insert(source.to_string(), Buffer { lines: Vec::new(), last_added: Instant::now(), next_run: threshold, ran_at: 0 });
         }
-        buf.lines.push((raw_id, event.to_vec()));
-        buf.last_added = Instant::now();
-        metrics.infer_buffered.fetch_add(1, Relaxed);
+        let buf = st.sources.get_mut(source).expect("inserted above");
+        let mut added = 0u64;
+        let mut full = 0u64;
+        for (raw_id, event) in events {
+            if buf.lines.len() >= self.max_buffer {
+                full += 1;
+                continue;
+            }
+            buf.lines.push((*raw_id, event.to_vec()));
+            added += 1;
+        }
+        if added > 0 {
+            buf.last_added = Instant::now();
+            metrics.infer_buffered.fetch_add(added, Relaxed);
+        }
+        if full > 0 {
+            metrics.infer_buffer_full.fetch_add(full, Relaxed);
+        }
         if self.live && buf.lines.len() >= buf.next_run {
             self.wake.notify_one();
         }

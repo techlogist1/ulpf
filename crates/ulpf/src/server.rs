@@ -38,14 +38,17 @@ struct App {
 const FRAME_TTL: Duration = Duration::from_millis(200);
 
 fn cached_frame(app: &App) -> Value {
-    let mut slot = app.frame.lock().unwrap_or_else(|e| e.into_inner());
-    if let Some((at, v)) = slot.as_ref()
-        && at.elapsed() < FRAME_TTL
     {
-        return v.clone();
+        let slot = app.frame.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some((at, v)) = slot.as_ref()
+            && at.elapsed() < FRAME_TTL
+        {
+            return v.clone();
+        }
     }
+    // computed outside the lock: two clients racing at the boundary both compute, neither waits
     let v = metrics_frame(&app.live);
-    *slot = Some((std::time::Instant::now(), v.clone()));
+    *app.frame.lock().unwrap_or_else(|e| e.into_inner()) = Some((std::time::Instant::now(), v.clone()));
     v
 }
 
@@ -177,7 +180,7 @@ fn parsers_json(live: &Live) -> Value {
                     "priority": d.matcher.priority,
                     "strategy": d.strategy.kind.name(),
                     "subs": d.sub.len(),
-                    "origin": if d.parser.description.as_deref().is_some_and(|s| s.starts_with("Inferred from")) { "approved" } else { "hand" },
+                    "origin": if d.matcher.priority < 0 { "approved" } else { "hand" },
                     "detected": hits.get(&d.parser.name).copied().unwrap_or(0),
                 })
             })
@@ -187,7 +190,7 @@ fn parsers_json(live: &Live) -> Value {
 
 fn metrics_frame(live: &Live) -> Value {
     let buffered = live.inference.buffered();
-    let pending_ids: Vec<String> = live.pending.as_ref().map(Pending::list).unwrap_or_default().into_iter().map(|p| p.id).collect();
+    let pending_ids: Vec<String> = live.pending.as_ref().map(Pending::ids).unwrap_or_default();
     let sources: Vec<Value> = live
         .sources
         .lock()
@@ -277,12 +280,8 @@ async fn pending_list(State(app): State<App>) -> Json<Value> {
     ))
 }
 
-fn pending_of(live: &Live) -> Result<&Pending, ApiError> {
-    live.pending.as_ref().ok_or_else(|| ApiError::new(StatusCode::NOT_FOUND, "not_found", "inference is disabled: no pending directory"))
-}
-
 async fn pending_get(State(app): State<App>, Path(id): Path<String>) -> Result<Json<Value>, ApiError> {
-    let pending = pending_of(&app.live)?;
+    let pending = app.live.pending_or_err().map_err(|e| review_error(&app.live, e))?;
     let d = pending.get(&id).map_err(|e| review_error(&app.live, e))?;
     // the evidence is what the engine produced; the time it was produced is review state
     let mut evidence = serde_json::to_value(&d.record.evidence).unwrap_or(Value::Null);
@@ -376,7 +375,7 @@ async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<imp
             if st.tick == 0 {
                 let frame = live.tail.since(None, st.initial);
                 st.last_id = frame.latest;
-                let count = live.pending.as_ref().map(|p| p.list().len()).unwrap_or(0);
+                let count = live.pending.as_ref().map(|p| p.ids().len()).unwrap_or(0);
                 let hello = json!({ "latest_raw_id": frame.latest, "pending_generation": st.pending_generation, "pending_count": count, "tail": tail_json(frame) });
                 st.queue.push_back(event("hello", &hello));
                 st.queue.push_back(event("metrics", &cached_frame(&st.app)));
@@ -396,7 +395,7 @@ async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<imp
             let generation = live.pending_generation.load(Relaxed);
             if generation != st.pending_generation {
                 st.pending_generation = generation;
-                let count = live.pending.as_ref().map(|p| p.list().len()).unwrap_or(0);
+                let count = live.pending.as_ref().map(|p| p.ids().len()).unwrap_or(0);
                 st.queue.push_back(event("pending", &json!({ "generation": generation, "count": count })));
             }
         }

@@ -64,9 +64,9 @@ impl Tail {
         };
         let mut skipped = 0u64;
         if let (Some(a), Some(oldest)) = (after, inner.entries.front().map(|e| e.raw_id))
-            && oldest > a + 1
+            && oldest > a.saturating_add(1)
         {
-            skipped += oldest - (a + 1);
+            skipped += oldest - a.saturating_add(1);
         }
         let cut = newer.len().saturating_sub(limit);
         skipped += cut as u64;

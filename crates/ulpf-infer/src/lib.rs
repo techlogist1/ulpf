@@ -16,6 +16,10 @@ use ulpf_parse::def::{Envelope, Matcher, Meta, ParserDefinition, Strategy, Strat
 use ulpf_parse::{Parsed, Parser, Scratch, SlotKind, Template};
 
 pub use cluster::Params;
+
+/// Lines longer than this in tokens are not clustered: the alignment tables are
+/// quadratic in token count, and a 20k-token line is a payload dump, not a message.
+pub const MAX_TOKENS: usize = 2048;
 use cluster::{Col, lossy};
 use token::{Kind, Tok};
 
@@ -31,21 +35,12 @@ pub struct Evidence {
     pub source: String,
     pub lines_seen: u64,
     pub lines_used: u64,
-    pub params: ParamsUsed,
+    pub params: Params,
     pub envelope: EnvelopeEvidence,
     pub templates: Vec<TemplateEvidence>,
     pub unmatched: Unmatched,
     pub decisions: Vec<String>,
     pub fingerprint: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ParamsUsed {
-    pub similarity: f64,
-    pub min_support: usize,
-    pub enum_max: usize,
-    pub rare_share: f64,
-    pub max_templates: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -105,7 +100,7 @@ fn body(line: &[u8]) -> &[u8] {
 }
 
 /// Strips the syslog envelope the way the runtime will, when the source carries one.
-fn bodies<'a>(lines: &[&'a [u8]]) -> (bool, Option<String>, Vec<&'a [u8]>) {
+fn bodies<'a>(lines: &[&'a [u8]]) -> (bool, Option<String>, Vec<&'a [u8]>, usize) {
     let mut headed = 0usize;
     let mut example = None;
     let mut stripped = Vec::with_capacity(lines.len());
@@ -126,7 +121,7 @@ fn bodies<'a>(lines: &[&'a [u8]]) -> (bool, Option<String>, Vec<&'a [u8]>) {
     let non_empty = lines.iter().filter(|l| !body(l).is_empty()).count().max(1);
     let syslog = headed * 5 >= non_empty; // a fifth of the lines carrying a header is a syslog source
     let out = stripped.into_iter().map(|(_, msg, b)| if syslog { msg } else { b }).collect();
-    (syslog, if syslog { example } else { None }, out)
+    (syslog, if syslog { example } else { None }, out, headed)
 }
 
 fn words<'a>(toks: &[Tok<'a>]) -> Vec<&'a [u8]> {
@@ -135,7 +130,7 @@ fn words<'a>(toks: &[Tok<'a>]) -> Vec<&'a [u8]> {
 
 /// Word-level similarity when both lines have words to compare; otherwise the shape of
 /// every non-space token (a headerless access log has almost no bare words).
-fn similarity(a: &[Tok<'_>], b: &[Tok<'_>]) -> f64 {
+fn line_similarity(a: &[Tok<'_>], b: &[Tok<'_>]) -> f64 {
     let (wa, wb) = (words(a), words(b));
     if wa.len() >= 2 && wb.len() >= 2 {
         // the message type lives in the first words; a long free-text tail must not
@@ -167,7 +162,7 @@ fn assign(toks: &[Vec<Tok<'_>>], params: &Params) -> Vec<Cluster> {
         }
         let mut best: Option<(usize, f64)> = None;
         for (ci, c) in clusters.iter().enumerate() {
-            let sim = similarity(t, &toks[c.seed]);
+            let sim = line_similarity(t, &toks[c.seed]);
             if sim >= params.similarity && best.is_none_or(|(_, b)| sim > b) {
                 best = Some((ci, sim));
             }
@@ -220,54 +215,43 @@ fn candidates_for(members: Vec<usize>, toks: &[Vec<Tok<'_>>], params: &Params, h
 /// patterns merge; patterns that differ in exactly one constant word merge and are
 /// re-derived without splitting, so the word becomes a slot.
 fn dedupe(candidates: &mut Vec<Candidate>, toks: &[Vec<Tok<'_>>], params: &Params, decisions: &mut Vec<String>) {
-    let shape = |t: &Template| -> Vec<String> {
-        t.to_pattern().split(' ').map(|w| {
-            let mut s = String::new();
-            let mut depth = 0;
-            for c in w.chars() {
-                match c {
-                    '{' => { depth += 1; if depth == 1 { s.push_str("{}"); } }
-                    '}' => depth -= 1,
-                    _ if depth == 0 => s.push(c),
-                    _ => {}
-                }
-            }
-            s
-        }).collect()
-    };
     let mut i = 0;
     while i < candidates.len() {
         let mut j = i + 1;
         while j < candidates.len() {
-            let (a, b) = (shape(&candidates[i].template), shape(&candidates[j].template));
-            let differing: Vec<usize> = if a.len() == b.len() { (0..a.len()).filter(|k| a[*k] != b[*k]).collect() } else { vec![0, 1] };
-            // one differing token with the same slots in it, whose constant text is an
-            // identifier (`wlan1`/`wlan2`), never a keyword (`in`/`out`: that was a split)
-            let one_word = differing.len() == 1 && {
-                let (x, y) = (&a[differing[0]], &b[differing[0]]);
-                let consts = |t: &str| t.replace("{}", "").bytes().filter(|b| b.is_ascii_alphanumeric()).collect::<Vec<u8>>();
-                x.matches("{}").count() == y.matches("{}").count() && !cluster::keyword_like(&consts(x)) && !cluster::keyword_like(&consts(y))
-            };
-            if differing.is_empty() || one_word {
-                let other = candidates.remove(j);
-                let mut members = std::mem::take(&mut candidates[i].members);
-                members.extend(other.members);
-                members.sort_unstable();
-                members.dedup();
-                let note = if differing.is_empty() { "identical pattern from another cluster" } else { "pattern differing in one constant word from another cluster" };
-                decisions.push(format!("merged templates: {note} ({} + {} lines)", candidates[i].members.len().max(1), other.history.len()));
-                let mut history = candidates[i].history.clone();
-                history.push(format!("merged with a template built from `{}`: {note}", other.history.last().cloned().unwrap_or_default()));
-                let mut rebuilt = Vec::new();
-                candidates_for(members, toks, params, history, &mut Vec::new(), &mut rebuilt, 4);
-                if let Some(c) = rebuilt.pop() {
-                    candidates[i] = c;
+            let (a, b) = (shape_words(&candidates[i].template), shape_words(&candidates[j].template));
+            let differing: Option<Vec<usize>> = (a.len() == b.len()).then(|| (0..a.len()).filter(|k| a[*k] != b[*k]).collect());
+            // identical, or one differing token with the same slots in it whose constant
+            // text is an identifier (`wlan1`/`wlan2`), never a keyword (`in`/`out`: that was a split)
+            let mergeable = match &differing {
+                Some(d) if d.is_empty() => Some("identical pattern from another cluster"),
+                Some(d) if d.len() == 1 => {
+                    let (x, y) = (&a[d[0]], &b[d[0]]);
+                    let consts = |t: &str| t.replace("{}", "").bytes().filter(|b| b.is_ascii_alphanumeric()).collect::<Vec<u8>>();
+                    (x.matches("{}").count() == y.matches("{}").count() && !cluster::keyword_like(&consts(x)) && !cluster::keyword_like(&consts(y))).then_some("pattern differing in one constant word from another cluster")
                 }
-                // start over on this candidate: its shape changed
-                j = i + 1;
+                _ => None,
+            };
+            let Some(note) = mergeable else {
+                j += 1;
                 continue;
+            };
+            let other = candidates.remove(j);
+            let (mine, theirs) = (candidates[i].members.len(), other.members.len());
+            let mut members = std::mem::take(&mut candidates[i].members);
+            members.extend(other.members);
+            members.sort_unstable();
+            members.dedup();
+            decisions.push(format!("merged templates: {note} ({mine} + {theirs} lines)"));
+            let mut history = candidates[i].history.clone();
+            history.push(format!("merged with a template built from `{}`: {note}", other.history.last().cloned().unwrap_or_default()));
+            let mut rebuilt = Vec::new();
+            candidates_for(members, toks, params, history, decisions, &mut rebuilt, 4);
+            if let Some(c) = rebuilt.pop() {
+                candidates[i] = c;
             }
-            j += 1;
+            // start over on this candidate: its shape changed
+            j = i + 1;
         }
         i += 1;
     }
@@ -285,25 +269,45 @@ fn slot_evidence(s: &cluster::Slot, cols: &[Col]) -> SlotEvidence {
     }
 }
 
-/// Compiles one pattern into a runnable parser exactly as the runtime would.
-fn compile_pattern(pattern: &str, syslog: bool) -> Option<Parser> {
+/// Compiles one body pattern into a runnable parser exactly as the runtime would (the
+/// envelope is already stripped from the bodies it is tested on).
+fn compile_pattern(pattern: &str) -> Result<Parser, String> {
     let def = ParserDefinition {
         parser: Meta { name: "candidate".into(), vendor: "x".into(), product: "x".into(), description: None },
         matcher: Matcher { contains: vec![], starts_with: None, regex: Some(".".into()), priority: 0 },
-        envelope: Envelope { syslog },
+        envelope: Envelope { syslog: false },
         strategy: Strategy::pattern(pattern),
         timestamp: vec![],
         sub: vec![],
     };
-    Parser::from_definition(def).ok()
+    Parser::from_definition(def)
 }
 
+/// Specificity for ordering: required constant text only. Optional constants weigh
+/// nothing, or a template made of optional groups would outrank the specific ones and
+/// take their lines first.
 fn constant_chars(t: &Template) -> usize {
     t.tokens.iter().map(|tok| match tok {
         ulpf_parse::Token::Const(s) => s.trim().len(),
-        ulpf_parse::Token::Optional(inner) => inner.iter().map(|x| if let ulpf_parse::Token::Const(s) = x { s.trim().len() } else { 0 }).sum(),
         _ => 0,
     }).sum()
+}
+
+/// Template shape for dedupe: constants as text, every slot as `{}`, optional groups
+/// flattened, split on spaces. Built from the tokens, not by re-parsing pattern text.
+fn shape_words(t: &Template) -> Vec<String> {
+    fn push(tokens: &[ulpf_parse::Token], out: &mut String) {
+        for tok in tokens {
+            match tok {
+                ulpf_parse::Token::Const(s) => out.push_str(s),
+                ulpf_parse::Token::Slot { .. } => out.push_str("{}"),
+                ulpf_parse::Token::Optional(inner) => push(inner, out),
+            }
+        }
+    }
+    let mut s = String::new();
+    push(&t.tokens, &mut s);
+    s.split(' ').map(str::to_string).collect()
 }
 
 fn fnv(parts: &[String]) -> String {
@@ -320,7 +324,7 @@ fn fnv(parts: &[String]) -> String {
 /// Words present in nearly every line make a `contains` signature; otherwise the
 /// templates' leading constants form a `regex` alternation. Priority -1: a generated
 /// parser never takes an event from a hand-written one.
-fn matcher(bodies: &[&[u8]], toks: &[Vec<Tok<'_>>], templates: &[&Template], decisions: &mut Vec<String>) -> Matcher {
+fn matcher(toks: &[Vec<Tok<'_>>], templates: &[&Template], decisions: &mut Vec<String>) -> Matcher {
     let used: Vec<usize> = (0..toks.len()).filter(|i| !toks[*i].is_empty()).collect();
     // Words seen per line: bare words plus the words inside quoted strings; atoms (and
     // therefore month names inside timestamps) are skipped, so a one-day file cannot make
@@ -363,7 +367,6 @@ fn matcher(bodies: &[&[u8]], toks: &[Vec<Tok<'_>>], templates: &[&Template], dec
             alts.push(alt);
         }
     }
-    let _ = bodies;
     if alts.is_empty() {
         decisions.push("signature: no constant text shared or leading; matcher is `regex = \".\"` (matches anything not claimed by another parser)".into());
         return Matcher { contains: vec![], starts_with: None, regex: Some(".".into()), priority: -1 };
@@ -389,9 +392,16 @@ pub fn slug(source: &str) -> String {
 /// proposal with zero templates, which the engine does not write.
 pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     let mut decisions = Vec::new();
-    let (syslog, example_header, bodies) = bodies(lines);
-    decisions.push(format!("envelope: syslog header on {} of {} lines -> syslog = {syslog}", if syslog { "enough" } else { "too few" }, lines.len()));
-    let toks: Vec<Vec<Tok<'_>>> = bodies.iter().map(|b| token::tokenize(b)).collect();
+    let (syslog, example_header, bodies, headed) = bodies(lines);
+    decisions.push(format!("envelope: syslog header on {headed} of {} lines -> syslog = {syslog} (a fifth is enough)", lines.len()));
+    let mut toks: Vec<Vec<Tok<'_>>> = bodies.iter().map(|b| token::tokenize(b)).collect();
+    let mut too_long: Vec<usize> = Vec::new();
+    for (i, t) in toks.iter_mut().enumerate() {
+        if t.len() > MAX_TOKENS {
+            too_long.push(i);
+            t.clear();
+        }
+    }
     let clusters = assign(&toks, params);
     decisions.push(format!("clustering: {} lines into {} clusters at similarity {}", toks.iter().filter(|t| !t.is_empty()).count(), clusters.len(), params.similarity));
 
@@ -406,7 +416,9 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
         unmatched_lines.push(i);
     };
     for (i, t) in toks.iter().enumerate() {
-        if t.is_empty() {
+        if too_long.contains(&i) {
+            note_unmatched(i, "too_long", &mut unmatched, &mut unmatched_lines);
+        } else if t.is_empty() {
             note_unmatched(i, "empty", &mut unmatched, &mut unmatched_lines);
         }
     }
@@ -441,26 +453,35 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     }
 
     // Verify: every line against the compiled patterns in emitted order, like the runtime.
-    let compiled: Vec<Option<Parser>> = candidates.iter().map(|c| compile_pattern(&c.template.to_pattern(), false)).collect();
+    // Only candidates the definition will hold take part, so `verified` describes the
+    // file that will be approved, not a superset of it.
+    let compiled: Vec<Result<Parser, String>> = candidates.iter().map(|c| compile_pattern(&c.template.to_pattern())).collect();
+    let eligible: Vec<bool> = candidates.iter().enumerate().map(|(k, c)| compiled[k].is_ok() && c.members.len() >= params.min_support).collect();
     let mut verified = vec![0u64; candidates.len()];
     let mut scratch = Scratch::default();
     let mut parsed = Parsed::default();
     let ctx = ulpf_parse::Context { receipt_epoch_nanos: 0, default_offset_secs: 0 };
+    let mut is_unmatched = vec![false; bodies.len()];
+    for &i in &unmatched_lines {
+        is_unmatched[i] = true;
+    }
     for (i, b) in bodies.iter().enumerate() {
-        if toks[i].is_empty() || unmatched_lines.contains(&i) {
+        if toks[i].is_empty() || is_unmatched[i] {
             continue;
         }
-        let hit = compiled.iter().position(|p| p.as_ref().is_some_and(|p| p.parse(b, &ctx, &mut scratch, &mut parsed).is_ok()));
+        let hit = compiled.iter().enumerate().position(|(k, p)| eligible[k] && p.as_ref().is_ok_and(|p| p.parse(b, &ctx, &mut scratch, &mut parsed).is_ok()));
         match hit {
             Some(k) => verified[k] += 1,
             None => note_unmatched(i, "no_template", &mut unmatched, &mut unmatched_lines),
         }
     }
     for (k, c) in candidates.iter().enumerate() {
-        if compiled[k].is_none() {
-            decisions.push(format!("template {} does not compile: `{}`", k + 1, c.template.to_pattern()));
-        } else if verified[k] as usize != c.members.len() {
-            decisions.push(format!("template {} verified {}/{} of its own lines (rest in unmatched)", k + 1, verified[k], c.members.len()));
+        match &compiled[k] {
+            Err(e) => decisions.push(format!("template {} does not compile and is left out: {e}: `{}`", k + 1, c.template.to_pattern())),
+            Ok(_) if !eligible[k] => {}
+            Ok(_) if verified[k] as usize > c.members.len() => decisions.push(format!("template {} took {} lines first, {} more than its own cluster (it is more general than a later template)", k + 1, verified[k], verified[k] as usize - c.members.len())),
+            Ok(_) if (verified[k] as usize) < c.members.len() => decisions.push(format!("template {} verified {}/{} of its own lines (the rest matched an earlier template or are in unmatched)", k + 1, verified[k], c.members.len())),
+            Ok(_) => {}
         }
     }
 
@@ -469,7 +490,9 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
         .enumerate()
         .map(|(k, c)| {
             let mut history = c.history.clone();
-            if verified[k] == 0 && compiled[k].is_some() {
+            if compiled[k].is_err() {
+                history.push("not in the definition: the pattern does not compile (see decisions)".into());
+            } else if verified[k] == 0 && eligible[k] {
                 history.push("not in the definition: every line it covers matched an earlier template".into());
             } else if c.members.len() < params.min_support {
                 history.push(format!("not in the definition: {} lines after a split is below min_support {} (keep it in the review screen if it is a real message type)", c.members.len(), params.min_support));
@@ -486,14 +509,14 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
             }
         })
         .collect();
-    let in_definition = |t: &TemplateEvidence| t.verified > 0 && t.support as usize >= params.min_support;
+    let in_definition = |t: &TemplateEvidence| t.verified > 0 && t.support as usize >= params.min_support && compiled[t.id as usize - 1].is_ok();
     let left_out = templates.iter().filter(|t| !in_definition(t)).count();
     if left_out > 0 {
-        decisions.push(format!("{left_out} templates left out of the definition (matched no line first, or below min_support after a split); they stay in the evidence"));
+        decisions.push(format!("{left_out} templates left out of the definition (no compile, matched no line first, or below min_support after a split); they stay in the evidence"));
     }
     let patterns: Vec<String> = templates.iter().filter(|t| in_definition(t)).map(|t| t.pattern.clone()).collect();
     let tpl_refs: Vec<&Template> = candidates.iter().map(|c| &c.template).collect();
-    let matcher = matcher(&bodies, &toks, &tpl_refs, &mut decisions);
+    let matcher = matcher(&toks, &tpl_refs, &mut decisions);
     let has_ts = candidates.iter().any(|c| c.slots.iter().any(|s| s.kind == SlotKind::Timestamp));
     let name = format!("{}_inferred", slug(source));
     let definition = ParserDefinition {
@@ -514,7 +537,7 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
         source: source.to_string(),
         lines_seen: lines.len() as u64,
         lines_used: (lines.len() as u64).saturating_sub(unmatched.count),
-        params: ParamsUsed { similarity: params.similarity, min_support: params.min_support, enum_max: params.enum_max, rare_share: params.rare_share, max_templates: params.max_templates },
+        params: params.clone(),
         envelope: EnvelopeEvidence { syslog, example_header },
         templates,
         unmatched,
@@ -525,7 +548,8 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
 }
 
 /// One template from a chosen set of lines, with keyword splitting off: the review
-/// screen's merge. `syslog` must be the proposal's envelope decision.
+/// screen's merge. `syslog` must be the proposal's envelope decision. The result has no
+/// id and no members: they are indices into the caller's proposal, which the caller sets.
 pub fn merge(lines: &[&[u8]], syslog: bool, params: &Params) -> Option<TemplateEvidence> {
     let bodies: Vec<&[u8]> = lines.iter().map(|l| {
         let b = body(l);
@@ -536,7 +560,7 @@ pub fn merge(lines: &[&[u8]], syslog: bool, params: &Params) -> Option<TemplateE
             b
         }
     }).collect();
-    let toks: Vec<Vec<Tok<'_>>> = bodies.iter().map(|b| token::tokenize(b)).filter(|t| !t.is_empty()).collect();
+    let toks: Vec<Vec<Tok<'_>>> = bodies.iter().map(|b| token::tokenize(b)).filter(|t| !t.is_empty() && t.len() <= MAX_TOKENS).collect();
     if toks.is_empty() {
         return None;
     }
@@ -548,7 +572,7 @@ pub fn merge(lines: &[&[u8]], syslog: bool, params: &Params) -> Option<TemplateE
     notes.extend(notes3);
     let (template, slots) = cluster::shape(&cols, cluster::rare_count(toks.len(), params));
     let pattern = template.to_pattern();
-    let verified = compile_pattern(&pattern, false).map(|p| {
+    let verified = compile_pattern(&pattern).ok().map(|p| {
         let mut scratch = Scratch::default();
         let mut parsed = Parsed::default();
         let ctx = ulpf_parse::Context { receipt_epoch_nanos: 0, default_offset_secs: 0 };

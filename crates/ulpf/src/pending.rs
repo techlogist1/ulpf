@@ -18,6 +18,9 @@ use ulpf_parse::def::ParserDefinition;
 pub struct Pending {
     dir: PathBuf,
     rejected: Mutex<HashSet<String>>,
+    /// Every mutating operation runs under this lock: the inference thread's `write`
+    /// and a reviewer's edit or approval must never interleave on the same three files.
+    ops: Mutex<()>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -135,7 +138,7 @@ impl Pending {
                 rejected.insert(rejected_key(&rec.source, &rec.evidence.fingerprint));
             }
         }
-        Ok(Pending { dir: dir.to_path_buf(), rejected: Mutex::new(rejected) })
+        Ok(Pending { dir: dir.to_path_buf(), rejected: Mutex::new(rejected), ops: Mutex::new(()) })
     }
 
     pub fn dir(&self) -> &Path {
@@ -144,6 +147,22 @@ impl Pending {
 
     pub fn id_for(source: &str) -> String {
         ulpf_infer::slug(source)
+    }
+
+    /// Ids of every proposal on disk: a directory scan, no file is opened.
+    pub fn ids(&self) -> Vec<String> {
+        let Ok(entries) = fs::read_dir(&self.dir) else { return vec![] };
+        let mut ids: Vec<String> = entries
+            .filter_map(|e| e.ok().map(|e| e.path()))
+            .filter(|p| p.extension().is_some_and(|x| x == "json"))
+            .filter_map(|p| p.file_stem().map(|s| s.to_string_lossy().into_owned()))
+            .collect();
+        ids.sort();
+        ids
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, ()> {
+        self.ops.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn toml_path(&self, id: &str) -> PathBuf {
@@ -169,14 +188,7 @@ impl Pending {
 
     pub fn list(&self) -> Vec<PendingSummary> {
         let mut out = Vec::new();
-        let Ok(entries) = fs::read_dir(&self.dir) else { return out };
-        let mut ids: Vec<String> = entries
-            .filter_map(|e| e.ok().map(|e| e.path()))
-            .filter(|p| p.extension().is_some_and(|x| x == "json"))
-            .filter_map(|p| p.file_stem().map(|s| s.to_string_lossy().into_owned()))
-            .collect();
-        ids.sort();
-        for id in ids {
+        for id in self.ids() {
             if let Ok(detail) = self.get(&id) {
                 let name = toml::from_str::<ParserDefinition>(&detail.definition).ok().map(|d| d.parser.name);
                 out.push(PendingSummary {
@@ -198,20 +210,24 @@ impl Pending {
     pub fn get(&self, id: &str) -> Result<PendingDetail, ReviewError> {
         let record = self.record(id)?;
         let path = self.toml_path(id);
-        let definition = fs::read_to_string(&path).map_err(|_| ReviewError::NotFound(id.to_string()))?;
+        // the record exists, so a missing definition is damage, not absence
+        let definition = fs::read_to_string(&path).map_err(|e| ReviewError::Io(format!("proposal `{id}` is damaged: {}: {e}", path.display())))?;
         let problems = problems_of(&path, &definition);
         Ok(PendingDetail { id: id.to_string(), source: record.source.clone(), definition, problems, record })
     }
 
-    /// The unknown lines the proposal was built from, terminators included.
+    /// The unknown events the proposal was built from, terminators included, framed the
+    /// way the engine framed them so `members` indices line up (a blank or indented line
+    /// belongs to the event before it).
     pub fn lines(&self, id: &str) -> Vec<Vec<u8>> {
         let Ok(bytes) = fs::read(self.lines_path(id)) else { return vec![] };
-        bytes.split_inclusive(|b| *b == b'\n').map(<[u8]>::to_vec).collect()
+        ulpf_store::Framer::new(&bytes, true).map(|r| bytes[r].to_vec()).collect()
     }
 
     /// Saves an edited definition, valid or not, and marks the proposal edited so the
     /// engine stops replacing it. Returns the load problems of the new text.
     pub fn put_text(&self, id: &str, text: &str) -> Result<Vec<String>, ReviewError> {
+        let _ops = self.lock();
         let mut rec = self.record(id)?;
         atomic_write(&self.toml_path(id), text.as_bytes())?;
         if !rec.edited {
@@ -228,6 +244,7 @@ impl Pending {
             return Ok(WriteOutcome::SkippedEmpty);
         }
         let id = Self::id_for(&proposal.source);
+        let _ops = self.lock();
         if self.rejected.lock().unwrap_or_else(|e| e.into_inner()).contains(&rejected_key(&proposal.source, &proposal.evidence.fingerprint)) {
             return Ok(WriteOutcome::SkippedRejected);
         }
@@ -257,6 +274,7 @@ impl Pending {
     /// Human edits to everything but `patterns` survive; the evidence gains the merged
     /// templates. Returns the new text and its load problems.
     pub fn regenerate(&self, id: &str, keep: &[u64], merge: &[Vec<u64>], params: &Params) -> Result<(String, Vec<String>), ReviewError> {
+        let _ops = self.lock();
         let mut rec = self.record(id)?;
         let text = fs::read_to_string(self.toml_path(id)).map_err(|_| ReviewError::NotFound(id.to_string()))?;
         let mut def: ParserDefinition = toml::from_str(&text).map_err(|e| ReviewError::Invalid(vec![format!("{}: {}", self.toml_path(id).display(), e.message())]))?;
@@ -299,10 +317,16 @@ impl Pending {
     /// must not collide with an active parser. The lines stay under `approved/` with the
     /// evidence; the caller reloads the registry and reports what now detects.
     pub fn approve(&self, id: &str, parsers_dir: &Path, active_names: &[String]) -> Result<Approved, ReviewError> {
+        let _ops = self.lock();
         let rec = self.record(id)?;
         let text = fs::read_to_string(self.toml_path(id)).map_err(|_| ReviewError::NotFound(id.to_string()))?;
         let parser = ulpf_parse::load_str(&self.toml_path(id), &text).map_err(|e| ReviewError::Invalid(vec![e.to_string()]))?;
         let name = parser.name().to_string();
+        // the name becomes a file name under parsers/: no separators, no dots, nothing a
+        // reviewer's typo or a hostile PUT could turn into a path
+        if name.is_empty() || !name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
+            return Err(ReviewError::Invalid(vec![format!("[parser] name `{name}` must be [A-Za-z0-9_-]+ (it names the file under parsers/)")]));
+        }
         if active_names.contains(&name) {
             return Err(ReviewError::Conflict(name));
         }
@@ -313,30 +337,42 @@ impl Pending {
         atomic_write(&path, text.as_bytes())?;
         let stamp = now_nanos();
         let approved = self.dir.join("approved");
-        fs::rename(self.json_path(id), approved.join(format!("{id}-{stamp}.json")))?;
+        // the record is the proposal's identity: it moves first; if that fails the parser
+        // file is taken back so the two directories never disagree
+        if let Err(e) = fs::rename(self.json_path(id), approved.join(format!("{id}-{stamp}.json"))) {
+            let _ = fs::remove_file(&path);
+            return Err(e.into());
+        }
+        let _ = fs::remove_file(self.toml_path(id));
         let _ = fs::rename(self.lines_path(id), approved.join(format!("{id}-{stamp}.lines")));
-        fs::remove_file(self.toml_path(id))?;
         Ok(Approved { name, path, source: rec.source })
     }
 
     /// Moves the proposal under `rejected/` and remembers its fingerprint.
     pub fn reject(&self, id: &str) -> Result<PathBuf, ReviewError> {
+        let _ops = self.lock();
         let rec = self.record(id)?;
         let stamp = now_nanos();
         let rejected = self.dir.join("rejected");
         let target = rejected.join(format!("{id}-{stamp}.toml"));
-        fs::rename(self.toml_path(id), &target)?;
+        // record first (identity), then the definition; an orphaned toml is invisible to
+        // `list` and overwritten by the next proposal, an orphaned json would be a ghost
         fs::rename(self.json_path(id), rejected.join(format!("{id}-{stamp}.json")))?;
+        let _ = fs::rename(self.toml_path(id), &target);
         let _ = fs::remove_file(self.lines_path(id));
         self.rejected.lock().unwrap_or_else(|e| e.into_inner()).insert(rejected_key(&rec.source, &rec.evidence.fingerprint));
         Ok(target)
     }
 }
 
-/// Write to a sibling temp file and rename, so a reader never sees a half-written file
-/// and a crash leaves either the old file or the new one.
+/// Write to a sibling temp file, sync it, and rename, so a reader never sees a
+/// half-written file and a power loss leaves either the old file or the new one.
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let tmp = path.with_extension(format!("{}.tmp", path.extension().and_then(|e| e.to_str()).unwrap_or("")));
-    fs::write(&tmp, bytes)?;
+    {
+        let mut f = fs::File::create(&tmp)?;
+        io::Write::write_all(&mut f, bytes)?;
+        f.sync_all()?;
+    }
     fs::rename(&tmp, path)
 }

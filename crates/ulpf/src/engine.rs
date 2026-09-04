@@ -152,7 +152,7 @@ pub struct Live {
     pub review_errors: AtomicU64,
     pub sse_clients: AtomicU64,
     pub load_problems: Mutex<Vec<String>>,
-    parsers_mtime: Mutex<Option<SystemTime>>,
+    parsers_signature: Mutex<Option<(usize, Option<SystemTime>, u64)>>,
     stop: AtomicBool,
 }
 
@@ -175,7 +175,13 @@ struct Batch {
     ranges: Vec<std::ops::Range<usize>>,
 }
 
-type OutMsg = (u64, Vec<u8>, u64, u64);
+/// One worker's serialised batch on its way to the output thread.
+struct Emitted {
+    seq: u64,
+    buf: Vec<u8>,
+    count: u64,
+    first_raw_id: u64,
+}
 
 pub fn now_nanos() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos() as i64).unwrap_or(0)
@@ -200,7 +206,9 @@ pub fn collect_inputs(inputs: &[PathBuf]) -> Result<Vec<PathBuf>> {
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
     for entry in std::fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
         let path = entry?.path();
-        if path.is_dir() {
+        // symlinked directories are not followed: a loop would recurse forever
+        let meta = std::fs::symlink_metadata(&path)?;
+        if meta.is_dir() {
             walk(&path, out)?;
         } else if path.file_name().is_some_and(|n| !n.to_string_lossy().starts_with('.')) {
             out.push(path);
@@ -209,8 +217,21 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
     Ok(())
 }
 
-fn parsers_mtime(dir: &Path) -> Option<SystemTime> {
-    std::fs::read_dir(dir).ok()?.filter_map(|e| e.ok()).filter(|e| e.path().extension().is_some_and(|x| x == "toml")).filter_map(|e| e.metadata().ok()?.modified().ok()).max()
+/// A source is a file named by its path relative to the input root it was found under
+/// (`fw/syslog.log`), or its basename when the file itself was the input. Two roots with
+/// a `syslog.log` each therefore stay two sources, with two resume offsets.
+pub fn source_name(root: &Path, path: &Path) -> String {
+    match path.strip_prefix(root) {
+        Ok(rel) if !rel.as_os_str().is_empty() => rel.to_string_lossy().into_owned(),
+        _ => path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string()),
+    }
+}
+
+/// Count, newest modification and total size of the `*.toml` files: a delete or a
+/// `cp -p` with an older timestamp changes it too.
+fn parsers_signature(dir: &Path) -> Option<(usize, Option<SystemTime>, u64)> {
+    let metas: Vec<std::fs::Metadata> = std::fs::read_dir(dir).ok()?.filter_map(|e| e.ok()).filter(|e| e.path().extension().is_some_and(|x| x == "toml")).filter_map(|e| e.metadata().ok()).collect();
+    Some((metas.len(), metas.iter().filter_map(|m| m.modified().ok()).max(), metas.iter().map(std::fs::Metadata::len).sum()))
 }
 
 impl Live {
@@ -251,7 +272,7 @@ impl Live {
             review_errors: AtomicU64::new(0),
             sse_clients: AtomicU64::new(0),
             load_problems: Mutex::new(load_problems),
-            parsers_mtime: Mutex::new(parsers_mtime(&cfg.parsers)),
+            parsers_signature: Mutex::new(parsers_signature(&cfg.parsers)),
             stop: AtomicBool::new(false),
         }))
     }
@@ -272,7 +293,7 @@ impl Live {
                 let loaded = pipeline.registry.len();
                 *self.pipeline.write().unwrap_or_else(|e| e.into_inner()) = Arc::new(pipeline);
                 *self.load_problems.lock().unwrap_or_else(|e| e.into_inner()) = problems.clone();
-                *self.parsers_mtime.lock().unwrap_or_else(|e| e.into_inner()) = parsers_mtime(&self.parsers_dir);
+                *self.parsers_signature.lock().unwrap_or_else(|e| e.into_inner()) = parsers_signature(&self.parsers_dir);
                 self.metrics.reloads.fetch_add(1, Relaxed);
                 let generation = self.generation.fetch_add(1, Relaxed) + 1;
                 ReloadReport { parsers_loaded: loaded, problems, generation }
@@ -281,10 +302,10 @@ impl Live {
         }
     }
 
-    /// True when a `*.toml` in the parsers directory changed since the last load.
+    /// True when the set of `*.toml` files in the parsers directory changed since the last load.
     fn parsers_dir_changed(&self) -> bool {
-        let now = parsers_mtime(&self.parsers_dir);
-        let mut last = self.parsers_mtime.lock().unwrap_or_else(|e| e.into_inner());
+        let now = parsers_signature(&self.parsers_dir);
+        let mut last = self.parsers_signature.lock().unwrap_or_else(|e| e.into_inner());
         if now != *last {
             *last = now;
             return true;
@@ -304,14 +325,15 @@ impl Live {
         self.stop.load(Relaxed)
     }
 
-    fn pending(&self) -> Result<&Pending, ReviewError> {
-        self.pending.as_ref().ok_or_else(|| ReviewError::Io("inference is disabled: no pending directory".into()))
+    /// The pending directory, or `NotFound`: with inference off there is nothing to review.
+    pub fn pending_or_err(&self) -> Result<&Pending, ReviewError> {
+        self.pending.as_ref().ok_or_else(|| ReviewError::NotFound("inference is disabled: no pending directory".into()))
     }
 
     /// Approval: the definition moves to the parsers directory, the registry reloads, and
     /// the source's buffered unknown lines are re-detected to prove the fast path.
     pub fn approve(&self, id: &str) -> Result<ApproveReport, ReviewError> {
-        let pending = self.pending()?;
+        let pending = self.pending_or_err()?;
         let mut lines = pending.lines(id);
         let approved = pending.approve(id, &self.parsers_dir, &self.parser_names())?;
         if lines.is_empty() {
@@ -328,20 +350,20 @@ impl Live {
     }
 
     pub fn reject(&self, id: &str) -> Result<PathBuf, ReviewError> {
-        let moved = self.pending()?.reject(id)?;
+        let moved = self.pending_or_err()?.reject(id)?;
         self.metrics.rejected.fetch_add(1, Relaxed);
         self.pending_generation.fetch_add(1, Relaxed);
         Ok(moved)
     }
 
     pub fn regenerate(&self, id: &str, keep: &[u64], merge: &[Vec<u64>]) -> Result<(String, Vec<String>), ReviewError> {
-        let r = self.pending()?.regenerate(id, keep, merge, &self.inference.params)?;
+        let r = self.pending_or_err()?.regenerate(id, keep, merge, &self.inference.params)?;
         self.pending_generation.fetch_add(1, Relaxed);
         Ok(r)
     }
 
     pub fn put_text(&self, id: &str, text: &str) -> Result<Vec<String>, ReviewError> {
-        let r = self.pending()?.put_text(id, text)?;
+        let r = self.pending_or_err()?.put_text(id, text)?;
         self.pending_generation.fetch_add(1, Relaxed);
         Ok(r)
     }
@@ -417,7 +439,7 @@ struct Threads<'scope> {
 fn start<'scope, 'env: 'scope>(scope: &'scope std::thread::Scope<'scope, 'env>, live: &'env Arc<Live>) -> Threads<'scope> {
     let (batch_tx, batch_rx) = sync_channel::<Batch>(live.queue_cap);
     let batch_rx = Arc::new(Mutex::new(batch_rx));
-    let (out_tx, out_rx) = sync_channel::<OutMsg>(live.queue_cap * 2);
+    let (out_tx, out_rx) = sync_channel::<Emitted>(live.queue_cap * 2);
     let in_flight = Arc::new(AtomicI64::new(0));
     let writer = scope.spawn(move || output_thread(live, out_rx));
     let inference = scope.spawn(move || {
@@ -443,15 +465,25 @@ fn start<'scope, 'env: 'scope>(scope: &'scope std::thread::Scope<'scope, 'env>, 
 /// thread finishes; inference's final pass runs after that and is timed separately.
 fn finish(live: &Arc<Live>, t: Threads<'_>, ingest_result: Result<()>) -> Result<(Duration, Duration)> {
     drop(t.batch_tx);
+    // Every thread is joined before anything returns: an early `?` here would leave the
+    // scoped inference thread waiting for a stop that never comes, and the scope would hang.
+    let mut first_error: Option<anyhow::Error> = None;
     for w in t.workers {
-        w.join().map_err(|_| anyhow!("worker thread panicked"))?;
+        if w.join().is_err() && first_error.is_none() {
+            first_error = Some(anyhow!("worker thread panicked"));
+        }
     }
-    let writer_result = t.writer.join().map_err(|_| anyhow!("output thread panicked"))?;
+    let writer_result = t.writer.join().unwrap_or_else(|_| Err(anyhow!("output thread panicked")));
     let elapsed = live.started.elapsed();
     let infer_started = Instant::now();
     live.inference.stop();
-    t.inference.join().map_err(|_| anyhow!("inference thread panicked"))?;
+    if t.inference.join().is_err() && first_error.is_none() {
+        first_error = Some(anyhow!("inference thread panicked"));
+    }
     let inference_secs = infer_started.elapsed();
+    if let Some(e) = first_error {
+        return Err(e);
+    }
     match (writer_result, ingest_result) {
         (Err(w), _) => Err(w),
         (Ok(()), Err(i)) => Err(i),
@@ -479,13 +511,21 @@ fn report(live: &Arc<Live>, elapsed: Duration, inference: Duration, input_proble
 /// Batch mode: every input once, then the counter block.
 pub fn run(cfg: &Config) -> Result<Report> {
     let live = Live::open(cfg, false)?;
-    let files = collect_inputs(&cfg.inputs)?;
+    let mut files: Vec<(PathBuf, String)> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    for root in &cfg.inputs {
+        for path in collect_inputs(std::slice::from_ref(root))? {
+            if seen.insert(path.clone()) {
+                files.push((path.clone(), source_name(root, &path)));
+            }
+        }
+    }
     let mut input_problems = Vec::new();
     let timing = std::thread::scope(|scope| {
         let mut t = start(scope, &live);
         let ingest_result = (|| {
-            for path in &files {
-                ingest_file(&live, path, 0, true, true, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
+            for (path, name) in &files {
+                ingest_file(&live, path, name, 0, true, true, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
             }
             Ok(())
         })();
@@ -525,48 +565,53 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
     let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().unwrap_or_default();
     let mut files: HashMap<PathBuf, Tailed> = HashMap::new();
     while !live.stopped() {
-        let paths = collect_inputs(&live.watch).unwrap_or_default();
-        for path in paths {
-            let Ok(meta) = std::fs::metadata(&path) else { continue };
-            let size = meta.len();
-            let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
-            let entry = files.entry(path.clone()).or_insert_with(|| {
-                let consumed = resume.get(&name).copied().unwrap_or(0);
-                live.metrics.files.fetch_add(1, Relaxed);
-                Tailed { consumed, last_size: size, stable_ticks: 0, growing_ticks: 0 }
-            });
-            if size < entry.consumed {
-                // truncated or replaced: start over, and say so once
-                problems.push(format!("{}: shrank below the ingested offset, re-reading from the start", path.display()));
-                entry.consumed = 0;
-            }
-            if size == entry.consumed {
-                entry.stable_ticks = 0;
-                entry.growing_ticks = 0;
-                entry.last_size = size;
-                continue;
-            }
-            if size == entry.last_size {
-                entry.stable_ticks += 1;
-            } else {
-                entry.stable_ticks = 0;
-                entry.growing_ticks += 1;
-                entry.last_size = size;
-            }
-            let finalize = entry.stable_ticks >= 2;
-            let stream = entry.growing_ticks >= 4;
-            if finalize || stream {
-                let before = entry.consumed;
-                match ingest_file(live, &path, entry.consumed, finalize, false, tx, in_flight, seq, problems) {
-                    Ok(consumed) => {
-                        entry.consumed = consumed;
-                        live.metrics.bytes.fetch_add(consumed.saturating_sub(before), Relaxed);
-                        if finalize {
-                            entry.growing_ticks = 0;
-                            entry.stable_ticks = 0;
+        for root in &live.watch {
+            let paths = collect_inputs(std::slice::from_ref(root)).unwrap_or_default();
+            for path in paths {
+                let Ok(meta) = std::fs::metadata(&path) else { continue };
+                let size = meta.len();
+                let name = source_name(root, &path);
+                let entry = files.entry(path.clone()).or_insert_with(|| {
+                    let consumed = resume.get(&name).copied().unwrap_or(0);
+                    live.metrics.files.fetch_add(1, Relaxed);
+                    Tailed { consumed, last_size: size, stable_ticks: 0, growing_ticks: 0 }
+                });
+                if size < entry.consumed {
+                    // truncated or replaced: start over, and say so now, not at shutdown
+                    let msg = format!("{}: shrank below the ingested offset, re-reading from the start", path.display());
+                    eprintln!("ulpf: input problem: {msg}");
+                    problems.push(msg);
+                    entry.consumed = 0;
+                }
+                if size == entry.consumed {
+                    entry.stable_ticks = 0;
+                    entry.growing_ticks = 0;
+                    entry.last_size = size;
+                    continue;
+                }
+                if size == entry.last_size {
+                    entry.stable_ticks += 1;
+                } else {
+                    entry.stable_ticks = 0;
+                    entry.growing_ticks += 1;
+                    entry.last_size = size;
+                }
+                let finalize = entry.stable_ticks >= 2;
+                let stream = entry.growing_ticks >= 4;
+                if finalize || stream {
+                    let before = entry.consumed;
+                    match ingest_file(live, &path, &name, entry.consumed, finalize, false, tx, in_flight, seq, problems)? {
+                        Some(consumed) => {
+                            entry.consumed = consumed;
+                            live.metrics.bytes.fetch_add(consumed.saturating_sub(before), Relaxed);
+                            if finalize {
+                                entry.growing_ticks = 0;
+                                entry.stable_ticks = 0;
+                            }
                         }
+                        // unreadable: counted and reported once; tried again only when the file changes
+                        None => entry.consumed = size,
                     }
-                    Err(e) => return Err(e),
                 }
             }
         }
@@ -581,19 +626,23 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
     Ok(())
 }
 
-/// Frames and stores `path` from byte `start`. With `eof` the whole remainder is
-/// consumed; without it the last line is withheld until more bytes arrive. Returns the
-/// new consumed offset. Batch mode passes `count_file` and the whole file is counted
+/// Frames and stores `path` (source `name`) from byte `start`. With `eof` the whole
+/// remainder is consumed; without it the last line is withheld until more bytes arrive.
+/// Returns the new consumed offset, or `None` when the file could not be read (counted
+/// and reported here, once). Batch mode passes `count_file` and the whole file is counted
 /// here; the tailer counts a file when it first sees it and bytes as it consumes them.
 #[allow(clippy::too_many_arguments)]
-fn ingest_file(live: &Arc<Live>, path: &Path, start: u64, eof: bool, count_file: bool, tx: &SyncSender<Batch>, in_flight: &AtomicI64, seq: &mut u64, problems: &mut Vec<String>) -> Result<u64> {
-    let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string());
+fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool, count_file: bool, tx: &SyncSender<Batch>, in_flight: &AtomicI64, seq: &mut u64, problems: &mut Vec<String>) -> Result<Option<u64>> {
     let file = match File::open(path) {
         Ok(f) => f,
         Err(e) => {
             live.metrics.files_failed.fetch_add(1, Relaxed);
-            problems.push(format!("{}: {e}", path.display()));
-            return Ok(start);
+            let msg = format!("{}: {e}", path.display());
+            if !count_file {
+                eprintln!("ulpf: input problem: {msg}");
+            }
+            problems.push(msg);
+            return Ok(None);
         }
     };
     let len = file.metadata().map(|m| m.len()).unwrap_or(0);
@@ -607,7 +656,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, start: u64, eof: bool, count_file:
             Err(e) => {
                 live.metrics.files_failed.fetch_add(1, Relaxed);
                 problems.push(format!("{}: mmap failed: {e}", path.display()));
-                return Ok(start);
+                return Ok(None);
             }
         }
     };
@@ -616,9 +665,9 @@ fn ingest_file(live: &Arc<Live>, path: &Path, start: u64, eof: bool, count_file:
         live.metrics.bytes.fetch_add(len, Relaxed);
     }
     let start = (start as usize).min(len as usize);
-    let source = live.store.lock().unwrap_or_else(|e| e.into_inner()).source_id(&name)?;
+    let source = live.store.lock().unwrap_or_else(|e| e.into_inner()).source_id(name)?;
     let ingest_started = now_nanos();
-    let ctx = Arc::new(FileCtx { mmap, name });
+    let ctx = Arc::new(FileCtx { mmap, name: name.to_string() });
     let mut count = 0u64;
     let mut first_id = None;
     let mut ranges: Vec<std::ops::Range<usize>> = Vec::with_capacity(live.batch_events);
@@ -647,13 +696,12 @@ fn ingest_file(live: &Arc<Live>, path: &Path, start: u64, eof: bool, count_file:
         // escapes, so a crash can never reissue an id that was already emitted.
         let batch_first = {
             let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
-            let mut first = None;
+            let first = store.len();
             for r in &ranges {
-                let id = store.append(source, receipt, &bytes[r.clone()]).context("raw store append failed; aborting to avoid an incomplete store")?;
-                first.get_or_insert(id);
+                store.append(source, receipt, &bytes[r.clone()]).context("raw store append failed; aborting to avoid an incomplete store")?;
             }
             store.flush(false).context("raw store flush failed")?;
-            first.expect("non-empty batch").0
+            first
         };
         first_id.get_or_insert(RawId(batch_first));
         count += ranges.len() as u64;
@@ -671,7 +719,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, start: u64, eof: bool, count_file:
         store.flush(false)?;
         store.record_ingest(source, first_id, count, (consumed - start) as u64, ingest_started)?;
     }
-    Ok(consumed as u64)
+    Ok(Some(consumed as u64))
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -694,7 +742,7 @@ fn send_batch(tx: &SyncSender<Batch>, metrics: &Metrics, in_flight: &AtomicI64, 
     tx.send(batch).map_err(|_| anyhow!("processing stopped before ingest finished; see the output error"))
 }
 
-fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<OutMsg>, in_flight: &AtomicI64) {
+fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Emitted>, in_flight: &AtomicI64) {
     let mut pipeline = live.pipeline();
     let mut scratch = pipeline.registry.scratch();
     let mut hint = None;
@@ -720,6 +768,7 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Ou
         let mut counts = LocalCounts::default();
         // `Parsed` borrows the batch's bytes and the current registry, so it lives per batch
         let mut parsed = Parsed::default();
+        let mut unknown: Vec<(u64, &[u8])> = Vec::new();
         let pipeline = &*pipeline;
         for (i, range) in batch.ranges.iter().enumerate() {
             let event = &bytes[range.clone()];
@@ -731,13 +780,20 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Ou
                 }
                 None => {
                     counts.no_parser += 1;
-                    live.inference.offer(&batch.file.name, batch.first_raw_id + i as u64, event, &live.metrics);
+                    unknown.push((batch.first_raw_id + i as u64, event));
                 }
             }
-            if outcome.parser.is_some() {
+            if let Some(p) = outcome.parser {
                 match outcome.parse {
                     Ok(()) => counts.parsed += 1,
-                    Err(f) => counts.parse_failed(f),
+                    Err(f) => {
+                        counts.parse_failed(f);
+                        // a generated parser's signature is loose by construction (D45): a
+                        // line it claims but cannot parse is still an unknown line for inference
+                        if pipeline.registry.get(p).definition().matcher.priority < 0 {
+                            unknown.push((batch.first_raw_id + i as u64, event));
+                        }
+                    }
                 }
             }
             match outcome.sub {
@@ -758,6 +814,9 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Ou
             counts.utf8_lossy += s.utf8_lossy as u64;
         }
         live.metrics.add(&counts);
+        if !unknown.is_empty() {
+            live.inference.offer_batch(&batch.file.name, &unknown, &live.metrics);
+        }
         {
             let mut sources = live.sources.lock().unwrap_or_else(|e| e.into_inner());
             let s = sources.entry(batch.file.name.clone()).or_default();
@@ -774,13 +833,13 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Ou
                 }
             }
         }
-        if tx.send((batch.seq, out, batch.ranges.len() as u64, batch.first_raw_id)).is_err() {
+        if tx.send(Emitted { seq: batch.seq, buf: out, count: batch.ranges.len() as u64, first_raw_id: batch.first_raw_id }).is_err() {
             break;
         }
     }
 }
 
-fn output_thread(live: &Live, rx: Receiver<OutMsg>) -> Result<()> {
+fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
     let stdout;
     let file;
     let mut w: Box<dyn Write> = if live.output.as_os_str() == "-" {
@@ -793,8 +852,8 @@ fn output_thread(live: &Live, rx: Receiver<OutMsg>) -> Result<()> {
     let mut pending: BTreeMap<u64, (Vec<u8>, u64, u64)> = BTreeMap::new();
     let mut next = 0u64;
     let mut since_flush = Instant::now();
-    while let Ok((seq, buf, count, first_raw_id)) = rx.recv() {
-        pending.insert(seq, (buf, count, first_raw_id));
+    while let Ok(e) = rx.recv() {
+        pending.insert(e.seq, (e.buf, e.count, e.first_raw_id));
         while let Some((buf, count, first_raw_id)) = pending.remove(&next) {
             w.write_all(&buf).context("writing output")?;
             live.metrics.emitted.fetch_add(count, Relaxed);

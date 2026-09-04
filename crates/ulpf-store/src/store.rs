@@ -160,6 +160,9 @@ impl RawStore {
             return Err(io::Error::new(io::ErrorKind::InvalidData, format!("raw id {} points at a damaged record", id.0)));
         }
         let len = u32::from_le_bytes(hdr[24..28].try_into().expect("4 bytes")) as usize;
+        if off + HEADER_LEN as u64 + len as u64 > self.seg_len {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, format!("raw id {} claims {len} bytes past the end of the segment", id.0)));
+        }
         let mut bytes = vec![0u8; len];
         self.seg.get_ref().read_exact_at(&mut bytes, off + HEADER_LEN as u64)?;
         let mut sha256 = [0u8; 32];
