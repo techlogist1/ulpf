@@ -163,9 +163,11 @@ verified from docs.rs), tokio 1.53, notify 9.0.0-rc.5 (evaluated, ruled out: D40
 - [x] 5. Isolation. `scripts/isolation.sh run bench/mixed-5000000.log`: 46 samples, no
       socket, PASS. `serve` mode: listener on 127.0.0.1 and one loopback client, PASS.
       `docker` mode with `--network none`: PASS. Commands in the hackathon section.
-- [x] 6. Container rebuilt from 3574f30+docs (`docker build -t ulpf:static .`, 9.56 MB):
-      `serve` inside with `-p 7879:7878`, `/api/status`, `/`, `/app.js` answered from the
-      host, edgerouter proposal (9 templates) generated in-container.
+- [x] 6. Container rebuilt from the final code (47965c8; `docker build -t ulpf:static .`,
+      9.57 MB): `serve` inside with `-p 7879:7878`; from the host `/api/status`, `/` and
+      `/app.js` answered, the MikroTik proposal (14 templates) was generated in-container
+      and approved through the API (13 parsers loaded, 250/250 now detected);
+      `scripts/isolation.sh docker ulpf:static samples` PASS.
 - [x] 7. Regression: `cargo test --workspace` 71 tests, 0 failed (v0.1's 50 plus 21);
       `cargo clippy --workspace --all-targets -- -D warnings` clean; counting-allocator
       test unchanged and passing; bench 231k then 260k events/s (inference off) and 258k
