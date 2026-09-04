@@ -193,3 +193,32 @@ that FortiGate writes `date`+`time` with a separate `tz` is vendor knowledge; th
 stage receives an instant and stays vendor-free. **Ruled out.** Mapping-side time
 extraction (every vendor's layout would leak into the schema file); receipt time only
 (loses the device clock, which is the whole point of a timestamp module).
+
+## D19. Engine: one ingest thread, N workers, one ordered output thread, batches of byte ranges
+**Decision.** Ingest frames the memory-mapped file, appends each event to the raw store, and
+sends batches of `(first_raw_id, ranges)` over a bounded `sync_channel`; workers run the
+shared `Pipeline::process`; the output thread reorders by batch sequence so JSON Lines order
+equals raw id order. Receipt time is taken once per batch. **Anchor.**
+`crates/ulpf/src/engine.rs`, `crates/ulpf/src/pipeline.rs`. **Principle.** Raw before
+understanding (append happens on the ingest thread before any worker sees the event);
+deep module (`Pipeline::process` is the single per-event path, so the fixture harness tests
+production code). **Ruled out.** Per-event channel messages (contention at ~1M/s); per-file
+worker parallelism (a single 2 GB file would use one core); unordered output (raw id N no
+longer sits on output line N, which is the 4am debugging primitive).
+
+## D20. Unknown-format events are emitted as Base Event with the text under `message`
+**Decision.** When no parser matches, the engine pushes one synthetic field `raw_message`
+and normalizes as usual; the line carries `parse_status: no_parser`, class 0. **Anchor.**
+`Pipeline::process` in `crates/ulpf/src/pipeline.rs`; counter `no_parser` in
+`crates/ulpf/src/metrics.rs`. **Principle.** Errors as values: the event is preserved,
+counted, traceable and visible in the same output stream. **Ruled out.** Dropping with a
+counter (invisible in the output); a separate rejects file (a second output to correlate).
+
+## D21. Fixtures are subset assertions with a fixed receipt time, generated then reviewed
+**Decision.** `fixtures/<parser>.expected.jsonl` asserts only the keys it lists; the
+harness runs the production pipeline with a fixed receipt time and reports every mismatch
+as file:line. `ulpf fixture` emits a skeleton to review, never to commit blind. **Anchor.**
+`crates/ulpf/src/fixture.rs`, `crates/ulpf/tests/fixtures.rs`, `fixtures/README.md`.
+**Principle.** Teamability without touching Rust; observability (all mismatches at once).
+**Ruled out.** Full-snapshot comparison (every mapping improvement breaks every fixture);
+Rust unit tests per parser (teammates cannot write them).

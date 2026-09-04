@@ -159,7 +159,8 @@ fn cisco_asa_lines_map_by_message_id() {
     assert_eq!(get(&v, "connection_info.uid"), 12345);
     assert_eq!(get(&v, "severity"), "Informational");
     assert_eq!(get(&v, "metadata.event_code"), "302013");
-    assert_eq!(get(&v, "action"), "Unknown", "Built connection has no action word in the vendor text yet");
+    assert_eq!(get(&v, "action"), "Allowed", "the vendor's verb `built` is attached by the parser sub and canonicalised here");
+    assert_eq!(get(&v, "unmapped.syslog_facility"), "20", "facility is kept but never mistaken for a log level");
     assert_eq!(get(&v, "device.hostname"), "asa-edge-01");
     assert_eq!(get(&v, "time"), 1_788_516_923_000i64);
     assert_eq!(get(&v, "ulpf.time_policies"), &serde_json::json!(["tz_assumed"]));

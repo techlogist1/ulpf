@@ -3,12 +3,12 @@
 Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 
 ## Definition of done (each item is checked only after running it)
-- [ ] 1. CLI processes a directory of mixed-format logs end to end, writes JSON Lines,
+- [~] 1. CLI processes a directory of mixed-format logs end to end, writes JSON Lines,
       reports sustained events/sec measured ingest→output on this machine.
-- [ ] 2. Every raw event reconstructs byte-identically from the append-only store;
+- [x] 2. Every raw event reconstructs byte-identically from the append-only store;
       proven by a test reading back bytes and digests across all fixtures including
       multi-line events, non-UTF-8 input, and chunk boundaries mid-event.
-- [ ] 3. Parser definition format exists, loaded from a directory at runtime, supports
+- [x] 3. Parser definition format exists, loaded from a directory at runtime, supports
       delimiter / key-value / structured (JSON, CEF, LEEF) / pattern-with-named-slots,
       and round-trips: a definition emitted from a `Template` parses back and runs
       identically to a hand-written one.
@@ -50,10 +50,10 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] parser format + runtime, four strategies (kv, delimiter, json/cef/leef, pattern) — 15 tests
 - [x] Template → definition round trip test (crates/ulpf-parse/tests/roundtrip.rs)
 - [x] signature detection (Registry::detect with per-source hint)
-- [ ] mapping stage + OCSF subset mapping
-- [ ] JSON Lines output
-- [ ] throughput measurement
-- [ ] end-to-end CLI
+- [x] mapping stage + OCSF subset mapping (mappings/ocsf.toml, fragments merge) — 4 tests
+- [x] JSON Lines output (ordered by raw id, unknown formats emitted as Base Event)
+- [x] throughput measurement (printed every run; bench file pending fan-out 2)
+- [x] end-to-end CLI: run / check / verify / raw / fixture — e2e + fixture harness tests
 - [ ] adversarial pass
 - [ ] Dockerfile static build
 
@@ -79,5 +79,5 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
 (none yet)
 
 ## Next action
-Build ulpf-normalize (mappings/ocsf.toml, canonical values, class rules) and the JSON Lines
-output, then the engine + CLI in crates/ulpf. Then the fixture harness, then fan-out 2.
+Fan-out 2 running (haiku/low): parser workers A/B/C + bench generator. On return: run the
+suite, run the bench file for the throughput number, adversarial pass, Dockerfile.

@@ -14,3 +14,11 @@ ulpf-time = { path = "../ulpf-time" }
 ulpf-store = { path = "../ulpf-store" }
 ulpf-parse = { path = "../ulpf-parse" }
 ulpf-normalize = { path = "../ulpf-normalize" }
+memmap2.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+
+[dev-dependencies]
+sha2.workspace = true

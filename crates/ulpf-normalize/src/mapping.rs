@@ -32,14 +32,17 @@ pub struct NormalizeStats {
     pub utf8_lossy: bool,
 }
 
+/// (canonical value, id)
+type Canonical = (String, Option<i64>);
+
 struct EnumTable {
     id_field: Option<String>,
     unknown: Option<(String, Option<i64>)>,
     other: Option<(String, Option<i64>)>,
     /// lowercase raw → (canonical, id)
-    raw: HashMap<Vec<u8>, (String, Option<i64>)>,
+    raw: HashMap<Vec<u8>, Canonical>,
     /// (source field, lowercase raw) → (canonical, id)
-    raw_by_field: HashMap<(Vec<u8>, Vec<u8>), (String, Option<i64>)>,
+    raw_by_field: HashMap<(Vec<u8>, Vec<u8>), Canonical>,
 }
 
 struct SchemaField {

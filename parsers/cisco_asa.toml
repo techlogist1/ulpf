@@ -26,14 +26,14 @@ field = "message"
 when = { msg_id = ["302013", "302015"] }
 kind = "pattern"
 pattern = 'Built outbound {protocol:word} connection {connection_id:int} for {dst_interface:word}:{dst_ip:ip}/{dst_port:int} ({dst_mapped_ip:ip}/{dst_mapped_port:int}) to {src_interface:word}:{src_ip:ip}/{src_port:int} ({src_mapped_ip:ip}/{src_mapped_port:int}){_:rest}'
-constants = { direction = "outbound" }
+constants = { direction = "outbound", action = "built" }
 
 [[sub]]
 field = "message"
 when = { msg_id = ["302013", "302015"] }
 kind = "pattern"
 pattern = 'Built inbound {protocol:word} connection {connection_id:int} for {src_interface:word}:{src_ip:ip}/{src_port:int} ({src_mapped_ip:ip}/{src_mapped_port:int}) to {dst_interface:word}:{dst_ip:ip}/{dst_port:int} ({dst_mapped_ip:ip}/{dst_mapped_port:int}){_:rest}'
-constants = { direction = "inbound" }
+constants = { direction = "inbound", action = "built" }
 
 # Teardown carries no direction. The first pair is the lower-security side, which on a
 # perimeter ASA is the destination of the common outbound case.
@@ -42,6 +42,7 @@ field = "message"
 when = { msg_id = ["302014", "302016"] }
 kind = "pattern"
 pattern = 'Teardown {protocol:word} connection {connection_id:int} for {dst_interface:word}:{dst_ip:ip}/{dst_port:int} to {src_interface:word}:{src_ip:ip}/{src_port:int} duration {duration:word} bytes {bytes:int}{teardown_reason:rest}'
+constants = { action = "teardown" }
 
 [[sub]]
 field = "message"
@@ -68,6 +69,7 @@ field = "message"
 when = { msg_id = "305011" }
 kind = "pattern"
 pattern = 'Built {xlate_type:word} {protocol:word} translation from {src_interface:word}:{src_ip:ip}/{src_port:int} to {mapped_interface:word}:{mapped_ip:ip}/{mapped_port:int}'
+constants = { action = "built" }
 
 [[sub]]
 field = "message"
