@@ -1,0 +1,33 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/ulpf-time",
+    "crates/ulpf-store",
+    "crates/ulpf-parse",
+    "crates/ulpf-normalize",
+    "crates/ulpf",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+rust-version = "1.95"
+repository = "https://github.com/techlogist1/ulpf"
+
+[workspace.dependencies]
+memmap2 = "0.9"
+sha2 = "0.10"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+toml = "1"
+rusqlite = { version = "0.40", features = ["bundled"] }
+regex = "1"
+memchr = "2"
+clap = { version = "4", features = ["derive"] }
+anyhow = "1"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+debug = 1
