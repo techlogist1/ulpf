@@ -43,6 +43,100 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D36, each with an anchor)
       current; every milestone committed and pushed to techlogist1/ulpf main.
 
+## Cold start for v1 (read this first)
+
+v0.1 is closed at the commit that added this section (parent 1fb4c41); `git log -1`
+gives the hash. Working tree clean, `origin/main` in sync, the eight done items above
+are all verified by runs recorded in this file. The next session starts with the
+deferred `aposd-critique` review pass, then the server + UI session (CLAUDE.md, "Verify
+before building the server"). Do not redo the review passes listed under Fan-out 2.
+
+### What is verified, and by which test
+| claim | proof |
+|---|---|
+| framing lossless, chunk-boundary safe, multi-line and non-UTF-8 kept | `crates/ulpf-store/tests/roundtrip.rs`: `framing_is_lossless_and_groups_continuations`, `framing_is_identical_across_every_chunk_boundary`, `framing_edge_cases` |
+| store round trip, reopen, crash recovery both directions, single writer | same file: `store_round_trips_bytes_and_digests_and_survives_reopen`, `index_ahead_of_segment_recovers_to_the_last_complete_record`, `segment_ahead_of_index_reindexes_complete_records_and_drops_a_torn_tail`, `a_second_writer_is_refused_while_the_store_is_open` |
+| whole samples corpus round-trips through the engine in raw-id order | `crates/ulpf/tests/e2e.rs`: `samples_directory_round_trips_through_store_and_output_in_order`, `single_thread_and_many_threads_produce_identical_output` |
+| Template -> definition -> identical parse | `crates/ulpf-parse/tests/roundtrip.rs`: `generated_definition_parses_identically_to_hand_written` (plus bijection and machine-emittability tests) |
+| every parser has a fixture and every fixture line matches | `crates/ulpf/tests/fixtures.rs`: `every_fixture_matches_its_sample` (214 events) |
+| timestamp formats and policies | `crates/ulpf-time/tests/corpus.rs` over `tests/corpus.txt` (118 cases) + 4 unit tests |
+| hostile inputs counted, broken parser files reported, output failure aborts, queue depth bounded | `crates/ulpf/tests/adversarial.rs` (6 tests) |
+| zero allocations per event on span-valued families | `crates/ulpf-parse/tests/alloc.rs` (counting global allocator) |
+| parser/mapping wall | `crates/ulpf-normalize/tests/normalize.rs`: `ocsf_mapping_loads_and_has_no_vendor_vocabulary`; `ulpf-parse` has no dependency on `ulpf-normalize` |
+
+### Exact commands
+```
+cargo build --release                                   # binary at target/release/ulpf
+cargo test --workspace                                  # 52 tests, check the exit code itself
+cargo clippy --workspace --all-targets -- -D warnings
+./target/release/ulpf check                             # 12 parsers, 1 mapping, 0 problems
+cargo test -p ulpf --test fixtures                      # every sample event asserted
+cargo run --release -p ulpf --example gen_bench -- 5000000 bench      # ~25 s, 1.5 GB, gitignored
+./target/release/ulpf run bench/mixed-5000000.log --store /tmp/ulpf-bench --output /dev/null
+./target/release/ulpf verify --store /tmp/ulpf-bench    # 5000000 records, 0 corrupt
+./target/release/ulpf fixture samples/<parser>.log > fixtures/<parser>.expected.jsonl   # then review the diff
+docker build -t ulpf:static .
+docker run --rm -v "$PWD/samples:/data/samples:ro" ulpf:static run /data/samples --store /tmp/s --output /dev/null
+```
+Bench numbers on the M1 Pro: 214k to 232k events/s over three quiet runs (median 225k),
+one later run 265k; expect about ±10% between runs. Never quote a number you did not
+just measure.
+
+### Inference prototype verdict (docs/inference-prototype-report.md)
+Prefix-tree clustering yields correct typed templates for fixed-layout lines (66 to 71%
+of lines) but fragments every optional field into a separate template and merges
+disposition words at loose thresholds, so it is usable only as a candidate generator for
+a human to prune, not as an unattended parser generator.
+
+### Warts and half-decisions not in docs/DECISIONS.md (with anchors)
+- The e2e multi-line check (`multiline >= 2` in `crates/ulpf/tests/e2e.rs`) is met by
+  the folded Fortinet line plus `samples/README.md`, which `run samples` ingests as a
+  log file because directory scans take every non-hidden file with no extension filter
+  (`walk` in `crates/ulpf/src/engine.rs`). A real multi-line perimeter event does not
+  exist in the corpus; the store tests prove the framing with synthetic input.
+- `RawReader` takes no lock (`RawReader::open` in `crates/ulpf-store/src/store.rs`):
+  `ulpf verify` or `ulpf raw` while a writer runs reads a moving file, and the recovery
+  truncation at open can shrink a file a reader mapped after a crash. Only the catalogue
+  read (`source_names`) is refused with "in use". The server session, which will hold
+  the writer open and serve reads in-process, should decide this properly.
+- A worker thread panic aborts the whole process through `join().expect(...)` in `run`
+  (`crates/ulpf/src/engine.rs`): no counter, no report. Input cannot reach a panic
+  (adversarial tests), a bug can.
+- OCSF `status` never receives a source field literally named `status`: that name is an
+  `action` alias so Sophos `status="Allow"` canonicalises (`mappings/ocsf.toml`, `action`
+  and `status` alias lists). Fortinet `status="success"` therefore lands in `action` as
+  Allowed too.
+- Check Point `origin` (a gateway IP) sits under `device.hostname` because Cisco IOS
+  `origin` is a hostname; it wins only when no syslog host exists (`mappings/ocsf.toml`).
+- Numeric severity scales differ per vendor (Check Point 0-4, syslog 0-7) and the
+  mapping keys on field name only; a numeric Check Point `severity` would normalise on
+  the syslog scale. The sample uses the text form (`parsers/check_point.toml`,
+  `[[enum]] field = "severity"` in `mappings/ocsf.toml`).
+- ASA teardown endpoints are `lower_*`/`higher_*` and deliberately unmapped; join on
+  `connection_info.uid` with the build event for direction (`parsers/cisco_asa.toml`).
+- OpenVPN is detected by its ctime prefix alone at priority -1 (`parsers/openvpn.toml`);
+  any other ctime-prefixed file log would be claimed by it.
+- Cisco IOS: the documented `<time>:%FAC-n-MNEM` form with no space before `%` does not
+  match because a pattern space requires at least one byte (`parsers/cisco_ios.toml`,
+  `crates/ulpf-parse/src/pattern.rs`); every real capture has the space.
+- The timestamp slot swallows an all-caps token right after a syslog stamp if it equals a
+  zone abbreviation (`timestamp_regex` in `crates/ulpf-parse/src/template.rs`; the
+  `CET1`/`CET` cases in `crates/ulpf-parse/tests/strategies.rs` show the boundary).
+- `gen_bench.rs` keeps the samples' timestamps (no time spread), weights families by
+  sample line count rather than realistic volume, and has an unused time-offset parameter
+  (`crates/ulpf/examples/gen_bench.rs`).
+- Delimiter `quote` is one byte while kv `quote` accepts several (`Strategy` in
+  `crates/ulpf-parse/src/def.rs`); nothing needed the asymmetry yet.
+- pfSense CARP `advbase`/`advskew` follow the Netgate BNF, whose prose lists them the other
+  way; unverified on a live box (`parsers/pfsense_filterlog.toml`). SonicWall `m=29` for
+  "Administrator login allowed" is unverified (`samples/sonicwall.log`).
+- Fixtures are full snapshots reviewed by hand (D30); the skeleton keeps a fixed subset of
+  normalized paths (`skeleton` in `crates/ulpf/src/fixture.rs`), so a mapping change
+  outside that subset does not change fixtures.
+- Normalization builds a `serde_json::Map` per event and is the throughput ceiling
+  (`Mapping::normalize` in `crates/ulpf-normalize/src/mapping.rs`); profile before the
+  server session.
+
 ## Environment (Phase 0 findings, 2026-09-04)
 - rustc/cargo 1.95.0, rustup 1.29; only `aarch64-apple-darwin` installed locally;
   `aarch64-unknown-linux-musl` available via rustup (static build done in Docker).
