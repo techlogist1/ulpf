@@ -46,11 +46,15 @@ fn fortinet_sample_parses_with_kv_and_timestamp_policies() {
     assert!(!ts.policies.contains(Policies::YEAR_ASSUMED));
     assert_eq!(&**out.timestamp_text.as_ref().unwrap(), b"2026-09-04 10:15:26");
 
-    // multi-line event, escaped quote, non-UTF-8 byte
+    // folded line, non-UTF-8 byte
     p.parse(&evs[4], &ctx(), &mut scratch, &mut out).unwrap();
     assert_field(&out, "user", b"admin\xe9");
-    assert_field(&out, "msg", b"Administrator admin logged in successfully from https(10.0.0.5) said \"hello\"");
+    assert_field(&out, "msg", b"Administrator admin logged in successfully from https(10.0.0.5)");
     assert!(field(&out, "continuation").is_none());
+
+    // escaped quote inside a config-change attribute
+    p.parse(&evs[6], &ctx(), &mut scratch, &mut out).unwrap();
+    assert_field(&out, "cfgattr", b"comments[allow web->\"allow web (reviewed)\"]");
 
     // truncated mid-value still yields what is there
     p.parse(&evs[5], &ctx(), &mut scratch, &mut out).unwrap();
@@ -64,7 +68,7 @@ fn cisco_asa_sample_parses_header_subs_and_envelopes() {
     let idx = reg.index_of("cisco_asa").unwrap();
     let p = reg.get(idx);
     let evs = events(&repo().join("samples/cisco_asa.log"));
-    assert_eq!(evs.len(), 17);
+    assert_eq!(evs.len(), 18);
     let mut scratch = reg.scratch();
     let mut out = ulpf_parse::Parsed::default();
 
