@@ -12,11 +12,11 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicI64, Ordering::Relaxed};
-use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
+use std::sync::mpsc::{Receiver, SyncSender, TrySendError, sync_channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use anyhow::{Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use memmap2::Mmap;
 use ulpf_parse::{Parsed, SubStatus};
 use ulpf_store::{Framer, RawStore};
@@ -116,7 +116,7 @@ pub fn run(cfg: &Config) -> Result<Report> {
     let (out_tx, out_rx) = sync_channel::<(u64, Vec<u8>, u64)>(queue_cap * 2);
     let in_flight = Arc::new(AtomicI64::new(0));
 
-    let output_result: Result<()> = std::thread::scope(|scope| {
+    let outcome: Result<()> = std::thread::scope(|scope| {
         let writer = scope.spawn({
             let metrics = Arc::clone(&metrics);
             let output = cfg.output.clone();
@@ -132,30 +132,39 @@ pub fn run(cfg: &Config) -> Result<Report> {
             workers.push(scope.spawn(move || worker_thread(rx, tx, &pipeline, &metrics, &in_flight)));
         }
         drop(out_tx);
+        // Only the workers hold the receiver now: when the output stage fails they exit,
+        // the channel disconnects, and ingest's next send fails instead of blocking forever.
+        drop(batch_rx);
 
-        let ingest_result = ingest(&files, &mut store, &batch_tx, &metrics, &in_flight, batch_events, &mut input_problems);
+        let ingest_result = ingest(&files, &mut store, &batch_tx, &metrics, &in_flight, queue_cap, batch_events, &mut input_problems);
         drop(batch_tx);
         for w in workers {
             w.join().expect("worker thread panicked");
         }
         let writer_result = writer.join().expect("output thread panicked");
-        ingest_result.and(writer_result)
+        match (writer_result, ingest_result) {
+            (Err(w), _) => Err(w),
+            (Ok(()), r) => r,
+        }
     });
-    output_result?;
-
+    // Whatever happened downstream, every appended record reaches disk before we report.
     store.flush(true)?;
+    outcome?;
+
     let elapsed = start.elapsed().as_secs_f64();
     let snapshot = metrics.snapshot(elapsed, threads, queue_cap);
     store.record_run(started_nanos, now_nanos(), &serde_json::to_string(&snapshot)?)?;
     Ok(Report { snapshot, load_problems, input_problems, parsers_loaded })
 }
 
+#[allow(clippy::too_many_arguments)]
 fn ingest(
     files: &[PathBuf],
     store: &mut RawStore,
     tx: &SyncSender<Batch>,
     metrics: &Metrics,
     in_flight: &AtomicI64,
+    queue_cap: usize,
     batch_events: usize,
     problems: &mut Vec<String>,
 ) -> Result<()> {
@@ -206,12 +215,16 @@ fn ingest(
             ranges.push(range);
             count += 1;
             if ranges.len() == batch_events {
-                send_batch(tx, metrics, in_flight, &mut seq, &ctx, receipt, batch_first, std::mem::replace(&mut ranges, Vec::with_capacity(batch_events)));
+                // Ids escape into the output with this batch: their bytes reach the OS first,
+                // so a process crash can never reissue an id that was already emitted.
+                store.flush(false).context("raw store flush failed")?;
+                send_batch(tx, metrics, in_flight, queue_cap, &mut seq, &ctx, receipt, batch_first, std::mem::replace(&mut ranges, Vec::with_capacity(batch_events)))?;
                 receipt = now_nanos();
             }
         }
         if !ranges.is_empty() {
-            send_batch(tx, metrics, in_flight, &mut seq, &ctx, receipt, batch_first, ranges);
+            store.flush(false).context("raw store flush failed")?;
+            send_batch(tx, metrics, in_flight, queue_cap, &mut seq, &ctx, receipt, batch_first, ranges)?;
         }
         metrics.framed.fetch_add(count, Relaxed);
         metrics.stored.fetch_add(count, Relaxed);
@@ -222,17 +235,23 @@ fn ingest(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn send_batch(tx: &SyncSender<Batch>, metrics: &Metrics, in_flight: &AtomicI64, seq: &mut u64, ctx: &Arc<FileCtx>, receipt: i64, first_raw_id: u64, ranges: Vec<std::ops::Range<usize>>) {
+fn send_batch(tx: &SyncSender<Batch>, metrics: &Metrics, in_flight: &AtomicI64, queue_cap: usize, seq: &mut u64, ctx: &Arc<FileCtx>, receipt: i64, first_raw_id: u64, ranges: Vec<std::ops::Range<usize>>) -> Result<()> {
     metrics.batches.fetch_add(1, Relaxed);
     let batch = Batch { seq: *seq, file: Arc::clone(ctx), receipt_nanos: receipt, first_raw_id, ranges };
     *seq += 1;
-    // A closed receiver means every worker died; the join below surfaces that panic.
-    // Blocking here is the backpressure policy.
-    let _ = tx.send(batch);
-    // Depth counts batches sitting in the channel; a worker may already have taken this
-    // one, so the counter can transiently dip below zero and is clamped for the high-water.
+    // Depth counts batches handed to the channel and not yet taken by a worker. Counted
+    // before the send and clamped to the capacity, so the high-water can never claim a
+    // depth the channel cannot hold; the worker decrements after its receive.
     let depth = in_flight.fetch_add(1, Relaxed) + 1;
-    metrics.queue_high_water.fetch_max(depth.max(0) as u64, Relaxed);
+    metrics.queue_high_water.fetch_max(depth.clamp(0, queue_cap as i64) as u64, Relaxed);
+    // Backpressure is measured, not inferred: a full queue is counted, then we block.
+    let batch = match tx.try_send(batch) {
+        Ok(()) => return Ok(()),
+        Err(TrySendError::Full(b)) => b,
+        Err(TrySendError::Disconnected(_)) => return Err(anyhow!("processing stopped before ingest finished; see the output error")),
+    };
+    metrics.backpressure_blocks.fetch_add(1, Relaxed);
+    tx.send(batch).map_err(|_| anyhow!("processing stopped before ingest finished; see the output error"))
 }
 
 fn worker_thread(rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<(u64, Vec<u8>, u64)>, pipeline: &Pipeline, metrics: &Metrics, in_flight: &AtomicI64) {

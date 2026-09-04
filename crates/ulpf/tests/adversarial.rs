@@ -151,3 +151,36 @@ fn chunk_boundary_mid_event_matches_whole_file_framing() {
     std::fs::remove_dir_all(&a).unwrap();
     std::fs::remove_dir_all(&b).unwrap();
 }
+
+#[test]
+fn output_failure_aborts_instead_of_hanging() {
+    let dir = temp("outfail");
+    let mut cfg = config(vec![repo().join("samples")], &dir, repo().join("parsers"));
+    cfg.output = dir.clone(); // a directory: creating the output file fails
+    cfg.queue_batches = 1;
+    cfg.batch_events = 1;
+    cfg.threads = 2;
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(run(&cfg).map(|_| ()).map_err(|e| format!("{e:#}")));
+    });
+    let result = rx.recv_timeout(std::time::Duration::from_secs(60)).expect("run hung after the output stage failed");
+    let err = result.unwrap_err();
+    assert!(err.contains("creating output"), "{err}");
+    // everything appended before the failure is on disk and intact
+    let reader = RawReader::open(&dir.join("store")).unwrap();
+    assert!(reader.verify().corrupt.is_empty());
+}
+
+#[test]
+fn queue_high_water_never_exceeds_capacity() {
+    let dir = temp("queue");
+    let mut cfg = config(vec![repo().join("samples")], &dir, repo().join("parsers"));
+    cfg.queue_batches = 1;
+    cfg.batch_events = 1;
+    cfg.threads = 8;
+    let s = run(&cfg).unwrap().snapshot;
+    assert!(s.queue_high_water <= s.queue_capacity, "{s:?}");
+    assert!(s.backpressure_blocks <= s.batches, "{s:?}");
+    assert_eq!(s.emitted, s.framed);
+}

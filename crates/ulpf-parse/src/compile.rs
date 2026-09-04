@@ -235,22 +235,45 @@ impl Parser {
             if scratch.sub_state[sub.group] == 3 {
                 continue;
             }
-            // Subs run on spans of the event only; an owned (unescaped/JSON) value cannot
-            // be borrowed for the event's lifetime.
-            let Some(Cow::Borrowed(input)) = out.get(&sub.field) else { continue };
-            let input: &'a [u8] = input;
+            // A borrowed value is a span of the event and its sub-fields borrow it too. A
+            // materialised value (JSON, an unescaped quoted value, an RFC 5424 param with
+            // escapes) is copied once and its sub-fields are owned: the one documented
+            // allocation in the sub stage, paid only where the value already allocated.
+            let input: Result<&'a [u8], Vec<u8>> = match out.get(&sub.field) {
+                None => continue,
+                Some(Cow::Borrowed(b)) => Ok(*b),
+                Some(Cow::Owned(o)) => Err(o.clone()),
+            };
             if !sub.when.iter().all(|(k, v)| out.get(k).is_some_and(|val| v.contains(val))) {
                 scratch.sub_state[sub.group] = scratch.sub_state[sub.group].max(1);
                 continue;
             }
-            let mark = out.fields.len();
-            if sub.strategy.apply(input, scratch, out).is_ok() {
+            let matched = match &input {
+                Ok(borrowed) => {
+                    let mark = out.fields.len();
+                    let ok = sub.strategy.apply(borrowed, scratch, out).is_ok();
+                    if !ok {
+                        out.fields.truncate(mark);
+                    }
+                    ok
+                }
+                Err(owned) => {
+                    let mut tmp = Parsed::default();
+                    let ok = sub.strategy.apply(owned, scratch, &mut tmp).is_ok();
+                    if ok {
+                        for f in tmp.fields {
+                            out.push(Cow::Owned(f.key.into_owned()), Cow::Owned(f.value.into_owned()));
+                        }
+                    }
+                    ok
+                }
+            };
+            if matched {
                 for (k, v) in &sub.constants {
                     out.push(k.as_slice(), v.as_slice());
                 }
                 scratch.sub_state[sub.group] = 3;
             } else {
-                out.fields.truncate(mark);
                 scratch.sub_state[sub.group] = 2;
             }
         }
@@ -266,7 +289,11 @@ impl Parser {
         }
     }
 
+    /// `timestamp_error` is set only when no candidate yields a time: it names the reason
+    /// the last present-but-unusable candidate failed, so it never accompanies a resolved
+    /// timestamp and the counter means "device time present, unreadable".
     fn resolve_timestamp<'a>(&self, ctx: &Context, scratch: &mut Scratch, out: &mut Parsed<'a>) {
+        let mut error = None;
         for t in &self.timestamps {
             if let Some(f) = &t.field {
                 let Some(val) = out.get(f).cloned() else { continue };
@@ -276,7 +303,7 @@ impl Parser {
                         out.timestamp_text = Some(val);
                         return;
                     }
-                    Err(e) => out.timestamp_error = Some(e.reason()),
+                    Err(e) => error = Some(e.reason()),
                 }
             } else {
                 scratch.join.clear();
@@ -304,7 +331,7 @@ impl Parser {
                         out.timestamp_text = Some(Cow::Owned(scratch.join.clone()));
                         return;
                     }
-                    Err(e) => out.timestamp_error = Some(e.reason()),
+                    Err(e) => error = Some(e.reason()),
                 }
             }
         }
@@ -313,10 +340,12 @@ impl Parser {
                 Ok(ts) => {
                     out.timestamp = Some(ts);
                     out.timestamp_text = Some(val);
+                    return;
                 }
-                Err(e) => out.timestamp_error = Some(e.reason()),
+                Err(e) => error = Some(e.reason()),
             }
         }
+        out.timestamp_error = error;
     }
 }
 

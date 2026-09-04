@@ -152,3 +152,79 @@ fn store_round_trips_bytes_and_digests_and_survives_reopen() {
 }
 
 use sha2::Digest;
+
+fn temp(name: &str) -> std::path::PathBuf {
+    let dir = std::env::temp_dir().join(format!("ulpf-store-{}-{}", name, std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    dir
+}
+
+fn fill(dir: &std::path::Path, n: usize) {
+    let mut s = RawStore::open(dir).unwrap();
+    let src = s.source_id("a.log").unwrap();
+    for i in 0..n {
+        s.append(src, 1, format!("event {i}\n").as_bytes()).unwrap();
+    }
+    s.flush(true).unwrap();
+}
+
+fn offset_of(dir: &std::path::Path, id: u64) -> u64 {
+    let idx = std::fs::read(dir.join("raw.idx")).unwrap();
+    u64::from_le_bytes(idx[(id * 8) as usize..(id * 8 + 8) as usize].try_into().unwrap())
+}
+
+#[test]
+fn a_second_writer_is_refused_while_the_store_is_open() {
+    let dir = temp("lock");
+    let first = RawStore::open(&dir).unwrap();
+    let err = match RawStore::open(&dir) {
+        Ok(_) => panic!("a second writer must be refused"),
+        Err(e) => e,
+    };
+    assert!(err.to_string().contains("in use"), "{err}");
+    drop(first);
+    RawStore::open(&dir).unwrap();
+}
+
+#[test]
+fn index_ahead_of_segment_recovers_to_the_last_complete_record() {
+    let dir = temp("idx-ahead");
+    fill(&dir, 50);
+    // the index buffer drained, the segment buffer did not: record 40's header is torn
+    let cut = offset_of(&dir, 40) + 30;
+    OpenOptions::new().write(true).open(dir.join("raw.seg")).unwrap().set_len(cut).unwrap();
+    let mut s = RawStore::open(&dir).unwrap();
+    assert_eq!(s.len(), 40, "records 40..49 were indexed but never fully written");
+    let src = s.source_id("a.log").unwrap();
+    assert_eq!(s.append(src, 2, b"after the crash\n").unwrap(), RawId(40));
+    s.flush(true).unwrap();
+    drop(s);
+    let r = RawReader::open(&dir).unwrap();
+    assert_eq!(r.len(), 41);
+    assert!(r.verify().corrupt.is_empty());
+    assert_eq!(r.get(RawId(39)).unwrap().bytes, b"event 39\n");
+    assert_eq!(r.get(RawId(40)).unwrap().bytes, b"after the crash\n");
+}
+
+#[test]
+fn segment_ahead_of_index_reindexes_complete_records_and_drops_a_torn_tail() {
+    let dir = temp("seg-ahead");
+    fill(&dir, 50);
+    // the segment buffer drained, the index buffer did not (30 entries), and a record
+    // was torn at the very end
+    OpenOptions::new().write(true).open(dir.join("raw.idx")).unwrap().set_len(30 * 8).unwrap();
+    let mut seg = OpenOptions::new().append(true).open(dir.join("raw.seg")).unwrap();
+    seg.write_all(b"ULPF\x32\x00\x00\x00\x00\x00\x00\x00torn").unwrap();
+    drop(seg);
+    let mut s = RawStore::open(&dir).unwrap();
+    assert_eq!(s.len(), 50, "records 30..49 are complete in the segment and get their ids back");
+    let src = s.source_id("a.log").unwrap();
+    assert_eq!(s.append(src, 3, b"next\n").unwrap(), RawId(50));
+    s.flush(true).unwrap();
+    drop(s);
+    let r = RawReader::open(&dir).unwrap();
+    assert_eq!(r.len(), 51);
+    assert!(r.verify().corrupt.is_empty());
+    assert_eq!(r.get(RawId(49)).unwrap().bytes, b"event 49\n");
+    assert_eq!(r.get(RawId(50)).unwrap().bytes, b"next\n");
+}

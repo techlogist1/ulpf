@@ -124,6 +124,9 @@ failed: a pattern bug, a truncated line, or, for ungated subs, a message you hav
 modelled) beats `sub_uncovered` (a field with subs is present but no sub is gated for it:
 a message id you have not written yet) beats `matched`; when none of the sub fields is
 present at all the status is `not_applicable`, the same as a definition without subs.
+A sub on a field whose value was materialised rather than borrowed from the event (any
+JSON value, a quoted value with escapes, an RFC 5424 parameter with escapes) runs on a
+copy of that value; it behaves the same and costs one allocation for that event.
 
 ## Naming fields
 

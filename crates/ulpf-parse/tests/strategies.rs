@@ -461,3 +461,62 @@ format = "auto"
     assert_field(&out, "ts", b"Sep  4 10:15:23 CET");
     assert_field(&out, "host", b"zone");
 }
+
+#[test]
+fn timestamp_error_is_reported_only_when_no_candidate_resolves() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = ["="]
+[strategy]
+kind = "kv"
+[[timestamp]]
+field = "bad"
+format = "rfc3339"
+[[timestamp]]
+field = "good"
+format = "epoch"
+"#);
+    let mut out = Parsed::default();
+    run(&p, b"bad=nonsense good=1788516923", &mut out).unwrap();
+    assert!(out.timestamp.is_some());
+    assert!(out.timestamp_error.is_none(), "a resolved time carries no error");
+    run(&p, b"bad=nonsense", &mut out).unwrap();
+    assert!(out.timestamp.is_none());
+    assert_eq!(out.timestamp_error, Some("no_match"));
+    run(&p, b"neither=here", &mut out).unwrap();
+    assert!(out.timestamp.is_none());
+    assert!(out.timestamp_error.is_none(), "no candidate present is not an error");
+}
+
+#[test]
+fn subs_run_on_materialised_json_values() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+starts_with = "{"
+[strategy]
+kind = "json"
+[[sub]]
+field = "http.url"
+kind = "pattern"
+anchor = "full"
+pattern = '{path:text}?{query:rest}'
+"#);
+    let mut out = Parsed::default();
+    run(&p, br#"{"http": {"url": "/api/v1?x=1&y=2"}}"#, &mut out).unwrap();
+    assert_field(&out, "path", b"/api/v1");
+    assert_field(&out, "query", b"x=1&y=2");
+    assert_eq!(out.sub, ulpf_parse::SubStatus::Matched);
+    run(&p, br#"{"http": {"url": "/plain"}}"#, &mut out).unwrap();
+    assert!(field(&out, "path").is_none());
+    assert_eq!(out.sub, ulpf_parse::SubStatus::NoMatch);
+    run(&p, br#"{"other": 1}"#, &mut out).unwrap();
+    assert_eq!(out.sub, ulpf_parse::SubStatus::NotApplicable);
+}

@@ -34,6 +34,8 @@ pub struct Metrics {
     pub output_bytes: AtomicU64,
     pub batches: AtomicU64,
     pub queue_high_water: AtomicU64,
+    /// Times the ingest thread found the queue full and had to wait.
+    pub backpressure_blocks: AtomicU64,
 }
 
 /// One worker's counts for one batch.
@@ -122,6 +124,7 @@ impl Metrics {
             batches: g(&self.batches),
             queue_high_water: g(&self.queue_high_water),
             queue_capacity: queue_capacity as u64,
+            backpressure_blocks: g(&self.backpressure_blocks),
         }
     }
 }
@@ -156,6 +159,7 @@ pub struct Snapshot {
     pub batches: u64,
     pub queue_high_water: u64,
     pub queue_capacity: u64,
+    pub backpressure_blocks: u64,
 }
 
 fn by_reason(list: &[(&str, u64)]) -> String {
@@ -186,9 +190,9 @@ impl std::fmt::Display for Snapshot {
         )?;
         write!(
             f,
-            "queue: {} batches, high-water {}/{} (backpressure engaged: {})",
-            self.batches, self.queue_high_water, self.queue_capacity,
-            if self.queue_high_water >= self.queue_capacity { "yes" } else { "no" }
+            "queue: {} batches, high-water {}/{}, backpressure blocks {} (engaged: {})",
+            self.batches, self.queue_high_water, self.queue_capacity, self.backpressure_blocks,
+            if self.backpressure_blocks > 0 { "yes" } else { "no" }
         )
     }
 }

@@ -62,6 +62,11 @@ pub struct Mapping {
 
 impl Mapping {
     pub fn compile(file: MappingFile) -> Result<Mapping, String> {
+        for c in file.class.iter().chain(file.default_class.iter()) {
+            if !(0..=99_999_999).contains(&c.uid) {
+                return Err(format!("[[class]] `{}`: uid {} is outside 0..=99999999", c.name, c.uid));
+            }
+        }
         let mut fields: Vec<SchemaField> = Vec::new();
         let mut aliases: HashMap<Vec<u8>, (usize, usize)> = HashMap::new();
         for (path, names) in &file.fields {
@@ -168,22 +173,17 @@ impl Mapping {
                     if better {
                         if let Some((_, prev)) = chosen[idx].take() {
                             // demoted alias keeps its data
-                            unmapped.insert(String::from_utf8_lossy(chosen_src[idx].as_deref().unwrap_or_default()).into_owned(), prev);
-                            stats.unmapped += 1;
+                            unmapped_insert(&mut unmapped, String::from_utf8_lossy(chosen_src[idx].as_deref().unwrap_or_default()).into_owned(), prev);
                             stats.mapped -= 1;
                         }
                         chosen[idx] = Some((rank, Value::String(value_text.into_owned())));
                         chosen_src[idx] = Some(f.key.to_vec());
                         stats.mapped += 1;
                     } else {
-                        unmapped.insert(key.into_owned(), Value::String(value_text.into_owned()));
-                        stats.unmapped += 1;
+                        unmapped_insert(&mut unmapped, key.into_owned(), Value::String(value_text.into_owned()));
                     }
                 }
-                None => {
-                    unmapped.insert(key.into_owned(), Value::String(value_text.into_owned()));
-                    stats.unmapped += 1;
-                }
+                None => unmapped_insert(&mut unmapped, key.into_owned(), Value::String(value_text.into_owned())),
             }
         }
         for (idx, slot) in chosen.into_iter().enumerate() {
@@ -221,7 +221,7 @@ impl Mapping {
                                     set_path(&mut root, idf, Value::from(*id));
                                 }
                             }
-                            unmapped.insert(String::from_utf8_lossy(&src).into_owned(), value);
+                            unmapped_insert(&mut unmapped, String::from_utf8_lossy(&src).into_owned(), value);
                         }
                     }
                 }
@@ -241,7 +241,7 @@ impl Mapping {
         }
         if let Some(Value::Number(a)) = root.get("activity_id") {
             let a = a.as_i64().unwrap_or(0);
-            root.insert("type_uid".into(), Value::from(class.uid * 100 + a));
+            root.insert("type_uid".into(), Value::from(class.uid.saturating_mul(100).saturating_add(a)));
         }
 
         // time
@@ -295,12 +295,32 @@ impl Mapping {
             ulpf.insert("utf8_lossy".into(), Value::Bool(true));
         }
         root.insert("ulpf".into(), Value::Object(ulpf));
+        stats.unmapped = unmapped.len() as u32;
         if !unmapped.is_empty() {
             root.insert("unmapped".into(), Value::Object(unmapped));
         }
         serde_json::to_writer(&mut *out, &Value::Object(root)).expect("writing to a Vec cannot fail");
         out.push(b'\n');
         stats
+    }
+}
+
+/// A source field name that repeats within one event keeps every value: a repeat lands
+/// under `name#2`, `name#3`, ... (numbered in the order the values reach this map).
+/// Nothing is dropped.
+fn unmapped_insert(unmapped: &mut Map<String, Value>, key: String, value: Value) {
+    if !unmapped.contains_key(&key) {
+        unmapped.insert(key, value);
+        return;
+    }
+    let mut n = 2;
+    loop {
+        let candidate = format!("{key}#{n}");
+        if !unmapped.contains_key(&candidate) {
+            unmapped.insert(candidate, value);
+            return;
+        }
+        n += 1;
     }
 }
 

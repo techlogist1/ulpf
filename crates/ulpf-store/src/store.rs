@@ -7,9 +7,18 @@
 //! - `catalog.sqlite` — sources, ingests (one row per file/stream), runs (one row per CLI
 //!   run with its counter report). Never per event: the offsets file is the event index.
 //!
-//! Crash recovery: the index is authoritative. On open, any segment bytes after the last
-//! indexed record are unindexed and were never handed out as a `RawId`; the writer resumes
-//! at the end of the last indexed record. A partial trailing index entry is ignored.
+//! Crash recovery (`recover`): the index is authoritative for every entry whose record is
+//! fully present in the segment. Trailing index entries that point past the segment (the
+//! index buffer drained before the segment buffer) are dropped; complete records the
+//! segment holds beyond the last index entry (the segment drained first) are indexed
+//! again, so an id that was handed out is never reissued; both files are cut to the
+//! recovered end. The engine flushes both buffers before it lets an id escape into the
+//! output, so only power loss can reach the reindexing path.
+//!
+//! One writer at a time: the catalogue connection is opened in SQLite's exclusive locking
+//! mode and holds the file lock until it closes; a second writer, or a reader of the
+//! catalogue, gets "store is in use". The OS releases the lock if the process dies, so
+//! there is no lock file to go stale.
 
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
@@ -47,6 +56,8 @@ impl RawStore {
     /// Opens (creating if needed) the store in `dir`. Only append and read exist beyond this.
     pub fn open(dir: &Path) -> io::Result<RawStore> {
         std::fs::create_dir_all(dir)?;
+        // Taken first: the writer lock lives on this connection (see the module doc).
+        let catalog = open_catalog(&dir.join("catalog.sqlite"), true).map_err(|e| in_use(dir, e))?;
         let seg_path = dir.join("raw.seg");
         let idx_path = dir.join("raw.idx");
         let mut seg = OpenOptions::new().read(true).write(true).create(true).truncate(false).open(&seg_path)?;
@@ -60,23 +71,9 @@ impl RawStore {
                 return Err(io::Error::new(io::ErrorKind::InvalidData, "raw.seg: bad file magic"));
             }
         }
-        let next_id = idx.metadata()?.len() / 8;
-        let seg_len = if next_id == 0 {
-            FILE_MAGIC.len() as u64
-        } else {
-            idx.seek(SeekFrom::Start((next_id - 1) * 8))?;
-            let mut off = [0u8; 8];
-            idx.read_exact(&mut off)?;
-            let off = u64::from_le_bytes(off);
-            seg.seek(SeekFrom::Start(off))?;
-            let mut hdr = [0u8; HEADER_LEN];
-            seg.read_exact(&mut hdr)?;
-            let len = u32::from_le_bytes(hdr[24..28].try_into().unwrap()) as u64;
-            off + HEADER_LEN as u64 + len
-        };
+        let (next_id, seg_len) = recover(&mut seg, &mut idx)?;
         seg.seek(SeekFrom::Start(seg_len))?;
         idx.seek(SeekFrom::Start(next_id * 8))?;
-        let catalog = open_catalog(&dir.join("catalog.sqlite"))?;
         Ok(RawStore {
             seg: BufWriter::with_capacity(1 << 20, seg),
             idx: BufWriter::with_capacity(1 << 16, idx),
@@ -174,8 +171,70 @@ impl Drop for RawStore {
     }
 }
 
-fn open_catalog(path: &Path) -> io::Result<rusqlite::Connection> {
+/// Returns `(record count, segment end)` after cutting both files to the last state that
+/// is consistent in both directions (module doc).
+fn recover(seg: &mut File, idx: &mut File) -> io::Result<(u64, u64)> {
+    let seg_file_len = seg.metadata()?.len();
+    let mut n = idx.metadata()?.len() / 8;
+    let mut seg_len = FILE_MAGIC.len() as u64;
+    while n > 0 {
+        idx.seek(SeekFrom::Start((n - 1) * 8))?;
+        let mut off = [0u8; 8];
+        idx.read_exact(&mut off)?;
+        if let Some(end) = record_end(seg, u64::from_le_bytes(off), n - 1, seg_file_len, false)? {
+            seg_len = end;
+            break;
+        }
+        n -= 1;
+    }
+    while let Some(end) = record_end(seg, seg_len, n, seg_file_len, true)? {
+        idx.seek(SeekFrom::Start(n * 8))?;
+        idx.write_all(&seg_len.to_le_bytes())?;
+        n += 1;
+        seg_len = end;
+    }
+    idx.set_len(n * 8)?;
+    seg.set_len(seg_len)?;
+    Ok((n, seg_len))
+}
+
+/// End offset of the record at `off` if a complete record carrying `id` is there. With
+/// `check_digest` the bytes must also hash to the stored digest (an unindexed trailing
+/// record may be torn in the middle of its bytes).
+fn record_end(seg: &mut File, off: u64, id: u64, seg_file_len: u64, check_digest: bool) -> io::Result<Option<u64>> {
+    if off < FILE_MAGIC.len() as u64 || off + HEADER_LEN as u64 > seg_file_len {
+        return Ok(None);
+    }
+    seg.seek(SeekFrom::Start(off))?;
+    let mut hdr = [0u8; HEADER_LEN];
+    seg.read_exact(&mut hdr)?;
+    if u32::from_le_bytes(hdr[0..4].try_into().unwrap()) != REC_MAGIC || u64::from_le_bytes(hdr[4..12].try_into().unwrap()) != id {
+        return Ok(None);
+    }
+    let len = u32::from_le_bytes(hdr[24..28].try_into().unwrap()) as u64;
+    let end = off + HEADER_LEN as u64 + len;
+    if end > seg_file_len {
+        return Ok(None);
+    }
+    if check_digest {
+        let mut bytes = vec![0u8; len as usize];
+        seg.read_exact(&mut bytes)?;
+        let digest: [u8; 32] = Sha256::digest(&bytes).into();
+        if digest != hdr[28..60] {
+            return Ok(None);
+        }
+    }
+    Ok(Some(end))
+}
+
+/// `writer` opens in exclusive locking mode and takes the lock with a first write, so it
+/// is held until the connection closes.
+fn open_catalog(path: &Path, writer: bool) -> io::Result<rusqlite::Connection> {
     let conn = rusqlite::Connection::open(path).map_err(sql_err)?;
+    conn.busy_timeout(std::time::Duration::ZERO).map_err(sql_err)?;
+    if writer {
+        conn.execute_batch("PRAGMA locking_mode = EXCLUSIVE;").map_err(sql_err)?;
+    }
     conn.execute_batch(
         "PRAGMA journal_mode = WAL;
          CREATE TABLE IF NOT EXISTS sources (id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
@@ -185,14 +244,27 @@ fn open_catalog(path: &Path) -> io::Result<rusqlite::Connection> {
             started_nanos INTEGER NOT NULL);
          CREATE TABLE IF NOT EXISTS runs (
             id INTEGER PRIMARY KEY, started_nanos INTEGER NOT NULL, finished_nanos INTEGER NOT NULL,
-            report TEXT NOT NULL);",
+            report TEXT NOT NULL);
+         CREATE TABLE IF NOT EXISTS writer (id INTEGER PRIMARY KEY, pid INTEGER NOT NULL);",
     )
     .map_err(sql_err)?;
+    if writer {
+        conn.execute("INSERT OR REPLACE INTO writer(id, pid) VALUES (1, ?1)", [std::process::id() as i64]).map_err(sql_err)?;
+    }
     Ok(conn)
 }
 
 fn sql_err(e: rusqlite::Error) -> io::Error {
     io::Error::other(format!("catalog: {e}"))
+}
+
+fn in_use(dir: &Path, e: io::Error) -> io::Error {
+    let text = e.to_string();
+    if text.contains("locked") || text.contains("busy") {
+        io::Error::other(format!("store {} is in use by another process", dir.display()))
+    } else {
+        e
+    }
 }
 
 /// Read-only view of a store. Maps the segment and index as they were at open time.
@@ -285,10 +357,12 @@ impl RawReader {
             rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
         )
         .map_err(sql_err)?;
-        let mut stmt = conn.prepare("SELECT id, name FROM sources").map_err(sql_err)?;
+        conn.busy_timeout(std::time::Duration::ZERO).map_err(sql_err)?;
+        let mut stmt = conn.prepare("SELECT id, name FROM sources").map_err(sql_err).map_err(|e| in_use(&self.dir, e))?;
         let rows = stmt
             .query_map([], |r| Ok((r.get::<_, u32>(0)?, r.get::<_, String>(1)?)))
-            .map_err(sql_err)?;
+            .map_err(sql_err)
+            .map_err(|e| in_use(&self.dir, e))?;
         let mut out = HashMap::new();
         for row in rows {
             let (id, name) = row.map_err(sql_err)?;

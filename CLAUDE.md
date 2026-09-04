@@ -62,7 +62,8 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 
 ## Other invariants
 - **Raw before understanding.** The store API is append + read. No update, no delete,
-  no handle to an existing record. Immutability is a property of the interface.
+  no handle to an existing record. Immutability is a property of the interface, and one
+  writer at a time is enforced (a second `ulpf run` on the same store is refused).
 - **Zero-copy hot path.** Inputs are memory-mapped. Parsed fields are byte ranges into
   the map (`Cow::Borrowed`); text is materialised only at output. Digests are computed
   from the mapped bytes. Throughput is measured from the first CLI run so any
@@ -126,7 +127,8 @@ ulpf fixture samples/x.log # fixture skeleton for review (never commit blind)
 Every `run` ends with the counter block: files, bytes, events/s, MB/s; per-stage counts
 (framed, stored, detected, no_parser, parsed, parse_failed by reason, normalized, emitted);
 signals (sub_matched, sub_no_match, sub_uncovered, time_from_receipt, time_error by reason,
-class_unknown, enum_other, unmapped_fields, utf8_lossy); queue batches and high-water.
+class_unknown, enum_other, unmapped_fields, utf8_lossy); queue batches, high-water and
+backpressure blocks (times the ingest thread found the queue full).
 When output looks plausible but wrong, read that block first: `no_parser` means the format
 was not recognised, `sub_uncovered` means a message id has no pattern yet, `sub_no_match`
 means a gated sub ran and failed (or an ungated sub met a message you have not modelled),

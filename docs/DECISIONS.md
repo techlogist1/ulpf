@@ -28,7 +28,8 @@ benefit).
 
 ## D3. Queue: `std::sync::mpsc::sync_channel`, block-on-full
 **Decision.** Ingest→process is a bounded `sync_channel` of batches; when full the
-ingest thread blocks. **Anchor.** `crates/ulpf/src/engine.rs` (`QUEUE_CAPACITY`, `sync_channel`).
+ingest thread blocks. **Anchor.** `crates/ulpf/src/engine.rs` (`Config::queue_batches`, `queue_cap`, `sync_channel`; the
+operator sets the size with `--queue`, the engine owns the policy that a full queue blocks).
 **Principle.** Pull complexity downward: the one policy that never
 loses data is chosen by the engine, not configured by the operator. **Ruled out.**
 `crossbeam-channel` (a dependency for a feature stdlib has); drop-on-full (violates raw
@@ -234,17 +235,21 @@ input: the two causes need two different fixes (a pattern bug versus a missing m
 so they must be two numbers on screen. **Ruled out.** Folding both into `no_match` (the
 operator cannot tell which definition work to do).
 
-## D23. Queue depth counts batches resident in the channel; the BOM is stripped by the envelope
-**Decision.** The in-flight counter increments after a successful `send`, is signed, and
-the high-water clamps at zero, so the printed depth never exceeds capacity and
-"backpressure engaged" means the channel really filled. A leading UTF-8 byte-order mark is
-removed before `<pri>` detection. Both found by feeding hostile inputs through the real
-engine (`crates/ulpf/tests/adversarial.rs`). **Anchor.** `send_batch` in
-`crates/ulpf/src/engine.rs`; `strip_syslog` in `crates/ulpf-parse/src/envelope.rs`.
-**Principle.** Verification means exercising the binary, not reading the source; a
-plausible-looking counter (`2/1`) is exactly the kind of wrong output only a run reveals.
-**Ruled out.** Counting before send (reports capacity+1 under load); treating a BOM as
-message bytes (a Windows-exported ASA log parses as `pattern_no_match` for every line).
+## D23. Backpressure is measured at the channel, the depth is clamped, and the BOM is stripped by the envelope
+**Decision.** The ingest thread counts a batch in flight before offering it, records the
+high-water clamped to the queue capacity, and measures backpressure directly: a
+`try_send` that reports the queue full increments `backpressure_blocks` before the
+blocking `send`. "Engaged" on screen means that counter is non-zero. A leading UTF-8
+byte-order mark is removed before `<pri>` detection. The first version of this decision
+counted after the send and claimed the depth "never exceeds capacity"; the 2026-09-05
+invariant review reproduced `high-water 2/1` under `--queue 1 -j 8`, because a worker's
+decrement lands after its receive frees the slot. **Anchor.** `send_batch` in
+`crates/ulpf/src/engine.rs`; `backpressure_blocks` in `crates/ulpf/src/metrics.rs`;
+`queue_high_water_never_exceeds_capacity` in `crates/ulpf/tests/adversarial.rs`;
+`strip_syslog` in `crates/ulpf-parse/src/envelope.rs`. **Principle.** Measure the thing
+you report; a counter derived from a race is a guess with a number on it. **Ruled out.**
+Inferring "engaged" from the high-water (wrong whenever the race over-counts); treating a
+BOM as message bytes (a Windows-exported ASA log parses as `pattern_no_match` for every line).
 
 ## D24. Subs run per field: file order, one winner per field, later subs may gate on earlier subs' output
 **Decision.** Every `[[sub]]` whose gate passes runs, in file order, except that a field
@@ -372,3 +377,61 @@ cost its definition one character, not a split value. Written for SonicOS's repo
 double-quoting it, so no shipped definition uses the capability yet. Kept: tested, one
 line, and the next vendor to do this costs nothing. **Ruled out.** A second `quote2` key
 (two keys for one concept).
+
+## D33. One writer per store, enforced by the catalogue's exclusive lock; recovery is consistent in both directions
+**Decision.** `RawStore::open` opens `catalog.sqlite` in SQLite's exclusive locking mode
+and takes the lock with a first write, so a second writer, or a catalogue reader, gets
+"store is in use" and the OS releases the lock if the process dies. On open, `recover`
+walks the index back to the last entry whose record is fully present, reindexes complete
+records the segment holds beyond it, and cuts both files there. The engine flushes both
+buffers before a batch's ids can appear in the output. Found by the invariant review:
+two concurrent runs on the default store path each exited 0 and left 37,041 corrupt
+records with 170,001 ids issued twice; a kill with the index buffer ahead of the segment
+buffer left the store unopenable. **Anchor.** `open_catalog`, `recover`, `record_end` in
+`crates/ulpf-store/src/store.rs`; the `flush(false)` before `send_batch` in
+`crates/ulpf/src/engine.rs`; `a_second_writer_is_refused_while_the_store_is_open`,
+`index_ahead_of_segment_recovers_to_the_last_complete_record`,
+`segment_ahead_of_index_reindexes_complete_records_and_drops_a_torn_tail` in
+`crates/ulpf-store/tests/roundtrip.rs`. **Principle.** Immutability is a property of the
+interface only if the interface is the only writer; a permanent id must be permanent
+across a crash. **Ruled out.** A lock file (goes stale after a crash and wedges the
+store); trusting the index unconditionally (the documented "index is authoritative" only
+covered the segment-ahead direction).
+
+## D34. A failed output stage aborts the run; ingest never blocks on a dead consumer
+**Decision.** Only the workers hold the batch receiver, so when the output thread fails
+(unwritable path, disk full, closed pipe) the workers exit, the channel disconnects, the
+ingest thread's next send fails, and `run` returns the output error after flushing the
+store. Found by the invariant review: `ulpf run ... | head` hung forever with no counter
+block. **Anchor.** the `drop(batch_rx)` and the result match in `run`, `send_batch`
+returning `Result`, in `crates/ulpf/src/engine.rs`; `output_failure_aborts_instead_of_hanging`
+in `crates/ulpf/tests/adversarial.rs`. **Principle.** Errors as values applies to the
+engine's own failures too: a hang is the one outcome that produces no counter.
+**Ruled out.** A watchdog timeout (guesses at a number; a slow disk is not a failure).
+
+## D35. Subs run on materialised values by copying them once
+**Decision.** A `[[sub]]` whose input field was materialised (a JSON value, an unescaped
+quoted value, an RFC 5424 parameter with escapes) runs on a copy and pushes owned
+sub-fields; the status semantics are identical to the borrowed case. Before this the sub
+was skipped and the event reported `not_applicable`, so a Suricata `http.url` could never
+be split and nothing said so. **Anchor.** `Parser::run_subs` in
+`crates/ulpf-parse/src/compile.rs`; `subs_run_on_materialised_json_values` in
+`crates/ulpf-parse/tests/strategies.rs`. **Principle.** The one allocation is paid only
+where the value already allocated; the hot path for borrowed spans is unchanged.
+**Ruled out.** Counting the skip as `sub_no_match` (visible but still useless).
+
+## D36. Repeated source fields keep every value; `time_error` means present-but-unreadable; class uids are range-checked
+**Decision.** A source field name that repeats within one event lands in `unmapped` as
+`name`, `name#2`, `name#3`, and `unmapped_fields` counts what was emitted. The parse
+stage sets `timestamp_error` only when no candidate resolved, so the counter is disjoint
+from `time_from_receipt`. `Mapping::compile` rejects a class uid outside 0..=99,999,999
+so `ulpf check` reports it with the file, and `type_uid` arithmetic saturates. All three
+from the invariant review. **Anchor.** `unmapped_insert` and the uid check in
+`crates/ulpf-normalize/src/mapping.rs`; `resolve_timestamp` in
+`crates/ulpf-parse/src/compile.rs`; `a_repeated_source_field_keeps_every_value`,
+`absurd_class_uid_is_rejected_at_load` in `crates/ulpf-normalize/tests/normalize.rs`;
+`timestamp_error_is_reported_only_when_no_candidate_resolves` in
+`crates/ulpf-parse/tests/strategies.rs`. **Principle.** Never a silent drop; a counter
+that fires on correct events is worse than no counter. **Ruled out.** Arrays for repeated
+keys (changes the value type of a field depending on the event, which every consumer then
+has to special-case).

@@ -125,9 +125,14 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
   documented comma form of 113004, 106100 without the hash pair, ICMP 106023 without
   parentheses, and teardown endpoints renamed lower_/higher_ because 302014 carries no
   direction (the old fixed guess inverted inbound connections).
-- [ ] Ultracode invariant review workflow (5 Opus finders, adversarial verification per
-  finding) over store, zero-copy, wall/errors, engine, docs; confirmed findings to be
-  applied on return.
+- [x] Ultracode invariant review workflow (5 Opus finders, one adversarial Opus verifier
+  per finding): 12 findings, 12 confirmed, 0 refuted; the zero-copy finder did not run
+  (session limit). All twelve applied 2026-09-05 with regression tests (D23 rewritten,
+  D33 to D36): store writer lock and two-direction crash recovery, ids flushed before they
+  escape, output-failure abort instead of a hang, measured backpressure with a clamped
+  high-water, subs on materialised values, repeated source fields kept, `time_error`
+  only when unresolved, class uid range check, D3 anchor. The zero-copy dimension is the
+  next review to run.
 
 ## Tried and abandoned
 - Internally-tagged `Strategy` enum with `#[serde(flatten)]` inside `[[sub]]`: serde cannot combine flatten with deny_unknown_fields; replaced by one flat validated struct (D13).

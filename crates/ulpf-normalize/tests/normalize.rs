@@ -265,3 +265,43 @@ fn class_rule_wildcard_means_present() {
     let v: Value = serde_json::from_slice(out.trim_ascii_end()).unwrap();
     assert_eq!(v["class_uid"], 4001, "{v}");
 }
+
+#[test]
+fn a_repeated_source_field_keeps_every_value() {
+    let map = mapping();
+    let mut parsed = Parsed::default();
+    parsed.push(&b"src"[..], &b"10.0.0.1"[..]);
+    parsed.push(&b"src"[..], &b"10.0.0.2"[..]);
+    parsed.push(&b"srcip"[..], &b"10.0.0.3"[..]);
+    let prov = Provenance {
+        raw_id: 3,
+        source: "t.log",
+        parser: None,
+        vendor: None,
+        product: None,
+        receipt_nanos: RECEIPT,
+        parse_status: "parsed",
+        sub_status: "not_applicable",
+    };
+    let mut out = Vec::new();
+    let stats = map.normalize(&parsed, &prov, &mut out);
+    let v: Value = serde_json::from_slice(out.trim_ascii_end()).unwrap();
+    assert_eq!(v.pointer("/src_endpoint/ip").unwrap(), "10.0.0.3", "the higher-ranked alias wins");
+    let mut kept = vec![v["unmapped"]["src"].as_str().unwrap(), v["unmapped"]["src#2"].as_str().unwrap()];
+    kept.sort();
+    assert_eq!(kept, ["10.0.0.1", "10.0.0.2"], "both values of the repeated field survive");
+    assert_eq!(stats.unmapped, 2);
+    assert_eq!(stats.mapped, 1);
+}
+
+#[test]
+fn absurd_class_uid_is_rejected_at_load() {
+    let dir = std::env::temp_dir().join(format!("ulpf-map-uid-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("ocsf.toml");
+    std::fs::write(&path, "[schema]\nname = \"ocsf\"\n[[class]]\nuid = 100000000000000000\nname = \"Huge\"\ncategory_uid = 1\ncategory_name = \"x\"\n").unwrap();
+    let report = load_files(&[path]);
+    assert!(report.mappings.is_empty());
+    let text = report.errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");
+    assert!(text.contains("outside"), "{text}");
+}
