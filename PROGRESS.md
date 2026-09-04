@@ -34,7 +34,7 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
       original string retained on the event.
 - [x] 6. `cargo test --workspace` passes (2026-09-05 at 97fee74: 50 tests across 11 test
       binaries, 0 failed, exit code checked), `cargo clippy --workspace --all-targets -- -D warnings` clean, Dockerfile
-      static build built and run 2026-09-04 and rebuilt 2026-09-05 at 97fee74 with the
+      static build built and run 2026-09-04 and rebuilt 2026-09-05 at cade196 with the
       final 12 definitions and the reviewed engine (ulpf:static, 7.37 MB, scratch base;
       in-container run over `samples/` processed 236 events, 0 failed files, time_error
       none, counters matching the fixtures).
