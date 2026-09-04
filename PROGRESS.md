@@ -5,13 +5,16 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 ## Definition of done (each item is checked only after running it)
 - [x] 1. CLI processes a directory of mixed-format logs end to end, writes JSON Lines,
       reports sustained events/sec measured ingest→output on this machine. Measured
-      2026-09-05 on the M1 Pro (8 cores, 7 workers), release build, 5,000,000-line
-      synthetic mix of all 12 families (1431 MB, `bench/mixed-5000000.log`):
-      233,128 events/s, 66.7 MB/s, 21.4 s wall, SHA-256 + raw store + JSON Lines
-      included; queue high-water 64/64, so the workers (parse+normalize+serialize) are
-      the bottleneck, not ingest. Signals on that run: detected 98.9%, no_parser 52,650
-      (generator-mutated lines), sub_no_match 74,650, sub_uncovered 166,907,
-      time_from_receipt 182,107, class_unknown 842,565.
+      2026-09-05 on the M1 Pro (8 cores, 7 workers), release build at 2cb3db1, 5,000,000
+      line synthetic mix of all 12 families (1526 MB, `bench/mixed-5000000.log`):
+      226,434 events/s, 69.1 MB/s, 22.1 s wall, SHA-256 + raw store (flushed per batch)
+      + JSON Lines included; `ulpf verify` on the resulting store: 5,000,000 records, 0
+      corrupt. Queue high-water 64/64 with 1,666 measured backpressure blocks, so the
+      workers (parse+normalize+serialize) are the bottleneck, not ingest. Signals on that
+      run: detected 99.0%, no_parser 48,047 (generator-mutated lines), sub_no_match
+      91,105, sub_uncovered 145,461, time_from_receipt 165,001, time_error 14 (the
+      earlier 51,641 was the counter firing on resolved timestamps, D36),
+      class_unknown 898,670.
 - [x] 2. Every raw event reconstructs byte-identically from the append-only store;
       proven by a test reading back bytes and digests across all fixtures including
       multi-line events, non-UTF-8 input, and chunk boundaries mid-event.

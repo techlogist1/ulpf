@@ -18,7 +18,7 @@ Measure with:
 ./target/release/ulpf run bench/mixed-5000000.log --store /tmp/ulpf-bench-store --output /dev/null
 ```
 
-The number recorded in `PROGRESS.md` (233k events/s, 66.7 MB/s, 2026-09-05, M1 Pro) came from exactly that command.
+The number recorded in `PROGRESS.md` (226k events/s, 69.1 MB/s, 2026-09-05, M1 Pro) came from exactly that command.
 
 ## How the generator works
 
