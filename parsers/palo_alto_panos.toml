@@ -1,9 +1,12 @@
 # Palo Alto Networks PAN-OS syslog: positional CSV after a BSD or IETF syslog header.
-# Source: PAN-OS 10.2 Administrator's Guide, "Syslog Field Descriptions" (Traffic,
-# Threat, System, Config log fields), with the documented syslog field names as column
-# names; zone columns use src_zone/dst_zone rather than the docs' from/to.
+# Source: PAN-OS 10.2 and 11.1 Administrator's Guide, "Syslog Field Descriptions"
+# (Traffic, Threat, System, Config log fields), column by column, with the documented
+# syslog field names as column names. Deviations: zone columns are src_zone/dst_zone
+# rather than the docs' from/to, and hyphenated names are written with underscores
+# (before_change_detail). FUTURE_USE columns are `_`.
 # The first seven columns are shared by every log type; the tail is split per `type`.
-# Fields quoted with " may contain commas (URLs in misc).
+# Fields quoted with " may contain commas (URLs in misc). Column lists end at PAN-OS
+# 11.1; 11.2+ appends more Traffic columns, which land in the unnamed tail (column_N).
 
 [parser]
 name = "palo_alto_panos"
@@ -20,16 +23,16 @@ syslog = true
 kind = "delimiter"
 delimiter = ","
 quote = '"'
-fields = ["_", "receive_time", "serial", "type", "subtype", "_", "generated_time"]
+fields = ["_", "receive_time", "serial", "type", "subtype", "_", "time_generated"]
 rest = "log_fields"
 
-# high_res_timestamp (PAN-OS 9.0+) carries an offset; generated_time does not.
+# high_res_timestamp (PAN-OS 9.0+) carries an offset; time_generated does not.
 [[timestamp]]
 field = "high_res_timestamp"
 format = "rfc3339"
 
 [[timestamp]]
-field = "generated_time"
+field = "time_generated"
 format = "%Y/%m/%d %H:%M:%S"
 
 [[timestamp]]
@@ -57,7 +60,7 @@ fields = [
   "src_osfamily", "src_osversion", "src_host", "src_mac", "dst_category", "dst_profile",
   "dst_model", "dst_vendor", "dst_osfamily", "dst_osversion", "dst_host", "dst_mac",
   "container_id", "pod_namespace", "pod_name", "src_edl", "dst_edl", "hostid", "serialnumber",
-  "src_dag", "dst_dag", "session_owner", "high_res_timestamp", "nsdsai_sst", "nsdsai_sd",
+  "src_dag", "dst_dag", "session_owner", "high_res_timestamp", "nssai_sst", "nssai_sd",
   "subcategory_of_app", "category_of_app", "technology_of_app", "risk_of_app",
   "characteristic_of_app", "container_of_app", "tunneled_app", "is_saas_of_app",
   "sanctioned_state_of_app", "offloaded", "flow_type", "cluster_name"
@@ -76,18 +79,18 @@ fields = [
   "severity", "direction", "seqno", "actionflags", "srcloc", "dstloc", "_", "contenttype",
   "pcap_id", "filedigest", "cloud", "url_idx", "user_agent", "filetype", "xff", "referer",
   "sender", "subject", "recipient", "reportid", "dg_hier_level_1", "dg_hier_level_2",
-  "dg_hier_level_3", "dg_hier_level_4", "vsys_name", "device_name", "file_url", "src_uuid",
+  "dg_hier_level_3", "dg_hier_level_4", "vsys_name", "device_name", "_", "src_uuid",
   "dst_uuid", "http_method", "tunnel_id", "monitortag", "parent_session_id",
-  "parent_start_time", "tunnel", "thr_category", "contentver", "sig_flags", "rule_uuid",
-  "http2_connection", "dynusergroup_name", "xff_ip", "src_category", "src_profile",
-  "src_model", "src_vendor", "src_osfamily", "src_osversion", "src_host", "src_mac",
-  "dst_category", "dst_profile", "dst_model", "dst_vendor", "dst_osfamily", "dst_osversion",
-  "dst_host", "dst_mac", "container_id", "pod_namespace", "pod_name", "src_edl", "dst_edl",
-  "hostid", "serialnumber", "domain_edl", "src_dag", "dst_dag", "partial_hash",
-  "high_res_timestamp", "reason", "justification", "nsdsai_sst", "subcategory_of_app",
-  "category_of_app", "technology_of_app", "risk_of_app", "characteristic_of_app",
-  "container_of_app", "tunneled_app", "is_saas_of_app", "sanctioned_state_of_app",
-  "cloud_report_id", "cluster_name", "flow_type"
+  "parent_start_time", "tunnel", "thr_category", "contentver", "sig_flags", "assoc_id", "ppid",
+  "http_headers", "url_category_list", "rule_uuid", "http2_connection", "dynusergroup_name",
+  "xff_ip", "src_category", "src_profile", "src_model", "src_vendor", "src_osfamily",
+  "src_osversion", "src_host", "src_mac", "dst_category", "dst_profile", "dst_model",
+  "dst_vendor", "dst_osfamily", "dst_osversion", "dst_host", "dst_mac", "container_id",
+  "pod_namespace", "pod_name", "src_edl", "dst_edl", "hostid", "serialnumber", "domain_edl",
+  "src_dag", "dst_dag", "partial_hash", "high_res_timestamp", "reason", "justification",
+  "nssai_sst", "subcategory_of_app", "category_of_app", "technology_of_app", "risk_of_app",
+  "characteristic_of_app", "container_of_app", "tunneled_app", "is_saas_of_app",
+  "sanctioned_state_of_app", "cloud_reportid", "flow_type", "cluster_name"
 ]
 
 [[sub]]
@@ -97,9 +100,9 @@ kind = "delimiter"
 delimiter = ","
 quote = '"'
 fields = [
-  "vsys", "eventid", "object", "_", "_", "module", "severity", "description", "seqno",
+  "vsys", "eventid", "object", "_", "_", "module", "severity", "opaque", "seqno",
   "actionflags", "dg_hier_level_1", "dg_hier_level_2", "dg_hier_level_3", "dg_hier_level_4",
-  "vsys_name", "device_name", "dg_id", "tpl_id", "high_res_timestamp"
+  "vsys_name", "device_name", "_", "_", "high_res_timestamp"
 ]
 
 [[sub]]
@@ -109,8 +112,8 @@ kind = "delimiter"
 delimiter = ","
 quote = '"'
 fields = [
-  "host", "vsys", "cmd", "admin", "client", "result", "path", "seqno", "actionflags",
-  "before_change_detail", "after_change_detail", "dg_hier_level_1", "dg_hier_level_2",
-  "dg_hier_level_3", "dg_hier_level_4", "vsys_name", "device_name", "dg_id", "comment",
+  "host", "vsys", "cmd", "admin", "client", "result", "path", "before_change_detail",
+  "after_change_detail", "seqno", "actionflags", "dg_hier_level_1", "dg_hier_level_2",
+  "dg_hier_level_3", "dg_hier_level_4", "vsys_name", "device_name", "dg_id", "comment", "_",
   "high_res_timestamp"
 ]

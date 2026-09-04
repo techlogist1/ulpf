@@ -28,7 +28,9 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
       original string retained on the event.
 - [x] 6. `cargo test --workspace` passes (2026-09-05: 45 tests across 9 binaries, 0
       failed), `cargo clippy --workspace --all-targets -- -D warnings` clean, Dockerfile
-      static build built and run 2026-09-04 (ulpf:static, 7.3 MB, scratch base).
+      static build built and run 2026-09-04 and rebuilt 2026-09-05 with the final 12
+      definitions (ulpf:static, 7.35 MB, scratch base; in-container run over `samples/`
+      processed 212 events, 0 failed files, counters matching the fixtures).
 - [x] 7. Throwaway inference prototype run on unseen samples; honest report in docs on
       whether prefix-tree clustering produced usable templates.
 - [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D32, each with an anchor)
