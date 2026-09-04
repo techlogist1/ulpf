@@ -1,8 +1,11 @@
 # Cisco IOS / IOS-XE syslog. Message header: %FACILITY-SEVERITY-MNEMONIC: text.
-# Sources: Cisco IOS System Message Guide; "Cisco IOS Configuration Fundamentals: logging"
-# for the optional prefixes: sequence number (service sequence-numbers), origin id
-# (logging origin-id), timestamp (service timestamps log datetime msec show-timezone,
-# with a leading * = clock never set, . = clock lost sync) or uptime (1d03h, 00:01:23).
+# Sources: Cisco IOS System Message Guide; Cisco "Embedded Syslog Manager" and
+# "Configuring System Message Logs" for the optional prefixes: origin id (logging
+# origin-id, added at the very beginning), sequence number (service sequence-numbers),
+# timestamp (service timestamps log datetime msec show-timezone, with a leading * = clock
+# never set, . = clock lost sync) or uptime (1d03h, 00:01:23). A relay may prepend its own
+# BSD header; the envelope strips it. Message texts were checked against Cisco's ACL
+# logging and incident-identification references (2026-09-05 review).
 # ASA and FTD share the %X-n-Y header shape; their own definitions win at priority 0.
 
 [parser]
@@ -20,10 +23,12 @@ syslog = true
 [strategy]
 kind = "pattern"
 patterns = [
+  '{origin:word}: {sequence:int}: {timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
   '{sequence:int}: {origin:word}: {timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
   '{sequence:int}: {timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
   '{origin:word}: {timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
   '{timestamp:timestamp}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
+  '{origin:word}: {sequence:int}: {uptime:word}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
   '{sequence:int}: {uptime:word}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
   '{uptime:word}: %{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
   '%{facility:word}-{severity:int}-{mnemonic:word}: {message:rest}',
@@ -36,13 +41,15 @@ field = "timestamp"
 format = "syslog"
 
 # --- access-list logging (SEC facility) -------------------------------------------
-# IPACCESSLOGP: tcp/udp with ports; the log-input form adds (interface mac) after src.
+# IPACCESSLOGP: tcp/udp with ports. The log-input keyword adds (interface mac) after the
+# source; on an SVI the MAC is empty and the space stays: (Vlan51 ).
 [[sub]]
 field = "message"
 when = { mnemonic = "IPACCESSLOGP" }
 kind = "pattern"
 patterns = [
   'list {acl:word} {action:word} {protocol:word} {src_ip:ip}({src_port:int}) ({src_interface:word} {src_mac:word}) -> {dst_ip:ip}({dst_port:int}), {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip}({src_port:int}) ({src_interface:word} ) -> {dst_ip:ip}({dst_port:int}), {packet_count:int} packet{_:rest}',
   'list {acl:word} {action:word} {protocol:word} {src_ip:ip}({src_port:int}) -> {dst_ip:ip}({dst_port:int}), {packet_count:int} packet{_:rest}',
 ]
 
@@ -53,6 +60,7 @@ when = { mnemonic = "IPACCESSLOGDP" }
 kind = "pattern"
 patterns = [
   'list {acl:word} {action:word} {protocol:word} {src_ip:ip} ({src_interface:word} {src_mac:word}) -> {dst_ip:ip} ({icmp_type:int}/{icmp_code:int}), {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip} ({src_interface:word} ) -> {dst_ip:ip} ({icmp_type:int}/{icmp_code:int}), {packet_count:int} packet{_:rest}',
   'list {acl:word} {action:word} {protocol:word} {src_ip:ip} -> {dst_ip:ip} ({icmp_type:int}/{icmp_code:int}), {packet_count:int} packet{_:rest}',
 ]
 
@@ -61,14 +69,32 @@ patterns = [
 field = "message"
 when = { mnemonic = "IPACCESSLOGNP" }
 kind = "pattern"
-pattern = 'list {acl:word} {action:word} {protocol:word} {src_ip:ip} -> {dst_ip:ip}, {packet_count:int} packet{_:rest}'
+patterns = [
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip} ({src_interface:word} {src_mac:word}) -> {dst_ip:ip}, {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip} ({src_interface:word} ) -> {dst_ip:ip}, {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip} -> {dst_ip:ip}, {packet_count:int} packet{_:rest}',
+]
 
-# IPACCESSLOGS: standard access list, source only.
+# IPACCESSLOGRP / IPACCESSLOGSP: one number in parentheses (igmp type, routing protocol).
+[[sub]]
+field = "message"
+when = { mnemonic = ["IPACCESSLOGRP", "IPACCESSLOGSP"] }
+kind = "pattern"
+patterns = [
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip} ({src_interface:word} {src_mac:word}) -> {dst_ip:ip} ({protocol_type:int}), {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {protocol:word} {src_ip:ip} -> {dst_ip:ip} ({protocol_type:int}), {packet_count:int} packet{_:rest}',
+]
+
+# IPACCESSLOGS: standard access list, source only, no comma before the count.
 [[sub]]
 field = "message"
 when = { mnemonic = "IPACCESSLOGS" }
 kind = "pattern"
-pattern = 'list {acl:word} {action:word} {src_ip:ip} {packet_count:int} packet{_:rest}'
+patterns = [
+  'list {acl:word} {action:word} {src_ip:ip} ({src_interface:word} {src_mac:word}) {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {src_ip:ip} ({src_interface:word} ) {packet_count:int} packet{_:rest}',
+  'list {acl:word} {action:word} {src_ip:ip} {packet_count:int} packet{_:rest}',
+]
 
 [[sub]]
 field = "message"
@@ -77,18 +103,25 @@ kind = "pattern"
 pattern = 'access-list logging rate-limited or missed {packet_count:int} packet{_:rest}'
 
 # --- login and configuration (SEC_LOGIN, SYS facilities) ---------------------------
+# The trailing "at <time>" is present on IOS-XE and absent on older IOS.
 [[sub]]
 field = "message"
 when = { mnemonic = "LOGIN_SUCCESS" }
 kind = "pattern"
-pattern = 'Login Success [user: {user:text}] [Source: {src_ip:ip}] [localport: {dst_port:int}] at {login_time:rest}'
+patterns = [
+  'Login Success [user: {user:text}] [Source: {src_ip:ip}] [localport: {dst_port:int}] at {login_time:rest}',
+  'Login Success [user: {user:text}] [Source: {src_ip:ip}] [localport: {dst_port:int}]',
+]
 constants = { auth_status = "success", action = "login" }
 
 [[sub]]
 field = "message"
 when = { mnemonic = "LOGIN_FAILED" }
 kind = "pattern"
-pattern = 'Login failed [user: {user:text}] [Source: {src_ip:ip}] [localport: {dst_port:int}] [Reason: {reason:text}] at {login_time:rest}'
+patterns = [
+  'Login failed [user: {user:text}] [Source: {src_ip:ip}] [localport: {dst_port:int}] [Reason: {reason:text}] at {login_time:rest}',
+  'Login failed [user: {user:text}] [Source: {src_ip:ip}] [localport: {dst_port:int}] [Reason: {reason:text}]',
+]
 constants = { auth_status = "failure", action = "failed" }
 
 [[sub]]
@@ -98,12 +131,15 @@ kind = "pattern"
 pattern = 'User {user:word} has exited tty session {session:int}({src_ip:ip})'
 constants = { action = "logout" }
 
+# Without AAA the "user" is the line itself (by vty2, by console).
 [[sub]]
 field = "message"
 when = { mnemonic = "CONFIG_I" }
 kind = "pattern"
 patterns = [
   'Configured from {config_source:text} by {user:word} on {line:word} ({src_ip:ip})',
+  'Configured from {config_source:text} by {user:word} on {line:word}',
+  'Configured from {config_source:text} by {line:word} ({src_ip:ip})',
   'Configured from {config_source:text} by {user:rest}',
 ]
 

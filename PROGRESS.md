@@ -96,8 +96,18 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
   class wildcard (D29), kv quote set (D32).
 - [x] bench generator worker (haiku/low) — `crates/ulpf/examples/gen_bench.rs`, kept as
   delivered (D31); 5M lines in 25 s.
-- [ ] Opus reviewers (3, read-only, web) verifying the seven rewritten definitions
-  against vendor documentation; findings to be applied on return.
+- [x] Opus reviewers (3, read-only, web) verified the seven rewritten definitions against
+  vendor documentation. All confirmed findings applied 2026-09-05 (see D30): PAN-OS THREAT
+  gained four documented columns after sig_flags and CONFIG's order/placeholder were
+  fixed; Check Point's sample uses the exporter's default space-separated timestamp and
+  trailing `;`; IOS origin-id precedes the sequence number, log-input on an SVI, login
+  without a trailing time, CONFIG_I variants, IPACCESSLOGRP; Junos legacy positional form,
+  trailing deny fields, `-->`; pfSense IPv6 rows capitalise the protocol and ICMPv6 has
+  no payload; SonicWall ids 37/38 and double-quoted appName; OpenVPN VERIFY ERROR serial,
+  `Learn sec`, `(Not enabled)`, daemon signals. Engine: an empty delimiter remainder emits
+  no `rest` field (consistent with D28).
+- [ ] Opus reviewers (2) on the remaining five families (Fortinet, ASA; Sophos, Squid,
+  Suricata); findings to be applied on return.
 
 ## Tried and abandoned
 - Internally-tagged `Strategy` enum with `#[serde(flatten)]` inside `[[sub]]`: serde cannot combine flatten with deny_unknown_fields; replaced by one flat validated struct (D13).

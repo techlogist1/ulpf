@@ -1,6 +1,8 @@
 //! Delimiter strategy: positional columns. Short rows emit what is present; extra
 //! columns are named `column_N` (1-based) so nothing is dropped, or, when `rest` is set,
-//! stay together as one unsplit span for a `[[sub]]` to split by the row's own type.
+//! stay together as one unsplit span for a `[[sub]]` to split by the row's own type. An
+//! empty remainder (row ends after the named columns, with or without a trailing
+//! delimiter) emits no `rest` field, like an empty pattern capture.
 
 use std::borrow::Cow;
 
@@ -43,7 +45,12 @@ impl DelimConfig {
             Some(Some(name)) => out.push(name.as_slice(), value),
             Some(None) => {}
             None => match &self.rest {
-                Some(rest) if col == self.fields.len() => out.push(rest.as_slice(), value),
+                // nothing left after the named columns is the absence of a remainder
+                Some(rest) if col == self.fields.len() => {
+                    if !value.is_empty() {
+                        out.push(rest.as_slice(), value);
+                    }
+                }
                 _ => out.push(Cow::Owned(format!("column_{}", col + 1).into_bytes()), value),
             },
         }
@@ -58,7 +65,9 @@ impl DelimConfig {
             if col == self.fields.len()
                 && let Some(rest) = &self.rest
             {
-                out.push(rest.as_slice(), &text[i..]);
+                if i < n {
+                    out.push(rest.as_slice(), &text[i..]);
+                }
                 col += 1;
                 break;
             }

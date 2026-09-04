@@ -10,7 +10,7 @@ Thu Sep  4 10:15:25 2026 jdoe/203.0.113.9:44321 PUSH: Received control message: 
 Thu Sep  4 10:15:25 2026 jdoe/203.0.113.9:44321 SENT CONTROL [jdoe]: 'PUSH_REPLY,route 10.0.0.0 255.255.255.0,dhcp-option DNS 10.0.0.53,ifconfig 10.8.0.6 255.255.255.0' (status=1)
 Thu Sep  4 10:15:25 2026 jdoe/203.0.113.9:44321 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
 Thu Sep  4 10:16:02 2026 198.51.100.7:51234 TLS: Initial packet from [AF_INET]198.51.100.7:51234, sid=9f8e7d6c 5b4a3928
-Thu Sep  4 10:16:02 2026 198.51.100.7:51234 VERIFY ERROR: depth=0, error=certificate has expired: CN=olduser
+Thu Sep  4 10:16:02 2026 198.51.100.7:51234 VERIFY ERROR: depth=0, error=certificate has expired: CN=olduser, serial=02
 Thu Sep  4 10:16:02 2026 198.51.100.7:51234 TLS Error: TLS object -> incoming plaintext read error
 Thu Sep  4 10:16:02 2026 198.51.100.7:51234 TLS Error: TLS handshake failed
 Thu Sep  4 10:16:03 2026 198.51.100.7:51234 SIGUSR1[soft,tls-error] received, client-instance restarting
@@ -24,3 +24,5 @@ Thu Sep  4 09:59:58 2026 TUN/TAP device tun0 opened
 Thu Sep  4 09:59:58 2026 Initialization Sequence Completed
 Thu Sep  4 10:18:10 2026 jdøe/203.0.113.9:44321 MULTI: Learn: 10.8.0.6 -> jdøe/203.0.113.9:44321
 Thu Sep  4 10:18:11 2026 203.0.113.9:44321 [jdoe] Peer Connection Initiated with [AF_IN
+Thu Sep  4 12:00:00 2026 jdoe/203.0.113.9:44321 MULTI: Learn sec: 10.8.0.6 -> jdoe/203.0.113.9:44321
+Thu Sep  4 12:00:01 2026 SIGTERM[hard,] received, process exiting

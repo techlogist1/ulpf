@@ -1,12 +1,12 @@
 <134>Sep  4 10:15:23 pfsense filterlog[12345]: 5,,,1000000103,igb0,match,block,in,4,0x0,,64,12345,0,DF,6,tcp,60,203.0.113.9,10.0.0.7,44321,22,0,S,1234567890,,65535,,mss;nop;wscale;sackOK;TS
 <134>Sep  4 10:15:24 pfsense filterlog[12345]: 4,,,1000000102,igb1,match,pass,out,4,0x0,,64,23456,0,DF,17,udp,73,10.0.0.5,8.8.8.8,51234,53,53
 <134>Sep  4 10:15:25 pfsense filterlog[12345]: 5,,,1000000103,igb0,match,block,in,4,0x0,,52,34567,0,none,1,icmp,84,203.0.113.77,10.0.0.7,request,1234,1
-<134>Sep  4 10:15:26 pfsense filterlog[12345]: 9,,,1000000109,igb0,match,block,in,6,0x00,0x00000,64,tcp,6,40,2001:db8::1,2001:db8:a::7,51000,443,0,S,987654321,,65535,,mss;nop;wscale
+<134>Sep  4 10:15:26 pfsense filterlog[12345]: 9,,,1000000109,igb0,match,block,in,6,0x00,0x00000,64,TCP,6,40,2001:db8::1,2001:db8:a::7,51000,443,0,S,987654321,,65535,,mss;nop;wscale
 <134>Sep  4 10:15:27 pfsense filterlog[12345]: 6,,,1000000106,igb1,match,pass,out,4,0x0,,64,45678,0,DF,6,tcp,52,10.0.0.5,93.184.216.34,50000,443,0,S,1122334455,,65535,,mss;nop;wscale;sackOK;TS
-<134>Sep  4 10:15:28 pfsense filterlog[12345]: 5,,,1000000103,igb0,match,block,in,4,0x0,,50,56789,0,none,1,icmp,56,198.51.100.4,10.0.0.7,unreachport,10.0.0.7,udp,33434
+<134>Sep  4 10:15:28 pfsense filterlog[12345]: 5,,,1000000103,igb0,match,block,in,4,0x0,,50,56789,0,none,1,icmp,56,198.51.100.4,10.0.0.7,unreachport,10.0.0.7,17,33434
 <134>Sep  4 10:15:29 pfsense filterlog[12345]: 0,,,0,igb0,match,pass,in,4,0x0,,255,0,0,none,112,carp,36,10.0.0.253,224.0.0.18,advertisement,255,1,2,1,0
 <134>Sep  4 10:15:30 pfsense filterlog[12345]: 5,,,1000000103,igb0,match,block,in,4,0x0,,64,11111,0,DF,47,gre,88,203.0.113.12,10.0.0.7
-<134>Sep  4 10:15:31 pfsense filterlog[12345]: 12,,,1000000112,igb0,match,block,in,6,0x00,0x00000,255,ipv6-icmp,58,64,fe80::1,ff02::1,135
+<134>Sep  4 10:15:31 pfsense filterlog[12345]: 12,,,1000000112,igb0,match,block,in,6,0x00,0x00000,255,ICMPv6,58,64,fe80::1,ff02::16,
 <134>Sep  4 10:15:32 pfsense filterlog[12345]: 5,,,1000000103,igb0,match,block,in,4,0x0,,1,22222,0,none,1,icmp,56,10.0.0.1,10.0.0.7,timexceed,ttl exceeded in transit
 <134>Sep  4 10:15:33 pfsense filterlog[12345]: 3,1,openvpn,1000000203,ovpns1,match,pass,in,4,0x0,,64,55555,0,DF,6,tcp,60,10.8.0.6,10.0.0.7,52000,445,0,S,1,,65535,,mss;nop;wscale
 <134>Sep  4 10:15:34 pfsense filterlog[12345]: 5,,,1000000103,igb0,match,block,in,4,0x0,,64,33333,0,DF,6,tcp,60,203.0.113.9,10.0.0.7,44322,22,0,S,
@@ -15,3 +15,4 @@
 Sep  4 10:15:37 pfsense filterlog[12345]: 4,,,1000000102,igb1,match,pass,out,4,0x0,,64,44444,0,DF,17,udp,61,10.0.0.5,1.1.1.1,51235,53,41
 <134>1 2026-09-04T10:15:38.123456+00:00 pfsense filterlog 12345 - - 5,,,1000000103,igb0,match,block,in,4,0x0,,64,77777,0,DF,6,tcp,60,203.0.113.9,10.0.0.7,44324,22,0,S,2,,65535,,mss
 <134>1 2026-09-04T10:15:39.654321+00:00 pfsense filterlog 12345 - - 4,,,1000000102,igb1,match,pass,out,4,0x0,,64,88888,0,DF,17,udp,64,10.0.0.5,9.9.9.9,51236,53,44
+<134>Sep  4 10:15:40 filterlog[68725]: 4,,,1000000102,igb1,match,pass,out,4,0x0,,64,99999,0,DF,17,udp,62,10.0.0.5,8.8.4.4,51237,53,42

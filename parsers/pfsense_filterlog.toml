@@ -1,8 +1,12 @@
 # pfSense / OPNsense filterlog: CSV whose tail layout depends on columns near the front
 # (IP version, then protocol, then ICMP type). Source: Netgate docs, "Raw Filter Log
-# Format" (docs.netgate.com/pfsense/en/latest/monitoring/logs/raw-filter-format.html).
+# Format" (docs.netgate.com/pfsense/en/latest/monitoring/logs/raw-filter-format.html),
+# checked against captured lines 2026-09-05: IPv6 rows print the next-header name
+# capitalised (TCP, UDP, ICMPv6) and ICMPv6 rows carry no protocol data after the
+# addresses. CARP advbase/advskew follow the document's BNF (its prose lists them the
+# other way round; unverified on a live box).
 # pfSense 2.5+ frames the line as RFC 5424 (`filterlog 12345 - -`), older releases as
-# RFC 3164 (`filterlog[12345]:`); both end in the same CSV.
+# RFC 3164 (`filterlog[12345]:`), usually with no hostname; both end in the same CSV.
 
 [parser]
 name = "pfsense_filterlog"
@@ -50,21 +54,21 @@ rest = "proto_fields"
 
 [[sub]]
 field = "proto_fields"
-when = { proto = "tcp" }
+when = { proto = ["tcp", "TCP"] }
 kind = "delimiter"
 delimiter = ","
 fields = ["src_port", "dst_port", "datalen", "tcp_flags", "seq", "ack", "window", "urg", "options"]
 
 [[sub]]
 field = "proto_fields"
-when = { proto = "udp" }
+when = { proto = ["udp", "UDP"] }
 kind = "delimiter"
 delimiter = ","
 fields = ["src_port", "dst_port", "datalen"]
 
 [[sub]]
 field = "proto_fields"
-when = { proto = ["icmp", "ipv6-icmp"] }
+when = { proto = "icmp" }
 kind = "delimiter"
 delimiter = ","
 fields = ["icmp_type"]

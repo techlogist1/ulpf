@@ -358,8 +358,8 @@ fields = ["src_port"]
     assert_eq!(out.sub, ulpf_parse::SubStatus::NotApplicable, "nothing for any sub to re-parse");
 
     run(&p, b"5,tcp,", &mut out).unwrap();
-    assert_field(&out, "tail", b"");
-    assert_eq!(out.sub, ulpf_parse::SubStatus::NoMatch, "a gated sub ran on an empty tail and found nothing");
+    assert!(field(&out, "tail").is_none(), "a trailing delimiter leaves nothing: no rest field");
+    assert_eq!(out.sub, ulpf_parse::SubStatus::NotApplicable);
 }
 
 #[test]

@@ -1,8 +1,9 @@
 # OpenVPN server file log (--log / --log-append, verb 3): a ctime stamp, then either
 # nothing (daemon lines), "ip:port" (peer before authentication), "cn/ip:port" (peer
 # after authentication) or "ip:port [cn]" while the client instance is being named.
-# Sources: OpenVPN 2.6 reference manual (--log, --verb) and openvpn/src/openvpn/
-# multi.c, ssl.c, ssl_verify.c message strings.
+# Sources: OpenVPN 2.6 reference manual (--log, --verb) and the message strings in
+# openvpn/src/openvpn: socket.c, ssl.c, ssl_verify*.c, multi.c, crypto.c, ping.c, sig.c,
+# forward.c, push.c, misc.c, tun.c, init.c (checked 2026-09-05).
 # Detection is the ctime prefix alone (other daemons rarely log this way to a file),
 # so this definition sits below every syslog-framed one.
 
@@ -48,10 +49,15 @@ kind = "pattern"
 pattern = 'VERIFY OK: depth={cert_depth:int}, {cert_subject:rest}'
 constants = { vpn_event = "certificate_verified" }
 
+# OpenSSL builds append ", serial=..."; mbedTLS builds order the parts differently.
 [[sub]]
 field = "message"
 kind = "pattern"
-pattern = 'VERIFY ERROR: depth={cert_depth:int}, error={reason:text}: {cert_subject:rest}'
+patterns = [
+  'VERIFY ERROR: depth={cert_depth:int}, error={reason:text}: {cert_subject:text}, serial={cert_serial:rest}',
+  'VERIFY ERROR: depth={cert_depth:int}, subject={cert_subject:text}, serial={cert_serial:text}: {reason:rest}',
+  'VERIFY ERROR: depth={cert_depth:int}, error={reason:text}: {cert_subject:rest}',
+]
 constants = { vpn_event = "certificate_rejected", action = "failed" }
 
 [[sub]]
@@ -69,13 +75,16 @@ constants = { vpn_event = "tls_failed", action = "failed" }
 [[sub]]
 field = "message"
 kind = "pattern"
-pattern = 'MULTI_sva: pool returned IPv4={assigned_ip:word}, IPv6={assigned_ipv6:rest}'
+pattern = 'MULTI_sva: pool returned IPv4={assigned_ip:text}, IPv6={assigned_ipv6:rest}'
 constants = { vpn_event = "address_assigned" }
 
 [[sub]]
 field = "message"
 kind = "pattern"
-pattern = 'MULTI: Learn: {learned_ip:ip} -> {_:rest}'
+patterns = [
+  'MULTI: Learn: {learned_ip:ip} -> {_:rest}',
+  'MULTI: Learn sec: {learned_ip:ip} -> {_:rest}',
+]
 constants = { vpn_event = "route_learned" }
 
 [[sub]]
@@ -99,10 +108,20 @@ kind = "pattern"
 pattern = '{signal:word}[{signal_detail:text}] received, client-instance {_:rest}'
 constants = { vpn_event = "disconnected", action = "disconnected" }
 
+# The daemon's own signals name the process, not a client instance.
 [[sub]]
 field = "message"
 kind = "pattern"
-pattern = 'MULTI: primary virtual IP for {_:text}: {assigned_ip:ip}'
+pattern = '{signal:word}[{signal_detail:text}] received, {signal_scope:text} {_:rest}'
+constants = { vpn_event = "signal" }
+
+[[sub]]
+field = "message"
+kind = "pattern"
+patterns = [
+  'MULTI: primary virtual IP for {_:text}: {assigned_ip:ip}',
+  'MULTI: primary virtual IPv6 for {_:text}: {assigned_ipv6:rest}',
+]
 constants = { vpn_event = "primary_virtual_ip" }
 
 [[sub]]

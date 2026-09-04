@@ -1,8 +1,12 @@
 # Juniper SRX (Junos) security logs. With `structured-data` every field is an RFC 5424
 # SD-PARAM (source-address="..."), which the syslog envelope exposes as fields; the
 # message part is empty. Without it, RT_FLOW writes positional text after the message
-# name. Source: Junos OS Security Flow Session logs and IDP logs field references
-# (RT_FLOW_SESSION_CREATE/CLOSE/DENY, IDP_ATTACK_LOG_EVENT).
+# name; the positional layout gained NAT rule types in 17.3 and the deny line gained
+# trailing session/application fields later, so both generations are covered.
+# Source: Junos OS "Monitoring Security Flow Sessions" (RT_FLOW_SESSION_CREATE/CLOSE/DENY
+# structured and unstructured examples), IDP logging reference (IDP_ATTACK_LOG_EVENT),
+# checked against captures 2026-09-05. The positional text is kept under `body`, not
+# `message`, because IDP structured events carry an SD-PARAM literally named message.
 
 [parser]
 name = "juniper_srx"
@@ -18,8 +22,8 @@ syslog = true
 [strategy]
 kind = "pattern"
 patterns = [
-  '{process:word}: {event:word}: {message:rest}',
-  '{message:rest}',
+  '{process:word}: {event:word}: {body:rest}',
+  '{body:rest}',
 ]
 
 # Structured lines: the header time (ISO with zone). Unstructured lines: BSD header.
@@ -27,19 +31,29 @@ patterns = [
 # The NAT rule types are two words ("source rule", "destination rule", "static rule") or
 # N/A, so the slot syntax cannot split them unambiguously; these two use a raw regex.
 [[sub]]
-field = "message"
+field = "body"
 when = { event = "RT_FLOW_SESSION_CREATE" }
 kind = "pattern"
-regex = 'session created (?P<src_ip>[^/ ]+)/(?P<src_port>\d+)->(?P<dst_ip>[^/ ]+)/(?P<dst_port>\d+) (?P<connection_tag>\S+) (?P<service_name>\S+) (?P<nat_src_ip>[^/ ]+)/(?P<nat_src_port>\d+)->(?P<nat_dst_ip>[^/ ]+)/(?P<nat_dst_port>\d+) (?P<nat_connection_tag>\S+) (?P<src_nat_rule_type>N/A|\S+ rule) (?P<src_nat_rule_name>\S+) (?P<dst_nat_rule_type>N/A|\S+ rule) (?P<dst_nat_rule_name>\S+) (?P<protocol_id>\d+) (?P<policy_name>\S+) (?P<src_zone>\S+) (?P<dst_zone>\S+) (?P<session_id>\d+) (?P<user>[^( ]+)\((?P<roles>[^)]*)\) (?P<interface>\S+) (?P<application>\S+) (?P<nested_application>\S+) (?P<encrypted>\S+)'
+regex = 'session created (?P<src_ip>[^/ ]+)/(?P<src_port>\d+)-+>(?P<dst_ip>[^/ ]+)/(?P<dst_port>\d+) (?P<connection_tag>\S+) (?P<service_name>\S+) (?P<nat_src_ip>[^/ ]+)/(?P<nat_src_port>\d+)-+>(?P<nat_dst_ip>[^/ ]+)/(?P<nat_dst_port>\d+) (?P<nat_connection_tag>\S+) (?P<src_nat_rule_type>N/A|\S+ rule) (?P<src_nat_rule_name>\S+) (?P<dst_nat_rule_type>N/A|\S+ rule) (?P<dst_nat_rule_name>\S+) (?P<protocol_id>\d+) (?P<policy_name>\S+) (?P<src_zone>\S+) (?P<dst_zone>\S+) (?P<session_id>\d+) (?P<user>[^( ]+)\((?P<roles>[^)]*)\) (?P<interface>\S+) (?P<application>\S+) (?P<nested_application>\S+) (?P<encrypted>\S+)'
 
 [[sub]]
-field = "message"
+field = "body"
 when = { event = "RT_FLOW_SESSION_CLOSE" }
 kind = "pattern"
-regex = 'session closed (?P<reason>[^:]+): (?P<src_ip>[^/ ]+)/(?P<src_port>\d+)->(?P<dst_ip>[^/ ]+)/(?P<dst_port>\d+) (?P<connection_tag>\S+) (?P<service_name>\S+) (?P<nat_src_ip>[^/ ]+)/(?P<nat_src_port>\d+)->(?P<nat_dst_ip>[^/ ]+)/(?P<nat_dst_port>\d+) (?P<nat_connection_tag>\S+) (?P<src_nat_rule_type>N/A|\S+ rule) (?P<src_nat_rule_name>\S+) (?P<dst_nat_rule_type>N/A|\S+ rule) (?P<dst_nat_rule_name>\S+) (?P<protocol_id>\d+) (?P<policy_name>\S+) (?P<src_zone>\S+) (?P<dst_zone>\S+) (?P<session_id>\d+) (?P<packets_from_client>\d+)\((?P<bytes_from_client>\d+)\) (?P<packets_from_server>\d+)\((?P<bytes_from_server>\d+)\) (?P<elapsed_time>\d+) (?P<application>\S+) (?P<nested_application>\S+) (?P<user>[^( ]+)\((?P<roles>[^)]*)\) (?P<interface>\S+) (?P<encrypted>\S+)'
+regex = 'session closed (?P<reason>[^:]+): (?P<src_ip>[^/ ]+)/(?P<src_port>\d+)-+>(?P<dst_ip>[^/ ]+)/(?P<dst_port>\d+) (?P<connection_tag>\S+) (?P<service_name>\S+) (?P<nat_src_ip>[^/ ]+)/(?P<nat_src_port>\d+)-+>(?P<nat_dst_ip>[^/ ]+)/(?P<nat_dst_port>\d+) (?P<nat_connection_tag>\S+) (?P<src_nat_rule_type>N/A|\S+ rule) (?P<src_nat_rule_name>\S+) (?P<dst_nat_rule_type>N/A|\S+ rule) (?P<dst_nat_rule_name>\S+) (?P<protocol_id>\d+) (?P<policy_name>\S+) (?P<src_zone>\S+) (?P<dst_zone>\S+) (?P<session_id>\d+) (?P<packets_from_client>\d+)\((?P<bytes_from_client>\d+)\) (?P<packets_from_server>\d+)\((?P<bytes_from_server>\d+)\) (?P<elapsed_time>\d+) (?P<application>\S+) (?P<nested_application>\S+) (?P<user>[^( ]+)\((?P<roles>[^)]*)\) (?P<interface>\S+) (?P<encrypted>\S+)'
 
+# Pre-17.3 layout (Juniper's own documentation example): no connection tags, no NAT rule
+# types, no user/roles/application tail.
 [[sub]]
-field = "message"
+field = "body"
+when = { event = "RT_FLOW_SESSION_CREATE" }
+kind = "pattern"
+regex = 'session created (?P<src_ip>[^/ ]+)/(?P<src_port>\d+)-+>(?P<dst_ip>[^/ ]+)/(?P<dst_port>\d+) (?P<service_name>\S+) (?P<nat_src_ip>[^/ ]+)/(?P<nat_src_port>\d+)-+>(?P<nat_dst_ip>[^/ ]+)/(?P<nat_dst_port>\d+) (?P<src_nat_rule_name>\S+) (?P<dst_nat_rule_name>\S+) (?P<protocol_id>\d+) (?P<policy_name>\S+) (?P<src_zone>\S+) (?P<dst_zone>\S+) (?P<session_id>\d+) (?P<interface>\S+)$'
+
+# The reason is unquoted free text; newer releases append session id and application
+# category, sub-category and risk after it.
+[[sub]]
+field = "body"
 when = { event = "RT_FLOW_SESSION_DENY" }
 kind = "pattern"
-pattern = 'session denied {src_ip:ip}/{src_port:int}->{dst_ip:ip}/{dst_port:int} {connection_tag:word} {service_name:word} {protocol_id:int}({icmp_type:int}) {policy_name:word} {src_zone:word} {dst_zone:word} {application:word} {nested_application:word} {user:word}({roles:word}) {interface:word} {encrypted:word} {reason:rest}'
+regex = 'session denied (?P<src_ip>[^/ ]+)/(?P<src_port>\d+)-+>(?P<dst_ip>[^/ ]+)/(?P<dst_port>\d+) (?P<connection_tag>\S+) (?P<service_name>\S+) (?P<protocol_id>\d+)\((?P<icmp_type>\d+)\) (?P<policy_name>\S+) (?P<src_zone>\S+) (?P<dst_zone>\S+) (?P<application>\S+) (?P<nested_application>\S+) (?P<user>[^( ]+)\((?P<roles>[^)]*)\) (?P<interface>\S+) (?P<encrypted>\S+) (?P<reason>Denied by policy|Rejected by policy|policy deny|[^0-9].*?)(?: (?P<session_id>\d+) (?P<application_category>\S+) (?P<application_sub_category>\S+) (?P<application_risk>-?\d+))?$'

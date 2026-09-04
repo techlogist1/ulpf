@@ -1,7 +1,8 @@
 # SonicWall SonicOS enhanced syslog: key=value after <pri>, usually with no RFC 3164
-# header (relays may add one). Source: SonicOS Log Events Reference Guide.
-# src/dst pack ip:port:interface[:hostname]; proto packs transport/service; appName
-# alone is single-quoted, hence the two quote characters.
+# header (relays may add one). Source: SonicOS Log Events Reference Guide and captured
+# SonicOS 6/7 lines (2026-09-05 review). src/dst pack ip:port:interface[:hostname], the
+# interface may carry a VLAN suffix (X0-V30), and drop messages may give a bare address;
+# proto packs transport/service.
 
 [parser]
 name = "sonicwall"
@@ -18,7 +19,7 @@ syslog = true
 kind = "kv"
 key_value_separator = "="
 pair_separator = " "
-quote = "\"'"
+quote = '"' 
 
 [[timestamp]]
 field = "time"
@@ -35,6 +36,7 @@ anchor = "full"
 patterns = [
   '{src_ip:ip}:{src_port:int}:{src_interface:text}:{src_host:rest}',
   '{src_ip:ip}:{src_port:int}:{src_interface:rest}',
+  '{src_ip:ip}',
 ]
 
 [[sub]]
@@ -44,6 +46,7 @@ anchor = "full"
 patterns = [
   '{dst_ip:ip}:{dst_port:int}:{dst_interface:text}:{dst_host:rest}',
   '{dst_ip:ip}:{dst_port:int}:{dst_interface:rest}',
+  '{dst_ip:ip}',
 ]
 
 [[sub]]
