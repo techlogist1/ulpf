@@ -26,6 +26,7 @@ pub fn sub_status_name(s: SubStatus) -> &'static str {
         SubStatus::NotApplicable => "not_applicable",
         SubStatus::Matched => "matched",
         SubStatus::NoMatch => "no_match",
+        SubStatus::Uncovered => "uncovered",
     }
 }
 

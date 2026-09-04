@@ -101,10 +101,11 @@ flag, and the original text is kept. Policies: `docs/timestamps.md`.
 
 `[[sub]]` re-parses one already-extracted field (usually `message`) with any strategy.
 `when` lists field/value gates; a value may be a string or a list. Subs are tried in
-file order; the first whose strategy matches wins and adds its `constants`. If a sub was
-eligible but none matched, the event is still emitted with the top-level fields and the
-run's `sub_no_match` counter increments — that is the signal that a device produced a
-message shape the definition has not seen yet.
+file order; the first whose strategy matches wins and adds its `constants`. The event is
+always emitted with its top-level fields; two counters tell you when the definition is
+behind the device: `sub_no_match` (a gate matched but no pattern did — a pattern bug or a
+truncated line) and `sub_uncovered` (subs exist but none is gated for this event — a
+message id you have not written yet).
 
 ## Naming fields
 

@@ -222,3 +222,26 @@ as file:line. `ulpf fixture` emits a skeleton to review, never to commit blind. 
 **Principle.** Teamability without touching Rust; observability (all mismatches at once).
 **Ruled out.** Full-snapshot comparison (every mapping improvement breaks every fixture);
 Rust unit tests per parser (teammates cannot write them).
+
+## D22. Sub-parser outcomes are four-valued; `uncovered` is its own counter
+**Decision.** `SubStatus` distinguishes `not_applicable` (definition has no subs),
+`matched`, `no_match` (a gate matched, no pattern did) and `uncovered` (subs exist, none
+gated for this event). The engine counts the last two separately. Found by the adversarial
+pass: an ASA message id with no sub read as "not applicable", indistinguishable from a
+parser that never had subs. **Anchor.** `SubStatus` in `crates/ulpf-parse/src/compile.rs`;
+`sub_uncovered` in `crates/ulpf/src/metrics.rs`. **Principle.** Observability as a design
+input: the two causes need two different fixes (a pattern bug versus a missing message id),
+so they must be two numbers on screen. **Ruled out.** Folding both into `no_match` (the
+operator cannot tell which definition work to do).
+
+## D23. Queue depth counts batches resident in the channel; the BOM is stripped by the envelope
+**Decision.** The in-flight counter increments after a successful `send`, is signed, and
+the high-water clamps at zero, so the printed depth never exceeds capacity and
+"backpressure engaged" means the channel really filled. A leading UTF-8 byte-order mark is
+removed before `<pri>` detection. Both found by feeding hostile inputs through the real
+engine (`crates/ulpf/tests/adversarial.rs`). **Anchor.** `send_batch` in
+`crates/ulpf/src/engine.rs`; `strip_syslog` in `crates/ulpf-parse/src/envelope.rs`.
+**Principle.** Verification means exercising the binary, not reading the source; a
+plausible-looking counter (`2/1`) is exactly the kind of wrong output only a run reveals.
+**Ruled out.** Counting before send (reports capacity+1 under load); treating a BOM as
+message bytes (a Windows-exported ASA log parses as `pattern_no_match` for every line).

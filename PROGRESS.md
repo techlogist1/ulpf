@@ -54,8 +54,8 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] JSON Lines output (ordered by raw id, unknown formats emitted as Base Event)
 - [x] throughput measurement (printed every run; bench file pending fan-out 2)
 - [x] end-to-end CLI: run / check / verify / raw / fixture — e2e + fixture harness tests
-- [ ] adversarial pass
-- [ ] Dockerfile static build
+- [x] adversarial pass — crates/ulpf/tests/adversarial.rs (4 tests): empty file, 8 MiB single line, unknown format, binary garbage, BOM+CRLF, nested dirs, hidden files, truncated KV, broken/bad-regex/bad-format parser files, zero parsers, missing dirs, batch-boundary parity. Found and fixed: BOM defeats envelope; uncovered message ids invisible; queue depth off by one.
+- [~] Dockerfile static build — written (rust:1.95-alpine → scratch), build running
 
 ## Parallel work
 ### Fan-out 1 (independent of the format; starts right after scaffold)
@@ -76,7 +76,8 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
 - [ ] bench generator worker
 
 ## Tried and abandoned
-(none yet)
+- Internally-tagged `Strategy` enum with `#[serde(flatten)]` inside `[[sub]]`: serde cannot combine flatten with deny_unknown_fields; replaced by one flat validated struct (D13).
+- Per-event SQLite rows for the raw index: ruled out on throughput math before writing it (D5).
 
 ## Next action
 Fan-out 2 running (haiku/low): parser workers A/B/C + bench generator. On return: run the

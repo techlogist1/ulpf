@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+use std::sync::atomic::{AtomicI64, Ordering::Relaxed};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
@@ -38,6 +38,7 @@ pub struct Config {
     pub queue_batches: usize,
 }
 
+#[derive(Debug)]
 pub struct Report {
     pub snapshot: Snapshot,
     pub load_problems: Vec<String>,
@@ -113,7 +114,7 @@ pub fn run(cfg: &Config) -> Result<Report> {
     let (batch_tx, batch_rx) = sync_channel::<Batch>(queue_cap);
     let batch_rx = Arc::new(Mutex::new(batch_rx));
     let (out_tx, out_rx) = sync_channel::<(u64, Vec<u8>, u64)>(queue_cap * 2);
-    let in_flight = Arc::new(AtomicU64::new(0));
+    let in_flight = Arc::new(AtomicI64::new(0));
 
     let output_result: Result<()> = std::thread::scope(|scope| {
         let writer = scope.spawn({
@@ -154,7 +155,7 @@ fn ingest(
     store: &mut RawStore,
     tx: &SyncSender<Batch>,
     metrics: &Metrics,
-    in_flight: &AtomicU64,
+    in_flight: &AtomicI64,
     batch_events: usize,
     problems: &mut Vec<String>,
 ) -> Result<()> {
@@ -221,17 +222,20 @@ fn ingest(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn send_batch(tx: &SyncSender<Batch>, metrics: &Metrics, in_flight: &AtomicU64, seq: &mut u64, ctx: &Arc<FileCtx>, receipt: i64, first_raw_id: u64, ranges: Vec<std::ops::Range<usize>>) {
-    let depth = in_flight.fetch_add(1, Relaxed) + 1;
-    metrics.queue_high_water.fetch_max(depth, Relaxed);
+fn send_batch(tx: &SyncSender<Batch>, metrics: &Metrics, in_flight: &AtomicI64, seq: &mut u64, ctx: &Arc<FileCtx>, receipt: i64, first_raw_id: u64, ranges: Vec<std::ops::Range<usize>>) {
     metrics.batches.fetch_add(1, Relaxed);
     let batch = Batch { seq: *seq, file: Arc::clone(ctx), receipt_nanos: receipt, first_raw_id, ranges };
     *seq += 1;
     // A closed receiver means every worker died; the join below surfaces that panic.
+    // Blocking here is the backpressure policy.
     let _ = tx.send(batch);
+    // Depth counts batches sitting in the channel; a worker may already have taken this
+    // one, so the counter can transiently dip below zero and is clamped for the high-water.
+    let depth = in_flight.fetch_add(1, Relaxed) + 1;
+    metrics.queue_high_water.fetch_max(depth.max(0) as u64, Relaxed);
 }
 
-fn worker_thread(rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<(u64, Vec<u8>, u64)>, pipeline: &Pipeline, metrics: &Metrics, in_flight: &AtomicU64) {
+fn worker_thread(rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<(u64, Vec<u8>, u64)>, pipeline: &Pipeline, metrics: &Metrics, in_flight: &AtomicI64) {
     let mut scratch = pipeline.registry.scratch();
     loop {
         let batch = {
@@ -260,6 +264,7 @@ fn worker_thread(rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<(u64, Vec<u8>, 
             match outcome.sub {
                 SubStatus::Matched => counts.sub_matched += 1,
                 SubStatus::NoMatch => counts.sub_no_match += 1,
+                SubStatus::Uncovered => counts.sub_uncovered += 1,
                 SubStatus::NotApplicable => {}
             }
             if let Some(r) = outcome.time_error {

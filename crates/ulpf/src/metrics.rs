@@ -22,6 +22,7 @@ pub struct Metrics {
     pub parse_failed: [AtomicU64; 6],
     pub sub_matched: AtomicU64,
     pub sub_no_match: AtomicU64,
+    pub sub_uncovered: AtomicU64,
     pub time_from_receipt: AtomicU64,
     pub time_error: [AtomicU64; 3],
     pub normalized: AtomicU64,
@@ -44,6 +45,7 @@ pub struct LocalCounts {
     pub parse_failed: [u64; 6],
     pub sub_matched: u64,
     pub sub_no_match: u64,
+    pub sub_uncovered: u64,
     pub time_from_receipt: u64,
     pub time_error: [u64; 3],
     pub normalized: u64,
@@ -75,6 +77,7 @@ impl Metrics {
         }
         self.sub_matched.fetch_add(c.sub_matched, Relaxed);
         self.sub_no_match.fetch_add(c.sub_no_match, Relaxed);
+        self.sub_uncovered.fetch_add(c.sub_uncovered, Relaxed);
         self.time_from_receipt.fetch_add(c.time_from_receipt, Relaxed);
         for (a, v) in self.time_error.iter().zip(c.time_error) {
             a.fetch_add(v, Relaxed);
@@ -106,6 +109,7 @@ impl Metrics {
             parse_failed: ParseFailure::ALL.iter().zip(&self.parse_failed).map(|(f, a)| (f.reason(), g(a))).filter(|(_, n)| *n > 0).collect(),
             sub_matched: g(&self.sub_matched),
             sub_no_match: g(&self.sub_no_match),
+            sub_uncovered: g(&self.sub_uncovered),
             time_from_receipt: g(&self.time_from_receipt),
             time_error: TIME_ERROR_REASONS.iter().zip(&self.time_error).map(|(r, a)| (*r, g(a))).filter(|(_, n)| *n > 0).collect(),
             normalized: g(&self.normalized),
@@ -139,6 +143,7 @@ pub struct Snapshot {
     pub parse_failed: Vec<(&'static str, u64)>,
     pub sub_matched: u64,
     pub sub_no_match: u64,
+    pub sub_uncovered: u64,
     pub time_from_receipt: u64,
     pub time_error: Vec<(&'static str, u64)>,
     pub normalized: u64,
@@ -176,8 +181,8 @@ impl std::fmt::Display for Snapshot {
         writeln!(f, "parse_failed by reason: {}", by_reason(&self.parse_failed))?;
         writeln!(
             f,
-            "signals: sub_matched {}  sub_no_match {}  time_from_receipt {}  time_error [{}]  class_unknown {}  enum_other {}  unmapped_fields {}  utf8_lossy {}",
-            self.sub_matched, self.sub_no_match, self.time_from_receipt, by_reason(&self.time_error), self.class_unknown, self.enum_other, self.unmapped_fields, self.utf8_lossy
+            "signals: sub_matched {}  sub_no_match {}  sub_uncovered {}  time_from_receipt {}  time_error [{}]  class_unknown {}  enum_other {}  unmapped_fields {}  utf8_lossy {}",
+            self.sub_matched, self.sub_no_match, self.sub_uncovered, self.time_from_receipt, by_reason(&self.time_error), self.class_unknown, self.enum_other, self.unmapped_fields, self.utf8_lossy
         )?;
         write!(
             f,

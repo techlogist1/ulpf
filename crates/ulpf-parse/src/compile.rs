@@ -42,14 +42,17 @@ impl ParseFailure {
     }
 }
 
-/// Outcome of the `[[sub]]` stage. `NoMatch` is the 4am signal that a device emitted a
-/// message shape the definition has not seen.
+/// Outcome of the `[[sub]]` stage. `NoMatch` (a gate matched but no pattern did) and
+/// `Uncovered` (the definition has subs but none is gated for this event) are the 4am
+/// signals that a device emitted a message shape the definition has not seen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SubStatus {
+    /// The definition declares no subs.
     #[default]
     NotApplicable,
     Matched,
     NoMatch,
+    Uncovered,
 }
 
 pub(crate) enum CompiledStrategy {
@@ -235,7 +238,7 @@ impl Parser {
             }
             out.fields.truncate(mark);
         }
-        if eligible { SubStatus::NoMatch } else { SubStatus::NotApplicable }
+        if eligible { SubStatus::NoMatch } else { SubStatus::Uncovered }
     }
 
     fn resolve_timestamp<'a>(&self, ctx: &Context, scratch: &mut Scratch, out: &mut Parsed<'a>) {

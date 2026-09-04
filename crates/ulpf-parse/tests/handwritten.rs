@@ -140,7 +140,7 @@ fn cisco_asa_sample_parses_header_subs_and_envelopes() {
     assert_field(&out, "syslog_host", b"asa-edge-01");
     assert_field(&out, "syslog_timestamp", b"2026-09-04T10:15:33.120Z");
     assert_field(&out, "msg_id", b"609001");
-    assert_eq!(out.sub, SubStatus::NotApplicable);
+    assert_eq!(out.sub, SubStatus::Uncovered);
     let ts = out.timestamp.unwrap();
     assert_eq!(ts.epoch_nanos, 1_788_516_933_120_000_000);
     assert!(ts.policies.is_empty());

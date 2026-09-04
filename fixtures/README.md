@@ -12,7 +12,7 @@ Keys (all optional; a key present is asserted, a key absent is not):
 |---|---|
 | `parser` | parser that must be detected, or `"none"` |
 | `status` | `parsed`, `no_parser`, or a parse-failure reason (`pattern_no_match`, ...) |
-| `sub` | `not_applicable`, `matched`, `no_match` |
+| `sub` | `not_applicable` (definition has no subs), `matched`, `no_match` (a gate matched, no pattern did), `uncovered` (subs exist, none gated for this event) |
 | `fields` | parsed vendor fields that must be present with these exact values |
 | `absent` | parsed field names that must not be present |
 | `normalized` | dotted OCSF paths and their exact values |
