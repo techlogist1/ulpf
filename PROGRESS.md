@@ -106,8 +106,21 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
   no payload; SonicWall ids 37/38 and double-quoted appName; OpenVPN VERIFY ERROR serial,
   `Learn sec`, `(Not enabled)`, daemon signals. Engine: an empty delimiter remainder emits
   no `rest` field (consistent with D28).
-- [ ] Opus reviewers (2) on the remaining five families (Fortinet, ASA; Sophos, Squid,
-  Suricata); findings to be applied on return.
+- [x] Opus reviewer on Sophos, Squid, Suricata (the three kept worker families): every
+  sample was rewritten from the sources 2026-09-05. Sophos now uses the wire form
+  (`<30> device="SFW" ...`, no syslog header), sent_bytes/recv_bytes, uppercase
+  protocols, correct log_id subtype digits, empty values, and Content Filtering / ATP /
+  IDP / Event records; Squid logs DIRECT/NONE hierarchy codes (HIER_ is the C enum
+  prefix), real result codes and plausible code/method pairs, `%6tr` widths, an IPv6
+  client and NONE_NONE/000, with a detector that no longer rejects IPv6 or hostnames;
+  Suricata TLS/HTTP/DNS objects match output-json-*.c (TLS 1.2, colon-hex serial and
+  fingerprint, no-offset validity dates, sni, http app_proto, dns v3 queries array,
+  community_id, alert metadata arrays).
+- [ ] Opus reviewer on Fortinet and Cisco ASA (the two hand-written first-session
+  families); findings to be applied on return.
+- [ ] Ultracode invariant review workflow (5 Opus finders, adversarial verification per
+  finding) over store, zero-copy, wall/errors, engine, docs; confirmed findings to be
+  applied on return.
 
 ## Tried and abandoned
 - Internally-tagged `Strategy` enum with `#[serde(flatten)]` inside `[[sub]]`: serde cannot combine flatten with deny_unknown_fields; replaced by one flat validated struct (D13).

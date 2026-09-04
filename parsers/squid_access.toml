@@ -1,7 +1,8 @@
 # Squid native access.log format
 # Source: Squid documentation access.log configuration directive
-# Format: %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %un %Sh/%<a %mt
-# Example: 1756980923.123    120 10.0.0.5 TCP_MISS/200 1234 GET http://example.com/ - HIER_DIRECT/93.184.216.34 text/html
+# Format: %ts.%03tu %6tr %>a %Ss/%03>Hs %<st %rm %ru %[un %Sh/%<a %mt
+# Example: 1788516923.123    120 10.0.0.5 TCP_MISS/200 1234 GET http://example.com/ - DIRECT/93.184.216.34 text/html
+# The client (%>a) may be IPv4, IPv6 or, with log_fqdn, a hostname.
 
 [parser]
 name = "squid_access"
@@ -10,7 +11,7 @@ product = "Cache"
 description = "Squid native access.log format"
 
 [match]
-regex = "^\\d{10,}\\.\\d{3}\\s+\\d+\\s+[0-9.]+\\s+\\w+/\\d{3}\\s"
+regex = "^\\d{10,}\\.\\d{3}\\s+\\d+\\s+\\S+\\s+[A-Z_]+/\\S+\\s"
 
 [strategy]
 kind = "pattern"

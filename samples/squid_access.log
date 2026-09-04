@@ -1,25 +1,27 @@
-1756980923.123    120 10.0.0.5 TCP_MISS/200 1234 GET http://example.com/ - HIER_DIRECT/93.184.216.34 text/html
-1756980924.456    235 192.168.1.100 TCP_HIT/304 0 GET http://cache.example.org/img.jpg john HIER_NONE/- image/jpeg
-1756980925.789    512 172.16.0.1 TCP_TUNNEL/200 5678 CONNECT example.secure.com:443 admin HIER_DIRECT/93.184.216.50 -
-1756980926.100    89 10.0.0.5 TCP_DENIED/403 0 POST http://blocked.site/api - HIER_NONE/- -
-1756980927.250 	   445  203.0.113.50 TCP_MISS/201 9876 PUT http://api.example.com/data - HIER_DIRECT/93.184.216.10 application/json
-1756980928.350    150 10.0.0.6 TCP_HIT/200 2048 DELETE http://example.com/resource - HIER_NONE/- application/json
-1756980929.499    300 192.168.1.50 TCP_MISS_ABORTED/500 0 GET http://error.example.com/ user123 HIER_DIRECT/93.184.216.75 text/html
-1756980930.650    180 172.16.0.50 TCP_REFRESH_MISS/206 4096 GET http://example.com/partial - HIER_DIRECT/93.184.216.25 video/mp4
-1756980931.750    210 203.0.113.100 TCP_MEM_HIT/20ÿ0 512 HEAD http://check.example.com/ - HIER_NONE/- -
-1756980932.880    320 10.0.0.7 TCP_CLIENT_REFRESH_MISS/200 3072 GET http://example.com/page - HIER_DIRECT/93.184.216.100 text/html
-1756980933.999    155 192.168.1.25 TCP_NEGATIVE_HIT/410 0 GET http://gone.example.com/ - HIER_NONE/- text/html
-1756980934.111    465 172.16.1.1 TCP_IMS_HIT/304 0 GET http://conditional.example.com/ admin HIER_NONE/- application/xml
-1756980935.222    280 10.0.0.10 TCP_MISS/200 7890 GET http://large.example.com/file.zip guest HIER_DIRECT/93.184.216.60 application/zip
-1756980936.333    195 203.0.113.75 TCP_REFRESH_FAIL_OLD/200 2500 GET http://fresh.example.com/data - HIER_DIRECT/93.184.216.90 application/json
-1756980937.444    410 192.168.2.10 TCP_MISS/302 512 GET http://redirect.example.com/ - HIER_DIRECT/93.184.216.35 text/html
-1756980938.555    320 172.16.2.50 TCP_SWAPFAIL_MISS/200 4500 GET http://example.com/cache - HIER_DIRECT/93.184.216.45 text/plain
-1756980939.666    90 10.0.0.15 TCP_OFFLINE_HIT/200 1500 POST http://api.example.com/sync - HIER_DIRECT/93.184.216.55 application/json
-1756980940.777    425 203.0.113.200 TCP_HIT/200 2000 GET http://cached.example.com/asset.js - HIER_NONE/- application/javascript
-1756980941.888    265 192.168.1.75 TCP_MISS/404 512 GET http://notfound.example.com/ admin HIER_DIRECT/93.184.216.70 text/html
-1756980942.999    145 172.16.3.1 TCP_REDIRECT/200 3456 GET http://direct.example.com/ - HIER_NONE/- text/html
-1756980943.101    380 10.0.0.20 TCP_MISS/200 6789 GET http://example.com/largefile - HIER_DIRECT/93.184.216.88 video/x-matroska
-1756980944.212    220 203.0.113.125 TCP_HIT/304 0 GET http://modified.example.com/ - HIER_NONE/- application/json
-1756980945.323 truncated line missing fields
-1756980946.434    175 10.0.0.25 TCP_MISS/200 1200 GET http://example.com/
-1756980947.545    385 192.168.3.100 TCP_MISS/200 5432 GET http://special.example.com/page - HIER_DIRECT/93.184.216.101 text/html
+1788516923.123    120 10.0.0.5 TCP_MISS/200 1234 GET http://example.com/ - DIRECT/93.184.216.34 text/html
+1788516924.456    235 192.168.1.100 TCP_IMS_HIT/304 0 GET http://cache.example.org/img.jpg john NONE/- image/jpeg
+1788516925.789    512 172.16.0.1 TCP_TUNNEL/200 5678 CONNECT example.secure.com:443 admin DIRECT/93.184.216.50 -
+1788516926.100     89 10.0.0.5 TCP_DENIED/403 0 POST http://blocked.site/api - NONE/- -
+1788516927.250 	   445  203.0.113.50 TCP_MISS/201 9876 PUT http://api.example.com/data - DIRECT/93.184.216.10 application/json
+1788516928.350    150 10.0.0.6 TCP_MISS/200 2048 DELETE http://example.com/resource - DIRECT/93.184.216.34 application/json
+1788516929.499    300 192.168.1.50 TCP_MISS_ABORTED/500 0 GET http://error.example.com/ user123 DIRECT/93.184.216.75 text/html
+1788516930.650    180 172.16.0.50 TCP_REFRESH_MODIFIED/200 4096 GET http://example.com/partial - DIRECT/93.184.216.25 video/mp4
+1788516931.750    210 203.0.113.100 TCP_MEM_HIT/20ÿ0 512 HEAD http://check.example.com/ - NONE/- -
+1788516932.880    320 10.0.0.7 TCP_CLIENT_REFRESH_MISS/200 3072 GET http://example.com/page - DIRECT/93.184.216.100 text/html
+1788516933.999    155 192.168.1.25 TCP_NEGATIVE_HIT/410 0 GET http://gone.example.com/ - NONE/- text/html
+1788516934.111    465 172.16.1.1 TCP_IMS_HIT/304 0 GET http://conditional.example.com/ admin NONE/- application/xml
+1788516935.222    280 10.0.0.10 TCP_MISS/200 7890 GET http://api.example.com/v1/users guest FIRSTUP_PARENT/10.0.0.2 application/json
+1788516936.333    600 203.0.113.75 TCP_REFRESH_FAIL_OLD/200 1500 GET http://stale.example.com/ - TIMEOUT_DIRECT/93.184.216.80 text/html
+1788516937.444     95 192.168.2.10 TCP_MISS/302 0 GET http://redirect.example.com/ - DIRECT/93.184.216.90 text/html
+1788516938.555    340 172.16.2.50 TCP_SWAPFAIL_MISS/200 2200 GET http://swap.example.com/ - DIRECT/93.184.216.95 text/html
+1788516939.666     90 10.0.0.15 TCP_OFFLINE_HIT/200 1200 GET http://offline.example.com/ - NONE/- text/plain
+1788516940.777    400 203.0.113.200 TCP_HIT/200 8192 GET http://popular.example.com/ - NONE/- text/html
+1788516941.888    260 192.168.1.75 TCP_MISS/404 350 GET http://missing.example.com/x admin DIRECT/93.184.216.60 text/html
+1788516942.999     15 172.16.3.1 TCP_REDIRECT/302 0 GET http://old.example.com/ - NONE/- text/html
+1788516943.100    170 10.0.0.20 TCP_MISS/200 4321 GET http://intercepted.example.com/ - ORIGINAL_DST/93.184.216.70 text/html
+1788516944.200      0 203.0.113.125 NONE_NONE/000 0 GET http://reset.example.com/ - NONE/- -
+1788516945.300    210 2001:db8:1::42 TCP_MISS/200 1024 GET http://v6.example.com/ - DIRECT/2606:2800:220:1:248:1893:25c8:1946 text/html
+garbage line that is not an access log entry
+1788516946.400    130 10.0.0.30 TCP_MISS/200 1000 GET http://trunc
+another line no parser claims
+1788516947.500    180 192.168.3.100 TCP_MISS/200 2560 GET http://example.com/last - DIRECT/93.184.216.34 text/html
