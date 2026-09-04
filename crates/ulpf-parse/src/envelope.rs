@@ -40,7 +40,8 @@ fn token_end(b: &[u8], i: usize) -> usize {
 }
 
 /// Strips the envelope from `event`, pushing header fields, and returns the message.
-pub(crate) fn strip_syslog<'a>(event: &'a [u8], out: &mut Parsed<'a>) -> &'a [u8] {
+/// Exported for the inference engine, which must see bodies the way the runtime does.
+pub fn strip_syslog<'a>(event: &'a [u8], out: &mut Parsed<'a>) -> &'a [u8] {
     // A UTF-8 byte-order mark is what Windows-exported logs start with; it is not data.
     let event = event.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(event);
     let mut i = 0;

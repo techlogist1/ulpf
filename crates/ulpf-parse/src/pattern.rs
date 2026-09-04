@@ -20,38 +20,50 @@ pub(crate) struct CompiledPattern {
     pub(crate) slot: usize,
 }
 
+/// Appends the regex for `tokens`. `last` says whether the run ends the whole pattern,
+/// where a lazy `text` slot would otherwise match a single byte.
+fn emit_tokens(tokens: &[Token], last: bool, re: &mut String) {
+    let n = tokens.len();
+    for (idx, tok) in tokens.iter().enumerate() {
+        let is_last = last && idx + 1 == n;
+        match tok {
+            Token::Const(s) => {
+                for c in s.chars() {
+                    if c == ' ' {
+                        re.push_str("[ \\t]+");
+                    } else {
+                        re.push_str(&regex::escape(&c.to_string()));
+                    }
+                }
+            }
+            Token::Slot { name, kind } => {
+                let body = kind.regex(is_last);
+                if name == "_" {
+                    re.push_str("(?:");
+                    re.push_str(body);
+                    re.push(')');
+                } else if *kind == SlotKind::Quoted {
+                    re.push_str(&format!("\"(?P<{name}>(?:[^\"\\\\]|\\\\.)*)\""));
+                } else {
+                    re.push_str(&format!("(?P<{name}>{body})"));
+                }
+            }
+            Token::Optional(inner) => {
+                re.push_str("(?:");
+                emit_tokens(inner, false, re);
+                re.push_str(")?");
+            }
+        }
+    }
+}
+
 impl CompiledPattern {
     pub(crate) fn from_template(t: &Template, anchor: Anchor) -> Result<Self, String> {
         let mut re = String::from("(?s-u)");
         if anchor != Anchor::None {
             re.push('^');
         }
-        let n = t.tokens.len();
-        for (idx, tok) in t.tokens.iter().enumerate() {
-            match tok {
-                Token::Const(s) => {
-                    for c in s.chars() {
-                        if c == ' ' {
-                            re.push_str("[ \\t]+");
-                        } else {
-                            re.push_str(&regex::escape(&c.to_string()));
-                        }
-                    }
-                }
-                Token::Slot { name, kind } => {
-                    let body = kind.regex(idx + 1 == n);
-                    if name == "_" {
-                        re.push_str("(?:");
-                        re.push_str(body);
-                        re.push(')');
-                    } else if *kind == SlotKind::Quoted {
-                        re.push_str(&format!("\"(?P<{name}>(?:[^\"\\\\]|\\\\.)*)\""));
-                    } else {
-                        re.push_str(&format!("(?P<{name}>{body})"));
-                    }
-                }
-            }
-        }
+        emit_tokens(&t.tokens, true, &mut re);
         if anchor == Anchor::Full {
             re.push('$');
         }

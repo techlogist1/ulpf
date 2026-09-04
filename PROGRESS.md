@@ -43,6 +43,68 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D36, each with an anchor)
       current; every milestone committed and pushed to techlogist1/ulpf main.
 
+## v1 (2026-09-05 session, autonomous): the visible half
+
+Brief: inference, review workflow, server, embedded UI, isolation check, container, demo
+script, design review. Skills: `software-design-philosophy` loaded (interfaces),
+`example-skills:frontend-design` for the UI worker, `aposd-critique` reserved for the
+review phase; `prompting-practices` does not exist on this machine (manifest at
+`~/Documents/dev/skills-audit/MANIFEST.md`), its requirements are carried from the brief.
+Toolchain verified: node 24.15, pnpm 11.9, docker 29.4, lsof; axum 0.8.9 (path syntax
+`/{id}`, `Sse::new(stream).keep_alive(KeepAlive::default())`, `axum::serve(listener, app)`
+verified from docs.rs), tokio 1.53, notify 9.0.0-rc.5 (evaluated, ruled out: D40).
+
+### Definition of done (checked only after running it)
+- [ ] 1. Inference end to end: unknown events buffer per source; at the threshold the
+      engine clusters, merges optional fields, types slots, writes `pending/<id>.toml` +
+      evidence; a held-out format produces a proposal; approving it activates the parser
+      without restart and the same events are then `detected`. Nothing is parsed on a
+      proposal. Tested on three held-out shapes and a messy sample; thresholds recorded
+      with the alternatives tried.
+- [ ] 2. Review workflow: list, view beside sample lines and candidate templates, edit,
+      regenerate from kept templates, approve, reject. Approval is the only pending→active path.
+- [ ] 3. Server on localhost: SSE (`metrics` + `tail`), pending routes, traceback with
+      stored and recomputed digests. Reuses the store's writer lock; owns no state.
+- [ ] 4. UI embedded: live feed with counters, review screen with merge-or-discard,
+      traceback view. Every control backed by the API. Restylable (`--ui-dir`).
+- [ ] 5. Isolation: `scripts/isolation.sh` proves no outbound connection during a
+      full-rate run; command in the demo script.
+- [ ] 6. Container rebuilt from the final commit; UI reachable from inside it.
+- [ ] 7. Regression: v0.1 suite, clippy, counting-allocator test, bench within variance.
+- [ ] 8. `aposd-critique` review pass, findings fixed.
+- [ ] 9. Hackathon section below; CLAUDE.md and DECISIONS.md current; committed, pushed.
+
+### Spine (sequential, lead)
+- [x] skills check, four files read, toolchain and crate APIs verified
+- [x] `docs/api.md` contract (routes, payloads, SSE kinds, evidence shape)
+- [ ] Template optional groups `{? ...}` (format fix the inference needs; round-trip tests)
+- [ ] `ulpf-infer` crate: tokenizer → key + alignment clustering → consensus template with
+      optional segments → enum split → typing → verify by compiling → emit definition
+- [ ] engine restructure: `Live` shared state, store behind one mutex (per-batch lock),
+      hot-swappable pipeline, per-source stats, bounded tail, inference thread, pending
+      module, reload; `ulpf run` unchanged in behaviour; `ulpf serve` poll-ingest loop
+- [ ] merge server + UI, isolation, container, demo script, review pass, final commit
+
+### Fan-outs (each designed before dispatch; see the entry for why fewer would not do)
+Fan-out A (after the contract; nothing here touches the engine):
+- UI worker (strong tier, frontend-design loaded): `ui/` Svelte 5 + Vite → `ui/dist/{index.html,app.js,app.css}`
+  with fixed names, 45-minute embed timer, plain HTML fallback. Develops against the
+  contract with a throwaway mock it deletes; ships nothing faked.
+- Held-out samples (cheap tier, given verified example lines from the prototype report):
+  `heldout/mikrotik.log`, `heldout/edgerouter.log`, `heldout/nginx_access.log`, `heldout/messy.log`.
+- Isolation worker (strong tier): `scripts/isolation.sh` against `run` and `serve`.
+Why not one worker: four disjoint file sets, no shared state, and the UI alone is the
+long pole.
+Fan-out B (after the engine restructure): server worker (strong) builds `server.rs`
+against `Live` and the contract with HTTP tests, while the lead writes the inference
+core. Fan-out C (after inference): stress-test worker grades proposals per held-out format.
+
+### Tried and abandoned (v1)
+(none yet)
+
+### Next action
+Optional groups in `Template`, then the `ulpf-infer` crate.
+
 ## Cold start for v1 (read this first)
 
 v0.1 is closed at the commit that added this section (parent 1fb4c41); `git log -1`

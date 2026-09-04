@@ -1,0 +1,300 @@
+<78>Sep  4 11:59:55 gw CRON[8539]: (root) CMD (/usr/local/bin/backup-nightly.sh)
+<134>Sep  4 10:51:26 gw wireless,info c9:52:ea:16:c9:7b@wlan2: connected
+<134>Sep  4 20:09:20 gw2 wireless,info b4:ce:80:52:d1:8b@wlan1: disconnected, timed out
+<134>Sep  4 14:44:35 branch-gw system,info,account user bob logged out from 58.141.155.237 via ssh
+<134>Sep  4 15:05:24 gw2 firewall,info forward: in:ether2 out:ether3, src-mac 17:ff:bf:96:1a:c2, proto TCP (SYN), 10.0.9.24:60134->118.163.88.81:443, NAT (10.0.9.24:60134->57.13.130.224:13450)->118.163.88.81:443, len 949
+<134>Sep  4 21:53:25 gw2 dhcp,info dhcp-guest assigned 192.168.4.125 to 67:74:5a:55:ca:6b
+<134>Sep  4 21:40:56 branch-gw dhcp,info dhcp-lan assigned 10.0.10.105 to df:1e:5b:63:ed:21
+<134>Sep  4 22:47:32 gw firewall,info forward: in:ether1 out:ether3, src-mac 25:c9:7c:ed:0d:95, proto UDP (3), 10.0.178.73:22116->96.130.208.17:26892, len 699
+<134>Sep  4 13:17:09 gw system,info,account user guest logged in from 63.54.116.127 via winbox
+<134>Sep  4 20:34:19 café-gw firewall,info forward: in:ether3 out:ether1, src-mac 58:a9:8f:5b:a4:df, proto UDP (4), 10.0.152.101:28009->27.117.175.235:443, NAT (10.0.152.101:28009->49.120.249.12:1139)->27.117.175.235:443, len 955
+<134>Sep  4 06:24:58 gw system,info,account user alice logged in from 110.251.44.147 via ssh
+<134>Sep  4 19:52:41 branch-gw dhcp,info dhcp1 assigned 192.168.18.74 to 5e:b2:35:43:7f:bd
+<134>Sep  4 15:01:14 branch-gw system,info,account user guest logged in from 31.222.172.98 via ssh
+<134>Sep  4 15:09:34 gw2 firewall,info forward: in:ether3 out:ether1, src-mac ee:db:81:7f:62:f8, proto TCP (RST), 10.0.186.125:5995->202.73.206.250:80, NAT (10.0.186.125:5995->181.80.220.36:8181)->202.73.206.250:80, len 1482
+<134>Sep  4 10:13:58 gw system,info,account user admin logged in from 2a31:8d63:e3d4:d6f4:a0:7419:9a6:ca47 via winbox
+<134>Sep  4 07:19:06 gw dhcp,info dhcp-guest assigned 192.168.4.70 to b2:fc:27:25:7b:b6
+<134>Sep  4 15:17:53 gw2 wireless,info a3:89:3e:97:45:36@wlan2: connected
+<130>Sep  4 21:11:47 branch-gw system,error,critical login failure for user engineer from 8626:1dbd:963f:8438:3f64:b502:94c2:60e6 via ssh
+<134>Sep  4 22:10:04 gw dhcp,info dhcp-lan assigned 10.0.116.241 to 93:ca:27:b1:3d:fb
+<134>Sep  4 16:28:40 branch-gw wireless,info 6c:71:b4:38:71:cc@wlan1: connected
+<130>Sep  4 14:40:25 gw system,error,critical login failure for user monitor from 219.31.25.89 via winbox
+<134>Sep  4 18:25:15 gw2 firewall,info input: in:ether1 out:(none), src-mac 7b:ef:fc:12:c3:6d, proto TCP (SYN), 5ce9:8fb4:db3d:b396:1a97:3c30:fa17:af26:64492->10.0.50.4:443
+<78>Sep  4 16:47:53 gw CRON[7065]: (root) CMD (test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily ))
+<134>Sep  4 17:14:28 gw firewall,info input: in:ether1 out:(none), src-mac 4d:32:3d:76:7b:05, proto TCP (ACK), 178.173.80.197:14826->192.168.8.204:8080, len 1446
+<134>Sep  4 16:07:51 gw firewall,info input: in:ether2 out:(none), src-mac b0:c5:35:0c:e1:ac, proto TCP (ACK,PSH), 147.237.69.34:62051->192.168.6.107:443, len 1279
+<78>Sep  4 01:11:59 gw CRON[3839]: (root) CMD (run-parts /etc/cron.hourly)
+<134>Sep  4 15:42:52 gw2 dhcp,info dhcp-lan deassigned 192.168.3.38 from 49:46:52:cc:e7:bc
+<130>Sep  4 12:52:10 gw system,error,critical login failure for user guest from 52.217.20.78 via ssh
+<134>Sep  4 10:18:07 gw firewall,info input: in:ether1 out:(none), src-mac b3:9a:dd:bc:f0:09, proto ICMP (type=3, code=1), 32.27.152.116->10.0.119.11, len 52
+<134>Sep  4 18:54:23 gw firewall,info input: in:ether3 out:(none), src-mac f2:e9:4d:6a:c0:f7, proto ICMP (type=11, code=0), 34.237.110.55->10.0.224.192, len 56
+<78>Sep  4 00:00:00 gw CRON[1786]: (root) CMD (certbot -q renew)
+<134>Sep  4 18:37:44 gw wireless,info fb:6d:dc:88:19:e7@wlan1: disconnected, received disassociation
+<30>Sep  4 00:00:00 gw systemd[1]: Started User Manager for UID 1000.
+<134>Sep  4 07:02:27 gw firewall,info input: in:ether2 out:(none), src-mac c8:4f:79:54:50:78, proto UDP (5), 213.188.55.229:26646->192.168.13.102:41089, len 1458
+<134>Sep  4 13:33:48 branch-gw dhcp,info dhcp1 deassigned 10.0.154.117 from 27:60:9e:f8:41:ad
+<134>Sep  4 06:41:38 gw2 dhcp,info dhcp-lan deassigned 10.0.19.32 from 68:3e:fd:13:13:7b
+<134>Sep  4 17:26:57 gw firewall,info input: in:ether2 out:(none), src-mac c1:07:00:ae:32:d4, proto UDP (8), 161.34.198.25:61261->10.0.138.238:8080, len 140
+<134>Sep  4 15:51:12 gw wireless,info 1e:54:1c:e1:9d:
+<130>Sep  4 20:13:30 branch-gw system,error,critical login failure for user alice from b877:fb6e:682f:7e38:de9c:9ef:af3b:327c via ssh
+<134>Sep  4 23:25:01 branch-gw dhcp,info dhcp-guest deassigned 10.0.98.101 from 8c:48:2a:d0:b0:ac
+<134>Sep  4 22:35:03 gw2 system,info,account user admin logged in from 177.185.202.221 via web
+<134>Sep  4 11:24:44 gw firewall,info forward: in:ether3 out:ether1, src-mac be:9f:18:50:1f:b0, proto UDP (5), 192.168.20.221:40231->30.115.17.8:17828, len 481
+<134>Sep  4 16:53:39 branch-gw firewall,info forward: in:ether2 out:ether1, src-mac 9d:01:ea:12:6d:81, proto UDP (6), 10.0.59.26:8313->22.109.156.78:16244, len 773
+<134>Sep  4 15:51:12 gw wireless,info 1e:54:1c:e1:9d:d8@wlan1: connected
+<134>Sep  4 21:36:46 gw2 wireless,info 5f:79:e8:da:3e:32@wlan1: disconnected, timed out
+<134>Sep  4 20:59:17 gw2 script,info script backup-config started by scheduler
+<134>Sep  4 21:15:57 gw2 firewall,info forward: in:ether2 out:ether3, src-mac 49:9f:87:d6:58:27, proto TCP (ACK,PSH), 192.168.1.171:63037->27.99.179.76:37304, len 92
+<134>Sep  4 10:09:48 gw firewall,info forward: in:ether2 out:ether1, src-mac 77:05:14:f4:27:e1, proto UDP (1), 10.0.161.155:14793->119.141.159.31:34917, NAT (10.0.161.155:14793->163.134.1.142:6278)->119.141.159.31:34917, len 231
+<134>Sep  4 14:15:26 gw2 system,info,account user bob logged out from 52.36.128.83 via ssh
+<134>Sep  4 08:25:43 gw2 dhcp,info dhcp-lan assigned 10.0.203.208 to f3:48:61:08:4e:78
+<134>Sep  4 15:47:02 gw2 firewall,info input: in:ether3 out:(none), src-mac 57:ac:63:24:9f:3d, proto ICMP (type=8, code=0), 220.155.92.112->10.0.159.236, len 64
+<134>Sep  4 12:02:13 branch-gw dhcp,info dhcp1 assigned 10.0.73.83 to f1:ef:a9:24:c8:f0
+<134>Sep  4 10:47:16 gw wireless,info 5b:3c:1c:aa:d4:b8@wlan1: disconnected, connection with AP is lost
+<134>Sep  4 12:56:20 gw firewall,info forward: in:ether2 out:ether3, src-mac bb:8f:6e:78:5d:89, proto TCP (RST), 10.0.31.57:18119->33.170.142.2:80, len 134
+<134>Sep  4 22:51:42 gw firewall,info input: in:ether1 out:(none), src-mac 97:f2:6b:80:30:8a, proto UDP (2), 147.213.248.156:25585->10.0.16.102:8080, len 198
+<134>Sep  4 12:10:32 branch-gw firewall,info input: in:ether2 out:(none), src-mac ad:23:31:e0:c3:00, proto UDP (7), 1c31:4b12:dc2e:a94a:766a:af04:b64c:9375:50585->192.168.19.170:443, len 1468
+<134>Sep  4 06:33:18 gw firewall,info input: in:ether1 out:(none), src-mac dd:1e:cd:d3:c1:88, proto ICMP (type=0, code=0), 81.215.151.195->10.0.25.34, len 75
+<134>Sep  4 14:11:17 branch-gw wireless,info 99:9f:f0:f5:90:49@wlan1: connected
+<134>Sep  4 17:01:59 gw firewall,info input: in:ether1 out:(none), src-mac fe:5f:71:af:d3:7c, proto ICMP (type=0, code=0), 108.250.89.254->192.168.4.73, len 88
+<134>Sep  4 07:06:36 gw2 firewall,info input: in:ether1 out:(none), src-mac 43:80:54:b4:6b:f4, proto ICMP (type=3, code=1), 89.193.242.215->10.0.11.83, len 67
+<130>Sep  4 06:45:47 branch-gw system,error,critical login failure for user root from 84.26.172.105 via winbox
+<130>Sep  4 16:24:30 gw2 system,error,critical login failure for user backup from 33.115.163.125 via winbox
+<134>Sep  4 11:16:25 gw wireless,info 64:07:74:60:8c:2a@wlan1: disconnected, reset by peer
+<134>Sep  4 09:28:10 gw wireless,info 5e:4f:7a:64:78:ee@wlan2: connected
+<134>Sep  4 18:04:26 branch-gw firewall,info input: in:ether2 out:(none), src-mac 40:05:c2:82:4c:a6, proto ICMP (type=3, code=1), 160.155.123.241->192.168.0.76, len 79
+<130>Sep  4 13:58:47 gw system,error,critical login failure for user backup from 108.58.40.13 via web
+<30>Sep  4 20:59:51 gw systemd[1]: Started Daily apt download activities.
+<134>Sep  4 18:33:34 branch-gw firewall,info input: in:ether3 out:(none), src-mac 11:75:88:76:54:75, proto ICMP (type=11, code=0), 147.200.241.233->10.0.122.224, len 56
+<134>Sep  4 21:24:16 branch-gw dhcp,info dhcp1 assigned 192.168.8.157 to 9b:a4:46:99:45:f0
+<134>Sep  4 11:45:33 branch-gw wireless,info eb:0d:78:dc:ac:3c@wlan2: disconnected, extensive data loss
+<134>Sep  4 06:29:08 gw firewall,info forward: in:ether3 out:ether1, src-mac 03:9d:c3:03:77:15, proto UDP (4), 10.0.238.119:24395->62.163.85.247:443, len 218
+<134>Sep  4 06:16:39 branch-gw script,info script check-uptime started by scheduler
+<134>Sep  4 22:14:14 gw firewall,info input: in:ether2 out:(none), src-mac e0:b5:2b:5f:e7:1f, proto TCP (ACK), 8183:86ee:46bd:ae01:88c0:e54f:5a8c:3a02:53932->192.168.4.209:19393, len 176
+<78>Sep  4 20:23:51 gw CRON[5165]: (root) CMD (run-parts /etc/cron.hourly)
+<134>Sep  4 06:54:07 branch-gw firewall,info input: in:ether1 out:(none), src-mac 5d:6e:17:8f:ca:e6, proto TCP (ACK), 4.217.83.58:34196->192.168.11.33:80, len 694
+<130>Sep  4 18:12:45 gw system,error,critical login failure for user admin from 190.122.68.98 via winbox
+<134>Sep  4 12:27:11 gw2 wireless,info 96:68:2f:93:48:45@wlan2: disconnected, reset by peer
+<134>Sep  4  20:46:48 branch-gw firewall,info input: in:ether3 out:(none), src-mac df:cc:06:1a:3e:9f, proto ICMP (type=3, code=1), 59.225.150.89->10.0.96.171, len 106
+<78>Sep  4 14:23:54 gw CRON[5801]: (root) CMD (/usr/lib/php/sessionclean)
+<134>Sep  4 16:41:10 gw2 firewall,info forward: in:ether1 out:ether2, src-mac df:2e:4a:85:05:38, proto UDP (4), 192.168.1.130:9813->202.234.18.29:443, NAT (192.168.1.130:9813->111.94.189.196:42906)->202.234.18.29:443, len 359
+<134>Sep  4 10:38:56 gw2 firewall,info input: in:ether2 out:(none), src-mac 7f:96:bb:d9:fb:16, proto UDP (1), 187.252.225.167:22008->10.0.92.20:22, len 696
+<134>Sep  4 10:55:36 gw2 firewall,info forward: in:ether2 out:ether3, src-mac af:fd:a9:f8:15:ab, proto UDP (3), 10.0.32.228:45254->154.185.63.4:80, NAT (10.0.32.228:45254->146.61.160.33:60514)->154.185.63.4:80, len 837
+<134>Sep  4 10:01:28 gw firewall,info input: in:ether3 out:(none), src-mac 27:fb:8c:3f:cd:4f, proto UDP
+<134>Sep  4 17:31:07 gw2 firewall,info input: in:ether3 out:(none), src-mac 9d:b9:70:07:30:22, proto TCP (ACK), 33.21.44.119:24123->10.0.89.197:22, len 571
+<134>Sep  4 14:02:57 branch-gw system,info,account user alice logged out from 120.139.34.140 via web
+<134>Sep  4 14:19:36 branch-gw firewall,info input: in:e
+<134>Sep  4 09:53:09 gw system,info,account user alice logged in from 136.173.102.230 via web
+<134>Sep  4 15:22:03 branch-gw script,info script backup-config started by scheduler
+<134>Sep  4 13:42:08 gw firewall,info input: in:ether1 out:(none), src-mac 3e:08:7f:1d:f4:75, proto TCP (ACK), 1dd5:e43c:8a9d:dcdb:ea16:75f9:bcb1:90dd:54107->192.168.6.162:8080
+<134>Sep  4 23:04:12 gw firewall,info forward: in:ether2 out:ether1, src-mac a1:14:c6:63:12:46, proto UDP (3), 10.0.206.132:14212->8.251.19.91:44649, NAT (10.0.206.132:14212->195.19.172.106:4916)->8.251.19.91:44649, len 418
+<134>Sep  4 08:42:22 gw2 firewall,info input: in:ether2 out:(none), src-mac db:4f:67:24:28:f0, proto UDP (7), 97.222.23.177:16780->192.168.0.89:80, len 950
+<134>Sep  4 23:50:00 gw dhcp,info dhcp1 deassigned 10.0.207.231 from 69:7c:3f:14:f8:49
+<134>Sep  4 14:57:04 gw firewall,info forward: in:ether2 out:ether3, src-mac af:05:53:a2:65:ab, proto TCP (SYN,ACK), 192.168.16.159:33609->162.248.227.159:443, NAT (192.168.16.159:33609->60.225.22.216:61145)->162.248.227.159:443, len 787
+<134>Sep  4 14:32:06 gw2 system,info,account user monitor logged in from 146.36.137.84 via web
+<30>Sep  4 14:59:53 gw systemd[1]: Started Daily apt download activities.
+<130>Sep  4 10:26:27 branch-gw system,error,critical login failure for user engineer from 48.223.238.124 via ssh
+<134>Sep  4 20:25:59 gw2 firewall,info forward: in:ether2 out:ether1, src-mac b8:27:22:11:49:19, proto UDP (8), 10.0.107.210:19712->132.120.200.208:24783, NAT (10.0.107.210:19712->180.71.6.197:60667)->132.120.200.208:24783, len 1434
+<134>Sep  4 22:30:53 gw firewall,info input: in:ether2 out:(none), src-mac ed:1e:dc:40:f7:e1, proto UDP (7), 32e4:6154:642a:a16e:3b25:4964:a8ab:99f8:47613->10.0.146.64:22
+<134>Sep  4 21:28:26 gw2 wireless,info e1:1f:0b:fe:4c:06@wlan1: disconnected, connection with AP is lost
+<134>Sep  4 15:59:31 gw system,info,account user monitor logged in from 2281:1815:5797:7db6:d6c0:d7dc:3d3f:27ef via winbox
+<134>Sep  4 15:34:33 gw system,info,account user backup logged out from ddaa:dcb3:d980:4c:c2d:ea65:558c:4c66 via winbox
+<134>Sep  4 09:36:29 branch-gw wireless,info 14:6e:c2:55:30:74@wlan2: connected
+<134>Sep  4 08:00:44 gw2 firewall,info input: in:ether2 out:(none), src-mac 3e:6e:dc:62:7b:95, proto UDP (7), 32.42.126.128:11925->10.0.193.158:80, len 1023
+<134>Sep  4 20:50:58 gw firewall,info input: in:ether1 out:(none), src-mac 2a:ec:67:0d:d1:1f, proto TCP (ACK,PSH), 33.152.100.226:8388->10.0.234.90:65023, len 1288
+<134>Sep  4 17:51:56 gw wireless,info f2:ec:2e:4e:30:39@wlan2: connected
+<134>Sep  4 17:06:08 gw2 system,info,account user admin logged out from 2b99:48f0:c2db:65ca:d5c8:419a:8471:f8a6 via web
+<78>Sep  4 08:23:56 gw CRON[7697]: (root) CMD (run-parts /etc/cron.hourly)
+<134>Sep  4 21:45:05 branch-gw firewall,info input: in:ether2 out:(none), src-mac 30:7b:9b:75:de:09, proto TCP (SYN,ACK), 14.84.205.171:35439->10.0.135.237:27233
+<134>Sep  4 20:21:49 branch-gw firewall,info input: in:ether1 out:(none), src-mac 18:45:17:e8:01:17, proto TCP (SYN,ACK), 49.57.22.181:53116->192.168.13.208:8080
+<130>Sep  4 18:58:33 branch-gw system,error,critical login failure for user bob from 22.178.211.74 via ssh
+<134>Sep  4 11:24:44 gw firewall,info forward: in:ether3 out:ether1, src-mac be:9f:18:50:1
+<78>Sep  4 02:23:59 gw CRON[3897]: (root) CMD (/usr/lib/php/sessionclean)
+<134>Sep  4 14:36:15 branch-gw firewall,info input: in:ether1 out:(none), src-mac cd:52:4a:14:82:3e, proto TCP (FIN,ACK), 223.186.145.4:1047->192.168.9.125:32011, len 1035
+<134>Sep  4 14:19:36 branch-gw firewall,info input: in:ether3 out:(none), src-mac 13:53:a7:cb:b4:dd, proto UDP (5), 187.78.8.109:10613->192.168.19.12:8080
+<134>Sep   4 13:54:37 gw wireless,info 1e:a8:b2:f7:10:c1@wlan2: connected
+<134>Sep  4 19:40:11 branch-gw firewall,info forward: in:ether3 out:ether2, src-mac ea:c2:1d:4f:ec:b6, proto UDP (5), 192.168.13.206:35892->75.82.215.188:443, NAT (192.168.13.206:35892->118.209.235.84:14209)->75.82.215.188:443, len 397
+<134>Sep  4 22:18:24 branch-gw firewall,info input: in:ether3 out:(none), src-mac e9:aa:10:9a:5b:7e, proto TCP (ACK), 197.193.102.217:10270->192.168.5.237:52035, len 1420
+<134>Sep  4 19:11:03 gw2 dhcp,info dhcp-lan assigned 10.0.179.174 to 8d:e8:07:3c:4d:ed
+<134>Sep  4 12:06:22 gw2 dhcp,info dhcp-guest deassigned 10.0.33.156 from 9d:de:01:5e:29:6b
+<134>Sep  4 19:19:22 branch-gw dhcp,info dhcp-guest assigned 10.0.49.235 to 8e:6c:bb:3e:8f:28
+<130>Sep  4 11:53:53 gw2 system,error,critical login failure for user  from dec4:dc78:b989:d276:1c7:71b3:7183:d085 via winbox
+<134>Sep  4 06:00:00 branch-gw firewall,info input: in:ether2 out:(none), src-mac 23:2b:d7:17:bc:16, proto ICMP (type=11, code=0), 119.163.86.179->192.168.3.16, len 74
+<134>Sep  4 19:23:32 gw firewall,info forward: in:ether2 out:ether1, src-mac 03:50:65:b7:92:0f, proto UDP (1), 10.0.111.41:28640->16.20.174.159:443, len 579
+<134>Sep  4 07:44:05 branch-gw script,info script check-uptime started by scheduler
+<134>Sep  4 21:57:35 gw2 system,info,account user monitor logged in from 81.197.154.163 via ssh
+<134>Sep  4 23:12:31 gw firewall,info input: in:ether3 out:(none), src-mac f4:c2:eb:78:08:91, proto TCP (ACK), 132.235.49.75:16541->10.0.226.145:443, len 163
+<134>Sep  4 09:19:50 branch-gw firewall,info input: in:ether1 out:(none), src-mac 7d:ca:b8:3f:e6:f9, proto UDP (6), 168.236.127.56:24657->192.168.6.178:22
+<134>Sep  4 09:24:00 gw2 firewall,info forward: in:ether1 out:ether3, src-mac f8:47:c0:94:48:1a, proto TCP (SYN), 192.168.3.250:21516->84.29.221.159:443, NAT (192.168.3.250:21516->120.50.137.58:40563)->84.29.221.159:443, len 643
+<134>Sep  4 16:03:41 gw firewall,info input: in:ether2 out:(none), src-mac a7:22:6b:be:91:d5, proto UDP (9), 142.15.183.45:46792->10.0.36.115:443, len 1404
+<130>Sep  4 21:49:15 gw system,error,critical login failure for user root from eb6c:d6cc:cd61:2350:2361:c2ca:d296:a548 via winbox
+<134>Sep  4 10:59:45 gw2 system,info,account user admin logged out from 89.95.229.227 via winbox
+<134>Sep  4 08:46:32 branch-gw system,info,account user guest logged in from 6b00:54a8:e0c5:e237:9883:8a3:af25:2bc6 via winbox
+<134>Sep  4 23:33:20 gw dhcp,info dhcp-lan deassigned 10.0.137.75 from d6:de:25:0d:c2:ce
+<134>Sep  4 11:08:05 gw firewall,info input: in:ether2 out:(none), src-mac 9a:08:83:1b:92:53, proto UDP (8), 115.192.36.58:54949->10.0.177.78:8080, len 343
+<134>Sep  4 23:45:50 gw2 firewall,info input: in:ether1 out:(none), src-mac 51:af:e4:8a:6f:37, proto ICMP (type=3, code=1), 192.78.44.194->192.168.14.34, len 53
+<134>Sep  4 19:02:43 gw2 dhcp,info dhcp-lan assigned 10.0.12.118 to 29:24:fb:fb:13:a8
+<134>Sep  4 20:42:38 gw2 firewall,info input: in:ether3 out:(none), src-mac e5:40:f8:aa:60:d3, proto UDP (7), 16.73.36.152:6060->10.0.128.198:16351
+<134>Sep  4 17:22:48 gw2 firewall,info input: in:ether2 out:(none), src-mac b6:33:93:5f:08:3b, proto TCP (SYN), 184.160.46.174:45467->192.168.14.239:34717
+<134>Sep  4 14:27:56 branch-gw wireless,info b4:ca:01:0c:45:78@wlan1: connected
+<134>Sep  4 23:41:40 gw2 firewall,info input: in:ether1 out:(none), src-mac 0b:2a:79:8b:4b:b3, proto UDP (3), 131.216.106.98:27003->10.0.118.254:8080, len 1120
+<134>Sep  4 16:16:11 gw dhcp,info dhcp1 deassigned 10.0.20.250 from c4:01:3c:51:4d:7a
+<130>Sep  4 18:21:05 gw system,error,critical login failure for user bob from 46.114.183.21 via ssh
+<130>Sep  4 07:10:46 branch-gw system,error,critical login failure for user root from 162.208.89.87 via winbox
+<134>Sep  4 18:46:04 gw dhcp,info dhcp1 deassigned 192.168.11.69 from f7:1c:b0:53:18:f1
+<134>Sep  4 22:26:43 gw2 system,info,account user alice logged out from 26.226.248.122 via web
+<134>Sep  4 16:12:01 gw wireless,info 1f:fe:a5:f6:01:75@wlan1: connected
+<78>Sep  4 22:47:50 gw CRON[3760]: (root) CMD (/usr/lib/php/sessionclean)
+<130>Sep  4 13:46:18 gw system,error,critical login failure for user backup from 115.216.55.250 via web
+
+<134>Sep  4 17:35:17 branch-gw wireless,info 92:4d:8b:40:97:00@wlan1: connected
+<134>Sep  4 10:22:17 branch-gw firewall,info forward:	in:ether1 out:ether2, src-mac 0a:78:08:be:04:84, proto TCP (RST), 192.168.10.173:62613->194.37.27.110:43275, len 1165
+<134>Sep  4 17:56:06 gw dhcp,info dhcp-lan deassigned 192.168.7.25 from d3:9b:46:0c:94:61
+<134>Sep  4 11:33:04 branch-gw firewall,info forward: in:ether3 out:ether1, src-mac ec:80:d7:21:bc:32, proto TCP (RST), 10.0.196.181:44253->48.13.193.107:59696, NAT (10.0.196.181:44253->45.17.32.239:64814)->48.13.193.107:59696, len 930
+<134>Sep  4 07:52:24 gw wireless,info be:7b:ef:d1:35:d8@wlan2: disconnected, connection with AP is lost
+<134>Sep  4 16:49:29 branch-gw firewall,info forward: in:ether2 out:ether1, src-mac bc:21:fe:77:37:06, proto TCP (SYN,ACK), 10.0.109.216:61683->186.67.138.127:53, len 1451
+<134>Sep  4 09:57:18 gw dhcp,info dhcp-guest deassigned 192.168.3.233 from a6:d5:05:11:72:84
+<130>Sep  4 22:01:45 gw2 system,error,critical login	failure for user monitor from 64.192.127.13 via web
+<134>Sep  4 10:01:28 gw firewall,info input: in:ether3 out:(none), src-mac 27:fb:8c:3f:cd:4f, proto UDP (3), 25.78.149.140:25286->10.0.59.77:40946, len 205
+<134>Sep  4 21:07:37 branch-gw system,info,account user admin logged out from 185.170.43.144 via winbox
+<134>Sep  4 17:39:27 gw system,info,account user guest logged in from 218.200.98.142 via web
+<134>Sep  4 12:35:31 branch-gw firewall,info forward: in:ether2 out:ether1, src-mac 75:23:05:fc:1f:cb, proto TCP (ACK,PSH), 192.168.15.106:26552->119.111.87.152:36684, len 65
+<134>Sep  4 22:55:52 gw firewall,info forward: in:ether3 out:ether1, src-mac 6f:c4:d4:e5:4d:16, proto UDP (1), 10.0.95.149:53433->141.83.50.56:56037, len 382
+<134>Sep  4 09:11:31 gw firewall,info input: in:ether1 out:(none), src-mac d7:9d:62:3c:b2:12, proto UDP (9), 128.242.231.202:25787->192.168.18.24:40869, len 526
+<134>Sep  4 07:35:45 gw dhcp,info dhcp-lan deassigned 192.168.4.201 from 15:ff:3e:4c:e5:dc
+<134>Sep  4 15:26:13 gw2 firewall,info forward: in:ether3 out:ether2, src-mac 7e:42:4d:95:f5:52, proto UDP (3), 10.0.239.182:48967->79.235.69.216:443, NAT (10.0.239.182:48967->46.175.234.243:37458)->79.235.69.216:443, len 605
+<134>Sep  4 12:31:21 gw system,info,account user alice logged out from 41.166.81.108 via winbox
+<134>Sep  4 13:21:19 branch-gw dhcp,info dhcp1 deassigned 192.168.17.46 from 3e:ed:6f:db:0f:be
+<134>Sep  4 12:48:00 gw firewall,info input: in:ether3 out:(none), src-mac ad:77:d7:de:4e:ad, proto ICMP (type=0, code=0), 81.138.48.22->192.168.16.98, len 98
+<134>Sep  4 17:47:46 branch-gw firewall,info input: in:ether1 out:(none), src-mac ba:8a:5e:a9:e6:3a, proto UDP (6), 212.152.187.154:61981->192.168.3.88:8080, len 896
+<134>Sep  4 18:29:24 gw2 script,info script ping-watchdog started by scheduler
+<78>Sep  4 21:35:51 gw CRON[5513]: (root) CMD (run-parts /etc/cron.hourly)
+<134>Sep  4 12:39:41 branch-gw firewall,info input: in:ether2 out:(none), src-mac 50:a5:99:9b:90:f2, proto UDP (1), 18.38.173.141:25566->10.0.51.19:8080, len 935
+<134>Sep  4 09:48:59 branch-gw firewall,info input: in:ether1 out:(none), src-mac c9:42:4a:24:83:25, proto ICMP (type=11, code=0), 185.207.147.97->10.0.113.124, len 105
+<134>Sep  4 11:58:03 gw dhcp,info dhcp1 assigned 10.0.59.147 to ee:dc:b5:9f:86:25
+<134>Sep  4 06:49:57 gw firewall,info input: in:ether2 out:(none), src-mac 52:e5:43:9b:14:ca, proto UDP (2), 104.141.252.160:30837->192.168.14.216:443
+<134>Sep  4 16:20:21 gw2 firewall,info forward: in:ether2 out:ether3, src-mac c3:b7:19:65:30:f3, proto TCP (SYN), 192.168.10.53:5784->77.99.113.251:53, len 1095
+<134>Sep  4 06:08:19 gw2 script,info script backup-config started by sÿþcheduler
+<134>Sep  4 11:03:55 branch-gw firewall,info input: in:ether3 out:(none), src-mac ff:84:6f:c6:95:d5, proto UDP (3), 87.155.102.244:30597->192.168.7.181:8080
+<134>Sep  4 23:08:21 gw2 wireless,info 9e:ad:f0:30:2a:bd@wlan2: disconnected, extensive data loss
+<134>Sep  4 07:14:56 gw2 firewall,info forward: in:ether2 out:ether1, src-mac 3c:95:38:16:88:fd, proto TCP (ACK), 192.168.15.10:58171->53.216.30.222:51442, NAT (192.168.15.10:58171->204.64.218.39:10462)->53.216.30.222:51442, len 816
+<78>Sep  4 10:47:55 gw CRON[9830]: (root) CMD (/usr/lib/php/sessionclean)
+<134>Sep  4 09:15:40 gw system,info,account user bob logged out from 105.37.21.164 via ssh
+<134>Sep  4 12:23:02 branch-gw system,info,account user alice logged in from 124.199.25.169 via ssh
+<30>Sep  4 05:59:57 gw systemd[1]: Started Session 42 of user root.
+<134>Sep  4 16:41:10 gw2 firewall,info forward: in:ether1 out:ether2, src-mac df:2e:4a:85
+<134>Sep  4 10:05:38 gw dhcp,info dhcp1 assigned 10.0.27.32 to 75:36:6e:d3:f8:7e
+<30>Sep  4 17:59:52 gw systemd[1]: Started User Manager for UID 1000.
+<134>Sep  4 11:37:14 gw wireless,info cf:c4:37:5c:e1:be@wlan2: connected
+<134>Sep  4 15:55:22 gw script,info script ping-watchdog started by scheduler
+<134>Sep  4 09:40:39 branch-gw dhcp,info dhcp-lan deassigned 10.0.114.61 from ab:64:90:79:6b:1a
+<134>Sep  4 08:34:02 gw firewall,info forward: in:ether3 out:ether1, src-mac 8b:83:4e:3f:9a:d3, proto UDP (4), 192.168.4.19:33140->206.254.157.65:80, NAT (192.168.4.19:33140->134.191.66.185:18025)->206.254.157.65:80, len 1118
+<134>Sep  4 20:05:10 gw firewall,info forward: in:ether1 out:ether3, src-mac 59:ed:10:8a:4f:dd, proto UDP (7), 10.0.63.200:13650->35.222.17.201:443, len 661
+<130>Sep  4 23:00:02 gw system,error,critical login failure for user  from 8afd:b428:d64:4c7:4b5c:428e:7cd9:49af via winbox
+<78>Sep  4 07:11:57 gw CRON[4751]: (root) CMD (/usr/local/bin/backup-nightly.sh)
+<134>Sep  4 11:12:15 gw firewall,info forward: in:ether3 out:ether1, src-mac 23:ed:d7:96:9b:b1, proto UDP (3), 10.0.63.93:56886->123.172.240.49:80, len 205
+<134>Sep  4 22:05:54 gw2 firewall,info input: in:ether2 out:(none), src-mac 40:15:a1:3d:02:e0, proto UDP (8), 208.42.253.110:38427->192.168.19.134:443
+<134>Sep  4 08:04:54 gw2 wireless,info 5f:e0:50:72:3a:98@wlan1: connected
+<134>Sep  4 07:39:55 gw2 firewall,info forward: in:ether3 out:ether1, src-mac 4c:34:b4:5f:64:72, proto UDP (4), 10.0.100.200:44638->207.0.54.12:443, len 1161
+<134>Sep  4 08:09:03 gw2 firewall,info input: in:ether3 out:(none), src-mac bc:c8:c5:a5:4d:35, proto UDP (5), 26.44.129.233:44745->192.168.0.131:22, len 47
+<134>Sep  4 16:49:29 branch-gw firewall,info forward: in:ether2 out:ether1, src-mac bc:21:fe:77:37:06, proto TCP (S
+<130>Sep  4 16:45:19 gw2 system,error,critical login failure for user admin from 91.145.155.225 via winbox
+<130>Sep  4 08:38:12 gw2 system,error,critical login failure for user engineer from 152.161.82.242 via web
+<134>Sep  4 23:37:30 branch-gw script,info script ping-watchdog started by scheduler
+<134>Sep  4 19:48:31 gw2 dhcp,info dhcp1 assigned 10.0.199.50 to 9b:0c:49:ae:ae:59
+<134>Sep  4 16:37:00 branch-gw wireless,info b5:01:6d:2c:22:a4@wlan2: disconnected, received disassociation
+<134>Sep  4 10:59:45 gw2 
+<134>Sep  4 19:06:53 gw firewall,info forward: in:ether1 out:ether3, src-mac 1f:a3:48:b0:a7:f1, proto UDP (3), 10.0.44.234:45865->203.118.29.119:80, len 823
+<134>Sep  4 08:17:23 branch-gw firewall,info input: in:ether3 out:(none), src-mac 25:af:af:7c:ff:da, proto UDP (5), 123.121.123.207:53159->10.0.231.127:443
+<134>Sep  4 21:20:07 branch-gw system,info,account user monitor logged out from 50b1:9528:76c0:743a:997f:3070:81bd:a117 via web
+<78>Sep  4 05:59:57 gw CRON[1756]: (root) CMD (run-parts /etc/cron.hourly)
+<130>Sep  4 18:16:55 branch-gw system,error,critical login failure for user  from baa4:d1a7:73a5:6de5:317c:87ea:2de5:44d1 via winbox
+<134>Sep	 4 12:14:42 gw2 system,info,account user monitor logged out from df1:5d95:cc9b:c88c:b239:f0a8:81f8:25b9 via web
+<134>Sep  4 08:13:13 branch-gw system,info,account user bob logged in from 43.11.250.205 via web
+<134>Sep  4 19:31:52 gw2 firewall,info forward: in:ether2 out:ether1, src-mac ce:a0:c8:e9:c1:46, proto TCP (SYN), 192.168.5.172:38649->39.132.125.89:443, NAT (192.168.5.172:38649->159.172.4.188:17312)->39.132.125.89:443, len 261
+<134>Sep  4 20:38:28 branch-gw wireless,info 98:0d:d5:14:3e:17@wlan1: disconnected, received disassociation
+<134>Sep  4 21:32:36 branch-gw firewall,info forward: in:ether3 out:ether1, src-mac ff:11:84:81:cb:b0, proto UDP (6), 10.0.1.238:39778->197.77.120.126:443, NAT (10.0.1.238:39778->184.70.135.236:64723)->197.77.120.126:443, len 45
+<134>Sep  4 15:38:42 gw dhcp,info dhcp-lan deassigned 10.0.226.48 from 49:84:20:75:59:ec
+<134>Sep  4 10:30:37 gw2 firewall,info forward: in:ether3 out:ether1, src-mac 6c:ff:4c:79:54:73, proto UDP (5), 192.168.15.207:49586->100.83.3.227:53, len 1256
+<134>Sep  4 23:29:10 gw firewall,info input: in:ether1 out:(none), src-mac f1:d3:cf:63:59:8d, proto UDP (1), 103.135.217.218:52569->192.168.1.205:80, len 206
+<134>Sep  4 09:44:49 gw firewall,info forward: in:ether2 out:ether3, src-mac 0d:0e:ea:cb:08:26, proto TCP (ACK), 10.0.208.132:17656->112.190.200.174:45788, len 698
+<134>Sep  4 17:18:38 gw firewall,info input: in:ether3 out:(none), src-mac f1:10:26:e3:50:ec, proto UDP (4), 28.227.164.99:50438->10.0.1.145:80
+<134>Sep  4 06:58:17 branch-gw system,info,account user backup logged in from 128.105.227.152 via ssh
+<134>Sep  4 19:56:50 gw2 system,info,account user guest logged out from 24.206.128.228 via winbox
+<134>Sep  4 09:32:20 gw2 firewall,info forward: in:ether1 out:ether3, src-mac 3e:92:21:e7:c7:38, proto UDP (4), 10.0.19.157:7080->32.216.176.80:53, len 87
+<134>Sep  4 13:08:49 gw2 firewall,info input: in:ether2 out:(none), src-mac a2:4b:e2:be:42:d9, proto TCP (SYN,ACK), 70.2.76.201:12022->192.168.14.9:80
+<134>Sep  4 15:13:44 gw2 dhcp,info dhcp-guest deassigned 192.168.20.2 from 94:c3:26:cb:17:27
+<134>Sep  4 08:21:33 gw firewall,info input: in:ether1 out:(none), src-mac 3c:9b:e6:e1:98:c9, proto ICMP (type=11, code=0), 211.66.85.219->192.168.5.33, len 92
+<134>Sep  4 11:49:43 gw script,info script backup-config started by scheduler
+<134>Sep  4 12:43:51 gw firewall,info input: in:ether2 out:(none), src-mac d4:d3:67:3a:e3:2c, proto TCP (SYN,ACK), 145.236.67.48:30724->10.0.220.70:80, len 949
+<134>Sep  4 06:04:09 gw system,info,account user engineer logged in from 64.146.166.78 via ssh
+<130>Sep  4 16:57:49 gw system,error,critical login failure for user test from e62b:9246:84b3:4e57:395a:9994:482:c2c2 via web
+<130>Sep  4 11:28:54 gw2 system,error,critical login failure for user monitor from 6178:4d91:d08:356f:d8d7:13eb:97c2:84ab via web
+<134>Sep  4 08:29:52 branch-gw dhcp,info dhcp1 deassigned 10.0.85.233 from d0:33:ac:1e:75:26
+<134>Sep  4 07:31:35 gw2 firewall,info input: in:ether1 out:(none), src-mac 6e:5f:40:4b:d9:54, proto TCP (SYN,ACK), 184.89.107.122:64063->10.0.62.125:8080, len 987
+<30>Sep  4 02:59:58 gw systemd[1]: Started Session 42 of user root.
+<78>Sep  4 15:35:53 gw CRON[5585]: (root) CMD (/usr/local/bin/backup-nightly.sh)
+<134>Sep  4 07:23:16 gw system,info,account user guest logged in from 20.93.30.8 via web
+<134>Sep  4 13:25:29 gw2 firewall,info forward: in:ether2 out:ether1, src-mac 01:41:04:00:a2:d7, proto TCP (ACK,PSH), 192.168.1.115:18393->218.83.239.99:40732, len 111
+<134>Sep  4 20:30:09 gw2 firewall,info forward: in:ether1 out:ether3, src-mac 56:08:6e:a6:71:52, proto TCP (FIN,ACK), 10.0.100.143:8597->172.231.240.98:64518, len 736
+<134>Sep  4 18:08:35 gw firewall,info input: in:ether2 out:(none), src-mac 1b:5b:80:84:25:54, proto ICMP (type=3, code=1), eed5:3b6a:44f:c931:cb2c:73f8:fc73:757b->192.168.11.64, len 61
+<134>Sep  4 14:23:46 gw2 script,info script ping-watchdog started by scheduler
+<134>Sep  4 08:59:01 gw system,info,account user monitor logged in from 83.107.209.215 via web
+<134>Sep  4 06:20:49 gw wireless,info 8a:89:6c:f0:5a:5e@wlan1: disconnected, connection with AP is lost
+<130>Sep  4 07:56:34 branch-gw system,error,critical login failure for user root from 919d:1fd2:3a2a:7175:13ef:4417:5fb9:6419 via winbox
+<134>Sep  4 06:37:28 branch-gw firewall,info forward: in:ether2 out:ether3, src-mac 19:0b:bc:99:2d:47, proto UDP (8), 10.0.203.253:43249->146.221.247.66:443, len 624
+<134>Sep  4 23:16:41 gw wireless,info 4b:a6:b8:f6:4f:ac@wlan1: disconnected, received disassociation
+<134>Sep  4 17:43:37 gw2 firewall,info input: in:ether3 out:(none), src-mac 0f:65:96:96:cd:1e, proto UDP (1), 122.18.114.84:50588->10.0.134.154:35177
+<30>Sep  4 08:59:56 gw systemd[1]: Started Cleanup of Temporary Directories.
+<134>Sep  4 22:43:23 branch-gw wireless,info 82:ac:77:24:2e:67@wlan1: disconnected, timed out
+<78>Sep  4 23:59:50 gw CRON[9030]: (root) CMD (certbot -q renew)
+<134>Sep  4 20:01:00 gw firewall,info forward: in:ether2 out:ether1, src-mac 1b:52:6e:1a:ef:dc, proto UDP (7), 192.168.3.11:45939->100.40.56.158:80, NAT (19
+<134>Sep  4 16:32:50 gw2 dhcp,info dhcp-lan deassigned 192.168.1.75 from 2d:30:c0:c7:08:b6
+<134>Sep  4 13:50:28 gw firewall,info forward: in:ether3 out:ether1, src-mac ac:89:5c:9b:82:36, proto UDP (1), 10.0.224.138:38598->222.140.149.16:443, len 41
+<134>Sep  4 20:01:00 gw firewall,info forward: in:ether2 out:ether1, src-mac 1b:52:6e:1a:ef:dc, proto UDP (7), 192.168.3.11:45939->100.40.56.158:80, NAT (192.168.3.11:45939->99.121.206.172:5610)->100.40.56.158:80, len 777
+<78>Sep  4 17:59:52 gw CRON[3027]: (root) CMD (/usr/local/bin/backup-nightly.sh)
+<134>Sep  4 11:41:24 branch-gw dhcp,info dhcp-guest assigned 10.0.85.24 to f6:fe:cd:43:d3:93
+<78>Sep  4 19:11:52 gw CRON[3813]: (root) CMD (/usr/local/bin/backup-nightly.sh)
+<130>Sep  4 10:34:47 gw system,error,critical login failure for user admin from 171.133.154.103 via ssh
+<130>Sep  4 18:41:54 branch-gw system,error,critical login failure for user engineer from 101.227.126.176 via winbox
+<134>Sep  4 07:48:14 branch-gw firewall,info input: in:ether3 out:(none), src-mac 93:14:71:6e:ad:13, proto TCP (SYN), 109.219.48.115:57865->192.168.3.45:443, len 947
+<134>Sep  4 23:04:12 gw firewall,info forward: in:ether2 out:ether1, src-mac a1:14:c6:63:12:46, proto UDP (3), 10.0.206.132:14212->8.
+<134>Sep  4 13:00:30 branch-gw wireless,info 0e:85:4b:29:77:7a@wlan1: connected
+<78>Sep  4 13:11:54 gw CRON[7945]: (root) CMD (test -x /usr/sbin/anacron || ( cd / && run-parts --report /etc/cron.daily ))
+<130>Sep  4 08:50:42 branch-gw system,error,critical login failure for user  from 4.180.76.148 via ssh
+<134>Sep  4 18:50:14 branch-gw dhcp,info dhcp-lan deassigned 192.168.15.31 from ff:50:8c:88:95:81
+<134>Sep  4 13:12:59 gw2 firewall,info input: in:ether2 out:(none), src-mac d9:cb:0d:f6:be:80, proto TCP (SYN,ACK), 12.101.81.164:25188->10.0.227.133:80, len 1357
+<134>Sep  4 21:03:27 gw script,info script ping-watchdog started by scheduÿþler
+<134>Sep  4 06:12:29 gw2 firewall,info forward: in:ether1 out:ether3, src-mac a5:0b:da:d2:21:b0, proto TCP (FIN,ACK), 192.168.1.247:18388->143.131.31.12:80, NAT (192.168.1.247:18388->173.65.205.243:43234)->143.131.31.12:80, len 1043
+<134>Sep  4 15:30:23 gw firewall,info input: in:ether3 out:(none), src-mac 62:de:2b:af:8c:fe, proto TCP (FIN,ACK), 15.248.80.44:7496->10.0.22.79:22
+<134>Sep  4 07:27:25 branch-gw firewall,info forward: in:ether1 out:ether3, src-mac 35:81:e7:12:90:fd, proto UDP (7), 10.0.200.71:51428->205.63.74.48:39762, NAT (10.0.200.71:51428->31.194.49.47:33103)->205.63.74.48:39762, len 284
+
+<134>Sep  4 17:10:18 gw2 firewall,info forward: in:ether1 out:ether2, src-mac d3:21:d2:db:71:8a, proto TCP (RST), 192.168.0.134:60913->67.181.220.55:5443, NAT (192.168.0.134:60913->177.210.21.121:31892)->67.181.220.55:5443, len 929
+<134>Sep  4 22:39:13 branch-gw system,info,account user admin logged out from 192.171.193.138 via web
+<30>Sep  4 11:59:55 gw systemd[1]: Started Session 42 of user root.
+<78>Sep  4 03:35:58 gw CRON[8010]: (root) CMD (run-parts /etc/cron.hourly)
+<134>Sep  4 08:54:51 gw wireless,info 33:42:94:9b:ba:2b@wlan1: connected
+<134>Sep  4 18:00:16 gw dhcp,info dhcp1 deassigned 10.0.35.22 from b8:ec:ae:7d:f5:28
+<30>Sep  4 23:59:50 gw systemd[1]: Started Daily apt download activities.
+<130>Sep  4 22:22:34 branch-gw system,error,critical login failure for user backup from 179.161.118.18 via web
+<134>Sep  4 11:20:35 branch-gw firewall,info input: in:ether1 out:(none), src-mac 6e:ba:3d:bc:69:8e, proto TCP (ACK,PSH), 85.11.120.198:64921->192.168.20.196:80, len 333
+<134>Sep  4 13:29:38 gw2 wireless,info ef:ba:ea:ae:5d:04@wlan2: connected
+<134>Sep  4 19:44:21 branch-gw firewall,info input: in:ether3 out:(none), src-mac 78:79:86:09:0b:92, proto UDP (7), 222.133.144.182:53996->192.168.9.199:1817
+<134>Sep  4 19:15:12 branch-gw firewall,info forward: in:ether3 out:ether1, src-mac 80:7b:8f:08:9d:b4, proto UDP (8), 192.168.13.3:43741->180.74.4.154:53, len 391
+<134>Sep  4 13:37:58 gw system,info,account user monitor logged in from 49.252.157.191 via web
+<134>Sep  4 20:55:08 gw2 wireless,info 65:5b:a2:1a:39:27@wlan2: disconnected, reset by peer
+
+<134>Sep  4 23:20:51 branch-gw firewall,info input: in:ether2 out:(none), src-mac 46:f5:0a:58:48:43, proto UDP (3), 215.230.110.21:50103->10.0.107.76:443, len 1020
+<134>Sep  4 09:07:21 gw script,info script check-uptime started by scheduler
+<78>Sep  4 09:35:56 gw CRON[2200]: (root) CMD (/usr/local/bin/backup-nightly.sh)
+<78>Sep  4 04:47:58 gw CRON[3253]: (root) CMD (certbot -q renew)
+<134>Sep  4 19:36:01 branch-gw firewall,info input: in:ether3 out:(none), src-mac b1:e3:98:be:a0:f4, proto UDP (1), 167.189.205.241:34253->10.0.156.56:8080, len 1405
+<134>Sep  4 14:52:55 branch-gw script,info script ping-watchdog started by scheduler
+<134>Sep  4 09:03:11 branch-gw firewall,info input: in:ether2 out:(none), src-mac 93:6d:82:db:47:dd, proto UDP (2), 191.4.168.222:52824->10.0.202.113:45357, len 735
+<134>Sep  4 10:43:06 gw dhcp,info dhcp-lan assigned 10.0.130.121 to 1a:5a:e9:e2:98:26
+<134>Sep  4 14:48:45 gw system,info,account user backup logged in from 6439:5a58:a659:f866:3fa2:b7df:44b2:f787 via web
+<134>Sep  4 14:07:07 gw2 firewall,info forward: in:ether2 out:ether1, src-mac 9c:c1:6a:7f:4c:1c, proto UDP (2), 192.168.12.221:44199->206.238.24.89:11788, len 400
+<134>Sep  4 12:18:52 gw2 firewall,info forward: in:ether1 out:ether3, src-mac 1f:34:b0:cd:53:a7, proto TCP (ACK), 10.0.170.82:45725->157.155.230.42:20666, len 1387
+<134>Sep  4 13:04:40 gw firewall,info forward: in:ether3 out:ether2, src-mac 9f:34:74:67:75:0a, proto TCP (SYN,ACK), 10.0.244.201:34947->41.83.39.164:80, NAT (10.0.244.201:34947->165.23.206.154:22514)->41.83.39.164:80, len 1129
+<130>Sep  4 19:27:42 gw system,error,critical login failure for user  from dbf7:d75b:3295:e85c:1b16:cc04:755d:aefd via winbox
+<134>Sep  4 20:17:39 branch-gw wireless,info 2e:f8:a8:f5:ec:60@wlan2: disconnected, received disassociation

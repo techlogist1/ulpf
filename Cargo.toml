@@ -5,6 +5,7 @@ members = [
     "crates/ulpf-store",
     "crates/ulpf-parse",
     "crates/ulpf-normalize",
+    "crates/ulpf-infer",
     "crates/ulpf",
 ]
 

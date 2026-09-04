@@ -143,3 +143,51 @@ pattern = '%ASA-{severity:int}-{msg_id:int}: Deny {protocol:word} src {src_inter
     }
     assert_eq!(compared, 1, "exactly the tcp deny line matches");
 }
+
+#[test]
+fn optional_groups_round_trip_and_match_with_or_without_the_segment() {
+    let pat = "fw {action:word} src {src_ip:ip}{? len={len:int}} proto {proto:word}";
+    let t = Template::from_pattern(pat).unwrap();
+    assert_eq!(t.to_pattern(), pat);
+    assert_eq!(Template::from_pattern(&t.to_pattern()).unwrap(), t);
+    assert_eq!(t.tokens.len(), 7, "{:?}", t.tokens);
+    assert!(matches!(&t.tokens[4], Token::Optional(inner) if inner.len() == 2));
+    assert_eq!(t.slots().map(|(n, _)| n).collect::<Vec<_>>(), vec!["action", "src_ip", "len", "proto"]);
+    for bad in ["{? a}{? b}", "{?}", "{? a {? b}}", "{? a"] {
+        let r = Template::from_pattern(bad);
+        if bad == "{? a}{? b}" {
+            assert!(r.is_ok(), "two sibling groups are fine");
+        } else {
+            assert!(r.is_err(), "{bad}");
+        }
+    }
+
+    let def = format!(
+        "[parser]\nname = \"opt\"\nvendor = \"v\"\nproduct = \"p\"\n[match]\ncontains = [\"fw \"]\n[strategy]\nkind = \"pattern\"\npattern = '{pat}'\n"
+    );
+    let p = parser(&def);
+    let mut scratch = Scratch::default();
+    let mut out = Parsed::default();
+    p.parse(b"fw drop src 10.0.0.1 len=60 proto tcp", &ctx(), &mut scratch, &mut out).unwrap();
+    assert_field(&out, "len", b"60");
+    assert_field(&out, "proto", b"tcp");
+    p.parse(b"fw drop src 10.0.0.1 proto tcp", &ctx(), &mut scratch, &mut out).unwrap();
+    assert!(out.get(b"len").is_none(), "absent segment emits no field");
+    assert_field(&out, "proto", b"tcp");
+    assert!(p.parse(b"fw drop src 10.0.0.1 len=x proto tcp", &ctx(), &mut scratch, &mut out).is_err());
+
+    let emitted = toml::to_string(&t.to_definition("opt_gen", "v", "p", vec!["fw ".into()])).unwrap();
+    load_str(std::path::Path::new("gen"), &emitted).unwrap();
+}
+
+#[test]
+fn timestamp_slot_reads_the_common_log_format_the_time_module_accepts() {
+    let def = "[parser]\nname = \"clf\"\nvendor = \"v\"\nproduct = \"p\"\n[match]\ncontains = [\"HTTP\"]\n[strategy]\nkind = \"pattern\"\npattern = '{client:ip} - {user:word} [{ts:timestamp}] \"{request:text}\" {status:int} {bytes:int}'\n[[timestamp]]\nfield = \"ts\"\nformat = \"auto\"\n";
+    let p = parser(def);
+    let mut scratch = Scratch::default();
+    let mut out = Parsed::default();
+    p.parse(b"203.0.113.9 - - [04/Sep/2026:10:15:23 +0000] \"GET /index.html HTTP/1.1\" 200 5124", &ctx(), &mut scratch, &mut out).unwrap();
+    assert_field(&out, "ts", b"04/Sep/2026:10:15:23 +0000");
+    assert_field(&out, "status", b"200");
+    assert!(out.timestamp.is_some(), "the slot text must be something ulpf_time::parse reads: {:?}", out.timestamp_error);
+}

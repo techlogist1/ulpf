@@ -609,6 +609,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "ulpf-infer"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "serde",
+ "toml",
+ "ulpf-parse",
+]
+
+[[package]]
 name = "ulpf-normalize"
 version = "0.1.0"
 dependencies = [

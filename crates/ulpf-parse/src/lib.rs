@@ -22,6 +22,7 @@ use std::borrow::Cow;
 pub use compile::{ParseFailure, Parser, Scratch, SubStatus};
 pub use def::*;
 pub use detect::Registry;
+pub use envelope::strip_syslog as strip_envelope;
 pub use load::{LoadError, LoadReport, load_dir, load_str};
 pub use template::{SlotKind, Template, Token};
 pub use ulpf_time::{Context, Policies, Timestamp};
