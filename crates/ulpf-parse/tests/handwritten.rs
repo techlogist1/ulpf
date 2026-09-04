@@ -16,7 +16,7 @@ fn fortinet_sample_parses_with_kv_and_timestamp_policies() {
     let idx = reg.index_of("fortinet_fortigate").unwrap();
     let p = reg.get(idx);
     let evs = events(&repo().join("samples/fortinet_fortigate.log"));
-    assert_eq!(evs.len(), 6);
+    assert_eq!(evs.len(), 7);
     let mut scratch = reg.scratch();
     let mut out = ulpf_parse::Parsed::default();
 
@@ -64,7 +64,7 @@ fn cisco_asa_sample_parses_header_subs_and_envelopes() {
     let idx = reg.index_of("cisco_asa").unwrap();
     let p = reg.get(idx);
     let evs = events(&repo().join("samples/cisco_asa.log"));
-    assert_eq!(evs.len(), 13);
+    assert_eq!(evs.len(), 17);
     let mut scratch = reg.scratch();
     let mut out = ulpf_parse::Parsed::default();
 
@@ -104,7 +104,10 @@ fn cisco_asa_sample_parses_header_subs_and_envelopes() {
 
     p.parse(&evs[2], &ctx(), &mut scratch, &mut out).unwrap();
     assert_field(&out, "bytes", b"6912");
-    assert_field(&out, "teardown_reason", b" TCP FINs");
+    assert_field(&out, "teardown_reason", b"TCP FINs");
+    assert_field(&out, "lower_ip", b"142.250.72.14");
+    assert_field(&out, "higher_ip", b"10.0.0.5");
+    assert!(field(&out, "src_ip").is_none(), "teardown carries no direction, so no src/dst");
 
     p.parse(&evs[3], &ctx(), &mut scratch, &mut out).unwrap();
     assert_field(&out, "acl", b"inside_out");
@@ -135,14 +138,15 @@ fn cisco_asa_sample_parses_header_subs_and_envelopes() {
     assert_field(&out, "user", b"j\xf8rgen");
     assert_field(&out, "assigned_ip", b"10.99.0.5");
 
-    // RFC 5424 framing, message id with no sub pattern
+    // `logging timestamp rfc5424`: ISO timestamp, device-id separator kept; message id with no sub pattern
     p.parse(&evs[10], &ctx(), &mut scratch, &mut out).unwrap();
     assert_field(&out, "syslog_host", b"asa-edge-01");
-    assert_field(&out, "syslog_timestamp", b"2026-09-04T10:15:33.120Z");
+    assert_field(&out, "syslog_timestamp", b"2026-09-04T10:15:33Z");
+    assert_field(&out, "severity", b"7");
     assert_field(&out, "msg_id", b"609001");
     assert_eq!(out.sub, SubStatus::Uncovered);
     let ts = out.timestamp.unwrap();
-    assert_eq!(ts.epoch_nanos, 1_788_516_933_120_000_000);
+    assert_eq!(ts.epoch_nanos, 1_788_516_933_000_000_000);
     assert!(ts.policies.is_empty());
 
     // no header at all
@@ -158,4 +162,29 @@ fn cisco_asa_sample_parses_header_subs_and_envelopes() {
     assert_field(&out, "msg_id", b"302013");
     assert_eq!(out.sub, SubStatus::NoMatch);
     assert!(field(&out, "dst_ip").is_none());
+
+    // no NAT: no mapped-address parentheses
+    p.parse(&evs[13], &ctx(), &mut scratch, &mut out).unwrap();
+    assert_field(&out, "connection_id", b"9");
+    assert_field(&out, "dst_ip", b"10.1.2.1");
+    assert_field(&out, "src_port", b"53496");
+    assert!(field(&out, "dst_mapped_ip").is_none());
+    assert_eq!(out.sub, SubStatus::Matched);
+
+    // sub-facility header and the FTD header
+    p.parse(&evs[14], &ctx(), &mut scratch, &mut out).unwrap();
+    assert_field(&out, "subfacility", b"auth");
+    assert_field(&out, "msg_id", b"113004");
+    assert_field(&out, "user", b"asmith");
+    assert_eq!(reg.detect(&evs[15], None), Some(idx));
+    p.parse(&evs[15], &ctx(), &mut scratch, &mut out).unwrap();
+    assert_field(&out, "msg_id", b"302014");
+    assert_field(&out, "teardown_reason", b"TCP FINs");
+
+    // the documented comma form of 113004 and 106100 without the hash pair
+    p.parse(&evs[16], &ctx(), &mut scratch, &mut out).unwrap();
+    assert_field(&out, "user", b"jdoe");
+    p.parse(&evs[17], &ctx(), &mut scratch, &mut out).unwrap();
+    assert_field(&out, "hit_interval", b"first hit");
+    assert_eq!(out.sub, SubStatus::Matched);
 }

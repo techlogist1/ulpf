@@ -1,8 +1,13 @@
-# Cisco ASA syslog. Header: %ASA-<severity>-<message_id>: <message>.
-# Sources: Cisco Secure Firewall ASA Series Syslog Messages guide (message ids below).
+# Cisco ASA syslog. Header: %ASA-<severity>-<message_id>: <message>, also
+# %ASA-<subfacility>-<severity>-<id> (auth, session) and %FTD-... from Firepower's Lina
+# engine, which emits the same messages. The ASA never sends an RFC 5424 frame: with
+# `logging timestamp rfc5424` only the timestamp changes and the ` : ` device-id
+# separator stays. Sources: Cisco Secure Firewall ASA Series Syslog Messages guide
+# (message ids below), checked 2026-09-05.
 # Per-message patterns run on the "message" field; the first matching sub wins.
 # Slot naming for connection messages follows the vendor's real/mapped vocabulary; the
 # src/dst assignment is direction-aware, which is why inbound and outbound are two subs.
+# The mapped-address parentheses are absent when no NAT applies.
 
 [parser]
 name = "cisco_asa"
@@ -10,14 +15,18 @@ vendor = "Cisco"
 product = "ASA"
 
 [match]
-contains = ["%ASA-"]
+regex = '%(?:ASA|FTD)-' 
 
 [envelope]
 syslog = true
 
 [strategy]
 kind = "pattern"
-pattern = '%ASA-{severity:int}-{msg_id:int}: {message:rest}'
+patterns = [
+  '%ASA-{severity:int}-{msg_id:int}: {message:rest}',
+  '%FTD-{severity:int}-{msg_id:int}: {message:rest}',
+  '%ASA-{subfacility:word}-{severity:int}-{msg_id:int}: {message:rest}',
+]
 
 # No [[timestamp]] declared: the syslog envelope timestamp is used automatically.
 
@@ -25,23 +34,33 @@ pattern = '%ASA-{severity:int}-{msg_id:int}: {message:rest}'
 field = "message"
 when = { msg_id = ["302013", "302015"] }
 kind = "pattern"
-pattern = 'Built outbound {protocol:word} connection {connection_id:int} for {dst_interface:word}:{dst_ip:ip}/{dst_port:int} ({dst_mapped_ip:ip}/{dst_mapped_port:int}) to {src_interface:word}:{src_ip:ip}/{src_port:int} ({src_mapped_ip:ip}/{src_mapped_port:int}){_:rest}'
+patterns = [
+  'Built outbound {protocol:word} connection {connection_id:int} for {dst_interface:word}:{dst_ip:ip}/{dst_port:int} ({dst_mapped_ip:ip}/{dst_mapped_port:int}) to {src_interface:word}:{src_ip:ip}/{src_port:int} ({src_mapped_ip:ip}/{src_mapped_port:int}){_:rest}',
+  'Built outbound {protocol:word} connection {connection_id:int} for {dst_interface:word}:{dst_ip:ip}/{dst_port:int} to {src_interface:word}:{src_ip:ip}/{src_port:int}{_:rest}',
+]
 constants = { direction = "outbound", action = "built" }
 
 [[sub]]
 field = "message"
 when = { msg_id = ["302013", "302015"] }
 kind = "pattern"
-pattern = 'Built inbound {protocol:word} connection {connection_id:int} for {src_interface:word}:{src_ip:ip}/{src_port:int} ({src_mapped_ip:ip}/{src_mapped_port:int}) to {dst_interface:word}:{dst_ip:ip}/{dst_port:int} ({dst_mapped_ip:ip}/{dst_mapped_port:int}){_:rest}'
+patterns = [
+  'Built inbound {protocol:word} connection {connection_id:int} for {src_interface:word}:{src_ip:ip}/{src_port:int} ({src_mapped_ip:ip}/{src_mapped_port:int}) to {dst_interface:word}:{dst_ip:ip}/{dst_port:int} ({dst_mapped_ip:ip}/{dst_mapped_port:int}){_:rest}',
+  'Built inbound {protocol:word} connection {connection_id:int} for {src_interface:word}:{src_ip:ip}/{src_port:int} to {dst_interface:word}:{dst_ip:ip}/{dst_port:int}{_:rest}',
+]
 constants = { direction = "inbound", action = "built" }
 
-# Teardown carries no direction. The first pair is the lower-security side, which on a
-# perimeter ASA is the destination of the common outbound case.
+# Teardown carries no direction: the first pair is the lower-security interface's side
+# whichever way the connection was built, so the endpoints keep neutral names
+# (lower_/higher_). The build event with the same connection_id has the direction.
 [[sub]]
 field = "message"
 when = { msg_id = ["302014", "302016"] }
 kind = "pattern"
-pattern = 'Teardown {protocol:word} connection {connection_id:int} for {dst_interface:word}:{dst_ip:ip}/{dst_port:int} to {src_interface:word}:{src_ip:ip}/{src_port:int} duration {duration:word} bytes {bytes:int}{teardown_reason:rest}'
+patterns = [
+  'Teardown {protocol:word} connection {connection_id:int} for {lower_interface:word}:{lower_ip:ip}/{lower_port:int} to {higher_interface:word}:{higher_ip:ip}/{higher_port:int} duration {duration:word} bytes {bytes:int} {teardown_reason:rest}',
+  'Teardown {protocol:word} connection {connection_id:int} for {lower_interface:word}:{lower_ip:ip}/{lower_port:int} to {higher_interface:word}:{higher_ip:ip}/{higher_port:int} duration {duration:word} bytes {bytes:int}',
+]
 constants = { action = "teardown" }
 
 [[sub]]
@@ -55,14 +74,20 @@ constants = { action = "deny" }
 field = "message"
 when = { msg_id = "106023" }
 kind = "pattern"
-pattern = 'Deny {protocol:word} src {src_interface:word}:{src_ip:ip} dst {dst_interface:word}:{dst_ip:ip} (type {icmp_type:int}, code {icmp_code:int}) by access-group "{acl:text}" [{hash_1:hex}, {hash_2:hex}]'
+patterns = [
+  'Deny {protocol:word} src {src_interface:word}:{src_ip:ip} dst {dst_interface:word}:{dst_ip:ip} (type {icmp_type:int}, code {icmp_code:int}) by access-group "{acl:text}" [{hash_1:hex}, {hash_2:hex}]',
+  'Deny {protocol:word} src {src_interface:word}:{src_ip:ip} dst {dst_interface:word}:{dst_ip:ip} type {icmp_type:int}, code {icmp_code:int} by access-group "{acl:text}" [{hash_1:hex}, {hash_2:hex}]',
+]
 constants = { action = "deny" }
 
 [[sub]]
 field = "message"
 when = { msg_id = "106100" }
 kind = "pattern"
-pattern = 'access-list {acl:word} {action:word} {protocol:word} {src_interface:word}/{src_ip:ip}({src_port:int}) -> {dst_interface:word}/{dst_ip:ip}({dst_port:int}) hit-cnt {hit_count:int} {hit_interval:text} [{hash_1:hex}, {hash_2:hex}]'
+patterns = [
+  'access-list {acl:word} {action:word} {protocol:word} {src_interface:word}/{src_ip:ip}({src_port:int}) -> {dst_interface:word}/{dst_ip:ip}({dst_port:int}) hit-cnt {hit_count:int} {hit_interval:text} [{hash_1:hex}, {hash_2:hex}]',
+  'access-list {acl:word} {action:word} {protocol:word} {src_interface:word}/{src_ip:ip}({src_port:int}) -> {dst_interface:word}/{dst_ip:ip}({dst_port:int}) hit-cnt {hit_count:int} ({hit_interval:text})',
+]
 
 [[sub]]
 field = "message"
@@ -75,7 +100,10 @@ constants = { action = "built" }
 field = "message"
 when = { msg_id = "113004" }
 kind = "pattern"
-pattern = 'AAA user {aaa_type:word} {aaa_status:word} : server = {server_ip:ip} : user = {user:word}'
+patterns = [
+  'AAA user {aaa_type:word} {aaa_status:word} : server = {server_ip:ip} : user = {user:word}',
+  'AAA user {aaa_type:word} {aaa_status:word}: server = {server_ip:ip}, User = {user:word}',
+]
 
 [[sub]]
 field = "message"

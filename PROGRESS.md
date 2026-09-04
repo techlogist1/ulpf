@@ -116,8 +116,15 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
   Suricata TLS/HTTP/DNS objects match output-json-*.c (TLS 1.2, colon-hex serial and
   fingerprint, no-offset validity dates, sni, http app_proto, dns v3 queries array,
   community_id, alert metadata arrays).
-- [ ] Opus reviewer on Fortinet and Cisco ASA (the two hand-written first-session
-  families); findings to be applied on return.
+- [x] Opus reviewer on Fortinet and Cisco ASA (the two hand-written first-session
+  families), applied 2026-09-05: Fortinet admin-login log id, IPS msg trailing comma,
+  incoming direction, trandisp/appcat/dstintfrole, a config-change event carrying the
+  escaped quote, the folded line relabelled as collector wrapping; ASA's sample RFC 5424
+  frame replaced by the real `logging timestamp rfc5424` form at severity 7, no-NAT
+  302013/302015 without mapped-address parentheses, `%ASA-auth-` and `%FTD-` headers, the
+  documented comma form of 113004, 106100 without the hash pair, ICMP 106023 without
+  parentheses, and teardown endpoints renamed lower_/higher_ because 302014 carries no
+  direction (the old fixed guess inverted inbound connections).
 - [ ] Ultracode invariant review workflow (5 Opus finders, adversarial verification per
   finding) over store, zero-copy, wall/errors, engine, docs; confirmed findings to be
   applied on return.

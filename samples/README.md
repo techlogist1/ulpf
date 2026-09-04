@@ -11,9 +11,9 @@ One `samples/<parser>.log` per `parsers/<parser>.toml`, with expected output in
 
 | sample | written from | deliberately dirty |
 |---|---|---|
-| `cisco_asa.log` | Cisco Secure Firewall ASA Syslog Messages guide | RFC 5424 and header-less lines, a truncated 302013, a non-UTF-8 byte in a user name, a message id with no sub |
+| `cisco_asa.log` | Cisco Secure Firewall ASA Syslog Messages guide, reviewed against it 2026-09-05 | the `logging timestamp rfc5424` form, a header-less buffer line, a relay-rewritten BSD header, no-NAT build, `%ASA-auth-` and `%FTD-` headers, the documented comma form of 113004, 106100 without the hash pair, a truncated 302013, a non-UTF-8 byte in a user name, a message id with no sub |
 | `cisco_ios.log` | Cisco IOS System Message Guide; `service timestamps`/`sequence-numbers`/`origin-id` docs | CRLF, uptime stamp (`1d03h:`), no sequence number, year-first stamp, truncated message, non-UTF-8 byte, bare `%SYS-` line with no header, `RESTART` with no sub |
-| `fortinet_fortigate.log` | FortiOS Log Reference (traffic, utm, event) | a multi-line `msg`, a non-UTF-8 byte, an `action=acc` typo, header variants |
+| `fortinet_fortigate.log` | FortiOS Log Reference (traffic, utm, event), reviewed 2026-09-05 | one line folded by a collector (FortiOS itself never wraps; the framing rule must still keep it with its event), a non-UTF-8 byte in an admin name (only plausible from a non-UTF-8 auth source; deliberate), an `action=acc` typo, a relayed BSD header, a config-change event with an escaped quote |
 | `openvpn.log` | OpenVPN 2.6 manual and source message strings | CRLF, non-UTF-8 byte in a common name, truncated line, daemon lines with no peer |
 | `palo_alto_panos.log` | PAN-OS 10.2 Syslog Field Descriptions (Traffic, Threat, System, Config) | IETF (RFC 5424) header, CRLF, non-UTF-8 byte in `srcuser`, a row cut at column 30, a header-less row, a USERID row no sub covers, a quoted URL with a comma |
 | `pfsense_filterlog.log` | Netgate "Raw Filter Log Format", captured IPv6 rows | RFC 3164 (with and without hostname) and RFC 5424 framings, a row ending in a delimiter, a row cut inside the common columns, non-UTF-8 byte in the interface name, no-`<pri>` line, TCP/UDP/ICMP/ICMPv6/CARP/GRE tails |
