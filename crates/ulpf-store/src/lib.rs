@@ -8,4 +8,4 @@ pub mod frame;
 mod store;
 
 pub use frame::Framer;
-pub use store::{RawId, RawReader, RawRecord, RawStore, VerifyReport};
+pub use store::{OwnedRecord, RawId, RawReader, RawRecord, RawStore, VerifyReport};

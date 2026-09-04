@@ -30,6 +30,9 @@ fn config(inputs: Vec<PathBuf>, dir: &std::path::Path, parsers: PathBuf) -> Conf
         default_offset_secs: 0,
         batch_events: 3,
         queue_batches: 1,
+        pending: None,
+        infer_threshold: 0,
+        tail_capacity: 16,
     }
 }
 

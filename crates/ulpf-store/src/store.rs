@@ -23,6 +23,7 @@
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufWriter, Read, Seek, SeekFrom, Write};
+use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
 
 use memmap2::Mmap;
@@ -41,6 +42,17 @@ pub struct RawRecord<'a> {
     pub source: u32,
     pub sha256: [u8; 32],
     pub bytes: &'a [u8],
+}
+
+/// A record read back through the writer (the server's traceback path): the bytes are
+/// copied out so the store lock is held only for the read.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OwnedRecord {
+    pub id: RawId,
+    pub receipt_nanos: i64,
+    pub source: u32,
+    pub sha256: [u8; 32],
+    pub bytes: Vec<u8>,
 }
 
 pub struct RawStore {
@@ -129,6 +141,64 @@ impl RawStore {
         self.seg_len += HEADER_LEN as u64 + bytes.len() as u64;
         self.next_id += 1;
         Ok(RawId(id))
+    }
+
+    /// Reads one record back through the writer. `None` when the id was never issued.
+    /// Flushes first so an id that escaped into the output is always readable; the read
+    /// is positional and never moves the append cursor.
+    pub fn get(&mut self, id: RawId) -> io::Result<Option<OwnedRecord>> {
+        if id.0 >= self.next_id {
+            return Ok(None);
+        }
+        self.flush(false)?;
+        let mut off = [0u8; 8];
+        self.idx.get_ref().read_exact_at(&mut off, id.0 * 8)?;
+        let off = u64::from_le_bytes(off);
+        let mut hdr = [0u8; HEADER_LEN];
+        self.seg.get_ref().read_exact_at(&mut hdr, off)?;
+        if u32::from_le_bytes(hdr[0..4].try_into().expect("4 bytes")) != REC_MAGIC || u64::from_le_bytes(hdr[4..12].try_into().expect("8 bytes")) != id.0 {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, format!("raw id {} points at a damaged record", id.0)));
+        }
+        let len = u32::from_le_bytes(hdr[24..28].try_into().expect("4 bytes")) as usize;
+        let mut bytes = vec![0u8; len];
+        self.seg.get_ref().read_exact_at(&mut bytes, off + HEADER_LEN as u64)?;
+        let mut sha256 = [0u8; 32];
+        sha256.copy_from_slice(&hdr[28..60]);
+        Ok(Some(OwnedRecord {
+            id,
+            receipt_nanos: i64::from_le_bytes(hdr[12..20].try_into().expect("8 bytes")),
+            source: u32::from_le_bytes(hdr[20..24].try_into().expect("4 bytes")),
+            sha256,
+            bytes,
+        }))
+    }
+
+    /// Source names by id, through the writer's own catalogue connection.
+    pub fn source_names(&self) -> io::Result<HashMap<u32, String>> {
+        let mut stmt = self.catalog.prepare("SELECT id, name FROM sources").map_err(sql_err)?;
+        let rows = stmt.query_map([], |r| Ok((r.get::<_, u32>(0)?, r.get::<_, String>(1)?))).map_err(sql_err)?;
+        let mut out = HashMap::new();
+        for row in rows {
+            let (id, name) = row.map_err(sql_err)?;
+            out.insert(id, name);
+        }
+        Ok(out)
+    }
+
+    /// Bytes ever ingested per source name, summed over the catalogue's ingest rows: the
+    /// offset a restarted tailer resumes from.
+    pub fn ingested_bytes(&self) -> io::Result<HashMap<String, u64>> {
+        let mut stmt = self
+            .catalog
+            .prepare("SELECT s.name, SUM(i.byte_count) FROM ingests i JOIN sources s ON s.id = i.source_id GROUP BY s.name")
+            .map_err(sql_err)?;
+        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))).map_err(sql_err)?;
+        let mut out = HashMap::new();
+        for row in rows {
+            let (name, bytes) = row.map_err(sql_err)?;
+            out.insert(name, bytes.max(0) as u64);
+        }
+        Ok(out)
     }
 
     /// Flushes buffers to the OS. `durable` additionally fsyncs both files.

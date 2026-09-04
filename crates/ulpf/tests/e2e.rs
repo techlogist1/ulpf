@@ -30,6 +30,9 @@ fn config(inputs: Vec<PathBuf>, dir: &std::path::Path, threads: usize) -> Config
         default_offset_secs: 0,
         batch_events: 4, // tiny batches so ordering and reorder logic is actually exercised
         queue_batches: 2,
+        pending: None,
+        infer_threshold: 0,
+        tail_capacity: 16,
     }
 }
 

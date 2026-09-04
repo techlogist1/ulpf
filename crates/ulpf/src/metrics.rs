@@ -8,6 +8,7 @@ use serde::Serialize;
 use ulpf_parse::ParseFailure;
 
 pub const TIME_ERROR_REASONS: [&str; 3] = ["empty", "no_match", "out_of_range"];
+pub const SKIP_REASONS: [&str; 4] = ["edited", "duplicate", "rejected", "no_templates"];
 
 #[derive(Default)]
 pub struct Metrics {
@@ -36,6 +37,19 @@ pub struct Metrics {
     pub queue_high_water: AtomicU64,
     /// Times the ingest thread found the queue full and had to wait.
     pub backpressure_blocks: AtomicU64,
+    // v1: inference and review. Buffered lines are copies of unknown events, never the
+    // events themselves; a proposal is a file in the pending directory.
+    pub infer_buffered: AtomicU64,
+    pub infer_buffer_full: AtomicU64,
+    pub infer_runs: AtomicU64,
+    pub infer_lines_templated: AtomicU64,
+    pub infer_lines_unmatched: AtomicU64,
+    pub proposals_written: AtomicU64,
+    pub proposals_replaced: AtomicU64,
+    pub proposals_skipped: [AtomicU64; 4],
+    pub approved: AtomicU64,
+    pub rejected: AtomicU64,
+    pub reloads: AtomicU64,
 }
 
 /// One worker's counts for one batch.
@@ -91,6 +105,12 @@ impl Metrics {
         self.utf8_lossy.fetch_add(c.utf8_lossy, Relaxed);
     }
 
+    pub fn skipped(&self, reason: &str) {
+        if let Some(i) = SKIP_REASONS.iter().position(|r| *r == reason) {
+            self.proposals_skipped[i].fetch_add(1, Relaxed);
+        }
+    }
+
     pub fn snapshot(&self, elapsed_secs: f64, threads: usize, queue_capacity: usize) -> Snapshot {
         let g = |a: &AtomicU64| a.load(Relaxed);
         let framed = g(&self.framed);
@@ -125,6 +145,17 @@ impl Metrics {
             queue_high_water: g(&self.queue_high_water),
             queue_capacity: queue_capacity as u64,
             backpressure_blocks: g(&self.backpressure_blocks),
+            infer_buffered: g(&self.infer_buffered),
+            infer_buffer_full: g(&self.infer_buffer_full),
+            infer_runs: g(&self.infer_runs),
+            infer_lines_templated: g(&self.infer_lines_templated),
+            infer_lines_unmatched: g(&self.infer_lines_unmatched),
+            proposals_written: g(&self.proposals_written),
+            proposals_replaced: g(&self.proposals_replaced),
+            proposals_skipped: SKIP_REASONS.iter().zip(&self.proposals_skipped).map(|(r, a)| (*r, g(a))).filter(|(_, n)| *n > 0).collect(),
+            approved: g(&self.approved),
+            rejected: g(&self.rejected),
+            reloads: g(&self.reloads),
         }
     }
 }
@@ -160,6 +191,17 @@ pub struct Snapshot {
     pub queue_high_water: u64,
     pub queue_capacity: u64,
     pub backpressure_blocks: u64,
+    pub infer_buffered: u64,
+    pub infer_buffer_full: u64,
+    pub infer_runs: u64,
+    pub infer_lines_templated: u64,
+    pub infer_lines_unmatched: u64,
+    pub proposals_written: u64,
+    pub proposals_replaced: u64,
+    pub proposals_skipped: Vec<(&'static str, u64)>,
+    pub approved: u64,
+    pub rejected: u64,
+    pub reloads: u64,
 }
 
 fn by_reason(list: &[(&str, u64)]) -> String {
@@ -188,11 +230,17 @@ impl std::fmt::Display for Snapshot {
             "signals: sub_matched {}  sub_no_match {}  sub_uncovered {}  time_from_receipt {}  time_error [{}]  class_unknown {}  enum_other {}  unmapped_fields {}  utf8_lossy {}",
             self.sub_matched, self.sub_no_match, self.sub_uncovered, self.time_from_receipt, by_reason(&self.time_error), self.class_unknown, self.enum_other, self.unmapped_fields, self.utf8_lossy
         )?;
-        write!(
+        writeln!(
             f,
             "queue: {} batches, high-water {}/{}, backpressure blocks {} (engaged: {})",
             self.batches, self.queue_high_water, self.queue_capacity, self.backpressure_blocks,
             if self.backpressure_blocks > 0 { "yes" } else { "no" }
+        )?;
+        write!(
+            f,
+            "inference: buffered {} (buffer full {})  runs {}  lines templated {} unmatched {}  proposals written {} replaced {} skipped [{}]  approved {}  rejected {}  reloads {}",
+            self.infer_buffered, self.infer_buffer_full, self.infer_runs, self.infer_lines_templated, self.infer_lines_unmatched,
+            self.proposals_written, self.proposals_replaced, by_reason(&self.proposals_skipped), self.approved, self.rejected, self.reloads
         )
     }
 }

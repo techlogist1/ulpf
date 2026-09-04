@@ -228,3 +228,27 @@ fn segment_ahead_of_index_reindexes_complete_records_and_drops_a_torn_tail() {
     assert_eq!(r.get(RawId(49)).unwrap().bytes, b"event 49\n");
     assert_eq!(r.get(RawId(50)).unwrap().bytes, b"next\n");
 }
+
+#[test]
+fn the_writer_reads_its_own_records_back_by_id() {
+    let dir = std::env::temp_dir().join(format!("ulpf-store-get-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let mut store = RawStore::open(&dir).unwrap();
+    let src = store.source_id("a.log").unwrap();
+    let ids: Vec<RawId> = (0..50u32).map(|i| store.append(src, 1_000 + i as i64, format!("line {i}\n").as_bytes()).unwrap()).collect();
+    let rec = store.get(ids[17]).unwrap().unwrap();
+    assert_eq!(rec.bytes, b"line 17\n");
+    assert_eq!(rec.receipt_nanos, 1_017);
+    assert_eq!(rec.source, src);
+    assert_eq!(rec.sha256, <[u8; 32]>::from(sha2::Sha256::digest(b"line 17\n")));
+    assert!(store.get(RawId(50)).unwrap().is_none());
+    // the read did not move the append cursor
+    let next = store.append(src, 2_000, b"after\n").unwrap();
+    assert_eq!(next, RawId(50));
+    assert_eq!(store.get(next).unwrap().unwrap().bytes, b"after\n");
+    assert_eq!(store.source_names().unwrap().get(&src).map(String::as_str), Some("a.log"));
+    store.record_ingest(src, Some(ids[0]), 50, 400, 0).unwrap();
+    store.record_ingest(src, Some(next), 1, 6, 0).unwrap();
+    assert_eq!(store.ingested_bytes().unwrap().get("a.log"), Some(&406));
+    let _ = std::fs::remove_dir_all(&dir);
+}

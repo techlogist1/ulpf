@@ -6,5 +6,9 @@
 pub mod cli;
 pub mod engine;
 pub mod fixture;
+pub mod inference;
 pub mod metrics;
+pub mod pending;
 pub mod pipeline;
+pub mod server;
+pub mod tail;
