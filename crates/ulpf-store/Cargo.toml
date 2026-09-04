@@ -6,3 +6,10 @@ license.workspace = true
 rust-version.workspace = true
 
 [dependencies]
+memmap2.workspace = true
+sha2.workspace = true
+memchr.workspace = true
+rusqlite.workspace = true
+
+[dev-dependencies]
+sha2.workspace = true

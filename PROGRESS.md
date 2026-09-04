@@ -33,15 +33,19 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - 8-core Apple M1 Pro, 16 GB RAM. Throughput numbers are for this machine.
 - Python 3.14 available (used only for the throwaway inference prototype).
 - No `ULPF-PRD.md` anywhere in the working directory; the brief is the source of truth.
-- Skills: `software-design-philosophy` and `karpathy-guidelines` loaded;
-  `aposd-critique` present for the adversarial pass. No `prompting-practices`
-  skill is installed — the brief's requirements are carried directly.
+- Skills (source of truth: ~/Documents/dev/skills-audit/MANIFEST.md, read 2026-09-04):
+  loaded `software-design-philosophy` (every module/interface decision) and
+  `andrej-karpathy-skills:karpathy-guidelines` (the installed Karpathy skill; no skill
+  named `prompting-practices` exists on this machine — its gate is carried from the
+  brief directly). `aposd-critique` is present and RESERVED for a separate review pass
+  after v0.1; not run in this session. Manifest note: aposd-critique writes untracked
+  `.aposd/critique/` into the repo — `.aposd/` is gitignored ahead of that pass.
 - Discrepancy with brief: none material. Docker daemon needed a manual start.
 
 ## Spine (sequential, lead)
 - [x] scaffold workspace (5 crates: time, store, parse, normalize, cli)
-- [ ] framing (lossless, multi-line by indentation, chunk-safe)
-- [ ] raw store + index + round-trip tests
+- [x] framing (lossless, multi-line by indentation, chunk-safe) — 3 tests
+- [x] raw store + index + round-trip tests — reopen, crash recovery, digest verify
 - [ ] two hand-written parsers (Fortinet KV, Cisco ASA pattern) → format freeze
 - [ ] parser format + runtime, four strategies
 - [ ] Template → definition round trip test
@@ -74,5 +78,5 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
 (none yet)
 
 ## Next action
-Write docs/DECISIONS.md initial entries, git init, create GitHub repo, push, then
-launch fan-out 1 and start framing.
+Hand-write parsers/fortinet_fortigate.toml and parsers/cisco_asa.toml with samples, then
+build ulpf-parse around what they need.

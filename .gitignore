@@ -6,3 +6,4 @@
 *.ulpf-store/
 /out/
 .DS_Store
+/.aposd/
