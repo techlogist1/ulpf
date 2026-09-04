@@ -6,9 +6,11 @@ document is the contract the server and the UI are built against independently; 
 change here is a change to both.
 
 Base URL `http://127.0.0.1:7878` (`ulpf serve --listen`). Every response body is JSON
-unless stated. Every error is `{"error": "<human text>", "reason": "<code>"}` with the
-status: `404 not_found`, `409 conflict`, `422 invalid`, `400 bad_request`, `500 io`.
-Every 4xx on a review route increments `review_errors`.
+unless stated. Every error the server decides is `{"error": "<human text>", "reason":
+"<code>"}` with the status: `404 not_found`, `409 conflict`, `422 invalid`, `500 io`.
+A malformed query or path parameter (a non-numeric raw id, an unparseable `after`) is
+rejected by the framework with a plain-text `400`. Every 4xx a review route decides
+increments `review_errors`; with inference disabled every review route is `404 not_found`.
 
 ## Streaming
 
@@ -47,7 +49,8 @@ before it was read. Nothing blocks the engine on a slow client.
   "server":    { "sse_clients": u64, "review_errors": u64, "uptime_secs": f64 }
 }
 ```
-`Snapshot` includes the v1 counters: `infer_buffered`, `infer_buffer_full`, `infer_runs`,
+`Snapshot` includes the v1 counters: `infer_buffered` (lines ever buffered; a source's
+`buffered` above is its current buffer), `infer_buffer_full`, `infer_runs`,
 `infer_lines_templated`, `infer_lines_unmatched`, `proposals_written`,
 `proposals_replaced`, `proposals_skipped` (list of `[reason, n]`: `edited`,
 `duplicate`, `rejected`, `no_templates`), `approved`, `rejected`, `reloads`.
@@ -144,7 +147,7 @@ reloads on its own when the directory's modification time changes.
     "members": [u32],                           // indices into <id>.lines
     "history": [string]                         // "cluster 3 (...)", "split on `input` (68 lines)", "not in the definition: ..."
   } ],
-  "unmatched": { "count": u64, "examples": [string], "by_reason": { "empty": n, "below_support": n, "no_template": n, "template_cap": n } },
+  "unmatched": { "count": u64, "examples": [string], "by_reason": { "empty": n, "too_long": n, "below_support": n, "no_template": n, "template_cap": n } },
   "decisions": [string],                        // every threshold decision the engine took, in order
   "fingerprint": string
 }

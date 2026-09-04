@@ -483,9 +483,12 @@ cannot see that they are one message).
 kept its size for two ticks is ingested to its end; a file still growing after four ticks
 is ingested up to its last complete line; offsets resume from the catalogue's ingest rows
 so a restart does not store the same bytes twice; a file that shrank is re-read from the
-start and reported. The tailer counts a file once when it first sees it. **Anchor.**
-`poll_loop` in `crates/ulpf/src/engine.rs`; `RawStore::ingested_bytes` in
-`crates/ulpf-store/src/store.rs`. **Principle.** Pull complexity downward: the two ways a
+start and reported at once. A source is named by its path relative to the watch root it
+was found under (review finding: basenames summed in the catalogue, so two `syslog.log`
+files shared one resume offset). An unreadable file is counted and reported once and
+retried only when it changes. The tailer counts a file once when it first sees it.
+**Anchor.** `poll_loop`, `source_name` in `crates/ulpf/src/engine.rs`;
+`RawStore::ingested_bytes` in `crates/ulpf-store/src/store.rs`. **Principle.** Pull complexity downward: the two ways a
 file arrives (a `cp` that lands in chunks, a stream that never stops) are both handled
 by one rule the operator never sees. Zero new dependencies. **Ruled out.** `notify`
 9.0.0-rc.5 (verified on crates.io 2026-09-05): a release-candidate dependency in a static
@@ -501,7 +504,9 @@ detection hint. The HTTP server holds an `Arc<Live>`, a 200 ms frame cache and e
 client's stream position, nothing else. **Anchor.** `Live`, `reload_parsers`,
 `worker_thread` in `crates/ulpf/src/engine.rs`; `App` in `crates/ulpf/src/server.rs`.
 **Principle.** One writer per shared resource, and the per-event path never touches a
-lock: the store lock and the pipeline read are per batch (1024 events). **Ruled out.**
+lock: the store lock, the pipeline read, the source-stats lock and the inference offer
+are per batch (1024 events); the review found the first version offering unknown events
+one at a time and it now hands over the batch's unknown events in one call. **Ruled out.**
 A request channel to the ingest thread for traceback reads (a second protocol for one
 call); a per-event store lock (measurable at 250k events/s); a server-side copy of any
 engine state (two truths).
@@ -539,9 +544,15 @@ grow until the process dies).
 fingerprint) and `<id>.lines` (the unknown lines it was built from). One proposal per
 source; a newer proposal replaces it unless a human edited it; a rejected proposal's
 fingerprint is remembered on disk and never resubmitted; approval validates the text,
-refuses a name an active parser already has, writes `parsers/<name>.toml` atomically, moves
-the evidence under `approved/` and reloads the registry; approving twice is `not_found`.
-**Anchor.** `crates/ulpf/src/pending.rs`; `Live::approve` in `crates/ulpf/src/engine.rs`;
+requires a name of `[A-Za-z0-9_-]+` (it becomes a file name: the review found `../x`
+would have written outside `parsers/`), refuses a name an active parser already has,
+writes `parsers/<name>.toml` atomically (temp file, fsync, rename), moves the record
+first and takes the parser file back if that fails, and reloads the registry; approving
+twice is `not_found`. Every mutating operation holds one lock, so the inference thread's
+next proposal cannot overwrite a human's edit mid-review or race an approval (review
+finding). `.lines` is re-framed with the engine's framer so template member indices
+line up with events, not physical lines. **Anchor.** `crates/ulpf/src/pending.rs`;
+`Live::approve` in `crates/ulpf/src/engine.rs`;
 `review_edge_cases_are_errors_as_values` in `crates/ulpf/tests/live.rs`. **Principle.**
 Structural prevention over documentation: nothing in the engine can write to `parsers/`
 except `Pending::approve`, and the file that a proposal parses nothing with is not in a
@@ -558,7 +569,11 @@ templates' leading constants, else `regex = "."`. **Anchor.** `matcher` in
 `crates/ulpf-infer/src/lib.rs`; `Registry::new` ordering in `crates/ulpf-parse/src/detect.rs`.
 **Principle.** A generated parser can never take an event from a hand-written one: the
 registry tries all priority-0 parsers first. The cost of a generated regex matcher is paid
-only by events no hand parser claimed. **Ruled out.** Priority 0 (name order would decide
+only by events no hand parser claimed. The review found the gap between two unknown
+sources: an approved `kernel:|sshd\[` matcher claims a sibling device's `kernel:` lines,
+which then fail to parse and would never reach inference; the engine therefore offers a
+line a generated parser claimed but could not parse to the inference buffer as well
+(`worker_thread`). **Ruled out.** Priority 0 (name order would decide
 between `cisco_asa` and `mikrotik_inferred`); a matcher over the syslog body only (the
 matcher sees the raw event by design, D16).
 
@@ -643,3 +658,23 @@ The UI is a window, not the product: every control calls a route in `docs/api.md
 nothing is faked in the browser. The 45-minute embed timer did not fire (first working
 build at 6 minutes). **Ruled out.** Hashed filenames (the binary would need a manifest);
 a CDN font (a runtime network call).
+
+## D51. The review pass: what changed, what was closed, what is deferred
+**Decision.** Two `aposd-critique` workers graded `ulpf-infer` and the `ulpf` engine,
+pending, tail and server modules at the end of the v1 session (18 ranked findings, both
+tables in `PROGRESS.md`). Every finding that input, a client or timing could trigger was
+fixed in one commit with the suite re-run (amendments to D40, D41, D44, D45, D46 above;
+`Pending::ids`, `Emitted`, `Params` serialised directly, saturating tail arithmetic, the
+store bounds check, symlink-safe walk, parsers-directory change signature). Closed with a
+reason rather than changed: axum's plain-text 400 for a malformed query or path parameter
+(documented in `docs/api.md`; a custom rejection type would be forty lines to rename a
+message nobody scripts against); `infer_buffered` counts lines ever buffered while a
+source's `buffered` is the current buffer (documented; renaming a contract field the UI
+already maps is not worth the churn tonight); integer widths in the evidence structs.
+Deferred with an argument: `Live`'s public fields. The server is the only consumer and
+reads them; hiding them behind twenty getters the night before the demo would touch every
+handler for no behavioural change, and the invariant that matters (nobody mutates engine
+state from outside) already holds because the mutable pieces are private or behind
+methods. Revisit when a second consumer of `Live` appears. **Anchor.** the commit named
+"review fixes" and this entry; `PROGRESS.md` "Review pass". **Principle.** A finding is
+closed by a fix or by written evidence, never by a known-issues list.

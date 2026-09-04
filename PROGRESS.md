@@ -85,8 +85,9 @@ curl -s http://127.0.0.1:7878/api/events/60 | python3 -m json.tool | head -30
 # 7. throughput (terminal 2; the bench file is gitignored, generate once, ~25 s, 1.5 GB)
 cargo run --release -p ulpf --example gen_bench -- 5000000 bench
 ./target/release/ulpf run bench/mixed-5000000.log --store /tmp/ulpf-bench --output /dev/null --infer-threshold 0
-#    2026-09-05: 231k events/s, 70.5 MB/s (inference off); 258k events/s with inference on
-#    (buffer 4096, final pass 0.054 s). Expect +-10% run to run. Never quote a number you did not just measure.
+#    2026-09-05 at 47965c8 (after the review fixes): 260k events/s, 79.3 MB/s (inference off);
+#    266k events/s with inference on (buffer 4096, final pass 0.062 s). Earlier runs the same
+#    day: 231k/258k. Expect +-10% run to run. Never quote a number you did not just measure.
 
 # 8. isolation (needs the bench file; serve mode starts its own server on 7878, so stop terminal 1 first)
 scripts/isolation.sh run bench/mixed-5000000.log       # 2026-09-05: 46 samples, 0 sockets, ISOLATION PASS
@@ -167,9 +168,12 @@ verified from docs.rs), tokio 1.53, notify 9.0.0-rc.5 (evaluated, ruled out: D40
       host, edgerouter proposal (9 templates) generated in-container.
 - [x] 7. Regression: `cargo test --workspace` 71 tests, 0 failed (v0.1's 50 plus 21);
       `cargo clippy --workspace --all-targets -- -D warnings` clean; counting-allocator
-      test unchanged and passing; bench 231k events/s (inference off) and 258k (on)
-      against v0.1's 214k-232k.
-- [ ] 8. `aposd-critique` review pass and fixes (next).
+      test unchanged and passing; bench 231k then 260k events/s (inference off) and 258k
+      then 266k (on) against v0.1's 214k-232k.
+- [x] 8. `aposd-critique` review pass: two workers (engine modules; `ulpf-infer`), 18
+      ranked findings, every one fixed in the "review fixes" commit with the suite re-run
+      (71 tests, clippy clean, held-out grades unchanged, bench re-measured) or closed
+      with a reason in D51. Table below.
 - [x] 9. This section, CLAUDE.md, DECISIONS.md D38-D50 with anchors.
 
 ### Spine (sequential, lead), as run
@@ -207,6 +211,32 @@ verified from docs.rs), tokio 1.53, notify 9.0.0-rc.5 (evaluated, ruled out: D40
 - `notify` for directory watching: rc release, and no events across bind mounts (D40).
 - A separate `ulpf-server` crate (D38).
 
+### Review pass (done item 8), findings ranked as the workers ranked them
+| # | finding (file) | verdict | what changed |
+|---|---|---|---|
+| E1 | source identity = basename, resume offsets summed by name (engine, store) | bug, fixed | `source_name(root, path)`: path relative to the input root |
+| E2 | no mutual exclusion between inference `write` and reviewer ops (pending) | bug, fixed | `Pending.ops` lock around every mutating method |
+| E3 | per-event lock + String on the unknown path (inference, engine) | smell, fixed | `offer_batch` once per batch |
+| E4 | `finish` returns before stopping inference: a worker panic hangs the scope | smell, fixed | every thread joined before any error returns |
+| E5 | `[parser] name` unvalidated as a file name (pending) | bug, fixed | `[A-Za-z0-9_-]+` or 422 |
+| E6 | unreadable watched file retried every tick, counters climb (engine) | bug, fixed | reported once, retried when the file changes |
+| E7 | `Pending::list` (file reads, regex compiles) every 200 ms for ids (server) | smell, fixed | `Pending::ids` directory scan |
+| E8 | approve/reject ordering leaves ghosts on IO failure (pending) | smell, fixed | record first, parser file rolled back, missing toml is `Io` |
+| E9 | inference disabled: 404 on GET, 500 on POST, uncounted (server, engine) | smell, fixed | one `NotFound` through `review_error` |
+| E10 | `after + 1` overflow (tail) | bug, fixed | saturating add |
+| E- | store `get` allocates from an unchecked header; `atomic_write` no fsync; `walk` follows symlinked dirs; mtime-only reload signature; `origin` by description text | fixed | bounds check; fsync; `symlink_metadata`; count+mtime+size; `priority < 0` |
+| I1 | alignment tables unbounded in token count (align) | bug, fixed | lines over 2048 tokens -> `unmatched[too_long]` |
+| I2 | optional constants weighed in ordering, general template first (lib) | bug, fixed | required constants only; `verified > support` explained |
+| I3 | merge decision printed wrong counts (lib) | bug, fixed | counts bound before the take |
+| I4 | deduped templates lost their presence decisions (lib) | smell, fixed | decisions passed through |
+| I5 | verification included templates the definition drops (lib) | bug, fixed | eligibility = compiles and >= min_support |
+| I6 | approved regex matcher claims a sibling unknown source's lines (lib, engine) | smell, fixed | parse failures under a `priority < 0` parser are offered to inference |
+| I7 | `.lines` split by `\n`, member indices shift on blank lines (pending) | bug, fixed | re-framed with `Framer` |
+| I8 | dedupe shape by brace counting (lib) | smell, fixed | shape from `Template.tokens` |
+| I- | two `similarity` names; compile error dropped; unused params; doc comments on the wrong items; `ParamsUsed` mirror | fixed | renamed, kept, removed, moved, `Params` serialised |
+| closed | axum plain-text 400 for malformed params; `infer_buffered` vs `buffered`; evidence integer widths | closed, documented | D51, api.md |
+| deferred | `Live` public fields | argued in D51 | revisit on a second consumer |
+
 ### Adversarial pass (each handled, counted, tested)
 | case | outcome | where |
 |---|---|---|
@@ -219,13 +249,12 @@ verified from docs.rs), tokio 1.53, notify 9.0.0-rc.5 (evaluated, ruled out: D40
 | unknown source floods | buffer capped at 4096, `infer_buffer_full` counted (43,951 on the bench) | bench run |
 | watched file shrinks | re-read from 0, reported as an input problem | `poll_loop` |
 
-## Cold start for v1 (read this first)
+## Cold start (v0.1 record; v1 is above)
 
-v0.1 is closed at the commit that added this section (parent 1fb4c41); `git log -1`
-gives the hash. Working tree clean, `origin/main` in sync, the eight done items above
-are all verified by runs recorded in this file. The next session starts with the
-deferred `aposd-critique` review pass, then the server + UI session (CLAUDE.md, "Verify
-before building the server"). Do not redo the review passes listed under Fan-out 2.
+v0.1 closed at 4a74364; v1 (the sections above) was built on 2026-09-05 in one session
+and is at `git log -1`. Working tree clean, `origin/main` in sync. The verified-claims
+table below is v0.1's; v1's proofs are listed per done item above. Do not redo the review
+passes listed under Fan-out 2 or the v1 inference iterations.
 
 ### What is verified, and by which test
 | claim | proof |
@@ -433,6 +462,7 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
   `ulpf fixture` and a diff review.
 
 ## Next action
-Apply the three Opus vendor-documentation reviews when they return (fix, regenerate the
-affected fixtures, re-run the suite, commit). Then the deferred `aposd-critique` review
-pass, then the server session (see CLAUDE.md "Verify before building the server").
+The `aposd-critique` review pass (v1 done item 8): two workers grade `ulpf-infer` and the
+`ulpf` engine/server/pending modules; every real finding is fixed with its own commit and
+a DECISIONS entry or amendment, every wrong one is closed with evidence here. Then the
+hackathon: follow the first section of this file.
