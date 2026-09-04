@@ -106,3 +106,34 @@ dependence); (5) min support 3, with singletons, truncated and non-UTF-8 lines r
 under usable templates after header stripping) but fragments every optional field into another
 template and merges disposition words at loose thresholds; usable as a candidate generator for a
 human to prune, not as an unattended parser generator.
+
+## v1 engine (2026-09-05): the same question, answered with the shipped `ulpf-infer`
+
+The prototype's seven failure modes were addressed as D46 records: the slot regexes are
+the tokenizer (plus bracket groups, hex chains and a no-address-after-colon rule),
+alignment replaces token-count buckets (gap-open 2, substitution 1, earliest match on a
+tie), presence per column makes optional groups, a keyword split keeps dispositions
+constant, a minority rule ignores damaged lines, split siblings are merged back, and
+every pattern is compiled through the real parser and re-tested. Inputs: `heldout/`
+(four files with ground truth, written from vendor pages and captures by a worker;
+guesses are listed in `heldout/README.md`).
+
+| file | lines | true types | templates emitted | lines covered | unmatched (reason) | notes |
+|---|---|---|---|---|---|---|
+| mikrotik.log | 250 | 14 | 14 (+1 dead, kept in evidence) | 250 | 0 | input/forward and ICMP/UDP/TCP split; NAT block optional; `logged in`/`out` separate; empty user optional |
+| edgerouter.log | 250 | 10 | 9 | 250 | 0 | TCP/UDP/ICMP/IPv6 split; `DF` optional; `MAC=` chain one slot; NAT-masq lines a template; sshd Accepted/Failed separate |
+| nginx_access.log | 250 | 3 (by request content) | 1 | 250 | 0 | `{ip} - {user} [{timestamp}] {quoted} {int} {int} {quoted} {quoted}` with a `[[timestamp]]` candidate |
+| messy.log | 300 | 14 + cron, systemd, truncated, empty | 19 | 289 | 11: 4 empty, 4 below_support (truncated), 3 no_template | cron and systemd got their own templates; truncated lines never became a template |
+
+Reading: the prototype's 4-10 clusters per true type became 1 per type on the three
+clean files (one over on MikroTik: a `disconnected, {text}{? is lost}` tail a human
+trims). What a human still edits: generic slot names where the format has no key
+(`word1`, `ip1`), the occasional `{? is lost}` tail, and the choice between per-flag
+templates and a slot when a keyword has three values. The brief's kill criterion
+(candidate generation only) did not fire.
+
+Iterations, in order, each graded on all four files: similarity 0.7 -> 0.6; key removed;
+weighted alignment; ipv6+port and chain tokens; letters-only keyword split; minority
+rule; dead-template drop; head-6 similarity; gap penalty; substitution state; first-token
+substitution both ways; messy-run collapse tightened; keyword-aware dedupe. Eleven
+rounds; the rejected alternatives are in PROGRESS.md "Tried and abandoned (v1)".

@@ -2,7 +2,9 @@
 
 Single static binary. Ingests perimeter-device logs in any vendor format, preserves
 every raw byte immutably, parses with the vendor's own vocabulary, normalizes to a
-pragmatic OCSF subset, emits JSON Lines, and prints measured throughput.
+pragmatic OCSF subset, emits JSON Lines, and prints measured throughput. Formats it does
+not know are clustered into a candidate parser a human reviews and approves in the
+embedded UI; approval activates the parser without a restart.
 
 See `CLAUDE.md` for architecture and the plain-text folder contract,
 `docs/parser-format.md` for writing parser definitions, `PROGRESS.md` for state.
@@ -15,7 +17,11 @@ cargo build --release
 ./target/release/ulpf run samples --store /tmp/ulpf-store --output /tmp/out.jsonl
 ./target/release/ulpf verify --store /tmp/ulpf-store
 ./target/release/ulpf raw 3 --store /tmp/ulpf-store
+
+mkdir -p demo/watch && ./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl
+cp samples/*.log heldout/mikrotik.log demo/watch/      # then open http://127.0.0.1:7878 and Review
 ```
+The full demo, with the numbers measured on 2026-09-05, is the first section of `PROGRESS.md`.
 
 Static container build: `docker build -t ulpf:static .` then
 `docker run --rm -v "$PWD/samples:/data/samples:ro" -v "$PWD/out:/data/out" ulpf:static run /data/samples --store /data/out/store --output /data/out/out.jsonl`.

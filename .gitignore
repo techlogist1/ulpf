@@ -7,3 +7,10 @@
 /out/
 .DS_Store
 /.aposd/
+/pending/*.toml
+/pending/*.json
+/pending/*.lines
+/pending/approved/
+/pending/rejected/
+/demo/
+ui/node_modules/

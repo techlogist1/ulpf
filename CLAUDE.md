@@ -6,12 +6,17 @@ network devices (firewalls, IDS/IPS, proxies, VPN concentrators, edge routers) i
 vendor format, preserves every original byte immutably and provably, parses each event
 using the vendor's own vocabulary, normalizes it into a pragmatic OCSF subset, and
 emits JSON Lines. End-to-end throughput (events/sec, ingest through output) is a
-first-class output printed at the end of every run.
+first-class output printed at the end of every run. v1 adds the visible half: events no
+parser claims are clustered into a candidate parser definition a human reviews and
+approves (never parsed until approved), a localhost HTTP API and embedded UI (live
+counters, review screen, traceback from any output line to its raw bytes), and a
+watch mode (`ulpf serve`) that tails directories and hot-reloads parsers.
 
 Users: a six-person hackathon team. Two people touch Rust. Four work only in the
-plain-text folders (`parsers/`, `mappings/`, `samples/`, `fixtures/`) and can never
-break the build. v0.1 (this repo state) is the invisible foundation; the parser
-inference engine and web UI are built on top of it in later sessions.
+plain-text folders (`parsers/`, `mappings/`, `samples/`, `fixtures/`, `pending/`,
+`ui/src/app.css`) and can never break the build. v0.1 is the invisible foundation; v1
+(this repo state) is the inference engine, review workflow, server and UI on top of it.
+`PROGRESS.md` opens with the hackathon demo script.
 
 ## Stack (each choice verified against crates.io on 2026-09-04)
 | Piece | Choice | Why |
@@ -26,7 +31,9 @@ inference engine and web UI are built on top of it in later sessions.
 | CLI | `clap` 4 derive | standard |
 | Queue | `std::sync::mpsc::sync_channel` | bounded, stdlib; no extra crate needed |
 | Timestamps | `ulpf-time` (zero deps) | fixed-layout formats only; civil-date math is 30 lines |
-| Directory watching | none in v0.1 | `notify` 9.0.0-rc verified as candidate for the server session |
+| Directory watching | polling, stdlib (D40) | `notify` 9.0.0-rc is a release candidate and misses events across Docker bind mounts |
+| HTTP + SSE | `axum` 0.8 + `tokio` 1 (2 worker threads) + `futures-util` | verified against docs.rs 2026-09-05: `/{id}` routes, `Sse::new(stream).keep_alive(..)`, `axum::serve` |
+| UI | Svelte 5 + Vite, prebuilt to three fixed files in `ui/dist`, `include_str!` | no node at Rust build or in the container; `--ui-dir` serves edits from disk |
 
 ## The three shapes (data model)
 Every event exists in exactly three forms:
@@ -43,8 +50,11 @@ Every event exists in exactly three forms:
 Supporting entities: `ParserDefinition` (matcher + strategy + fields; one per device
 family; identical format hand-written or generated), `FieldMapping` (source field →
 schema field + value canonicalisation; one per output schema, shared by all parsers),
-`Template` (constant tokens + typed slots; the inference engine's product; converts
-to a `ParserDefinition` losslessly).
+`Template` (constant tokens + typed slots + optional groups `{? ...}`; the inference
+engine's product; converts to a `ParserDefinition` losslessly), `Proposal` (a
+`ParserDefinition` plus `Evidence`: templates with support/verified counts, slots with
+examples, unmatched lines by reason, the decision log; crate `ulpf-infer`, written to
+`pending/` by the engine, never loaded by the registry).
 
 ## The parser/mapping wall (non-negotiable)
 Parsing (1→2) and normalization (2→3) are separate stages with a hard boundary.
@@ -53,7 +63,9 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 - Enforced structurally: `ulpf-parse` has no dependency on `ulpf-normalize`; the
   definition and mapping TOML types use `deny_unknown_fields`, and neither type has a
   field where the other side's vocabulary could go. Mappings receive only
-  `(field name, value)` pairs.
+  `(field name, value)` pairs. `ulpf-infer` depends on `ulpf-parse` only, so an inferred
+  slot cannot be named after a schema field by construction; inferred names are the
+  device's own keys (`src-mac`, `IN`) or `kind+n`.
 - Why: parser knowledge is per-device and grows with every vendor; schema knowledge is
   per-standard and changes rarely but globally. Fusing them means a second output
   schema rewrites every parser.
@@ -63,11 +75,22 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 ## Other invariants
 - **Raw before understanding.** The store API is append + read. No update, no delete,
   no handle to an existing record. Immutability is a property of the interface, and one
-  writer at a time is enforced (a second `ulpf run` on the same store is refused).
+  writer at a time is enforced (a second `ulpf run` on the same store is refused). The
+  server reads records through the writer's own handle (D42); it never opens the store.
+- **Nothing is parsed on a proposal.** The registry loads `parsers/` only. A proposal is
+  three files in `pending/`; `Pending::approve` is the only code that writes to
+  `parsers/`, and it validates, refuses name collisions, writes atomically and reloads.
+  Generated parsers carry `priority = -1`, so a hand-written parser always wins (D45).
+- **The server owns no state.** `Live` (`crates/ulpf/src/engine.rs`) is the one shared
+  object; the server holds an `Arc<Live>`, a 200 ms frame cache and per-client stream
+  positions. If a feature needs server-side state, it belongs in `Live` (D41).
 - **Zero-copy hot path.** Inputs are memory-mapped. Parsed fields are byte ranges into
   the map (`Cow::Borrowed`); text is materialised only at output. Digests are computed
   from the mapped bytes. Throughput is measured from the first CLI run so any
-  allocation creeping in is visible as a regression.
+  allocation creeping in is visible as a regression. v1 adds work per batch (one store
+  lock, one pipeline read, one source-stats lock), never per event; the unknown path
+  copies the event into the inference buffer (bounded, counted), the serving path
+  allocates in the server (D43, D49).
 - **Bounded backpressure.** The ingest→process queue is a `sync_channel` of fixed
   capacity. Saturation policy: the producer blocks. Dropping is never acceptable
   because the raw store must be complete.
@@ -77,7 +100,10 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 - **Counters on screen.** Per-stage counts (framed, stored, detected, parsed,
   normalized, emitted), error counts by reason, queue high-water mark and throughput
   are printed at the end of every run. The server session exposes the same struct.
-- **Zero outbound network calls at runtime.** Build-time crates.io fetches only.
+- **Zero outbound network calls at runtime.** Build-time crates.io fetches only. `serve`
+  listens on `127.0.0.1` unless told otherwise and never connects out;
+  `scripts/isolation.sh` proves it by sampling the process's sockets (run, serve and
+  `--network none` docker modes).
 
 ## Plain-text folder contract (for teammates)
 - `parsers/*.toml` — one parser definition per device family. Loaded by directory scan
@@ -91,8 +117,15 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
   arrive (see `samples/README.md`).
 - `fixtures/<parser>.expected.jsonl` — expected parsed fields and normalized subset per
   sample event. The fixture test in `crates/ulpf/tests/` runs every pair.
+- `pending/<id>.toml` + `.json` + `.lines` — one proposal per unknown source, written by
+  the engine, edited by anyone, activated only by approval (UI, API or moving the file by
+  hand into `parsers/`). `ulpf check --pending pending` validates them. Not committed.
+- `heldout/*.log` + `.truth.tsv` — inference test inputs with ground truth; never loaded
+  by `run`. Grade a change with `cargo run -p ulpf-infer --example infer -- heldout/X.log`.
+- `ui/src/app.css` — every colour and spacing token at the top; `ulpf serve --ui-dir
+  ui/dist` after `pnpm build` in `ui/`, no Rust rebuild.
 - Validate without a rebuild: `cargo run -- check` (or the built binary `ulpf check`).
-- Full format reference: `docs/parser-format.md`.
+- Full format reference: `docs/parser-format.md`; HTTP contract: `docs/api.md`.
 
 ## Coding standards
 - Bytes, not strings, on the hot path (`&[u8]`, `regex::bytes`). UTF-8 is a property
@@ -109,29 +142,39 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 - Commit messages say what now works. Every commit builds and passes `cargo test`.
 - `pnpm` is irrelevant here; this is pure Rust. No Python at runtime.
 
-## Verify before building the server (next session)
-- The current `axum` API and its server-sent events support must be verified from the
-  docs before writing any handler; do not trust recalled signatures.
-- Svelte 5 + Vite embedded into the binary has a 45-minute abandon timer: if the embed
-  is not serving in 45 minutes, ship plain HTML from `include_str!`.
-- The `frontend-design` skill was not needed in v0.1; load it for the UI session.
-- `notify` 9.x for directory watching: verify the API; v0.1 scans directories once.
-- `Metrics` in `crates/ulpf/src/metrics.rs` is the struct to expose over the wire.
+## Inference (how the engine proposes a parser)
+Unknown events are copied into a per-source buffer (bounded at 4096, ordered by raw id).
+At the threshold (`--infer-threshold`, 64), at each doubling, and when a source goes
+quiet, `ulpf_infer::infer` tokenizes with the slot regexes, clusters by word similarity,
+aligns members with gap and substitution costs, derives optional groups from presence,
+types slots by value family, splits clusters on keyword slots so dispositions stay
+constant, and compiles every pattern through the real parser to verify it. The
+proposal's `Evidence` records every decision. Thresholds and their alternatives: D46.
+The kill criterion in the brief did not fire: the four held-out files grade at 14/14,
+9/10 and 1 template(s) per format with every line covered, and a messy file isolates its
+junk by reason. Tune against `heldout/` and record the grades before changing a threshold.
 
 ## CLI (what exists)
 ```
 ulpf run <files|dirs>... --store DIR --output FILE.jsonl [--parsers parsers] [--mappings mappings]
-         [--schema ocsf] [--tz +05:30] [-j THREADS] [--batch 1024] [--queue 64] [--report-json report.json]
-ulpf check                 # load every parser and mapping file, report path:line problems
-ulpf verify --store DIR    # recompute every SHA-256 in the raw store
-ulpf raw <ID> --store DIR  # exact bytes of one raw record (header on stderr)
-ulpf fixture samples/x.log # fixture skeleton for review (never commit blind)
+         [--schema ocsf] [--tz +05:30] [-j THREADS] [--batch 1024] [--queue 64]
+         [--pending pending] [--infer-threshold 64] [--report-json report.json]
+ulpf serve <dirs>... --store DIR --output FILE.jsonl [--listen 127.0.0.1:7878] [--pending pending]
+         [--infer-threshold 64] [--tail 1000] [--poll-ms 250] [--ui-dir ui/dist] + the run options
+ulpf infer FILE [--pending pending] [--parsers parsers] [--decisions]   # offline proposal for one file
+ulpf check [--pending pending]  # load every parser, mapping and pending file, report path:line problems
+ulpf verify --store DIR         # recompute every SHA-256 in the raw store
+ulpf raw <ID> --store DIR       # exact bytes of one raw record (header on stderr)
+ulpf fixture samples/x.log      # fixture skeleton for review (never commit blind)
 ```
 Every `run` ends with the counter block: files, bytes, events/s, MB/s; per-stage counts
 (framed, stored, detected, no_parser, parsed, parse_failed by reason, normalized, emitted);
 signals (sub_matched, sub_no_match, sub_uncovered, time_from_receipt, time_error by reason,
 class_unknown, enum_other, unmapped_fields, utf8_lossy); queue batches, high-water and
-backpressure blocks (times the ingest thread found the queue full).
+backpressure blocks (times the ingest thread found the queue full); inference (buffered,
+buffer full, runs, lines templated/unmatched, proposals written/replaced/skipped by
+reason, approved, rejected, reloads), then the pending proposals awaiting review. The
+same numbers are `engine` in `GET /api/metrics` and the `metrics` SSE event.
 When output looks plausible but wrong, read that block first: `no_parser` means the format
 was not recognised, `sub_uncovered` means a message id has no pattern yet, `sub_no_match`
 means a gated sub ran and failed (or an ungated sub met a message you have not modelled),
@@ -140,8 +183,10 @@ means a gated sub ran and failed (or an ungated sub met a message you have not m
 input for any output line (`ulpf.raw_id`).
 
 ## Working files
-- `PROGRESS.md` — checklist, verified state, in-flight work, next action.
-- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out.
+- `PROGRESS.md` — hackathon demo script first, then the v1 and v0.1 checklists, verified
+  state, tried and abandoned, next action.
+- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out (D1-D50).
+- `docs/api.md` — the HTTP and SSE contract the server and UI are built against.
 - `docs/parser-format.md` — the definition format reference for teammates.
 - `docs/timestamps.md` — timestamp survey, auto-detection order, zone table, policies.
-- `docs/inference-prototype-report.md` — honest result of the prefix-tree clustering trial.
+- `docs/inference-prototype-report.md` — the prefix-tree trial, and the v1 engine's graded results on `heldout/`.

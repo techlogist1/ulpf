@@ -43,67 +43,181 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D36, each with an anchor)
       current; every milestone committed and pushed to techlogist1/ulpf main.
 
+## Hackathon (start here at 3am)
+
+Everything below was run on 2026-09-05 on the M1 Pro from a clean checkout of this
+commit. Terminal 1 is the server, terminal 2 is everything else. All paths are relative
+to the repo root.
+
+```
+cargo build --release                                   # ~1 min; binary target/release/ulpf
+./target/release/ulpf check --pending pending           # 12 parsers, 1 mapping, 0 problems
+
+# 1. server + UI (terminal 1). Watches demo/watch, proposals go to pending/, approvals to parsers/.
+mkdir -p demo/watch
+./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending pending --infer-threshold 64
+#    -> ulpf: serving http://127.0.0.1:7878 ; ctrl-c prints the counter block
+#    open http://127.0.0.1:7878  (Live / Review / Traceback)
+
+# 2. known formats: counters and the tail move within 500 ms
+cp samples/*.log demo/watch/
+
+# 3. an unknown format: buffered as no_parser, clustered at 64 lines, "Review (1)" appears
+cp heldout/mikrotik.log demo/watch/
+#    Review -> mikrotik: definition on the left, 14 templates with slots, examples,
+#    history and the decision log on the right. Uncheck a template + "Regenerate from kept"
+#    to drop it; edit the TOML and Save to see problems by line.
+
+# 4. approve (UI button, or):
+curl -s -X POST http://127.0.0.1:7878/api/pending/mikrotik/approve
+#    -> {"name":"mikrotik_inferred","parsers_loaded":13,"now_detected":{"tested":250,"detected":250}}
+#    parsers/mikrotik_inferred.toml now exists; no restart happened (engine.reloads = 1)
+
+# 5. the same events take the fast path
+cp heldout/mikrotik.log demo/watch/mikrotik-again.log
+#    Live -> sources: mikrotik-again.log detected 250, no_parser 0; parsers: mikrotik_inferred detected 250
+
+# 6. traceback: click any tail row, or open http://127.0.0.1:7878/#/trace/60 , or:
+curl -s http://127.0.0.1:7878/api/events/60 | python3 -m json.tool | head -30
+#    stored and recomputed SHA-256 side by side, digest_match true, the line as emitted
+#    (no_parser, before approval) and the same bytes through the current parsers (mikrotik_inferred)
+
+# 7. throughput (terminal 2; the bench file is gitignored, generate once, ~25 s, 1.5 GB)
+cargo run --release -p ulpf --example gen_bench -- 5000000 bench
+./target/release/ulpf run bench/mixed-5000000.log --store /tmp/ulpf-bench --output /dev/null --infer-threshold 0
+#    2026-09-05: 231k events/s, 70.5 MB/s (inference off); 258k events/s with inference on
+#    (buffer 4096, final pass 0.054 s). Expect +-10% run to run. Never quote a number you did not just measure.
+
+# 8. isolation (needs the bench file; serve mode starts its own server on 7878, so stop terminal 1 first)
+scripts/isolation.sh run bench/mixed-5000000.log       # 2026-09-05: 46 samples, 0 sockets, ISOLATION PASS
+scripts/isolation.sh serve demo/watch 20               # 2026-09-05: LISTEN 127.0.0.1:7878 + one loopback client, PASS
+scripts/isolation.sh docker ulpf:static samples        # --network none, PASS
+
+# 9. container (image 9.56 MB, UI embedded)
+docker build -t ulpf:static .
+mkdir -p demo/data && docker run --rm -p 7878:7878 -v "$PWD/demo/watch:/data/watch:ro" -v "$PWD/demo/data:/data" \
+  ulpf:static serve /data/watch --store /data/store --output /data/out.jsonl --pending /data/pending --listen 0.0.0.0:7878
+#    http://127.0.0.1:7878 from the host; the parsers inside the image are the ones at build time
+
+# offline inference without the server, for a file in hand:
+./target/release/ulpf infer heldout/edgerouter.log --pending pending --decisions
+
+# reset between rehearsals (approvals land in parsers/, so remove the generated one)
+rm -rf demo pending/*.toml pending/*.json pending/*.lines pending/approved pending/rejected parsers/*_inferred.toml
+```
+
+When a proposal looks wrong: the evidence panel shows, per template, `support` (cluster
+size) beside `verified` (lines the compiled pattern matched first), the slot table with
+`distinct` counts and examples (a `word` slot with 2 distinct alphabetic values that should
+have been a constant means the keyword split declined: check the `preceded by` key against
+the identity list in D46), `history` (which splits and merges produced it), and the
+`decisions` log (every threshold decision in order). `unmatched` lists the lines no template
+took, by reason. `ulpf infer FILE --decisions` prints the same offline.
+
+When the fast path does not happen after approval: `engine.reloads` did not move (the
+parsers directory is not the one `serve` was started with), or `now_detected` was below
+`tested` (the matcher is too narrow: widen `[match]` in the approved file; the directory
+poller reloads on save).
+
 ## v1 (2026-09-05 session, autonomous): the visible half
 
 Brief: inference, review workflow, server, embedded UI, isolation check, container, demo
 script, design review. Skills: `software-design-philosophy` loaded (interfaces),
-`example-skills:frontend-design` for the UI worker, `aposd-critique` reserved for the
-review phase; `prompting-practices` does not exist on this machine (manifest at
+`example-skills:frontend-design` for the UI worker, `aposd-critique` for the review phase;
+`prompting-practices` does not exist on this machine (manifest at
 `~/Documents/dev/skills-audit/MANIFEST.md`), its requirements are carried from the brief.
 Toolchain verified: node 24.15, pnpm 11.9, docker 29.4, lsof; axum 0.8.9 (path syntax
 `/{id}`, `Sse::new(stream).keep_alive(KeepAlive::default())`, `axum::serve(listener, app)`
 verified from docs.rs), tokio 1.53, notify 9.0.0-rc.5 (evaluated, ruled out: D40).
 
-### Definition of done (checked only after running it)
-- [ ] 1. Inference end to end: unknown events buffer per source; at the threshold the
-      engine clusters, merges optional fields, types slots, writes `pending/<id>.toml` +
-      evidence; a held-out format produces a proposal; approving it activates the parser
-      without restart and the same events are then `detected`. Nothing is parsed on a
-      proposal. Tested on three held-out shapes and a messy sample; thresholds recorded
-      with the alternatives tried.
-- [ ] 2. Review workflow: list, view beside sample lines and candidate templates, edit,
-      regenerate from kept templates, approve, reject. Approval is the only pending→active path.
-- [ ] 3. Server on localhost: SSE (`metrics` + `tail`), pending routes, traceback with
-      stored and recomputed digests. Reuses the store's writer lock; owns no state.
-- [ ] 4. UI embedded: live feed with counters, review screen with merge-or-discard,
-      traceback view. Every control backed by the API. Restylable (`--ui-dir`).
-- [ ] 5. Isolation: `scripts/isolation.sh` proves no outbound connection during a
-      full-rate run; command in the demo script.
-- [ ] 6. Container rebuilt from the final commit; UI reachable from inside it.
-- [ ] 7. Regression: v0.1 suite, clippy, counting-allocator test, bench within variance.
-- [ ] 8. `aposd-critique` review pass, findings fixed.
-- [ ] 9. Hackathon section below; CLAUDE.md and DECISIONS.md current; committed, pushed.
+### Definition of done (each item checked only after running it)
+- [x] 1. Inference end to end. `crates/ulpf/tests/live.rs`
+      `unknown_format_becomes_a_proposal_and_approval_moves_it_to_the_fast_path`: 250
+      MikroTik lines -> no_parser 250 -> one proposal (14 templates, 0 problems) -> a
+      second run parses nothing and skips the duplicate -> approve through `Live` reloads
+      in place, `now_detected` 250/250 -> a third run: detected 250, parsed 250, no
+      proposal. Held-out grades (`cargo run -p ulpf-infer --example infer -- heldout/X.log`):
+      mikrotik 14 templates for 14 message types, 250/250 lines, 0 unmatched; edgerouter
+      9 templates for 10 types, 250/250; nginx 1 template, 250/250; messy 19 templates,
+      289/300 with 4 empty, 4 below_support (truncated), 3 no_template. Thresholds and
+      the alternatives tried: D46.
+- [x] 2. Review workflow. `review_edge_cases_are_errors_as_values`: invalid edit saved and
+      listed with its line, approval refused with the same problem, edited proposal never
+      replaced, name conflict 409, regenerate from a kept subset keeps the human's
+      `[match]`, reject then resubmit skipped as rejected across a restart. UI: Review
+      list, detail with editor/Save/Approve/Reject, per-template Keep + Regenerate,
+      verified in Chrome against the real server 2026-09-05 (approval showed 13 parsers
+      loaded, 250 of 250 buffered lines detected).
+- [x] 3. Server. `crates/ulpf/tests/server.rs` walks the demo over real HTTP: status, UI
+      assets, ingest by watch, proposal, tail with raw ids, invalid edit -> 422 with
+      problems, approve -> now_detected 250/250, approve twice -> 404, parsers list shows
+      origin approved, traceback with matching digests and emitted vs now, missing id ->
+      404 with store_len, second file detected 250/0, SSE hello+metrics, client disconnect
+      drops the count to 0. Store reads go through the writer's lock (D42); the server
+      owns a frame cache and per-client positions only (D41, D48).
+- [x] 4. UI embedded. `ui/dist/{index.html,app.js,app.css}` (63 KB JS) built by Svelte 5 +
+      Vite in 13 minutes (timer did not fire), served from the binary and from `--ui-dir`.
+      Screens checked in Chrome: Live counters/sources/parsers/tail, Review, Traceback.
+      No console errors. Tokens at the top of `ui/src/app.css`.
+- [x] 5. Isolation. `scripts/isolation.sh run bench/mixed-5000000.log`: 46 samples, no
+      socket, PASS. `serve` mode: listener on 127.0.0.1 and one loopback client, PASS.
+      `docker` mode with `--network none`: PASS. Commands in the hackathon section.
+- [x] 6. Container rebuilt from 3574f30+docs (`docker build -t ulpf:static .`, 9.56 MB):
+      `serve` inside with `-p 7879:7878`, `/api/status`, `/`, `/app.js` answered from the
+      host, edgerouter proposal (9 templates) generated in-container.
+- [x] 7. Regression: `cargo test --workspace` 71 tests, 0 failed (v0.1's 50 plus 21);
+      `cargo clippy --workspace --all-targets -- -D warnings` clean; counting-allocator
+      test unchanged and passing; bench 231k events/s (inference off) and 258k (on)
+      against v0.1's 214k-232k.
+- [ ] 8. `aposd-critique` review pass and fixes (next).
+- [x] 9. This section, CLAUDE.md, DECISIONS.md D38-D50 with anchors.
 
-### Spine (sequential, lead)
+### Spine (sequential, lead), as run
 - [x] skills check, four files read, toolchain and crate APIs verified
-- [x] `docs/api.md` contract (routes, payloads, SSE kinds, evidence shape)
-- [ ] Template optional groups `{? ...}` (format fix the inference needs; round-trip tests)
-- [ ] `ulpf-infer` crate: tokenizer → key + alignment clustering → consensus template with
-      optional segments → enum split → typing → verify by compiling → emit definition
-- [ ] engine restructure: `Live` shared state, store behind one mutex (per-batch lock),
-      hot-swappable pipeline, per-source stats, bounded tail, inference thread, pending
-      module, reload; `ulpf run` unchanged in behaviour; `ulpf serve` poll-ingest loop
-- [ ] merge server + UI, isolation, container, demo script, review pass, final commit
+- [x] `docs/api.md` contract before server or UI
+- [x] Template optional groups `{? ...}` + CLF timestamp shape (D39; D27 gap closed)
+- [x] `ulpf-infer` crate, graded on the four held-out files after eleven iterations (D46)
+- [x] engine restructure: `Live`, per-batch store lock, pipeline swap, tail, inference
+      thread, pending module, `serve` poller, `infer` and `check --pending` (D40-D44)
+- [x] server + UI merge, browser verification, isolation, container, demo script
 
-### Fan-outs (each designed before dispatch; see the entry for why fewer would not do)
-Fan-out A (after the contract; nothing here touches the engine):
-- UI worker (strong tier, frontend-design loaded): `ui/` Svelte 5 + Vite → `ui/dist/{index.html,app.js,app.css}`
-  with fixed names, 45-minute embed timer, plain HTML fallback. Develops against the
-  contract with a throwaway mock it deletes; ships nothing faked.
-- Held-out samples (cheap tier, given verified example lines from the prototype report):
-  `heldout/mikrotik.log`, `heldout/edgerouter.log`, `heldout/nginx_access.log`, `heldout/messy.log`.
-- Isolation worker (strong tier): `scripts/isolation.sh` against `run` and `serve`.
-Why not one worker: four disjoint file sets, no shared state, and the UI alone is the
-long pole.
-Fan-out B (after the engine restructure): server worker (strong) builds `server.rs`
-against `Live` and the contract with HTTP tests, while the lead writes the inference
-core. Fan-out C (after inference): stress-test worker grades proposals per held-out format.
+### Fan-outs, as dispatched
+- Fan-out A (three workers, after the contract): UI worker (strong, frontend-design)
+  shipped Svelte in 13 min and reported two contract gaps (hello count, 422 problems),
+  both adopted; held-out samples worker (Sonnet, web-verified) delivered four files with
+  ground truth; isolation worker (Opus) delivered the script with run mode tested and a
+  self-test. The first two attempts at the samples and isolation workers died on the
+  session rate limit and were relaunched. Why not one worker: disjoint file sets, the UI
+  the long pole. Server and inference were written by the lead (the server needs `Live`,
+  which was being built; a cold worker would have re-read the engine).
+- No stress-test worker: the lead graded the four held-out files directly with
+  `examples/infer.rs` across eleven iterations; the graded table is in
+  `docs/inference-prototype-report.md`.
 
 ### Tried and abandoned (v1)
-(none yet)
+- Cluster key on the first alphabetic word: a username became the key in nginx lines.
+- Similarity 0.7: fragmented free-text tails into singletons; 0.6 + keyword split kept.
+- Plain LCS alignment: a missing NAT block pulled a line's address pair into the block
+  on a tie; gap-open penalty added. Gap penalty alone: two-word disagreements became one
+  region; substitution state added.
+- Joining a many-token run into one value when one column faced it: hid `connected` vs
+  `disconnected, reason` from the keyword split; first-token substitution instead.
+- Enum split on any identifier-like value: split per script name, per flag list;
+  restricted to plain alphabetic words seen at least twice each.
+- `notify` for directory watching: rc release, and no events across bind mounts (D40).
+- A separate `ulpf-server` crate (D38).
 
-### Next action
-Optional groups in `Template`, then the `ulpf-infer` crate.
+### Adversarial pass (each handled, counted, tested)
+| case | outcome | where |
+|---|---|---|
+| source never reaches the threshold | clustered on idle (serve) and at the end of the run (batch) | `a_source_below_the_threshold_is_still_clustered_at_the_end_of_a_run`; idle rule in `inference.rs` |
+| proposal approved twice | 404 `not_found`, counted in `review_errors` | live.rs, server.rs tests |
+| rejected definition resubmitted | skipped, `proposals_skipped[rejected]`, survives restart | live.rs |
+| client disconnecting mid-stream | guard drops, `sse_clients` back to 0 | server.rs test |
+| traceback for an id that does not exist | 404 with `store_len` | both tests |
+| pending file edited by hand into invalid syntax | listed with `path:line`, approval 422 with problems, `ulpf check --pending` exit 1 | live.rs, server.rs |
+| unknown source floods | buffer capped at 4096, `infer_buffer_full` counted (43,951 on the bench) | bench run |
+| watched file shrinks | re-read from 0, reported as an input problem | `poll_loop` |
 
 ## Cold start for v1 (read this first)
 

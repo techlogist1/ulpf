@@ -485,7 +485,7 @@ pub fn run(cfg: &Config) -> Result<Report> {
         let mut t = start(scope, &live);
         let ingest_result = (|| {
             for path in &files {
-                ingest_file(&live, path, 0, true, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
+                ingest_file(&live, path, 0, true, true, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
             }
             Ok(())
         })();
@@ -557,7 +557,7 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
             let stream = entry.growing_ticks >= 4;
             if finalize || stream {
                 let before = entry.consumed;
-                match ingest_file(live, &path, entry.consumed, finalize, tx, in_flight, seq, problems) {
+                match ingest_file(live, &path, entry.consumed, finalize, false, tx, in_flight, seq, problems) {
                     Ok(consumed) => {
                         entry.consumed = consumed;
                         live.metrics.bytes.fetch_add(consumed.saturating_sub(before), Relaxed);
@@ -583,10 +583,10 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
 
 /// Frames and stores `path` from byte `start`. With `eof` the whole remainder is
 /// consumed; without it the last line is withheld until more bytes arrive. Returns the
-/// new consumed offset. In batch mode `start` is 0 and `eof` is true, and the file's
-/// size is counted here; the tailer counts bytes as it consumes them.
+/// new consumed offset. Batch mode passes `count_file` and the whole file is counted
+/// here; the tailer counts a file when it first sees it and bytes as it consumes them.
 #[allow(clippy::too_many_arguments)]
-fn ingest_file(live: &Arc<Live>, path: &Path, start: u64, eof: bool, tx: &SyncSender<Batch>, in_flight: &AtomicI64, seq: &mut u64, problems: &mut Vec<String>) -> Result<u64> {
+fn ingest_file(live: &Arc<Live>, path: &Path, start: u64, eof: bool, count_file: bool, tx: &SyncSender<Batch>, in_flight: &AtomicI64, seq: &mut u64, problems: &mut Vec<String>) -> Result<u64> {
     let name = path.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| path.display().to_string());
     let file = match File::open(path) {
         Ok(f) => f,
@@ -611,7 +611,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, start: u64, eof: bool, tx: &SyncSe
             }
         }
     };
-    if start == 0 && eof {
+    if count_file {
         live.metrics.files.fetch_add(1, Relaxed);
         live.metrics.bytes.fetch_add(len, Relaxed);
     }

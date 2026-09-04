@@ -36,7 +36,7 @@
   function summary(ev) {
     const parts = [`generated ${ev.generated}`, `${fmt.n(ev.lines_used)} of ${fmt.n(ev.lines_seen)} lines used`]
     if (ev.envelope?.syslog) parts.push(`syslog envelope${ev.envelope.example_header ? ` (${ev.envelope.example_header})` : ''}`)
-    if (ev.params) parts.push(`similarity ${ev.params.similarity}`, `min support ${ev.params.min_support}`, `constant share ${ev.params.constant_share}`, `enum max ${ev.params.enum_max}`)
+    if (ev.params) parts.push(`similarity ${ev.params.similarity}`, `min support ${ev.params.min_support}`, `rare share ${ev.params.rare_share}`, `enum max ${ev.params.enum_max}`)
     return parts.join(', ')
   }
 

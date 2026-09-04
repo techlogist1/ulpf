@@ -453,3 +453,193 @@ materialised value, `column_N` names. **Anchor.** `Parsed::take_spare`/`give_bac
 throughput number stays honest only if the hot path stays what the docs say it is.
 **Ruled out.** A streaming JSON flattener (the JSON exception is documented and JSON is a
 minority of the throughput file; revisit if it dominates).
+
+## D38. v1 layout: an `ulpf-infer` crate that depends on `ulpf-parse` only; server, pending, tail and inference buffers are modules of `ulpf`
+**Decision.** Inference is its own crate with one dependency, `ulpf-parse` (for `Template`,
+`SlotKind`, the envelope strip and `Parser::from_definition` to verify its own output).
+The HTTP server, the pending directory, the tail ring and the per-source buffers are
+modules of the `ulpf` crate beside the engine. **Anchor.** `Cargo.toml` (members),
+`crates/ulpf-infer/Cargo.toml`, `crates/ulpf/src/lib.rs`. **Principle.** The
+parser/mapping wall extends to inference by the dependency graph: `ulpf-infer` cannot
+name an output-schema field because `ulpf-normalize` is not in its tree. Sub-agent
+isolation: the inference crate was built and graded without touching the engine.
+**Ruled out.** A `ulpf-server` crate (the binary is `ulpf`; a server crate would need the
+engine, and the binary would need the server, a cycle, or the documented binary path moves).
+
+## D39. Optional groups `{? ...}` in the template syntax
+**Decision.** A run of constants and slots may be wrapped in `{? ...}` and is matched as
+one optional unit; groups do not nest; `to_pattern` re-emits them and the bijection test
+covers them. **Anchor.** `parse_tokens`/`write_tokens` in `crates/ulpf-parse/src/template.rs`,
+`emit_tokens` in `crates/ulpf-parse/src/pattern.rs`,
+`optional_groups_round_trip_and_match_with_or_without_the_segment` in
+`crates/ulpf-parse/tests/roundtrip.rs`. **Principle.** When inference discovers a
+structure the format cannot express, fix the format: the prototype's worst failure was
+one template per optional-field combination. **Ruled out.** Emitting a `patterns` list
+with one entry per combination (eight patterns for three optional fields, and a human
+cannot see that they are one message).
+
+## D40. Directory watching by polling with a stability rule, not `notify`
+**Decision.** `serve` scans the watch directories every `--poll-ms` (250 ms). A file that
+kept its size for two ticks is ingested to its end; a file still growing after four ticks
+is ingested up to its last complete line; offsets resume from the catalogue's ingest rows
+so a restart does not store the same bytes twice; a file that shrank is re-read from the
+start and reported. The tailer counts a file once when it first sees it. **Anchor.**
+`poll_loop` in `crates/ulpf/src/engine.rs`; `RawStore::ingested_bytes` in
+`crates/ulpf-store/src/store.rs`. **Principle.** Pull complexity downward: the two ways a
+file arrives (a `cp` that lands in chunks, a stream that never stops) are both handled
+by one rule the operator never sees. Zero new dependencies. **Ruled out.** `notify`
+9.0.0-rc.5 (verified on crates.io 2026-09-05): a release-candidate dependency in a static
+binary, and inotify/FSEvents events do not cross Docker bind mounts on macOS, which is
+exactly how the container will be fed tonight.
+
+## D41. `Live` is the one shared object; the pipeline is swapped, never mutated; the server owns nothing
+**Decision.** Counters, the parser pipeline behind an `RwLock<Arc<Pipeline>>` read once
+per batch, the raw store behind a `Mutex` taken once per batch, per-source counts, the
+tail, the inference buffers and the pending directory live in `Live`. A reload builds a
+new `Pipeline` and swaps the `Arc`; a worker notices at its next batch and drops its
+detection hint. The HTTP server holds an `Arc<Live>`, a 200 ms frame cache and each
+client's stream position, nothing else. **Anchor.** `Live`, `reload_parsers`,
+`worker_thread` in `crates/ulpf/src/engine.rs`; `App` in `crates/ulpf/src/server.rs`.
+**Principle.** One writer per shared resource, and the per-event path never touches a
+lock: the store lock and the pipeline read are per batch (1024 events). **Ruled out.**
+A request channel to the ingest thread for traceback reads (a second protocol for one
+call); a per-event store lock (measurable at 250k events/s); a server-side copy of any
+engine state (two truths).
+
+## D42. Traceback reads through the writer
+**Decision.** `RawStore::get` flushes and reads one record positionally from the open
+files, so the server reads the store through the same handle that holds the single-writer
+lock; the bytes are copied out and the lock is held for one pread. **Anchor.**
+`RawStore::get`, `source_names` in `crates/ulpf-store/src/store.rs`;
+`the_writer_reads_its_own_records_back_by_id` in `crates/ulpf-store/tests/roundtrip.rs`;
+`Live::traceback` in `crates/ulpf/src/engine.rs`. **Principle.** Reuse the lock the store
+already has; a second mapping of a file that is being appended to was the v0.1 wart.
+**Ruled out.** `RawReader` inside the server (maps the files as they were at open time,
+so the newest ids are invisible and recovery can shrink a mapped file).
+
+## D43. Inference buffers: bounded copies of unknown events, ordered by raw id, clustered by threshold in `serve` and once after `run`
+**Decision.** A worker copies an event into a per-source buffer only when no parser
+claimed it; the buffer holds at most 4096 lines and overflow is a counter
+(`infer_buffer_full`), never a dropped event (the store and the output already have it).
+Lines are keyed by raw id and sorted before clustering, so the same input yields the same
+proposal regardless of worker scheduling. In `serve` a source is clustered at the
+threshold (64), then at each doubling, and again when it goes quiet for 5 s with at least
+`min_support` new lines; in `run` the buffers are clustered once after the output thread
+finishes, so the throughput number stays ingest to output. **Anchor.**
+`crates/ulpf/src/inference.rs`; the `offer` call in `worker_thread`. **Principle.**
+Zero-copy hot path: the allocation is on the unknown path and the counting-allocator test
+still passes; observability: every buffered, dropped, clustered and skipped line is a
+counter on screen. Found by the in-process test: without the raw-id order, two runs over
+one file produced two fingerprints. **Ruled out.** Clustering inside the worker (blocks
+the hot path for the whole batch); unbounded buffers (a device that never matches would
+grow until the process dies).
+
+## D44. The pending directory is three plain files per source; approval is the only path to `parsers/`
+**Decision.** `<id>.toml` (the definition, editable), `<id>.json` (evidence, review state,
+fingerprint) and `<id>.lines` (the unknown lines it was built from). One proposal per
+source; a newer proposal replaces it unless a human edited it; a rejected proposal's
+fingerprint is remembered on disk and never resubmitted; approval validates the text,
+refuses a name an active parser already has, writes `parsers/<name>.toml` atomically, moves
+the evidence under `approved/` and reloads the registry; approving twice is `not_found`.
+**Anchor.** `crates/ulpf/src/pending.rs`; `Live::approve` in `crates/ulpf/src/engine.rs`;
+`review_edge_cases_are_errors_as_values` in `crates/ulpf/tests/live.rs`. **Principle.**
+Structural prevention over documentation: nothing in the engine can write to `parsers/`
+except `Pending::approve`, and the file that a proposal parses nothing with is not in a
+directory the registry loads. Teamability: a proposal can be reviewed with `cat` and edited
+with any editor, and `ulpf check --pending` reports its problems by line. **Ruled out.**
+Proposals as rows in the catalogue (not editable by the four non-Rust teammates);
+proposals inside `parsers/` with a disabled flag (a malformed one would sit in the active
+load report).
+
+## D45. Generated parsers carry priority -1 and a signature the human can read
+**Decision.** Every emitted definition has `priority = -1`; its `[match]` is `contains`
+of a word present in 98% of the source's lines, else a `regex` alternation of the
+templates' leading constants, else `regex = "."`. **Anchor.** `matcher` in
+`crates/ulpf-infer/src/lib.rs`; `Registry::new` ordering in `crates/ulpf-parse/src/detect.rs`.
+**Principle.** A generated parser can never take an event from a hand-written one: the
+registry tries all priority-0 parsers first. The cost of a generated regex matcher is paid
+only by events no hand parser claimed. **Ruled out.** Priority 0 (name order would decide
+between `cisco_asa` and `mikrotik_inferred`); a matcher over the syslog body only (the
+matcher sees the raw event by design, D16).
+
+## D46. The inference algorithm, and the thresholds it was tuned to
+**Decision.** Tokenize with the slot regexes (D14 made them the one syntax authority) plus
+three shape rules the prototype lacked: a bracketed value with no spaces is one word
+(`(SYN,ACK)`, `[WAN_IN-default-D]`), a run of seven or more two-digit hex groups is one
+opaque chain (netfilter `MAC=`), an address never starts after a colon. Cluster by
+word-level LCS similarity against a fixed seed (no erosion), taking the better of the
+whole line and its first six words so a free-text tail cannot outvote the message type.
+Align every member onto the pivot with a gap-open penalty (2) and a substitution state
+(1): one contiguous absent field beats two split gaps, and `Accepted publickey` against
+`Failed password` is two word substitutions, not a region. Presence per column decides
+optional groups (absent in fewer than max(2, 5%) members is damage: required; present in
+fewer is junk: dropped). Slots type by the family of their values, widening compatible
+atoms (`ip`, `float`) and ignoring a dissenting minority below the same bound. A word
+slot with at most three distinct plain-alphabetic values, each seen twice, not after an
+identity key (`user`, `from`, `via`), splits the cluster so dispositions stay constant;
+variable-length word runs (TCP flags) collapse to one text slot before that check so they
+are not mistaken for keywords. Split siblings with identical shapes, or shapes differing
+in one identifier, are merged back. Every pattern is compiled through the real parser
+and every line re-tested; templates that match nothing first, or fall below `min_support`
+after a split, stay in the evidence but not in the definition. **Anchor.**
+`crates/ulpf-infer/src/{token,align,cluster,lib}.rs`; `Params`; the tests in each file;
+the graded runs in `docs/inference-prototype-report.md` (v1 section). **Principle.**
+Observability as a design input: every one of these decisions writes a line into the
+evidence (`decisions`, per-template `history`, `verified` beside `support`, `unmatched`
+by reason) so a proposal that looks wrong at 4am says why. **Thresholds, with the
+alternatives tried on the four held-out files:** similarity 0.7 (the report's setting)
+fragmented every free-text tail into singletons, 0.5 merged dispositions in the prototype;
+0.6 with the keyword split as the guard covers every MikroTik and EdgeRouter line.
+`enum_max` 3 (2 missed `TCP/UDP/ICMP`). `min_support` 3 (the report's recommendation;
+2 promoted truncated pairs). `rare_share` 0.05 with a floor of 2. Gap 2 and substitution
+1 (a gap penalty alone made `Accepted publickey` a region; no penalty let a missing NAT
+block pull an address pair into the block). Head-6 similarity (without it wireless
+disconnect reasons fragmented by word count). **Ruled out.** A cluster key on the first
+word (a username became the key in nginx lines); token-count buckets (the report's first
+failure mode); depth-limited splitting (MikroTik needs input/forward then ICMP/UDP/TCP).
+
+## D47. A proposal parses nothing; a template earns its place in the definition by matching first
+**Decision.** Nothing is parsed from a pending file: the registry loads `parsers/` only.
+Within a proposal, a template whose compiled pattern matched no line first (an earlier,
+more specific template took them all) or whose support fell below `min_support` after a
+split is left out of `patterns` but kept in the evidence with a history line saying why;
+the reviewer can put it back with `regenerate`. **Anchor.** `in_definition` in
+`crates/ulpf-infer/src/lib.rs`; `Pending::regenerate`. **Principle.** The definition is
+what the engine will run; the evidence is what the human reads. **Ruled out.** Deleting
+dead templates (the reviewer loses the evidence that a shape existed).
+
+## D48. Server: axum 0.8 on a two-thread runtime, SSE by per-client position, exact client counts, embedded UI with a disk override
+**Decision.** The server runs on its own small tokio runtime beside the engine's threads.
+`/api/stream` is an `unfold` stream per client: hello, then every 250 ms the tail lines
+newer than that client's last id (at most 200, the rest counted as `skipped`), a metrics
+frame every other tick from a 200 ms cache shared by all clients, and a `pending` event
+when the generation changes; a guard in the stream state decrements `sse_clients` when
+the connection drops. `/` serves `ui/dist` embedded with `include_str!`, or from
+`--ui-dir` on every request. A 422 on approve carries the load problems; `hello` carries
+the pending count. **Anchor.** `crates/ulpf/src/server.rs`; `docs/api.md`;
+`the_server_is_a_window_onto_a_live_engine` in `crates/ulpf/tests/server.rs`.
+**Principle.** Bounded work per client, per tick, however many clients: the hundredth
+SSE client costs one frame clone. **Ruled out.** A broadcast channel fed by the output
+thread (work on the engine thread proportional to clients); WebSockets (two-way for a
+one-way feed); a JS bundler in the Docker build (three prebuilt files are committed).
+
+## D49. The tail is a ring of emitted lines with ranges into the batch buffers
+**Decision.** The output thread hands each batch's serialised buffer to the ring after
+writing it (moved, not copied); the ring keeps `(raw id, range)` per line, evicts the
+oldest beyond `--tail` events, and reports to each reader how many lines newer than its
+position were evicted or cut. **Anchor.** `crates/ulpf/src/tail.rs`. **Principle.** The
+allocation for serving lives in the server's buffer, not on the engine's path: the ring
+adds one `Arc` clone per line to work the output thread already did. **Ruled out.**
+Copying each line into the ring (a second allocation per event at full rate).
+
+## D50. UI: Svelte 5 + Vite compiled to three fixed-name files, committed, no external requests
+**Decision.** `ui/` builds with `pnpm build` to `ui/dist/{index.html,app.js,app.css}`
+(no hashes, one chunk, assets inlined), committed so the Rust build and the container
+need no node. Hash routing so the binary serves one page. All colours and spacing are CSS
+custom properties at the top of `app.css`; `--ui-dir ui/dist` serves edits without a
+rebuild. Verified in Chrome against the real server: live counters, review with approve,
+traceback. **Anchor.** `ui/vite.config.js`, `ui/README.md`, `ui/dist/`. **Principle.**
+The UI is a window, not the product: every control calls a route in `docs/api.md` and
+nothing is faked in the browser. The 45-minute embed timer did not fire (first working
+build at 6 minutes). **Ruled out.** Hashed filenames (the binary would need a manifest);
+a CDN font (a runtime network call).

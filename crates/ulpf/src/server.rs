@@ -30,6 +30,23 @@ struct App {
     live: Arc<Live>,
     ui_dir: Option<PathBuf>,
     listen: SocketAddr,
+    /// One metrics frame per tick however many clients ask: the hundredth SSE client
+    /// costs a clone, not another walk of the pending directory.
+    frame: Arc<std::sync::Mutex<Option<(std::time::Instant, Value)>>>,
+}
+
+const FRAME_TTL: Duration = Duration::from_millis(200);
+
+fn cached_frame(app: &App) -> Value {
+    let mut slot = app.frame.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some((at, v)) = slot.as_ref()
+        && at.elapsed() < FRAME_TTL
+    {
+        return v.clone();
+    }
+    let v = metrics_frame(&app.live);
+    *slot = Some((std::time::Instant::now(), v.clone()));
+    v
 }
 
 pub struct Server {
@@ -45,7 +62,7 @@ impl Server {
         let listener = rt.block_on(tokio::net::TcpListener::bind(listen))?;
         let addr = listener.local_addr()?;
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
-        let app = router(App { live, ui_dir, listen: addr });
+        let app = router(App { live, ui_dir, listen: addr, frame: Arc::new(std::sync::Mutex::new(None)) });
         rt.spawn(async move {
             let _ = axum::serve(listener, app)
                 .with_graceful_shutdown(async {
@@ -226,7 +243,7 @@ async fn status(State(app): State<App>) -> Json<Value> {
 }
 
 async fn metrics(State(app): State<App>) -> Json<Value> {
-    Json(metrics_frame(&app.live))
+    Json(cached_frame(&app))
 }
 
 #[derive(Deserialize)]
@@ -267,7 +284,14 @@ fn pending_of(live: &Live) -> Result<&Pending, ApiError> {
 async fn pending_get(State(app): State<App>, Path(id): Path<String>) -> Result<Json<Value>, ApiError> {
     let pending = pending_of(&app.live)?;
     let d = pending.get(&id).map_err(|e| review_error(&app.live, e))?;
-    Ok(Json(json!({ "id": d.id, "source": d.source, "definition": d.definition, "problems": d.problems, "evidence": d.record.evidence, "edited": d.record.edited })))
+    // the evidence is what the engine produced; the time it was produced is review state
+    let mut evidence = serde_json::to_value(&d.record.evidence).unwrap_or(Value::Null);
+    let mut generated = String::new();
+    ulpf_time::format_rfc3339(d.record.created_nanos, &mut generated);
+    if let Some(obj) = evidence.as_object_mut() {
+        obj.insert("generated".into(), Value::String(generated));
+    }
+    Ok(Json(json!({ "id": d.id, "source": d.source, "definition": d.definition, "problems": d.problems, "evidence": evidence, "edited": d.record.edited })))
 }
 
 #[derive(Deserialize)]
@@ -328,6 +352,7 @@ impl Drop for ClientGuard {
 }
 
 struct StreamState {
+    app: App,
     guard: ClientGuard,
     queue: VecDeque<Event>,
     last_id: Option<u64>,
@@ -341,7 +366,7 @@ const TAIL_PER_TICK: usize = 200;
 
 async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     app.live.sse_clients.fetch_add(1, Relaxed);
-    let state = StreamState { guard: ClientGuard(Arc::clone(&app.live)), queue: VecDeque::new(), last_id: None, pending_generation: app.live.pending_generation.load(Relaxed), tick: 0, initial: q.tail.unwrap_or(100).clamp(1, 500) };
+    let state = StreamState { guard: ClientGuard(Arc::clone(&app.live)), queue: VecDeque::new(), last_id: None, pending_generation: app.live.pending_generation.load(Relaxed), tick: 0, initial: q.tail.unwrap_or(100).clamp(1, 500), app };
     let stream = futures_util::stream::unfold(state, |mut st| async move {
         loop {
             if let Some(ev) = st.queue.pop_front() {
@@ -354,7 +379,7 @@ async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<imp
                 let count = live.pending.as_ref().map(|p| p.list().len()).unwrap_or(0);
                 let hello = json!({ "latest_raw_id": frame.latest, "pending_generation": st.pending_generation, "pending_count": count, "tail": tail_json(frame) });
                 st.queue.push_back(event("hello", &hello));
-                st.queue.push_back(event("metrics", &metrics_frame(live)));
+                st.queue.push_back(event("metrics", &cached_frame(&st.app)));
                 st.tick += 1;
                 continue;
             }
@@ -366,7 +391,7 @@ async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<imp
                 st.queue.push_back(event("tail", &tail_json(frame)));
             }
             if st.tick % 2 == 0 {
-                st.queue.push_back(event("metrics", &metrics_frame(live)));
+                st.queue.push_back(event("metrics", &cached_frame(&st.app)));
             }
             let generation = live.pending_generation.load(Relaxed);
             if generation != st.pending_generation {
