@@ -29,7 +29,7 @@ SonicOS 7.1 / Sophos SFOS syslog guides). `ulpf-time` handles every row below.
 5. layouts in this order: `%Y/%m/%d %H:%M:%S`, `%d/%b/%Y:%H:%M:%S %z`, `%d%b%Y %H:%M:%S`, `%Y-%m-%d %H:%M:%S %Z`.
 6. otherwise `no_match`. A syntactic match with an impossible date (Feb 30, hour 24) is `out_of_range`, never retried.
 
-## Policies (each is a `Policies` flag on the result; see DECISIONS.md D5–D8)
+## Policies (each is a `Policies` flag on the result; see DECISIONS.md D8–D12)
 - **year_assumed** — no year: take the year of the receipt time *in the resolved zone*; if the result lands more
   than 7 days after receipt, use the previous year (December logs read in January). A Feb 29 the receipt year
   lacks also falls back to the previous year.

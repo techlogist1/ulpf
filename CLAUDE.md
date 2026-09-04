@@ -118,7 +118,7 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 ## CLI (what exists)
 ```
 ulpf run <files|dirs>... --store DIR --output FILE.jsonl [--parsers parsers] [--mappings mappings]
-         [--tz +05:30] [-j THREADS] [--batch 1024] [--queue 64] [--report-json report.json]
+         [--schema ocsf] [--tz +05:30] [-j THREADS] [--batch 1024] [--queue 64] [--report-json report.json]
 ulpf check                 # load every parser and mapping file, report path:line problems
 ulpf verify --store DIR    # recompute every SHA-256 in the raw store
 ulpf raw <ID> --store DIR  # exact bytes of one raw record (header on stderr)

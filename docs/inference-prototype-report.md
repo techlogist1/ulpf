@@ -102,7 +102,7 @@ dependence); (5) min support 3, with singletons, truncated and non-UTF-8 lines r
 "unmatched" list instead of templates; (6) collapse a trailing run of disagreeing tokens into one
 `{text}` tail slot; (7) treat an int slot in a positional layout as `port` when all values fit.
 
-**Verdict.** As specified it yields correct, typed templates for fixed-layout lines (61-71% of lines
+**Verdict.** As specified it yields correct, typed templates for fixed-layout lines (66-71% of lines
 under usable templates after header stripping) but fragments every optional field into another
 template and merges disposition words at loose thresholds; usable as a candidate generator for a
 human to prune, not as an unattended parser generator.

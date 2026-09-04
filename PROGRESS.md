@@ -16,7 +16,7 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
       earlier 51,641 was the counter firing on resolved timestamps, D36),
       class_unknown 898,670.
 - [x] 2. Every raw event reconstructs byte-identically from the append-only store;
-      proven by a test reading back bytes and digests across all fixtures including
+      proven by a test reading back bytes and digests across all samples including
       multi-line events, non-UTF-8 input, and chunk boundaries mid-event.
 - [x] 3. Parser definition format exists, loaded from a directory at runtime, supports
       delimiter / key-value / structured (JSON, CEF, LEEF) / pattern-with-named-slots,
@@ -25,18 +25,19 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] 4. 12 parser definitions, each with a paired synthetic sample and a reviewed
       fixture: cisco_asa, cisco_ios, fortinet_fortigate, openvpn, palo_alto_panos,
       pfsense_filterlog, check_point, juniper_srx, sonicwall, sophos_xg, squid_access,
-      suricata_eve (189 sample events, all asserted by `cargo test -p ulpf --test fixtures`).
+      suricata_eve (214 sample events, all asserted by `cargo test -p ulpf --test fixtures`).
 - [x] 5. Dedicated timestamp module handles the sample formats (syslog no-year,
       no-timezone) with its own corpus; every policy decision explicit and recorded;
       original string retained on the event.
-- [x] 6. `cargo test --workspace` passes (2026-09-05: 45 tests across 9 binaries, 0
-      failed), `cargo clippy --workspace --all-targets -- -D warnings` clean, Dockerfile
-      static build built and run 2026-09-04 and rebuilt 2026-09-05 with the final 12
-      definitions (ulpf:static, 7.35 MB, scratch base; in-container run over `samples/`
-      processed 212 events, 0 failed files, counters matching the fixtures).
+- [x] 6. `cargo test --workspace` passes (2026-09-05 at 97fee74: 50 tests across 11 test
+      binaries, 0 failed, exit code checked), `cargo clippy --workspace --all-targets -- -D warnings` clean, Dockerfile
+      static build built and run 2026-09-04 and rebuilt 2026-09-05 at 97fee74 with the
+      final 12 definitions and the reviewed engine (ulpf:static, 7.37 MB, scratch base;
+      in-container run over `samples/` processed 236 events, 0 failed files, time_error
+      none, counters matching the fixtures).
 - [x] 7. Throwaway inference prototype run on unseen samples; honest report in docs on
       whether prefix-tree clustering produced usable templates.
-- [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D32, each with an anchor)
+- [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D36, each with an anchor)
       current; every milestone committed and pushed to techlogist1/ulpf main.
 
 ## Environment (Phase 0 findings, 2026-09-04)
