@@ -46,15 +46,31 @@ pub struct Parsed<'a> {
     /// Reason the last present-but-unparseable candidate failed, if any.
     pub timestamp_error: Option<&'static str>,
     pub sub: SubStatus,
+    /// Buffer a multi-field timestamp is joined into; handed out as `timestamp_text` and
+    /// taken back by `clear`, so the join never allocates after the first event.
+    spare: Vec<u8>,
 }
 
 impl<'a> Parsed<'a> {
     pub fn clear(&mut self) {
         self.fields.clear();
         self.timestamp = None;
-        self.timestamp_text = None;
+        if let Some(Cow::Owned(v)) = self.timestamp_text.take() {
+            self.spare = v;
+        }
         self.timestamp_error = None;
         self.sub = SubStatus::NotApplicable;
+    }
+
+    /// The reusable join buffer, empty. Return it through `timestamp_text` or `give_back`.
+    pub(crate) fn take_spare(&mut self) -> Vec<u8> {
+        let mut v = std::mem::take(&mut self.spare);
+        v.clear();
+        v
+    }
+
+    pub(crate) fn give_back(&mut self, v: Vec<u8>) {
+        self.spare = v;
     }
 
     #[inline]

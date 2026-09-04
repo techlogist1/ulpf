@@ -21,8 +21,9 @@ Static container build: `docker build -t ulpf:static .` then
 `docker run --rm -v "$PWD/samples:/data/samples:ro" -v "$PWD/out:/data/out" ulpf:static run /data/samples --store /data/out/store --output /data/out/out.jsonl`.
 
 Throughput file: `cargo run --release -p ulpf --example gen_bench -- 5000000 bench` (see `bench/README.md`).
-Measured 2026-09-05 on an M1 Pro (7 worker threads): 5,000,000 mixed events, 1526 MB, in 22.1 s,
-226k events/s, 69.1 MB/s, raw store with SHA-256 (flushed per batch) and JSON Lines output included.
+Measured 2026-09-05 on an M1 Pro (7 worker threads): 5,000,000 mixed events, 1526 MB, in 21.5 to 23.4 s
+over three runs, 214k to 232k events/s (median 225k, about 69 MB/s), raw store with SHA-256 (flushed
+per batch) and JSON Lines output included; run-to-run variance is about ±10%.
 
 Parser families in v0.1 (`parsers/`): Cisco ASA, Cisco IOS, Fortinet FortiGate, OpenVPN,
 Palo Alto PAN-OS, pfSense filterlog, Check Point Log Exporter, Juniper SRX, SonicWall

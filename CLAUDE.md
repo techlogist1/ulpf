@@ -97,7 +97,10 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
 ## Coding standards
 - Bytes, not strings, on the hot path (`&[u8]`, `regex::bytes`). UTF-8 is a property
   of the output, not the input.
-- No allocation inside per-event parse/detect code paths. Materialise at output.
+- No allocation inside per-event parse/detect code paths. Materialise at output. The
+  documented exceptions: JSON values, a quoted value that needs unescaping, a sub on such a
+  materialised value, and `column_N` names for columns beyond the named ones.
+  `crates/ulpf-parse/tests/alloc.rs` counts allocations and fails on any other.
 - Errors that can be defined out of existence are. What remains is an enum reason
   counted in `Metrics`, never a `panic!`/`unwrap()` on input data.
 - Rust warnings are errors in CI mindset: the build must be clean.

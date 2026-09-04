@@ -12,6 +12,7 @@ use crate::detect::CompiledMatcher;
 use crate::kv::KvConfig;
 use crate::pattern::CompiledPattern;
 use crate::template::Template;
+use crate::structured::StructuredScratch;
 use crate::{Parsed, envelope, structured};
 
 /// Why a strategy produced nothing. Each variant is a counter reason, never a panic.
@@ -109,8 +110,8 @@ impl CompiledStrategy {
                 if text.is_empty() || cfg.apply(text, out) == 0 { Err(ParseFailure::NoColumns) } else { Ok(()) }
             }
             CompiledStrategy::Json => structured::apply_json(text, out),
-            CompiledStrategy::Cef => structured::apply_cef(text, out),
-            CompiledStrategy::Leef => structured::apply_leef(text, out),
+            CompiledStrategy::Cef => structured::apply_cef(text, &mut scratch.structured, out),
+            CompiledStrategy::Leef => structured::apply_leef(text, &mut scratch.structured, out),
             CompiledStrategy::Pattern(list) => {
                 for p in list {
                     if p.apply(text, scratch.locs(p), out) {
@@ -146,13 +147,13 @@ pub struct Parser {
     subs: Vec<CompiledSub>,
 }
 
-/// Per-thread scratch: capture locations per compiled pattern, a join buffer for
-/// multi-field timestamps. Grows on first use, then allocates nothing.
+/// Per-thread scratch: capture locations per compiled pattern, sub-group states, and the
+/// CEF/LEEF position buffers. Grows on first use, then allocates nothing.
 #[derive(Default)]
 pub struct Scratch {
     locs: Vec<Option<CaptureLocations>>,
-    join: Vec<u8>,
     sub_state: Vec<u8>,
+    structured: StructuredScratch,
 }
 
 impl Scratch {
@@ -220,7 +221,7 @@ impl Parser {
         if result.is_ok() && !self.subs.is_empty() {
             out.sub = self.run_subs(scratch, out);
         }
-        self.resolve_timestamp(ctx, scratch, out);
+        self.resolve_timestamp(ctx, out);
         result
     }
 
@@ -292,7 +293,7 @@ impl Parser {
     /// `timestamp_error` is set only when no candidate yields a time: it names the reason
     /// the last present-but-unusable candidate failed, so it never accompanies a resolved
     /// timestamp and the counter means "device time present, unreadable".
-    fn resolve_timestamp<'a>(&self, ctx: &Context, scratch: &mut Scratch, out: &mut Parsed<'a>) {
+    fn resolve_timestamp<'a>(&self, ctx: &Context, out: &mut Parsed<'a>) {
         let mut error = None;
         for t in &self.timestamps {
             if let Some(f) = &t.field {
@@ -306,15 +307,17 @@ impl Parser {
                     Err(e) => error = Some(e.reason()),
                 }
             } else {
-                scratch.join.clear();
+                // The join buffer belongs to `out`: it becomes `timestamp_text` on success
+                // and comes back on the next `clear`, so this allocates once per thread.
+                let mut join = out.take_spare();
                 let mut complete = true;
                 for (i, f) in t.fields.iter().enumerate() {
                     match out.get(f) {
                         Some(v) => {
                             if i > 0 {
-                                scratch.join.push(b' ');
+                                join.push(b' ');
                             }
-                            scratch.join.extend_from_slice(v);
+                            join.extend_from_slice(v);
                         }
                         None => {
                             complete = false;
@@ -323,15 +326,19 @@ impl Parser {
                     }
                 }
                 if !complete {
+                    out.give_back(join);
                     continue;
                 }
-                match ulpf_time::parse(&scratch.join, &t.format, ctx) {
+                match ulpf_time::parse(&join, &t.format, ctx) {
                     Ok(ts) => {
                         out.timestamp = Some(ts);
-                        out.timestamp_text = Some(Cow::Owned(scratch.join.clone()));
+                        out.timestamp_text = Some(Cow::Owned(join));
                         return;
                     }
-                    Err(e) => error = Some(e.reason()),
+                    Err(e) => {
+                        error = Some(e.reason());
+                        out.give_back(join);
+                    }
                 }
             }
         }

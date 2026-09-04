@@ -5,13 +5,16 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 ## Definition of done (each item is checked only after running it)
 - [x] 1. CLI processes a directory of mixed-format logs end to end, writes JSON Lines,
       reports sustained events/sec measured ingest→output on this machine. Measured
-      2026-09-05 on the M1 Pro (8 cores, 7 workers), release build at 2cb3db1, 5,000,000
-      line synthetic mix of all 12 families (1526 MB, `bench/mixed-5000000.log`):
-      226,434 events/s, 69.1 MB/s, 22.1 s wall, SHA-256 + raw store (flushed per batch)
-      + JSON Lines included; `ulpf verify` on the resulting store: 5,000,000 records, 0
-      corrupt. Queue high-water 64/64 with 1,666 measured backpressure blocks, so the
-      workers (parse+normalize+serialize) are the bottleneck, not ingest. Signals on that
-      run: detected 99.0%, no_parser 48,047 (generator-mutated lines), sub_no_match
+      2026-09-05 on the M1 Pro (8 cores, 7 workers), release build of the final engine,
+      5,000,000 line synthetic mix of all 12 families (1526 MB, `bench/mixed-5000000.log`),
+      three consecutive runs on a quiet machine: 214k / 225k / 232k events/s
+      (65–71 MB/s, 21.5–23.4 s wall); a fourth run under load gave 206k and an
+      independent reviewer's clean run 265k, so the honest figure is 225k events/s
+      with about ±10% run-to-run variance. SHA-256 + raw store (flushed per batch) +
+      JSON Lines included; `ulpf verify` on the resulting store: 5,000,000 records, 0
+      corrupt. Queue high-water 64/64 with about 1,650 measured backpressure blocks, so
+      the workers (parse+normalize+serialize) are the bottleneck, not ingest. Signals on
+      that run: detected 99.0%, no_parser 48,047 (generator-mutated lines), sub_no_match
       91,105, sub_uncovered 145,461, time_from_receipt 165,001, time_error 14 (the
       earlier 51,641 was the counter firing on resolved timestamps, D36),
       class_unknown 898,670.
@@ -135,8 +138,12 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
   D33 to D36): store writer lock and two-direction crash recovery, ids flushed before they
   escape, output-failure abort instead of a hang, measured backpressure with a clamped
   high-water, subs on materialised values, repeated source fields kept, `time_error`
-  only when unresolved, class uid range check, D3 anchor. The zero-copy dimension is the
-  next review to run.
+  only when unresolved, class uid range check, D3 anchor. The zero-copy dimension was
+  then run (3 findings, 3 confirmed, 0 refuted) and applied with a counting-allocator
+  test that pins the invariant (D37): multi-field timestamp join no longer cloned, CEF/LEEF
+  position buffers in `Scratch`, JSON flattener moves values. Ten of twelve families
+  measure zero allocations per event after warm-up; JSON and escaped quoted values are the
+  documented exceptions.
 
 ## Tried and abandoned
 - Internally-tagged `Strategy` enum with `#[serde(flatten)]` inside `[[sub]]`: serde cannot combine flatten with deny_unknown_fields; replaced by one flat validated struct (D13).
@@ -144,7 +151,9 @@ families; no shared state. The bench generator touches `crates/ulpf/examples/` o
 
 ## Known limits carried into the next session
 - Throughput ceiling is the worker side: normalization builds a `serde_json::Map` per
-  event. Profile before the server session; the parse path itself allocates nothing.
+  event. Profile before the server session; the parse path allocates nothing for
+  span-valued families (`crates/ulpf-parse/tests/alloc.rs` proves it), JSON and escaped
+  quoted values excepted.
 - `class_unknown` on the bench mix comes from families with no OCSF class for their
   events (IOS config/interface messages, OpenVPN control-channel lines) and from
   generator-mutated lines; not a mapping bug.

@@ -435,3 +435,21 @@ from the invariant review. **Anchor.** `unmapped_insert` and the uid check in
 that fires on correct events is worse than no counter. **Ruled out.** Arrays for repeated
 keys (changes the value type of a field depending on the event, which every consumer then
 has to special-case).
+
+## D37. The zero-copy claim is measured by a counting allocator, and the three per-event allocations it found are gone
+**Decision.** `crates/ulpf-parse/tests/alloc.rs` installs a counting global allocator and
+asserts that, after warm-up, detection and parsing allocate nothing over every sample of
+the ten families whose values are borrowed spans, and nothing for CEF and LEEF. The
+zero-copy dimension of the invariant review found three per-event allocations: the
+multi-field `[[timestamp]]` join buffer was cloned into `timestamp_text` (one Vec per
+Sophos event); CEF and LEEF built fresh position vectors per event; the JSON flattener
+cloned strings it already owned. The join buffer now travels with `Parsed` and comes back
+on `clear`, the CEF/LEEF buffers live in `Scratch`, and the flattener moves values.
+The documented exceptions stand: JSON values, a quoted value with escapes, a sub on a
+materialised value, `column_N` names. **Anchor.** `Parsed::take_spare`/`give_back` in
+`crates/ulpf-parse/src/lib.rs`; `StructuredScratch` in `crates/ulpf-parse/src/structured.rs`;
+`resolve_timestamp` in `crates/ulpf-parse/src/compile.rs`; `crates/ulpf-parse/tests/alloc.rs`.
+**Principle.** A performance invariant that is not measured by a test is a hope; the
+throughput number stays honest only if the hot path stays what the docs say it is.
+**Ruled out.** A streaming JSON flattener (the JSON exception is documented and JSON is a
+minority of the throughput file; revisit if it dominates).
