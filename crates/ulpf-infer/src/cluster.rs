@@ -677,9 +677,12 @@ fn name_slot(cols: &[Col], idx: usize, kind: SlotKind, placed: &Placed) -> (Opti
 /// Names that come from the shape of the line rather than from a key. Runs before the key
 /// rules, so `kernel: [{rule}]` is not named after the syslog tag and an address pair
 /// beats the `from`/`to` rows. Earlier rules win: entries are inserted, never replaced.
+/// The input's own names (a JSON key) come first: they are the device's vocabulary
+/// verbatim, so no heuristic, not even the slot's type, outranks them.
 fn positional(cols: &[Col], kinds: &[Option<SlotKind>]) -> Placed {
     let slots: Vec<usize> = (0..cols.len()).filter(|i| kinds[*i].is_some()).collect();
     let mut out: Placed = BTreeMap::new();
+    json_keys(cols, kinds, &mut out);
     ncsa_combined(cols, &slots, kinds, &mut out);
     address_pair(cols, &slots, kinds, &mut out);
     by_column(cols, kinds, &mut out);
@@ -697,6 +700,42 @@ fn place(out: &mut Placed, idx: usize, name: &str, reason: &str) {
 
 fn leave_generic(out: &mut Placed, idx: usize, reason: &str) {
     out.entry(idx).or_insert_with(|| (None, reason.to_string()));
+}
+
+/// `"key":{value}` in a JSON object (the tokenizer keeps such a key as a constant word):
+/// the key is the device's own name for the value. A nested object names by its innermost
+/// key (the path is not tracked, the reason says so); an array's elements take the array's key.
+fn json_keys(cols: &[Col], kinds: &[Option<SlotKind>], out: &mut Placed) {
+    let punct = |i: usize, t: &[u8]| cols.get(i).is_some_and(|c| !c.is_slot() && c.kind == Kind::Punct && c.text == t);
+    let mut depth = 0usize;
+    for (idx, kind) in kinds.iter().enumerate() {
+        depth = depth.saturating_add(usize::from(punct(idx, b"{"))).saturating_sub(usize::from(punct(idx, b"}")));
+        if kind.is_none() {
+            continue;
+        }
+        let element = idx >= 1 && punct(idx - 1, b"[");
+        let colon = idx - usize::from(element);
+        if colon < 2 || !punct(colon - 1, b":") {
+            continue;
+        }
+        let k = &cols[colon - 2];
+        if k.is_slot() || k.kind != Kind::Word || k.text.len() < 3 || k.text[0] != b'"' || k.text[k.text.len() - 1] != b'"' {
+            continue;
+        }
+        let key = lossy(&k.text[1..k.text.len() - 1]);
+        let name = sanitize(&key);
+        let mut reason = format!("json key `{key}`");
+        if element {
+            reason.push_str(" (first array element)");
+        }
+        if depth > 1 {
+            reason.push_str(" (innermost key of a nested object)");
+        }
+        if name != key {
+            reason.push_str(&format!(" (written `{name}`)"));
+        }
+        place(out, idx, &name, &reason);
+    }
 }
 
 /// `%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"`: the field order is the

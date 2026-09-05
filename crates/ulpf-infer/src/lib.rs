@@ -530,8 +530,14 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     let patterns: Vec<String> = templates.iter().filter(|t| in_definition(t)).map(|t| t.pattern.clone()).collect();
     let tpl_refs: Vec<&Template> = candidates.iter().map(|c| &c.template).collect();
     let matcher = matcher(&toks, &tpl_refs, &mut decisions);
-    // only a pattern that reaches the definition can produce the field the spec names
-    let has_ts = patterns.iter().any(|p| p.contains(":timestamp}"));
+    // only a pattern that reaches the definition can produce the field a spec names; the
+    // slot carries the device's name when the input had one (`ts`), else `timestamp`
+    let mut ts_fields: Vec<String> = Vec::new();
+    for s in templates.iter().filter(|t| in_definition(t)).flat_map(|t| &t.slots).filter(|s| s.kind == "timestamp") {
+        if !ts_fields.contains(&s.name) {
+            ts_fields.push(s.name.clone());
+        }
+    }
     let name = format!("{}_inferred", slug(source));
     let definition = ParserDefinition {
         parser: Meta {
@@ -545,7 +551,7 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
         matcher,
         envelope: Envelope { syslog },
         strategy: Strategy { kind: StrategyKind::Pattern, patterns, ..Default::default() },
-        timestamp: if has_ts && !syslog { vec![TimestampSpec { field: Some("timestamp".into()), fields: vec![], format: "auto".into() }] } else { vec![] },
+        timestamp: if syslog { vec![] } else { ts_fields.into_iter().map(|f| TimestampSpec { field: Some(f), fields: vec![], format: "auto".into() }).collect() },
         sub: vec![],
     };
     let fingerprint = fnv(&definition.strategy.patterns);
@@ -984,6 +990,33 @@ mod tests {
         named(&s, "dst_port", "port", "names the pair src/dst");
         generic(&s, "ip1", "a second address pair on the line");
         generic(&s, "port1", "a second address pair on the line");
+    }
+
+    #[test]
+    fn json_object_keys_name_their_values() {
+        let text = r#"{"ts":1788598139.619101,"uid":"CDs4H012T73KDmsDq1","id.orig_h":"192.168.148.3","id.orig_p":51988,"proto":"tcp","answers":["192.168.148.2"],"TTLs":[600.0]}
+{"ts":1788598139.641962,"uid":"C1XoL82mvHNDJCIEC4","id.orig_h":"192.168.148.4","id.orig_p":51992,"proto":"udp","answers":["192.168.148.5"],"TTLs":[300.0]}
+{"ts":1788598139.663136,"uid":"CBpkuR3uSbM9CVfaXj","id.orig_h":"192.168.148.5","id.orig_p":52008,"proto":"tcp","answers":["192.168.148.7"],"TTLs":[600.0]}
+{"ts":1788598139.676846,"uid":"CRLsyU1FtJtCOYVhzh","id.orig_h":"192.168.148.6","id.orig_p":52024,"proto":"udp","answers":["192.168.148.9"],"TTLs":[60.0]}
+"#;
+        let s = slots(text);
+        named(&s, "ts", "timestamp", "json key `ts`");
+        named(&s, "uid", "quoted", "json key `uid`");
+        named(&s, "id_orig_h", "quoted", "json key `id.orig_h` (written `id_orig_h`)");
+        named(&s, "id_orig_p", "int", "json key `id.orig_p`");
+        named(&s, "proto", "quoted", "json key `proto`");
+        named(&s, "answers", "quoted", "json key `answers` (first array element)");
+        named(&s, "TTLs", "float", "json key `TTLs`");
+        assert!(s.iter().all(|s| s.2), "every slot of a JSON object is named by its key: {s:#?}");
+        let nested = slots("{\"id\":{\"orig_h\":\"10.0.0.1\"},\"n\":1}\n{\"id\":{\"orig_h\":\"10.0.0.2\"},\"n\":2}\n{\"id\":{\"orig_h\":\"10.0.0.3\"},\"n\":3}\n");
+        named(&nested, "orig_h", "quoted", "json key `orig_h` (innermost key of a nested object)");
+        named(&nested, "n", "int", "json key `n`");
+        let p = infer("conn.log", &lines(text), &Params::default());
+        assert!(p.evidence.templates[0].pattern.starts_with(r#"{{"ts":{ts:timestamp},"uid":{uid:quoted},"id.orig_h":{id_orig_h:quoted}"#), "{}", p.evidence.templates[0].pattern);
+        assert_eq!(p.definition.timestamp.len(), 1);
+        assert_eq!(p.definition.timestamp[0].field.as_deref(), Some("ts"));
+        let toml = toml::to_string(&p.definition).unwrap();
+        ulpf_parse::load_str(std::path::Path::new("gen.toml"), &toml).unwrap();
     }
 
     #[test]

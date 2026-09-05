@@ -86,6 +86,8 @@ fn strict(kind: SlotKind, text: &[u8], rest: &[u8]) -> bool {
 /// Splits a line body (terminators already removed) into tokens.
 pub fn tokenize(body: &[u8]) -> Vec<Tok<'_>> {
     let mut out = Vec::new();
+    // a JSON object's keys are its schema: `"key":` is a constant, only the value varies
+    let json = body.first() == Some(&b'{');
     let mut i = 0;
     while i < body.len() {
         let b = body[i];
@@ -119,7 +121,8 @@ pub fn tokenize(body: &[u8]) -> Vec<Tok<'_>> {
         if b == b'"'
             && let Some(end) = quoted_end(body, i)
         {
-            out.push(Tok { kind: Kind::Quoted, text: &body[i..end] });
+            let kind = if json && body.get(end) == Some(&b':') { Kind::Word } else { Kind::Quoted };
+            out.push(Tok { kind, text: &body[i..end] });
             i = end;
             continue;
         }
@@ -317,5 +320,17 @@ mod tests {
         assert_eq!(t[0], (Kind::Atom(SlotKind::Timestamp), "Thu Sep  4 10:15:23 2026"));
         let t = kinds("msg=\"unterminated");
         assert!(t.contains(&(Kind::Punct, "\"")));
+    }
+
+    #[test]
+    fn json_keys_are_constants_and_json_values_stay_quoted() {
+        let t = kinds(r#"{"ts":1.5,"id.orig_h":"10.0.0.1","q":"a:b"}"#);
+        assert!(t.contains(&(Kind::Word, "\"ts\"")));
+        assert!(t.contains(&(Kind::Word, "\"id.orig_h\"")));
+        assert!(t.contains(&(Kind::Quoted, "\"10.0.0.1\"")));
+        assert!(t.contains(&(Kind::Quoted, "\"a:b\"")), "{t:?}");
+        // outside a JSON object a quoted string before a colon is still a value
+        let t = kinds(r#"x "ts":1"#);
+        assert!(t.contains(&(Kind::Quoted, "\"ts\"")));
     }
 }
