@@ -179,6 +179,29 @@ enum Cmd {
         #[arg(long)]
         schema: Option<String>,
     },
+    /// Play the demo of PROGRESS.md: existing subcommands, the watch directory and the API only.
+    Demo {
+        /// Fixed pauses instead of waiting for Enter, then stop and reset.
+        #[arg(long)]
+        auto: bool,
+        /// Check the inputs, the ports and that every title and command still matches PROGRESS.md; start nothing.
+        #[arg(long)]
+        check: bool,
+        /// Stop a leftover demo server and remove the demo directory.
+        #[arg(long)]
+        reset: bool,
+        /// Scratch directory the demo owns (removed before and after; the server's parsers and pending live here).
+        #[arg(long, default_value = "demo")]
+        dir: PathBuf,
+        #[arg(long, default_value = "127.0.0.1:7878")]
+        listen: SocketAddr,
+        /// Syslog address the demo's server listens on, UDP and TCP.
+        #[arg(long, default_value = "127.0.0.1:5514")]
+        syslog: SocketAddr,
+        /// Repository root: samples/, heldout/, parsers/, mappings/ and PROGRESS.md come from here.
+        #[arg(long, default_value = ".")]
+        repo: PathBuf,
+    },
     /// Emit fixture skeleton lines for a sample file (review each line before committing).
     Fixture {
         sample: PathBuf,
@@ -541,6 +564,13 @@ pub fn main() -> Result<()> {
             let mut out = std::io::stdout().lock();
             for e in &page.events {
                 writeln!(out, "{}", serde_json::to_string(&e.line)?)?;
+            }
+            Ok(())
+        }
+        Cmd::Demo { auto, check, reset, dir, listen, syslog, repo } => {
+            let code = crate::demo::main(crate::demo::Args { auto, check, reset, dir, listen, syslog, repo })?;
+            if code != 0 {
+                std::process::exit(code);
             }
             Ok(())
         }
