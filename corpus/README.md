@@ -34,7 +34,7 @@ ulpf run corpus/<path> --store <scratch> --output <scratch>/x.jsonl --infer-thre
 | `fortinet_fortigate/fortigate_sample_sva_s1.log` | Fortinet FortiGate 7.x | real-capture | 1 | MIT (sva-s1/sentinelone-syslog-toolkit) | `fortinet_fortigate` | 1 parsed |
 | `fortinet_fortigate/fortigate_forum_quotes.log` | Fortinet FortiGate (1 × 7.x, 3 × pre-5.0) | sanitized-real | 4 | mailing-list / forum quotes, redacted by their posters | `fortinet_fortigate` | 4 parsed (was 3 no_parser before the legacy `log_id=` matcher fix) |
 | `juniper_srx/juniper_srx.log` | Juniper SRX (Junos) | generated | 284 | MIT (Azure/Azure-Sentinel sample data) | `juniper_srx` (282), none (2 sshd) | 282 parsed but **282 sub_uncovered** — see note below |
-| `openvpn/azuresentinel_openvpn_syslog.log` | OpenVPN 2.x via syslog | sanitized-real | 32 | MIT (Azure/Azure-Sentinel) | `openvpn` | 32 parsed, 26 sub_matched, 6 sub_no_match |
+| `openvpn/azuresentinel_openvpn_syslog.log` | OpenVPN 2.x via syslog | sanitized-real | 32 | MIT (Azure/Azure-Sentinel) | `openvpn` | 32 parsed, 28 sub_matched, 4 sub_no_match |
 | `openvpn/dfir_gemini_openvpn_syslog.log` | OpenVPN 2.x via syslog | real-capture | 5 | MIT (AndrewRathbun/DFIRArtifactMuseum) | `openvpn` | 6 parsed, 2 sub_matched, 4 sub_no_match |
 | `palo_alto_panos/palo_alto_panos.log` | Palo Alto PAN-OS (VM-Series) | sanitized-real | 50 | Apache-2.0 (chronosphereio/processing-templates) | `palo_alto_panos` | 50 parsed, 50 sub_matched |
 | `pfsense_filterlog/pfsense_filterlog.log` | Netgate pfSense / OPNsense | real-capture | 30 | MIT (crowdsecurity/hub), Apache-2.0 (splunk/splunk-connect-for-syslog) | `pfsense_filterlog` | 30 parsed, 30 sub_matched |
@@ -52,6 +52,11 @@ directory's `setup/` reproduces it. No third-party licence applies.
 
 | file | tool / product | kind | lines | covered by | counters |
 |---|---|---|---|---|---|
+| `openvpn/server.log` | OpenVPN 2.6.14 server, `--log-append` | generated | 3937 | `openvpn` | 3937 parsed, 3146 sub_matched, 791 sub_no_match (was **3937 no_parser** before the ISO 8601 file-log fix) |
+| `openvpn/client.log` | OpenVPN 2.6.14 clients (4 variants concatenated) | generated | 7329 | `openvpn` | 7329 parsed, 1940 sub_matched, 5389 sub_no_match (was **7329 no_parser**) |
+| `openvpn/server-2.5.log` | OpenVPN 2.5.1 server, `--log-append` | generated | 565 | `openvpn` | 565 parsed, 457 sub_matched, 108 sub_no_match (was **565 no_parser**) |
+| `openvpn/server-2.4-ctime.log` | OpenVPN 2.4.12 server, `--log-append` (ctime prefix) | generated | 674 | `openvpn` | 674 parsed, 613 sub_matched, 61 sub_no_match |
+| `openvpn/server-syslog.log` | OpenVPN 2.6.14 server, `--syslog` + rsyslog RFC 3164 | generated | 1044 | `openvpn` (1043), none (1 rsyslogd) | 1043 parsed, 825 sub_matched, 218 sub_no_match |
 | `squid/access.log` | Squid 6.13 (`docker.io/ubuntu/squid`) | generated | 16500 | `squid_access` | 16500 parsed, 16500 sub_matched |
 | `squid/cache.log` | Squid 6.13 cache log | generated | 19774 | none | 19774 no_parser (a different format from `access.log`; no parser family) |
 | `suricata/eve.json` | Suricata 8.0.6 (`jasonish/suricata`) | generated | 2924 | `suricata_eve` | 2924 parsed |
@@ -84,11 +89,21 @@ lines are correctly `no_parser` — they are a Unix daemon's messages that happe
 share the SRX's syslog stream, exactly the mixed-source mess the review workflow exists
 for.
 
-**`openvpn/*` — 10 sub_no_match.** OpenVPN's `[[sub]]` list is ungated (there is no
-message id to gate on), so a message body no sub models is reported as `sub_no_match`
-rather than `sub_uncovered` — the designed prompt to write the next pattern. The
-unmodelled bodies here are `MULTI: multi_create_instance called`, `Re-using SSL/TLS
-context`, `Control Channel MTU parms [...]`, `send_push_reply(): route …` and the
-`link-mtu` inconsistency warning. Left unmodelled rather than pattern-matched from the
-sample: each needs its string checked against the OpenVPN source before a sub is
-committed.
+**`openvpn/*` — sub_no_match is the designed signal, not a defect.** OpenVPN's `[[sub]]`
+list is ungated (there is no message id to gate on), so a message body no sub models is
+reported as `sub_no_match` rather than `sub_uncovered` — the prompt to write the next
+pattern. Every line still parses: the timestamp, the peer prefix (`ip:port`,
+`cn/ip:port`, `ip:port [cn]`) and the message body are extracted whatever the body says.
+
+Four subs were added from the OpenVPN source rather than from these files — 2.6's
+`Data Channel: cipher '%s'[, auth '%s'][, peer-id: %d]` summary line (`init.c`, the
+replacement for 2.5's `Outgoing Data Channel: Cipher … initialized`), `print_details()`'s
+`Control Channel: …` line (`ssl_openssl.c`), the duplicate-CN warning (`multi.c`) and the
+HMAC failure (`crypto.c`) — which is what took `server.log` from 1299 to 791.
+
+What is left unmodelled is mostly the *client* vocabulary (`client.log` is 7329 lines of
+one) and verb-3 diagnostics: `UDPv4 link remote:`, `Socket Buffers:`, `Timers:`,
+`Protocol options:`, `OPTIONS IMPORT:`, `net_iface_up:`, `TLS: move_session:`,
+`VERIFY KU OK`, `Restart pause`, `event_wait :`. Modelling a client role is a separate
+piece of work from the perimeter-device families this repo ships, and each string still
+needs checking against the source before a sub is committed.

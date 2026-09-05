@@ -32,3 +32,13 @@ May 11 08:42:15 vpn-gw1 ovpn-server[1105]: MULTI: multi_create_instance called
 May 11 08:42:16 vpn-gw1 ovpn-server[1105]: 185.11.22.33:49152 [jsmith_contractor] Peer Connection Initiated with [AF_INET]185.11.22.33:49152
 May 11 08:42:16 vpn-gw1 ovpn-server[1105]: jsmith_contractor/185.11.22.33:49152 MULTI_sva: pool returned IPv4=10.0.8.55, IPv6=(Not enabled)
 May 11 08:42:15 vpn-gw1 ovpn-server[1105]: 185.11.22.33:49152 Re-using SSL/TLS context
+2026-09-05 09:56:38 OpenVPN 2.6.14 aarch64-unknown-linux-gnu [SSL (OpenSSL)] [LZO] [LZ4] [EPOLL] [PKCS11] [MH/PKTINFO] [AEAD] [DCO]
+2026-09-05 09:56:41 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 09:56:42 192.168.117.6:56462 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 09:56:42 192.168.117.6:56462 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+2026-09-05 09:56:42 192.168.117.6:56462 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:56462
+2026-09-05 09:56:43 jdoe/192.168.117.6:56462 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+2026-09-05 09:56:45 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:10 OpenVPN 2.5.1 aarch64-unknown-linux-gnu [SSL (OpenSSL)] [LZO] [LZ4] [EPOLL] [PKCS11] [MH/PKTINFO] [AEAD] built on Jul  3 2026
+2026-09-05 10:10:12 192.168.117.3:53560 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:10:13 jdoe/192.168.117.6:55765 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
