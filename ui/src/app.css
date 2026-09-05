@@ -388,3 +388,14 @@ details summary { cursor: pointer; color: var(--fg-2); font-size: var(--t0); }
 .keymap dl { display: grid; grid-template-columns: 7em 1fr; gap: var(--s1) var(--s4); margin: 0; font-size: var(--t0); }
 .keymap dt { font-family: var(--mono); color: var(--fg); }
 .keymap dd { margin: 0; color: var(--fg-1); }
+
+/* ---- v4: flags, filter, export ---- */
+/* Trust flags: one warn-outlined mono mark per stage that did not reach its outcome, packed
+   into a 7em column of the tail. Never a score, so never a scale of colours. */
+.flags { display: flex; gap: var(--s1); align-items: center; overflow: hidden; }
+.flags .tag { padding: 0 3px; }
+/* The export choice: two segmented controls, what will be written, and the link. It writes
+   nothing, so it is not a confirmation and has no Confirm.svelte. */
+.export { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; background: var(--bg-1); border: 1px solid var(--line); padding: var(--s3) var(--s4); margin-bottom: var(--s3); font-size: var(--t0); }
+.export .push { margin-left: auto; }
+.export a.btn { text-decoration: none; }

@@ -3,6 +3,7 @@
   import { fmt } from './api.js'
   import { keys, nav } from './keys.js'
   import VList from './VList.svelte'
+  import Flags from './Flags.svelte'
 
   const m = $derived(live.metrics)
   const e = $derived(live.metrics?.engine ?? {})
@@ -41,14 +42,61 @@
   let filter = $state('')
   let box = $state(null)
   let innerHeight = $state(800)
-  const match = (r) => {
-    const q = filter.trim().toLowerCase()
-    return !q || `${r.raw_id} ${r.parser ?? r.status} ${r.cls} ${r.action} ${r.device} ${r.sum}`.toLowerCase().includes(q)
-  }
-  const rows = $derived(filter.trim() ? live.tail.filter(match) : live.tail)
-  $effect(() => { filter; sel = -1 })
+  let flaggedOnly = $state(false)
+  // Space-separated terms, every one a case-insensitive substring of the whole line: the rule
+  // docs/api.md gives the export route, so the export of a filtered view is the view.
+  const terms = $derived(filter.trim().toLowerCase().split(/\s+/).filter(Boolean))
+  const rows = $derived.by(() => {
+    let r = live.tail
+    if (flaggedOnly) r = r.filter((x) => x.flags.length)
+    if (terms.length) r = r.filter((x) => terms.every((t) => x.text.includes(t)))
+    return r
+  })
+  const flagged = $derived(live.tail.reduce((a, r) => a + (r.flags.length ? 1 : 0), 0))
+  const countNote = $derived(
+    terms.length && flaggedOnly
+      ? `${fmt.n(rows.length)} of ${fmt.n(live.tail.length)} flagged and matching`
+      : terms.length
+        ? `${fmt.n(rows.length)} of ${fmt.n(live.tail.length)}`
+        : flaggedOnly
+          ? `${fmt.n(rows.length)} flagged of ${fmt.n(live.tail.length)}`
+          : `${fmt.n(rows.length)}`,
+  )
+  $effect(() => { filter; flaggedOnly; sel = -1 })
+
+  // Export: the output file as the sink wrote it, over this view's raw id range or all of it,
+  // with the filter's terms so the file is the rows on screen. It writes nothing, so no
+  // confirmation; the anchor carries download, the server names the file.
+  let exportOpen = $state(false)
+  let format = $state('jsonl')
+  let whole = $state(false)
+  let dl = $state(null)
+  const span = $derived.by(() => {
+    if (whole || !rows.length) return null
+    let from = rows[0].raw_id, to = rows[0].raw_id
+    for (const r of rows) { if (r.raw_id < from) from = r.raw_id; if (r.raw_id > to) to = r.raw_id }
+    return { from, to }
+  })
+  const exportUrl = $derived.by(() => {
+    const p = new URLSearchParams({ format })
+    if (span) { p.set('from', span.from); p.set('to', span.to) }
+    if (terms.length) p.set('q', terms.join(' '))
+    return `/api/export?${p}`
+  })
+  const exportNote = $derived(
+    [
+      span ? `raw ids ${fmt.n(span.from)} to ${fmt.n(span.to)}` : 'every line in the output file',
+      terms.length ? `lines carrying ${terms.join(' and ')}` : null,
+      flaggedOnly ? 'flagged-only is a filter of this screen; the export route filters on terms, not flags' : null,
+    ].filter(Boolean).join(', '),
+  )
+
   $effect(() => keys((ev) => {
     if (ev.key === '/') { box?.focus(); box?.select(); return true }
+    if (ev.key === 'f') { flaggedOnly = !flaggedOnly; return true }
+    if (ev.key === 'e') { exportOpen = !exportOpen; return true }
+    if (exportOpen && ev.key === 'Enter') { dl?.click(); exportOpen = false; return true }
+    if (exportOpen && ev.key === 'Escape') { exportOpen = false; return true }
     if (ev.key === ' ') { live.paused ? resume() : (live.paused = true); return true }
     const was = sel
     const hit = nav(ev, rows.length, sel, (n) => (sel = n), (n) => (location.hash = `#/trace/${rows[n].raw_id}`))
@@ -93,23 +141,39 @@
 <section>
   <div class="head">
     <h2>Tail</h2>
-    <span class="note">newest first, {filter.trim() ? `${fmt.n(rows.length)} of ${fmt.n(live.tail.length)}` : `${fmt.n(rows.length)}`} rows, click or Enter traces the event</span>
+    <span class="note">newest first, {countNote} rows, click or Enter traces the event</span>
     <span class="push bar">
-      <input type="search" bind:value={filter} bind:this={box} onkeydown={(ev) => { if (ev.key === 'Escape') { filter = ''; ev.currentTarget.blur() } }} placeholder="filter the tail  /" size="24" aria-label="Filter the tail" />
+      <input type="search" bind:value={filter} bind:this={box} onkeydown={(ev) => { if (ev.key === 'Escape') { filter = ''; ev.currentTarget.blur() } }} placeholder="filter every field  /" size="24" aria-label="Filter the tail" />
+      <button class="btn" class:on={flaggedOnly} onclick={() => (flaggedOnly = !flaggedOnly)} aria-pressed={flaggedOnly} title="only the events with at least one flag">Flagged<kbd>f</kbd></button>
+      <button class="btn" class:on={exportOpen} onclick={() => (exportOpen = !exportOpen)} aria-expanded={exportOpen}>Export<kbd>e</kbd></button>
       {#if live.paused}<span class="tag warn">held, {fmt.n(live.held)} arrived</span>{/if}
       <button class="btn" class:on={live.paused} onclick={() => (live.paused ? resume() : (live.paused = true))}>{live.paused ? 'Release' : 'Hold'}<kbd>space</kbd></button>
     </span>
   </div>
+  {#if exportOpen}
+    <div class="export">
+      <span class="kinds">
+        <button class:on={format === 'jsonl'} onclick={() => (format = 'jsonl')} aria-pressed={format === 'jsonl'}>jsonl</button>
+        <button class:on={format === 'csv'} onclick={() => (format = 'csv')} aria-pressed={format === 'csv'}>csv</button>
+      </span>
+      <span class="kinds">
+        <button class:on={!whole} onclick={() => (whole = false)} aria-pressed={!whole}>this view</button>
+        <button class:on={whole} onclick={() => (whole = true)} aria-pressed={whole}>everything</button>
+      </span>
+      <span class="muted sm">{exportNote}</span>
+      <a class="btn primary push" href={exportUrl} bind:this={dl} download target="_blank" rel="noopener" onclick={() => (exportOpen = false)}>Download<kbd>Enter</kbd></a>
+    </div>
+  {/if}
   {#if !rows.length}
     <div class="empty">
-      <b>{filter.trim() ? `Nothing in the tail matches ${filter.trim()}.` : 'No events yet.'}</b>
-      <span>{filter.trim() ? 'Esc clears the filter.' : 'The tail fills the moment the engine emits: drop a file into a watched directory or send syslog to the listener in the status line.'}</span>
+      <b>{terms.length ? `Nothing in the tail matches ${terms.join(' ')}.` : flaggedOnly ? `Nothing in the tail is flagged: all ${fmt.n(live.tail.length)} events reached every stage.` : 'No events yet.'}</b>
+      <span>{terms.length ? 'Esc clears the filter.' : flaggedOnly ? 'f shows every event again.' : 'The tail fills the moment the engine emits: drop a file into a watched directory or send syslog to the listener in the status line.'}</span>
     </div>
   {:else}
-    <div class="tail" style="--cols:6em 11em 13em 12em 6em 14em minmax(0,1fr)">
+    <div class="tail" style="--cols:6em 11em 13em 12em 6em 14em 7em minmax(0,1fr)">
       <VList items={rows} max={Math.max(330, innerHeight - 420)} {sel}>
         {#snippet header()}
-          <div class="vh"><span class="num">raw</span><span>time</span><span>parser</span><span>class</span><span>action</span><span>device</span><span>summary</span></div>
+          <div class="vh"><span class="num">raw</span><span>time</span><span>parser</span><span>class</span><span>action</span><span>device</span><span title="the stages that did not reach their outcome; hover a mark for the flag">flags</span><span>summary</span></div>
         {/snippet}
         {#snippet row(r, i)}
           <div class="vr" class:sel={i === sel} onclick={() => (location.hash = `#/trace/${r.raw_id}`)} role="button" tabindex="-1">
@@ -119,6 +183,7 @@
             <span>{r.cls}</span>
             <span class:is-warn={deny(r.action)}>{r.action}</span>
             <span class="mono is-dim">{r.device}</span>
+            <Flags flags={r.flags} />
             <span class="mono" title={r.sum}>{r.sum}</span>
           </div>
         {/snippet}

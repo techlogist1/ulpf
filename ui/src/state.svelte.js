@@ -1,11 +1,34 @@
 import { fmt, leaf, summarize } from './api.js'
 
-// A tail row is flattened the moment it arrives: seven strings, never the nested event.
+// Trust flags (docs/api.md, "Trust flags"): the stages that did not reach their outcome for
+// this event, read from the fields the emitted line already carries. Nothing is computed on
+// the engine's hot path for this and nothing is a probability: summing one flag over the
+// output equals the counter block's counter of the same name.
+export function flagsOf(l) {
+  const u = l?.ulpf ?? {}
+  const f = []
+  if (u.parse_status === 'no_parser') f.push('no_parser')
+  else if (u.parse_status && u.parse_status !== 'parsed') f.push(`parse_failed:${u.parse_status}`)
+  if (u.sub_status === 'uncovered') f.push('sub_uncovered')
+  if (u.sub_status === 'no_match') f.push('sub_no_match')
+  if (Array.isArray(u.time_policies) && u.time_policies.includes('receipt_fallback')) f.push('time_from_receipt')
+  if (u.time_error) f.push(`time_error:${u.time_error}`)
+  if (l?.class_uid === 0) f.push('class_unknown')
+  const n = l?.unmapped ? Object.keys(l.unmapped).length : 0
+  if (n) f.push(`unmapped:${n}`)
+  if (u.utf8_lossy === true) f.push('utf8_lossy')
+  return f
+}
+
+// A tail row is flattened the moment it arrives: nine strings, never the nested event.
 // Keeping the whole normalized object in reactive state would proxy every nested field of
-// every row on every frame, which is what locks a browser at full rate.
+// every row on every frame, which is what locks a browser at full rate. `text` is the whole
+// line once, lowercased, so the filter is a substring test per term and not a walk per field.
 export function row(ev) {
   const l = ev.line
   return {
+    flags: flagsOf(l),
+    text: JSON.stringify(l ?? null).toLowerCase(),
     raw_id: ev.raw_id,
     time: fmt.stamp(leaf(l, 'metadata.event_time_rfc3339') ?? l?.time),
     parser: leaf(l, 'ulpf.parser') ?? null,
