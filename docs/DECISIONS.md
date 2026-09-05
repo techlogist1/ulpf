@@ -1415,6 +1415,34 @@ Real captures (no Windows host tonight: the sample's lines 1, 4 and 7 are Micros
 documented examples, the rest built from the same pages); `UserData`-shaped providers
 and `RenderingInfo` are parsed by the general rules but have no family, sub or mapping;
 UTF-16 input. The branch merged after the demo (2026-09-07); the demo did not show it.
+**Fix round (03:47-, three findings, all closed).** (1) The seventh `ParseFailure` variant
+panicked a worker on every `invalid_xml` line: `Metrics.parse_failed` and
+`LocalCounts.parse_failed` in `crates/ulpf/src/metrics.rs` were `[_; 6]` by hand, so the
+index `ALL.position(InvalidXml)` = 6 was out of bounds, and the summary zip would have
+dropped the reason even without the panic. Both arrays are now `[_; ParseFailure::ALL.len()]`,
+so a variant added in the parser crate sizes the counters by construction; the engine test
+`malformed_xml_is_counted_and_emitted_never_a_panic` (`crates/ulpf/tests/e2e.rs`) drives an
+unterminated tag, a stray `<` and a non-UTF-8 value through `run` and asserts
+`parse_failed = [("invalid_xml", 3)]`, four of four emitted. (2) The sibling counter for a
+repeated unnamed element was `n.to_string()` inside the collision loop, N(N-1)/2 allocations
+per event over an unnamed `<Data>` list (a provider without a manifest template renders
+EventData that way, and the family's `[match]` claims it); `push_decimal` formats the
+counter into a stack buffer, and the alloc test's xml case now parses twenty unnamed
+siblings at 0 allocations (`EventData.Data` ... `EventData.Data20`). No new exception was
+needed. (3) `process.pid` was declared `int` in both fragments but the Security-auditing
+`ProcessId` is "[Type = Pointer]: hexadecimal Process ID" (the 4624 page), and `as_int` kept
+the string when `parse::<i64>` failed, so one output file carried `"0x44c"` and `6228` under
+one field. The verifier offered dropping the field from `int` (every pid a string under a
+field both schemas declare integer: fourteen wrong instead of six) or unmapping `ProcessId`
+(loses the decimal Sysmon pids); neither is a canonicalisation. `as_int`
+(`crates/ulpf-normalize/src/mapping.rs`) now reads a `0x`/`0X` prefix as hexadecimal, which
+is the mapping stage's job (a value the vendor rendered in hex is still the integer), and the
+fixture's six logon rows assert `process.pid` 1100, 0, 1016, 444, 0, 1016. The base `int`
+lists (ports, bytes, packets, codes, uids, duration) never carry a `0x` prefix in any sample
+or fixture, and the twelve other families' outputs are byte-identical between main's binary
+and this one. Two files outside the lane's list were touched for these fixes,
+`crates/ulpf/src/metrics.rs` and `crates/ulpf-normalize/src/mapping.rs`; both are a few lines
+and are named here for the merge.
 
 ## D76. The entity index's cost was SQLite's page cache, not the per-value upsert: 64 MiB of cache and one transaction per queue-full
 **Decision.** The pivot writer opens its connection with `PRAGMA cache_size = -65536` (64 MiB,
