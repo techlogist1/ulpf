@@ -266,7 +266,7 @@ fn writer_and_reader_round_trip_and_rebuild_matches_the_live_index() {
     assert!(!top.is_empty());
     let busiest = top[0].value.clone();
     let page = index
-        .query(&PivotQuery { kind: EntityKind::SrcIp, value: busiest.as_bytes(), limit: 200, before: None, after: None, order: Order::Desc })
+        .query(&PivotQuery { kind: EntityKind::SrcIp, value: busiest.as_bytes(), limit: 200, before: None, before_id: None, after: None, after_id: None, order: Order::Desc })
         .unwrap();
     assert_eq!(page.total, top[0].events);
     assert_eq!(page.value, busiest);
@@ -291,7 +291,7 @@ fn writer_and_reader_round_trip_and_rebuild_matches_the_live_index() {
 
     // an unknown value is an empty page, not an error
     let empty = index
-        .query(&PivotQuery { kind: EntityKind::User, value: b"nobody@nowhere", limit: 10, before: None, after: None, order: Order::Desc })
+        .query(&PivotQuery { kind: EntityKind::User, value: b"nobody@nowhere", limit: 10, before: None, before_id: None, after: None, after_id: None, order: Order::Desc })
         .unwrap();
     assert_eq!(empty.total, 0);
     assert!(empty.events.is_empty());
@@ -380,7 +380,7 @@ fn a_million_postings_answer_a_page_in_bounded_time() {
     let index = PivotIndex::open(&output).unwrap();
     let t = std::time::Instant::now();
     let page = index
-        .query(&PivotQuery { kind: EntityKind::SrcIp, value: b"10.1.1.1", limit: 200, before: None, after: None, order: Order::Desc })
+        .query(&PivotQuery { kind: EntityKind::SrcIp, value: b"10.1.1.1", limit: 200, before: None, before_id: None, after: None, after_id: None, order: Order::Desc })
         .unwrap();
     let elapsed = t.elapsed();
     eprintln!("page of {} of {} events, related_over {}, in {:.3} s", page.events.len(), page.total, page.related_over, elapsed.as_secs_f64());

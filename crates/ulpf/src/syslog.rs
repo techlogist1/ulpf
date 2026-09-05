@@ -40,7 +40,7 @@ struct PeerBuf {
 
 impl PeerBuf {
     fn new(name: String) -> PeerBuf {
-        PeerBuf { buf: Vec::with_capacity(FLUSH_BYTES / 4), ranges: Vec::with_capacity(FLUSH_EVENTS), receipts: Vec::with_capacity(FLUSH_EVENTS), first_at: Instant::now(), source_id: None, name }
+        PeerBuf { buf: Vec::new(), ranges: Vec::new(), receipts: Vec::new(), first_at: Instant::now(), source_id: None, name }
     }
 
     fn push(&mut self, bytes: &[u8]) {
@@ -87,9 +87,9 @@ impl PeerBuf {
         live.metrics.framed.fetch_add(count, Relaxed);
         live.metrics.stored.fetch_add(count, Relaxed);
         live.metrics.bytes.fetch_add(bytes, Relaxed);
-        let buf = std::mem::replace(&mut self.buf, Vec::with_capacity(FLUSH_BYTES / 4));
-        let ranges = std::mem::replace(&mut self.ranges, Vec::with_capacity(FLUSH_EVENTS));
-        let receipts = std::mem::replace(&mut self.receipts, Vec::with_capacity(FLUSH_EVENTS));
+        let buf = std::mem::take(&mut self.buf);
+        let ranges = std::mem::take(&mut self.ranges);
+        let receipts = std::mem::take(&mut self.receipts);
         let ctx = Arc::new(FileCtx { backing: Backing::Owned(buf), name: self.name.clone(), names: HashMap::new() });
         send_batch(tx, &live.metrics, in_flight, live.queue_cap, seq, &ctx, 0, first, ranges, receipts)
     }
@@ -141,7 +141,7 @@ pub(crate) fn udp_listener(live: &Arc<Live>, addr: SocketAddr, tx: SyncSender<Ba
                 let pb = peers.entry(ip).or_insert_with(|| PeerBuf::new(format!("udp/{ip}")));
                 pb.push(&buf[..n]);
                 if pb.due() {
-                    pb.flush(live, &tx, in_flight)?;
+                    flush_or_stop(pb, live, &tx, in_flight, "udp")?;
                 }
             }
             Err(e) if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut | ErrorKind::Interrupted) => {}
@@ -152,14 +152,31 @@ pub(crate) fn udp_listener(live: &Arc<Live>, addr: SocketAddr, tx: SyncSender<Ba
         }
         for pb in peers.values_mut() {
             if pb.due() {
-                pb.flush(live, &tx, in_flight)?;
+                flush_or_stop(pb, live, &tx, in_flight, "udp")?;
             }
         }
+        // a peer with nothing buffered and nothing for a minute costs a map entry: drop it
+        // (its store source and stats stay; it is re-resolved when it speaks again)
+        peers.retain(|_, pb| !pb.ranges.is_empty() || pb.first_at.elapsed() < Duration::from_secs(60));
     }
     for pb in peers.values_mut() {
-        pb.flush(live, &tx, in_flight)?;
+        flush_or_stop(pb, live, &tx, in_flight, "udp")?;
     }
     Ok(())
+}
+
+/// A flush that fails means the store or the queue is gone; that ends the run loudly
+/// (D34), counted, rather than leaving a listener that silently stops receiving.
+fn flush_or_stop(pb: &mut PeerBuf, live: &Live, tx: &SyncSender<Batch>, in_flight: &AtomicI64, which: &str) -> Result<()> {
+    match pb.flush(live, tx, in_flight) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            live.metrics.syslog_errors.fetch_add(1, Relaxed);
+            eprintln!("ulpf: syslog {which} {}: {e:#}; stopping", pb.name);
+            live.stop();
+            Err(e)
+        }
+    }
 }
 
 /// The TCP acceptor thread: one thread per connection, capped; connections beyond the
@@ -240,7 +257,7 @@ fn tcp_connection(live: &Arc<Live>, mut stream: TcpStream, peer: SocketAddr, tx:
             }
         }
         if pb.due() {
-            pb.flush(live, tx, in_flight)?;
+            flush_or_stop(&mut pb, live, tx, in_flight, "tcp")?;
         }
     }
     if !pending.is_empty() {

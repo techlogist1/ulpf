@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use ulpf_parse::def::{Envelope, Matcher, Meta, ParserDefinition, Strategy, StrategyKind, TimestampSpec};
-use ulpf_parse::{Context, Parsed, Parser, Registry, Scratch, SlotKind, Template};
+use ulpf_parse::{Context, Parsed, Parser, Registry, Scratch, Template};
 
 pub use cluster::Params;
 
@@ -94,7 +94,6 @@ pub struct Unmatched {
 
 struct Candidate {
     template: Template,
-    slots: Vec<cluster::Slot>,
     members: Vec<usize>,
     history: Vec<String>,
     slot_evidence: Vec<SlotEvidence>,
@@ -220,7 +219,7 @@ fn candidates_for(members: Vec<usize>, toks: &[Vec<Tok<'_>>], params: &Params, h
     }
     let (template, slots) = cluster::shape(&cols, cluster::rare_count(members.len(), params));
     let slot_evidence = slots.iter().map(|s| slot_evidence(s, &cols)).collect();
-    out.push(Candidate { template, slots, members, history, slot_evidence });
+    out.push(Candidate { template, members, history, slot_evidence });
 }
 
 /// Keyword splits happen per cluster, so the same message shape can come out of two
@@ -531,7 +530,8 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     let patterns: Vec<String> = templates.iter().filter(|t| in_definition(t)).map(|t| t.pattern.clone()).collect();
     let tpl_refs: Vec<&Template> = candidates.iter().map(|c| &c.template).collect();
     let matcher = matcher(&toks, &tpl_refs, &mut decisions);
-    let has_ts = candidates.iter().any(|c| c.slots.iter().any(|s| s.kind == SlotKind::Timestamp));
+    // only a pattern that reaches the definition can produce the field the spec names
+    let has_ts = patterns.iter().any(|p| p.contains(":timestamp}"));
     let name = format!("{}_inferred", slug(source));
     let definition = ParserDefinition {
         parser: Meta {
@@ -574,6 +574,9 @@ pub fn infer_with_prior(source: &str, lines: &[&[u8]], prior: &ParserDefinition,
     let mut decisions = vec![format!("prior: `{}` v{} ({} strategy, priority {}) is this source's established parser", prior.parser.name, prior.parser.version, prior.strategy.kind.name(), prior.matcher.priority)];
     let (mut detected, mut parsed_ok, mut covered) = (0usize, 0usize, 0usize);
     let mut remaining: Vec<&[u8]> = Vec::new();
+    // original positions of the drift lines: template members must index the lines file
+    // the pending record is written with, which holds every buffered line
+    let mut positions: Vec<u32> = Vec::new();
     match Parser::from_definition(prior.clone()) {
         Ok(p) => {
             let reg = Registry::new(vec![p]);
@@ -581,7 +584,7 @@ pub fn infer_with_prior(source: &str, lines: &[&[u8]], prior: &ParserDefinition,
             let ctx = Context { receipt_epoch_nanos: 0, default_offset_secs: 0 };
             let mut scratch = reg.scratch();
             let mut parsed = Parsed::default();
-            for l in lines {
+            for (pos, l) in lines.iter().enumerate() {
                 let det = reg.detect(l, None).is_some();
                 let ok = p.parse(l, &ctx, &mut scratch, &mut parsed).is_ok();
                 detected += det as usize;
@@ -590,16 +593,23 @@ pub fn infer_with_prior(source: &str, lines: &[&[u8]], prior: &ParserDefinition,
                     covered += 1;
                 } else {
                     remaining.push(l);
+                    positions.push(pos as u32);
                 }
             }
         }
         Err(e) => {
             decisions.push(format!("prior does not compile ({e}); treated as absent"));
             remaining = lines.to_vec();
+            positions = (0..lines.len() as u32).collect();
         }
     }
     decisions.push(format!("prior covers {covered} of {} lines (signature matched {detected}, strategy parsed {parsed_ok}); {} lines are drift", lines.len(), remaining.len()));
     let mut p = infer(source, &remaining, params);
+    for t in &mut p.evidence.templates {
+        for m in &mut t.members {
+            *m = positions.get(*m as usize).copied().unwrap_or(*m);
+        }
+    }
     let mut tail = std::mem::take(&mut p.evidence.decisions);
     decisions.append(&mut tail);
     p.evidence.decisions = decisions;
@@ -634,7 +644,10 @@ pub fn infer_with_prior(source: &str, lines: &[&[u8]], prior: &ParserDefinition,
     } else {
         p.evidence.decisions.push(format!("update: the prior's strategy parses {:.0}% of the lines; only the signature changed", parse_rate * 100.0));
     }
-    if detected < lines.len() {
+    let generated_is_catch_all = p.definition.matcher.contains.is_empty() && p.definition.matcher.regex.as_deref() == Some(".");
+    if detected < lines.len() && generated_is_catch_all {
+        p.evidence.decisions.push(format!("signature: the prior's [match] rejected {} of {} lines, but the generated signature is the catch-all `.`; the prior's is kept rather than widened to everything", lines.len() - detected, lines.len()));
+    } else if detected < lines.len() {
         def.matcher = union_matcher(&prior.matcher, &p.definition.matcher);
         p.evidence.decisions.push(format!("signature: the prior's [match] rejected {} of {} lines; widened to the union of the prior's signature and the generated one (priority kept at {})", lines.len() - detected, lines.len(), def.matcher.priority));
     }

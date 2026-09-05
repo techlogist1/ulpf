@@ -675,6 +675,9 @@ fn strftime<'a>(layout: &[u8], s: &'a [u8]) -> Option<Parts<'a>> {
                 b'j' => p.yday = Some(c.digits(1, 3)? as u16),
                 b's' => {
                     let d = c.take_while(|b| b.is_ascii_digit());
+                    if d.is_empty() {
+                        return None;
+                    }
                     p.epoch = Some(to_i64(d)?.checked_mul(NANOS_PER_SEC)?);
                 }
                 b'p' => p.pm = Some(c.ampm()?),
@@ -697,7 +700,10 @@ fn auto(s: &[u8]) -> Result<Parts<'_>, TimeError> {
         [b'[', inner @ .., b']'] => inner,
         _ => s,
     };
+    // nine digits or more, like the `timestamp` slot the parser compiles: a shorter bare
+    // number is a count or an id, never an instant (1973 onward)
     if s.first().is_some_and(u8::is_ascii_digit)
+        && s.len() >= 9
         && s.iter().all(|b| b.is_ascii_digit() || *b == b'.')
     {
         return epoch(s, None);

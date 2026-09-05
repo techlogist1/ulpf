@@ -184,6 +184,11 @@ impl Pending {
     }
 
     fn record(&self, id: &str) -> Result<PendingRecord, ReviewError> {
+        // the id becomes three file names under the pending directory; the slug charset is
+        // the only one a proposal can have, so anything else is simply not a proposal
+        if id.is_empty() || !id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_') {
+            return Err(ReviewError::NotFound(id.to_string()));
+        }
         let text = fs::read_to_string(self.json_path(id)).map_err(|_| ReviewError::NotFound(id.to_string()))?;
         serde_json::from_str(&text).map_err(|e| ReviewError::Io(format!("{}: {e}", self.json_path(id).display())))
     }
@@ -262,7 +267,9 @@ impl Pending {
     /// Writes or replaces the proposal for the source, unless a human edited the pending
     /// one, an identical one is already pending, or the same fingerprint was rejected.
     pub fn write(&self, proposal: &Proposal, lines: &[Vec<u8>]) -> Result<WriteOutcome, ReviewError> {
-        if proposal.evidence.templates.is_empty() || proposal.definition.strategy.patterns.is_empty() {
+        // a fresh proposal with nothing to parse is nothing; an update composed on a kv or
+        // delimiter prior legitimately has no `patterns` (its strategy is the prior's)
+        if proposal.evidence.templates.is_empty() || (proposal.definition.strategy.patterns.is_empty() && proposal.updates.is_none()) {
             return Ok(WriteOutcome::SkippedEmpty);
         }
         let id = Self::id_for(&proposal.source);
@@ -400,6 +407,9 @@ pub fn unified_diff(a_name: &str, b_name: &str, a: &str, b: &str) -> String {
     let al: Vec<&str> = a.lines().collect();
     let bl: Vec<&str> = b.lines().collect();
     let (n, m) = (al.len(), bl.len());
+    if n > 4000 || m > 4000 {
+        return format!("--- {a_name}\n+++ {b_name}\n(diff suppressed: {n} against {m} lines; open both texts)\n");
+    }
     let mut lcs = vec![vec![0u32; m + 1]; n + 1];
     for i in (0..n).rev() {
         for j in (0..m).rev() {

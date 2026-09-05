@@ -341,8 +341,12 @@ pub struct PivotQuery<'a> {
     pub limit: usize,
     /// Newest-first paging: only events strictly older than this device time (ms).
     pub before: Option<i64>,
+    /// With `before`: the raw id of the last event shown, so events sharing that
+    /// millisecond are not repeated or skipped (the cursor is the pair).
+    pub before_id: Option<u64>,
     /// Oldest-first paging: only events strictly newer than this device time (ms).
     pub after: Option<i64>,
+    pub after_id: Option<u64>,
     pub order: Order,
 }
 
@@ -360,6 +364,7 @@ pub struct PivotPage {
     pub related_over: u64,
     pub events: Vec<PivotEvent>,
     pub next_before: Option<i64>,
+    pub next_before_id: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -451,7 +456,9 @@ impl PivotIndex {
         let (related, related_over) = self.related(q.kind, &window)?;
         let dict_dev = self.dict_devices()?;
         let dict_par = self.dict_parsers()?;
-        let next_before = if page.len() >= q.limit.clamp(1, 500) { page.last().map(|e| e.time_ms) } else { None };
+        let full = page.len() >= q.limit.clamp(1, 500);
+        let next_before = if full { page.last().map(|e| e.time_ms) } else { None };
+        let next_before_id = if full { page.last().map(|e| e.raw_id) } else { None };
         let events = page
             .iter()
             .map(|e| PivotEvent {
@@ -473,6 +480,7 @@ impl PivotIndex {
             related_over,
             events,
             next_before,
+            next_before_id,
         })
     }
 
@@ -576,7 +584,19 @@ impl PivotIndex {
                 if window.len() < RELATED_WINDOW {
                     window.push(e);
                 }
-                let wanted = if desc { q.before.is_none_or(|b| e.time_ms < b) } else { q.after.is_none_or(|a| e.time_ms > a) };
+                // strictly past the cursor, where the cursor is (time, id) when the caller
+                // has one and time alone otherwise
+                let wanted = if desc {
+                    q.before.is_none_or(|b| match q.before_id {
+                        Some(bid) => (e.time_ms, e.raw_id) < (b, bid),
+                        None => e.time_ms < b,
+                    })
+                } else {
+                    q.after.is_none_or(|a| match q.after_id {
+                        Some(aid) => (e.time_ms, e.raw_id) > (a, aid),
+                        None => e.time_ms > a,
+                    })
+                };
                 if wanted && page.len() < candidates {
                     page.push(e);
                 }
@@ -714,7 +734,9 @@ pub fn rebuild(output: &Path, mapping: &Mapping, batch_events: usize) -> Result<
     let _ = std::fs::remove_file(&path);
     let _ = std::fs::remove_file(path.with_extension("pivot-wal"));
     let _ = std::fs::remove_file(path.with_extension("pivot-shm"));
-    let text = std::fs::read(output).with_context(|| format!("reading {}", output.display()))?;
+    let file = std::fs::File::open(output).with_context(|| format!("reading {}", output.display()))?;
+    // SAFETY: the output is only ever appended to; every byte below the mapped length is final.
+    let text = unsafe { memmap2::Mmap::map(&file) }.with_context(|| format!("mapping {}", output.display()))?;
     let entities = mapping.entities();
     let paths: Vec<(EntityKind, &str)> = EntityKind::ALL.into_iter().filter_map(|k| entities.path(k).map(|p| (k, p))).collect();
 

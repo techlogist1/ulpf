@@ -236,7 +236,9 @@ impl Versions {
 
     /// The newest complete version below `version`, if any.
     pub fn previous_of(&self, version: u64) -> Option<u64> {
-        (1..version).rev().find(|&v| self.path(v).exists())
+        // a replay that failed or was cancelled leaves a file with no complete meta; it is
+        // not a version to compare against
+        (1..version).rev().find(|&v| self.path(v).exists() && (v == 1 || self.read_meta(v).is_some_and(|m| m.complete)))
     }
 
     /// Records what the live output is being written with; called at open and reload.

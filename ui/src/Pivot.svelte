@@ -34,10 +34,10 @@
   }
   $effect(() => { searchKind; q; if (!kind) search() })
 
-  async function load(k, v, before) {
+  async function load(k, v, before, beforeId) {
     busy = true
     if (!before) { err = null; sel = -1 }
-    const u = `/api/pivot?kind=${encodeURIComponent(k)}&value=${encodeURIComponent(v)}&limit=100${before ? `&before=${before}` : ''}`
+    const u = `/api/pivot?kind=${encodeURIComponent(k)}&value=${encodeURIComponent(v)}&limit=100${before ? `&before=${before}` : ''}${before && beforeId != null ? `&before_id=${beforeId}` : ''}`
     const r = await api('GET', u)
     busy = false
     if (!r.ok) { if (!before) { data = null; err = r.data } return }
@@ -83,7 +83,7 @@
       if (back) pivot(back.kind, back.value)
       return true
     }
-    if (e.key === 'm' && data?.next_before) { load(kind, value, data.next_before); return true }
+    if (e.key === 'm' && data?.next_before) { load(kind, value, data.next_before, data.next_before_id); return true }
     return nav(e, rows.length, sel, (n) => (sel = n), (n) => (location.hash = `#/trace/${rows[n].raw_id}`))
   }))
 </script>
@@ -185,7 +185,7 @@
             <span class="note">newest first, {fmt.n(rows.length)} of {fmt.n(data.total)} loaded</span>
             {#if noLine}<span class="note is-dim">{hasLines ? `${fmt.n(noLine)} rows have left the tail; open one for the stored record` : 'the index carries no emitted line; open a row for the record'}</span>{/if}
             <span class="push">
-              {#if data.next_before}<button class="btn" onclick={() => load(kind, value, data.next_before)} disabled={busy}>Load older</button>{/if}
+              {#if data.next_before}<button class="btn" onclick={() => load(kind, value, data.next_before, data.next_before_id)} disabled={busy}>Load older</button>{/if}
             </span>
           </div>
           <div class="scroll">

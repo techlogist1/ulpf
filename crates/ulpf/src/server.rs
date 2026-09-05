@@ -63,7 +63,7 @@ pub struct Server {
 impl Server {
     /// Binds and starts serving on its own small runtime; returns at once.
     pub fn start(live: Arc<Live>, listen: SocketAddr, ui_dir: Option<PathBuf>) -> anyhow::Result<Server> {
-        let rt = tokio::runtime::Builder::new_multi_thread().worker_threads(2).enable_all().build()?;
+        let rt = tokio::runtime::Builder::new_multi_thread().worker_threads(4).enable_all().build()?;
         let listener = rt.block_on(tokio::net::TcpListener::bind(listen))?;
         let addr = listener.local_addr()?;
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
@@ -294,7 +294,6 @@ async fn status(State(app): State<App>) -> Json<Value> {
             "version": pipeline.mapping.file().schema.version,
             "entities": serde_json::to_value(pipeline.mapping.entities()).unwrap_or(Value::Null),
         },
-        "output_format": "jsonl",
         "syslog": { "udp": live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).0.map(|a| a.to_string()), "tcp": live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).1.map(|a| a.to_string()), "udp_rcvbuf": live.syslog_udp_rcvbuf.load(Relaxed) },
     }))
 }
@@ -328,7 +327,7 @@ async fn pending_list(State(app): State<App>) -> Json<Value> {
             .map(|p| {
                 let mut created = String::new();
                 ulpf_time::format_rfc3339(p.created_nanos, &mut created);
-                json!({ "id": p.id, "source": p.source, "name": p.name, "created": created, "lines": p.lines, "templates": p.templates, "unmatched": p.unmatched, "edited": p.edited, "problems": p.problems })
+                json!({ "id": p.id, "source": p.source, "name": p.name, "created": created, "lines": p.lines, "templates": p.templates, "unmatched": p.unmatched, "edited": p.edited, "problems": p.problems, "updates": p.updates, "version": p.version, "current_version": p.current_version })
             })
             .collect(),
     ))
@@ -384,14 +383,16 @@ struct PivotParams {
     value: String,
     limit: Option<usize>,
     before: Option<i64>,
+    before_id: Option<u64>,
     after: Option<i64>,
+    after_id: Option<u64>,
     order: Option<String>,
 }
 
 async fn pivot(State(app): State<App>, Query(q): Query<PivotParams>) -> Result<Json<Value>, ApiError> {
     let kind = EntityKind::from_name(&q.kind).ok_or_else(|| ApiError::new(StatusCode::UNPROCESSABLE_ENTITY, "invalid", format!("unknown entity kind `{}`; one of {}", q.kind, EntityKind::ALL.iter().map(|k| k.name()).collect::<Vec<_>>().join(", "))))?;
     let order = if q.order.as_deref() == Some("asc") { Order::Asc } else { Order::Desc };
-    let page = app.live.pivot(&PivotQuery { kind, value: q.value.as_bytes(), limit: q.limit.unwrap_or(200).clamp(1, 500), before: q.before, after: q.after, order }).map_err(|e| ApiError::new(StatusCode::NOT_FOUND, "not_found", format!("pivot index: {e:#}")))?;
+    let page = app.live.pivot(&PivotQuery { kind, value: q.value.as_bytes(), limit: q.limit.unwrap_or(200).clamp(1, 500), before: q.before, before_id: q.before_id, after: q.after, after_id: q.after_id, order }).map_err(|e| ApiError::new(StatusCode::NOT_FOUND, "not_found", format!("pivot index: {e:#}")))?;
     Ok(Json(serde_json::to_value(page).unwrap_or(Value::Null)))
 }
 

@@ -92,6 +92,9 @@ pub fn strip_syslog<'a>(event: &'a [u8], out: &mut Parsed<'a>) -> &'a [u8] {
 }
 
 fn rfc5424<'a>(b: &'a [u8], out: &mut Parsed<'a>) -> Option<&'a [u8]> {
+    // a header that turns out not to be RFC 5424 must leave no field behind, or the 3164
+    // branch that runs next pushes syslog_timestamp/syslog_host a second time
+    let mark = out.fields.len();
     let mut i = 2;
     let names: [&[u8]; 5] = [b"syslog_timestamp", b"syslog_host", b"syslog_app", b"syslog_procid", b"syslog_msgid"];
     for (idx, name) in names.iter().enumerate() {
@@ -105,7 +108,10 @@ fn rfc5424<'a>(b: &'a [u8], out: &mut Parsed<'a>) -> Option<&'a [u8]> {
         }
         let tok = &b[i..end];
         if tok.is_empty() {
-            return None;
+            {
+                out.fields.truncate(mark);
+                return None;
+            }
         }
         if tok != b"-" {
             out.push(*name, tok);
@@ -131,7 +137,10 @@ fn rfc5424<'a>(b: &'a [u8], out: &mut Parsed<'a>) -> Option<&'a [u8]> {
         if elements > 0 {
             out.push(&b"syslog_sd"[..], &b[sd_start..i]);
         } else if b.get(i) != Some(&b'[') {
-            return None;
+            {
+                out.fields.truncate(mark);
+                return None;
+            }
         }
     }
     let mut msg = &b[skip_spaces(b, i)..];

@@ -254,6 +254,9 @@ fn the_writer_reads_its_own_records_back_by_id() {
     assert_eq!(store.source_names().unwrap().get(&src).map(String::as_str), Some("a.log"));
     store.record_ingest(src, Some(ids[0]), 50, 400, 0).unwrap();
     store.record_ingest(src, Some(next), 1, 6, 0).unwrap();
-    assert_eq!(store.ingested_bytes().unwrap().get("a.log"), Some(&406));
+    // the resume offset is what the records say (ten 7-byte lines, forty 8-byte lines and
+    // "after\n" = 396), not what an ingest row claimed (400 + 6): the rows are provenance,
+    // the records are the truth a restart resumes from
+    assert_eq!(store.ingested_bytes().unwrap().get("a.log"), Some(&396));
     let _ = std::fs::remove_dir_all(&dir);
 }

@@ -175,6 +175,14 @@ impl SourceStats {
             DriftState::Tripped | DriftState::Proposed => {
                 if rate < baseline + DRIFT_DELTA {
                     self.drift_clean_windows += 1;
+                    // the device went back to its old format on its own: four clean
+                    // windows clear the alert and the baseline starts afresh
+                    if self.drift_clean_windows >= 4 {
+                        self.drift = DriftState::Cleared;
+                        self.baseline_events = 0;
+                        self.baseline_misses = 0;
+                        self.drift_since_nanos = now_nanos();
+                    }
                 } else {
                     self.drift_clean_windows = 0;
                 }
@@ -481,6 +489,9 @@ pub(crate) struct EntityBatch {
 pub(crate) struct EventEntities {
     pub(crate) raw_id: u64,
     pub(crate) time_ms: i64,
+    pub(crate) class_uid: i64,
+    /// Arena range of the source name.
+    pub(crate) source: (u32, u32),
     /// The emitted line's range inside the batch buffer (without its newline).
     pub(crate) line: (u32, u32),
     /// Arena ranges; an empty range is absent.
@@ -514,7 +525,8 @@ pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratc
         let outcome = pipeline.process(event, raw_id, batch.source(i), batch.receipt(i), hint, scratch, parsed, out);
         if let Some(eb) = entities.as_deref_mut() {
             // up to five small values per event, copied once; the index thread does the rest
-            let mut e = EventEntities { raw_id, time_ms: outcome.stats.time_ms, line: (line_start as u32, out.len().saturating_sub(1) as u32), ..EventEntities::default() };
+            let mut e = EventEntities { raw_id, time_ms: outcome.stats.time_ms, class_uid: outcome.stats.class_uid, line: (line_start as u32, out.len().saturating_sub(1) as u32), ..EventEntities::default() };
+            e.source = eb.put(batch.source(i).as_bytes());
             if let Some(p) = outcome.parser {
                 e.parser = eb.put(pipeline.registry.get(p).name().as_bytes());
             }
@@ -1232,6 +1244,22 @@ fn report(live: &Arc<Live>, elapsed: Duration, inference: Duration, input_proble
     })
 }
 
+/// The entity index commits ahead of the output's buffered writer, so after a kill it can
+/// name lines the output lost; once recovery has changed the output, the index is
+/// derived data that no longer matches and is removed (`ulpf pivot --rebuild` recreates it).
+fn drop_stale_pivot(live: &Arc<Live>, problems: &mut Vec<String>) {
+    let base = crate::pivot::index_path(&live.output);
+    let mut removed = false;
+    for suffix in ["", "-wal", "-shm"] {
+        let mut p = base.as_os_str().to_os_string();
+        p.push(suffix);
+        removed |= std::fs::remove_file(PathBuf::from(p)).is_ok();
+    }
+    if removed {
+        problems.push(format!("{}: the entity index predated the recovery and was dropped; rebuild it with `ulpf pivot --rebuild --output {}`", base.display(), live.output.display()));
+    }
+}
+
 /// After a kill, the output file may end in a torn line and lack records the store holds
 /// (the store is flushed per batch before ids escape, D33; the output buffer is not).
 /// Truncate the torn line, find the last emitted raw id, and send every later stored
@@ -1271,6 +1299,7 @@ fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI6
                         // one torn line and nothing before it: the output starts over
                         f.set_len(0)?;
                         problems.push(format!("{}: a torn first line from an interrupted run was removed", live.output.display()));
+                        drop_stale_pivot(live, problems);
                         None
                     }
                     None => return Ok(0),
@@ -1278,6 +1307,7 @@ fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI6
                         if last_nl + 1 != tail.len() {
                             f.set_len(len - tail_len + last_nl as u64 + 1)?;
                             problems.push(format!("{}: a torn last line ({} bytes) from an interrupted run was removed", live.output.display(), tail.len() - last_nl - 1));
+                            drop_stale_pivot(live, problems);
                         }
                         let line_start = tail[..last_nl].iter().rposition(|b| *b == b'\n').map(|p| p + 1).unwrap_or(0);
                         match replay::raw_id_of(&tail[line_start..last_nl]) {
@@ -1316,13 +1346,20 @@ fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI6
             sources.push(rec.source);
         }
         live.metrics.batches.fetch_add(1, Relaxed);
-        let batch = Batch { seq: live.seq.fetch_add(1, Relaxed), file: Arc::clone(&ctx), receipt_nanos: 0, first_raw_id: id, ranges, receipts, sources };
+        // the sequence is taken under the store lock like every producer's (D60): a
+        // listener already running must not slip a batch ahead of the recovered ones
+        let seq = {
+            let _store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+            live.seq.fetch_add(1, Relaxed)
+        };
+        let batch = Batch { seq, file: Arc::clone(&ctx), receipt_nanos: 0, first_raw_id: id, ranges, receipts, sources };
         in_flight.fetch_add(1, Relaxed);
         tx.send(batch).map_err(|_| anyhow!("processing stopped before recovery finished; see the output error"))?;
         id += n as u64;
     }
     live.recovered.store(count, Relaxed);
     problems.push(format!("{}: {count} records the store held but the output lacked (ids {first}..{}) were written first", live.output.display(), total - 1));
+    drop_stale_pivot(live, problems);
     Ok(count)
 }
 
@@ -1344,7 +1381,7 @@ pub fn run(cfg: &Config) -> Result<Report> {
         let ingest_result = (|| {
             recover_output(&live, &t.batch_tx, &t.in_flight, &mut input_problems)?;
             // a restart over the same inputs and store continues where the store ends
-            let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().unwrap_or_default();
+            let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().context("reconciling ingest offsets with the store")?;
             for (path, name) in &files {
                 let start = resume.get(name).copied().unwrap_or(0);
                 ingest_file(&live, path, name, start, true, true, &t.batch_tx, &t.in_flight, &mut input_problems)?;
@@ -1406,7 +1443,7 @@ pub fn serve(live: &Arc<Live>, poll: Duration) -> Result<Report> {
 
 #[allow(clippy::too_many_arguments)]
 fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight: &AtomicI64, problems: &mut Vec<String>) -> Result<()> {
-    let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().unwrap_or_default();
+    let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().context("reconciling ingest offsets with the store")?;
     let mut files: HashMap<PathBuf, Tailed> = HashMap::new();
     while !live.stopped() {
         for root in &live.watch {
@@ -1626,12 +1663,15 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Em
         let parse_failed: u64 = counts.parse_failed.iter().sum();
         let (tripped, routing) = {
             let mut sources = live.sources.lock().unwrap_or_else(|e| e.into_inner());
-            let s = sources.entry(batch.file.name.clone()).or_default();
+            // a recovery batch names a source per event; its first event's source is the
+            // batch's for the stats (recovery batches are contiguous ids, almost always one
+            // file), and the clock is arrival, which the quiet judge and the UI both mean
+            let s = sources.entry(batch.source(0).to_string()).or_default();
             s.events += batch.ranges.len() as u64;
             s.detected += counts.detected;
             s.no_parser += counts.no_parser;
             s.parse_failed += parse_failed;
-            s.last_seen_nanos = batch.receipt_nanos;
+            s.last_seen_nanos = now_nanos();
             for (i, h) in hits.iter().enumerate() {
                 if *h > 0 {
                     *s.by_parser.entry(pipeline.registry.get(i).name().to_string()).or_default() += h;
@@ -1673,14 +1713,16 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Em
 fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
     let stdout;
     let file;
-    let mut pos = 0u64;
+    // the file offset of the next line, taken at the first write: recovery may truncate
+    // a torn tail after this thread was spawned, and every posting offset depends on it
+    let mut pos: Option<u64> = None;
     let mut pivot: Option<PivotWriter> = None;
     let mut w: Box<dyn Write> = if live.output.as_os_str() == "-" {
         stdout = std::io::stdout();
         Box::new(BufWriter::with_capacity(1 << 20, stdout.lock()))
     } else {
         file = File::options().create(true).append(true).open(&live.output).with_context(|| format!("creating output {}", live.output.display()))?;
-        pos = file.metadata().map(|m| m.len()).unwrap_or(0);
+        let _ = &file;
         // the entity index beside the output: derived data on its own thread (D55);
         // nothing sits beside a device such as /dev/null
         if !output_is_sink(&live.output) {
@@ -1724,6 +1766,7 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
         };
         pending.insert(e.seq, (e.buf, e.count, e.first_raw_id, e.entities));
         while let Some((buf, count, first_raw_id, entities)) = pending.remove(&next) {
+            let at = pos.unwrap_or_else(|| if output_is_sink(&live.output) { 0 } else { std::fs::metadata(&live.output).map(|m| m.len()).unwrap_or(0) });
             w.write_all(&buf).context("writing output")?;
             live.metrics.emitted.fetch_add(count, Relaxed);
             live.metrics.output_bytes.fetch_add(buf.len() as u64, Relaxed);
@@ -1734,17 +1777,31 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
                     let parser = (ev.parser.0 != ev.parser.1).then(|| std::str::from_utf8(entities.slice(ev.parser)).unwrap_or(""));
                     for (k, r) in ev.values.iter().enumerate() {
                         if r.0 != r.1 {
-                            postings.push(Posting { raw_id: ev.raw_id, time_ms: ev.time_ms, kind: EntityKind::ALL[k], value: entities.slice(*r), device, parser, offset: pos + ev.line.0 as u64, len: ev.line.1.saturating_sub(ev.line.0) });
+                            postings.push(Posting { raw_id: ev.raw_id, time_ms: ev.time_ms, kind: EntityKind::ALL[k], value: entities.slice(*r), device, parser, offset: at + ev.line.0 as u64, len: ev.line.1.saturating_sub(ev.line.0) });
                         }
                     }
                 }
                 pw.push_batch(&postings);
             }
-            pos += buf.len() as u64;
+            pos = Some(at + buf.len() as u64);
             if let Some(s) = &mut sink {
-                // one row per emitted line, in the order the JSON Lines file has them
-                for (i, line) in buf.split(|b| *b == b'\n').filter(|l| !l.is_empty()).enumerate() {
-                    s.push(first_raw_id + i as u64, line, &live.metrics);
+                // one row per emitted line, from the values the worker already copied out
+                let text = |r: (u32, u32)| (r.0 != r.1).then(|| std::str::from_utf8(entities.slice(r)).unwrap_or(""));
+                for ev in &entities.events {
+                    let v = |k: EntityKind| text(ev.values[k as usize]);
+                    s.push(ulpf_parquet::Row {
+                        raw_id: ev.raw_id as i64,
+                        time_ms: ev.time_ms,
+                        parser: text(ev.parser),
+                        source: text(ev.source).unwrap_or(""),
+                        class_uid: ev.class_uid as i32,
+                        normalized: &buf[ev.line.0 as usize..ev.line.1 as usize],
+                        src_ip: v(EntityKind::SrcIp),
+                        dst_ip: v(EntityKind::DstIp),
+                        user: v(EntityKind::User),
+                        device: text(ev.device),
+                        dst_port: v(EntityKind::DstPort).and_then(|p| p.parse().ok()),
+                    });
                 }
                 if let Err(e) = s.end_batch(&live.metrics) {
                     live.metrics.parquet_errors.fetch_add(1, Relaxed);

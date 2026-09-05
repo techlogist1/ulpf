@@ -205,6 +205,7 @@ pub fn parse_tz(s: &str) -> Result<i32> {
     anyhow::ensure!(digits.len() == 4 && digits.bytes().all(|b| b.is_ascii_digit()), "timezone must be Z, +HH:MM, -HHMM or seconds, got `{s}`");
     let h: i32 = digits[..2].parse()?;
     let m: i32 = digits[2..].parse()?;
+    anyhow::ensure!(h <= 14 && m < 60, "timezone offset out of range: `{s}` (at most 14:00)");
     Ok(sign * (h * 3600 + m * 60))
 }
 
@@ -516,8 +517,8 @@ pub fn main() -> Result<()> {
                 kind,
                 value: value.as_bytes(),
                 limit,
-                before: None,
-                after: None,
+                before: None, before_id: None,
+                after: None, after_id: None,
                 order: crate::pivot::Order::Desc,
             })?;
             eprintln!(

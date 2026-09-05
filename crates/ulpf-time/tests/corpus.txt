@@ -79,7 +79,8 @@ Feb 30 10:00:00 | syslog | 2026-09-04T12:00:00Z | ERR:out_of_range | -
 1788516923.1234567891234 | epoch | 2026-09-04T12:00:00Z | ns=1788516923123456789 | -
 10000000000 | epoch | 2026-09-04T12:00:00Z | ERR:out_of_range | -
 99999999999999999999 | epoch | 2026-09-04T12:00:00Z | ERR:out_of_range | -
-20260904 | auto | 2026-09-04T12:00:00Z | 1970-08-23T12:01:44.000Z | -
+# a bare 8-digit number is a date shape or a count, never an instant: auto needs nine digits (1973 onward), like the timestamp slot
+20260904 | auto | 2026-09-04T12:00:00Z | ERR:no_match | -
 -1 | epoch | 2026-09-04T12:00:00Z | ERR:no_match | -
 1788516923. | epoch | 2026-09-04T12:00:00Z | ERR:no_match | -
 2026-09-04T10:15:23.1234567891234Z | rfc3339 | 2026-09-04T12:00:00Z | ns=1788516923123456789 | -

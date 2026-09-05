@@ -48,6 +48,10 @@ pub struct Registry {
     parsers: Vec<Parser>,
     /// Indices into `parsers`, highest priority first, then by name.
     order: Vec<usize>,
+    /// The highest priority any parser has: only a parser at that priority may be taken
+    /// from the per-source hint without the ordered scan, or a generated parser (D45)
+    /// that matched a source's last event could claim a line a hand-written one owns.
+    top_priority: i32,
 }
 
 impl Registry {
@@ -58,7 +62,8 @@ impl Registry {
                 .cmp(&parsers[a].definition().matcher.priority)
                 .then_with(|| parsers[a].name().cmp(parsers[b].name()))
         });
-        Registry { parsers, order }
+        let top_priority = parsers.iter().map(|p| p.definition().matcher.priority).max().unwrap_or(0);
+        Registry { parsers, order, top_priority }
     }
 
     pub fn len(&self) -> usize {
@@ -88,7 +93,7 @@ impl Registry {
     /// Index of the first parser whose signature matches, trying `hint` first.
     pub fn detect(&self, event: &[u8], hint: Option<usize>) -> Option<usize> {
         if let Some(h) = hint
-            && self.parsers.get(h).is_some_and(|p| p.matches(event))
+            && self.parsers.get(h).is_some_and(|p| p.definition().matcher.priority == self.top_priority && p.matches(event))
         {
             return Some(h);
         }

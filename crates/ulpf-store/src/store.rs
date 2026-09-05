@@ -254,35 +254,23 @@ impl RawStore {
 
     /// Bytes ever ingested per source name, summed over the catalogue's ingest rows: the
     /// offset a restarted tailer resumes from.
-    /// Bytes already stored per source name: the completed ingests in the catalogue plus
-    /// the records a killed run appended after its last ingest row (the torn tail, summed
-    /// from the records themselves through a snapshot), so a restart resumes exactly where
-    /// the store ends and never stores a byte twice.
+    /// Bytes already stored per source name, summed from the records themselves through a
+    /// snapshot: framing is lossless, so a source's records concatenate to the exact prefix
+    /// of its input already consumed, whatever mix of producers wrote the store and however
+    /// it stopped. O(records) once at startup; a record that cannot be read is an error, not
+    /// a silent zero, because a wrong offset would store bytes twice.
     pub fn ingested_bytes(&mut self) -> io::Result<HashMap<String, u64>> {
-        let mut out = HashMap::new();
-        let mut accounted = 0u64;
-        {
-            let mut stmt = self
-                .catalog
-                .prepare("SELECT s.name, SUM(i.byte_count), MAX(i.first_raw_id + i.event_count) FROM ingests i JOIN sources s ON s.id = i.source_id GROUP BY s.name")
-                .map_err(sql_err)?;
-            let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?, r.get::<_, Option<i64>>(2)?))).map_err(sql_err)?;
-            for row in rows {
-                let (name, bytes, end) = row.map_err(sql_err)?;
-                out.insert(name, bytes.max(0) as u64);
-                accounted = accounted.max(end.unwrap_or(0).max(0) as u64);
-            }
+        let names = self.source_names()?;
+        let reader = self.reader()?;
+        let mut by_id: HashMap<u32, u64> = HashMap::new();
+        for id in 0..reader.len() {
+            let rec = reader.get(RawId(id)).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, format!("raw id {id} is unreadable while reconciling ingest offsets; run `ulpf verify`")))?;
+            *by_id.entry(rec.source).or_default() += rec.bytes.len() as u64;
         }
-        if accounted < self.next_id {
-            let names = self.source_names()?;
-            let reader = self.reader()?;
-            for id in accounted..reader.len() {
-                if let Some(rec) = reader.get(RawId(id))
-                    && let Some(name) = names.get(&rec.source)
-                {
-                    *out.entry(name.clone()).or_default() += rec.bytes.len() as u64;
-                }
-            }
+        let mut out = HashMap::new();
+        for (source, bytes) in by_id {
+            let name = names.get(&source).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidData, format!("source id {source} has records but no catalogue row")))?;
+            out.insert(name.clone(), bytes);
         }
         Ok(out)
     }
@@ -579,10 +567,15 @@ impl RawReader {
     pub fn open(dir: &Path) -> io::Result<RawReader> {
         let seg_file = File::open(dir.join("raw.seg"))?;
         let idx_file = File::open(dir.join("raw.idx"))?;
-        // SAFETY: the files are only ever appended to; bytes below the mapped length are
-        // never modified by any code path in this crate.
-        let seg = unsafe { Mmap::map(&seg_file)? };
+        // The writer flushes the segment before the index, so an index mapped at time T
+        // names only records the segment already held at T, and a segment mapped after T
+        // is a superset: map the index first, or a reader beside a live writer could see
+        // entries whose records lie past its segment mapping and call them corrupt.
+        // SAFETY: the files are only appended to while a writer runs; recovery truncates
+        // and rewrites only bytes above the last complete record, before any reader that
+        // this writer hands out exists (D7, D33).
         let idx = unsafe { Mmap::map(&idx_file)? };
+        let seg = unsafe { Mmap::map(&seg_file)? };
         if seg.len() < FILE_MAGIC.len() || &seg[..FILE_MAGIC.len()] != FILE_MAGIC {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "raw.seg: bad file magic"));
         }
@@ -638,7 +631,7 @@ impl RawReader {
         }
         let p = (IDX_HEADER_LEN + id.0 * IDX_ENTRY_LEN) as usize;
         let off = u64::from_le_bytes(self.idx.get(p..p + 8)?.try_into().ok()?) as usize;
-        let hdr = self.seg.get(off..off + HEADER_LEN)?;
+        let hdr = self.seg.get(off..off.checked_add(HEADER_LEN)?)?;
         if u32::from_le_bytes(hdr[0..4].try_into().ok()?) != REC_MAGIC {
             return None;
         }
@@ -648,7 +641,8 @@ impl RawReader {
         let len = u32::from_le_bytes(hdr[24..28].try_into().ok()?) as usize;
         let mut sha256 = [0u8; 32];
         sha256.copy_from_slice(&hdr[28..60]);
-        let bytes = self.seg.get(off + HEADER_LEN..off + HEADER_LEN + len)?;
+        let body = off.checked_add(HEADER_LEN)?;
+        let bytes = self.seg.get(body..body.checked_add(len)?)?;
         if rec_id != id.0 {
             return None;
         }
@@ -714,6 +708,18 @@ impl RawReader {
         }
         if att.records > self.count {
             report.attestation_problem = Some(format!("attestation covers {} records, the store holds {}", att.records, self.count));
+        }
+        // the head is the strongest single fact in the document: the last attested record's
+        // chain value must be what the store holds for that id (a store rewritten from any
+        // point below it, however consistently, cannot reproduce it without the store id)
+        if att.records > 0 && att.records <= self.count {
+            let last = RawId(att.records - 1);
+            if !self.chain(last).map(|c| hex(&c)).is_some_and(|c| c.eq_ignore_ascii_case(&att.head)) {
+                report.bad_checkpoint = Some(last);
+            }
+        }
+        if att.checkpoints.is_empty() && att.records > 0 {
+            report.attestation_problem.get_or_insert_with(|| "attestation carries no checkpoints; refusing to call it verified".to_string());
         }
         for cp in &att.checkpoints {
             if cp.id >= self.count {
