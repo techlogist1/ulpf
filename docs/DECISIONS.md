@@ -698,7 +698,10 @@ the next replay, and the report names the generation it used. **Anchor.**
 in `crates/ulpf/src/engine.rs`; `RawReader::segment`; `crates/ulpf/tests/replay.rs`.
 **Principle.** Deep module: one per-batch path for live and replay (a second copy would
 drift); information hiding: the diff and the versions know nothing of the engine; the
-store's append-only interface is untouched (the replay never holds a writer).
+store's append-only interface is untouched (the replay never holds a writer). An output that is a sink (`-` or a device such as `/dev/null`, `output_is_sink`) gets no
+version meta, no entity index and no recovery: the first cut wrote `/dev/null.v1.meta.json`
+and broke the documented bench command, found when the multi-core measurement produced no
+numbers.
 **Ruled out.** Replaying through the live worker pool with a flag (every counter, the tail,
 inference and per-source stats would need a "not this one" branch per event); a separate
 process for the server's replay (cannot read source names while the writer holds the
