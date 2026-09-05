@@ -188,9 +188,11 @@ jobs:
           if ($out -notmatch 'parsers')    { Write-Host "::error::check printed no 'parsers'"; exit 1 }
           if ($out -notmatch '0 problems') { Write-Host "::error::check printed no '0 problems'"; exit 1 }
 
-          # Every non-empty line in samples/ is one event, except a continuation line a
-          # collector folded: samples/fortinet_fortigate.log has exactly one (see
-          # samples/README.md). 305 non-empty lines, 304 framed, on 2026-09-06.
+          # `ulpf run samples` frames every file in the directory, README.md included, so
+          # the comparison counts every file too. Every non-empty line is one event except
+          # a continuation line a collector folded: samples/fortinet_fortigate.log has
+          # exactly one (see samples/README.md). 355 non-empty lines over sixteen files,
+          # 354 framed, on 2026-09-06 with lane 3's cef/leef/cloudtrail samples merged.
           $folded = 1
           $lines = (Get-ChildItem samples -File | Get-Content | Where-Object { $_ -ne '' }).Count
           $expect = $lines - $folded
