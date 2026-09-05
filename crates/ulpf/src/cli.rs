@@ -28,7 +28,7 @@ struct EngineArgs {
     parsers: PathBuf,
     #[arg(long, default_value = "mappings")]
     mappings: PathBuf,
-    /// Mapping schema name (default: the first loaded).
+    /// Mapping schema name (default: `ocsf` when present, else the first loaded).
     #[arg(long)]
     schema: Option<String>,
     /// Worker threads (default: available cores minus one).

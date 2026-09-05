@@ -45,9 +45,10 @@ impl Pipeline {
         problems.extend(maps.errors.iter().map(|e| format!("mapping: {e}")));
         let idx = match schema {
             Some(name) => maps.mappings.iter().position(|m| m.schema_name() == name).with_context(|| format!("no mapping named `{name}` in {}", mappings_dir.display()))?,
+            // several mappings and no choice: `ocsf` is the documented default, else the first loaded
             None => {
                 anyhow::ensure!(!maps.mappings.is_empty(), "no usable mapping in {}", mappings_dir.display());
-                0
+                maps.mappings.iter().position(|m| m.schema_name() == "ocsf").unwrap_or(0)
             }
         };
         let mapping = maps.mappings.swap_remove(idx);
