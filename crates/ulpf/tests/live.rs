@@ -202,3 +202,37 @@ fn a_source_below_the_threshold_is_still_clustered_at_the_end_of_a_run() {
     let _ = std::fs::remove_dir_all(&dir);
     let _ = std::fs::remove_dir_all(&dir2);
 }
+
+/// A headed delimited file is a delimiter proposal: written although it has no
+/// `patterns`, regenerated in review without gaining any, approved as a definition the
+/// registry loads and that claims the data rows.
+#[test]
+fn a_delimiter_proposal_is_written_regenerated_and_approved() {
+    const ZEEK: &str = "#separator \\x09\n\
+#set_separator\t,\n\
+#fields\tts\tuid\tid.orig_h\tid.orig_p\tduration\tuser_agent\tinfo_code\n\
+#types\ttime\tstring\taddr\tport\tinterval\tstring\tcount\n\
+1788598139.619101\tCxag613FOqKD0xpr26\t192.168.148.3\t51988\t0.5\tMozilla/5.0 (X11)\t-\n\
+1788598139.641962\tCy2eHt2diBn0JThuV8\t192.168.148.4\t51992\t-\tcurl/8.4.0\t-\n\
+1788598139.663136\tCrgAkX2woehl3n5097\t192.168.148.5\t52008\t1.25\tMozilla/5.0 (Macintosh)\t-\n\
+1788598139.676846\tCRLsyU1FtJtCOYVhzh\t192.168.148.6\t52024\t3.0\tGo-http-client/1.1\t-\n\
+#close\t2026-09-05-09-37-23\n";
+    let dir = temp("delimiter");
+    let lines: Vec<Vec<u8>> = ZEEK.lines().map(|l| format!("{l}\n").into_bytes()).collect();
+    let refs: Vec<&[u8]> = lines.iter().map(Vec::as_slice).collect();
+    let proposal = ulpf_infer::infer("http.log", &refs, &ulpf_infer::Params::default());
+    assert_eq!(proposal.definition.strategy.kind, ulpf_parse::def::StrategyKind::Delimiter, "{:#?}", proposal.evidence.decisions);
+    let pending = Pending::open(&dir.join("pending")).unwrap();
+    assert_eq!(pending.write(&proposal, &lines).unwrap(), WriteOutcome::Written);
+    let id = Pending::id_for("http.log");
+    let first = pending.get(&id).unwrap().record.evidence.templates[0].id;
+    let (text, problems) = pending.regenerate(&id, &[first], &[], &ulpf_infer::Params::default()).unwrap();
+    assert!(problems.is_empty(), "{problems:?}");
+    assert!(text.contains("kind = \"delimiter\""), "{text}");
+    assert!(!text.contains("patterns"), "{text}");
+    let approved = pending.approve(&id, &parsers_copy(&dir), &[]).unwrap();
+    let parser = ulpf_parse::load_str(&approved.path, &std::fs::read_to_string(&approved.path).unwrap()).unwrap();
+    assert!(parser.matches(refs[4]));
+    assert!(!parser.matches(refs[2]), "the header line is not an event");
+    let _ = std::fs::remove_dir_all(&dir);
+}

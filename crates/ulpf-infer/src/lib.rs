@@ -407,6 +407,167 @@ pub fn slug(source: &str) -> String {
     if s.is_empty() { "source".into() } else { s }
 }
 
+fn meta(source: &str, n: usize) -> Meta {
+    Meta {
+        name: format!("{}_inferred", slug(source)),
+        vendor: "unknown".into(),
+        product: source.to_string(),
+        description: Some(format!("Inferred from {n} unknown lines of {source}; review every slot name before trusting.")),
+        version: 1,
+        origin: Some("inferred".into()),
+    }
+}
+
+/// The one `#fields` header every data line fits: exactly the header's column count on
+/// at least `min_support` lines, none with another count. `#` lines are the file's own
+/// metadata and an empty line has no columns; neither votes. Anything else (two headers,
+/// a row with another count, a non-ASCII separator) is the pattern path's input as before.
+fn header_fitting<'h>(bodies: &[&[u8]], headers: &'h [cluster::Header], params: &Params) -> Option<&'h cluster::Header> {
+    let [h] = headers else { return None };
+    let data: Vec<&&[u8]> = bodies.iter().filter(|b| !b.is_empty() && b[0] != b'#').collect();
+    (h.sep.is_ascii() && data.len() >= params.min_support && data.iter().all(|b| cluster::seps(b, h.sep) + 1 == h.fields.len())).then_some(h)
+}
+
+/// The narrowest timestamp shape every value has: epoch or ISO 8601 (the forms a
+/// delimited log writes) so the signature stays readable, else the whole slot regex.
+fn ts_form<'a>(values: impl Iterator<Item = &'a [u8]> + Clone) -> String {
+    const FORMS: [&str; 2] = [r"[0-9]{9,19}(?:\.[0-9]+)?", r"[0-9]{4}[-/][0-9]{2}[-/][0-9]{2}[T ][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:Z|[+-][0-9]{2}:?[0-9]{2})?"];
+    FORMS
+        .iter()
+        .find(|f| regex::bytes::Regex::new(&format!("^(?:{f})$")).is_ok_and(|re| values.clone().all(|v| re.is_match(v))))
+        .map_or_else(|| ulpf_parse::SlotKind::Timestamp.regex(false).to_string(), |f| (*f).to_string())
+}
+
+/// A delimited file with a fitting header is one delimiter definition over the header's
+/// names: no clustering, one template row (the header line) and one slot per column.
+fn infer_delimited(source: &str, lines: &[&[u8]], bodies: &[&[u8]], envelope: EnvelopeEvidence, h: &cluster::Header, params: &Params, mut decisions: Vec<String>) -> Proposal {
+    let n = h.fields.len();
+    let syslog = envelope.syslog;
+    let mut unmatched = Unmatched::default();
+    let mut data: Vec<usize> = Vec::new();
+    for (i, b) in bodies.iter().enumerate() {
+        let reason = if b.is_empty() {
+            "empty"
+        } else if b[0] == b'#' {
+            "header"
+        } else {
+            data.push(i);
+            continue;
+        };
+        unmatched.count += 1;
+        *unmatched.by_reason.entry(reason.to_string()).or_default() += 1;
+        if unmatched.examples.len() < 20 {
+            unmatched.examples.push(lossy(b));
+        }
+    }
+    decisions.push(format!("header: `#fields` names {n} columns separated by {:?}; every one of the {} data lines has exactly {n} columns, so the definition is one delimiter strategy over the header's names and nothing is clustered", h.sep as char, data.len()));
+    decisions.push("typing: each column's type is the family its values show, as a pattern slot's would be; a column of only `-` or of mixed families is text; values stay as the device wrote them (`-`, `(empty)`)".into());
+    let rows: Vec<Vec<&[u8]>> = data.iter().map(|&i| bodies[i].split(|b| *b == h.sep).collect()).collect();
+    let rare = cluster::rare_count(data.len(), params);
+    let mut used: BTreeMap<String, usize> = BTreeMap::new();
+    let mut fields: Vec<String> = Vec::with_capacity(n);
+    let mut slots: Vec<SlotEvidence> = Vec::with_capacity(n);
+    // a column whose every value is a timestamp atom can shape the signature
+    let mut ts_shaped: Option<usize> = None;
+    for (k, field) in h.fields.iter().enumerate() {
+        let values: Vec<&[u8]> = rows.iter().map(|r| r.get(k).copied().unwrap_or(b"")).collect();
+        let col = cluster::column(&values);
+        let kind = cluster::column_kind(&col, rare);
+        if ts_shaped.is_none() && col.values.iter().all(|(_, k, _)| *k == Kind::Atom(ulpf_parse::SlotKind::Timestamp)) {
+            ts_shaped = Some(k);
+        }
+        let mut name = if field.is_empty() { "_".to_string() } else { cluster::sanitize(field) };
+        if name != "_" {
+            let count = used.entry(name.clone()).or_default();
+            *count += 1;
+            if *count > 1 {
+                name = format!("{name}_{count}");
+            }
+        }
+        let written = if name == *field { String::new() } else { format!(", written `{name}`") };
+        let distinct = col.distinct();
+        slots.push(SlotEvidence {
+            name: name.clone(),
+            kind: kind.name().to_string(),
+            suggested: true,
+            reason: format!("header `{field}` (column {}{written})", k + 1),
+            preceded_by: String::new(),
+            distinct: distinct.len() as u64,
+            examples: distinct.iter().take(3).map(|(v, _)| lossy(v)).collect(),
+        });
+        fields.push(name);
+    }
+    let sep_re = if h.sep == b'\t' { r"\t".to_string() } else { regex::escape(&(h.sep as char).to_string()) };
+    let ts_re = ts_shaped.map(|k| ts_form(rows.iter().map(|r| r.get(k).copied().unwrap_or(b""))));
+    let cells: Vec<String> = (0..n).map(|k| if Some(k) == ts_shaped { format!("(?:{})", ts_re.as_deref().unwrap_or_default()) } else { format!("[^{sep_re}]*") }).collect();
+    let matcher = Matcher { contains: vec![], starts_with: None, regex: Some(format!(r"^{}[\r\n]*$", cells.join(&sep_re))), priority: -1 };
+    match ts_shaped {
+        Some(k) => decisions.push(format!("signature: exactly {n} columns with a timestamp in every line's column {} (`{}`), anchored to the whole line", k + 1, h.fields[k])),
+        None => decisions.push(format!("signature: exactly {n} columns, anchored to the whole line; no column holds a timestamp in every line")),
+    }
+    let ts_fields: Vec<String> = slots.iter().filter(|s| s.kind == "timestamp").map(|s| s.name.clone()).collect();
+    let definition = ParserDefinition {
+        parser: meta(source, lines.len()),
+        matcher,
+        envelope: Envelope { syslog },
+        strategy: Strategy {
+            kind: StrategyKind::Delimiter,
+            delimiter: Some(if h.sep == b'\t' { "tab".to_string() } else { (h.sep as char).to_string() }),
+            fields: fields.clone(),
+            ..Default::default()
+        },
+        timestamp: if syslog { vec![] } else { ts_fields.into_iter().map(|f| TimestampSpec { field: Some(f), fields: vec![], format: "auto".into() }).collect() },
+        sub: vec![],
+    };
+    // verify as the runtime will: signature, then strategy, on the stored lines
+    let mut verified = 0u64;
+    match Parser::from_definition(definition.clone()) {
+        Ok(p) => {
+            let mut scratch = Scratch::default();
+            let mut parsed = Parsed::default();
+            let ctx = Context { receipt_epoch_nanos: 0, default_offset_secs: 0 };
+            let (mut rejected, mut failed) = (0usize, 0usize);
+            for &i in &data {
+                if !p.matches(lines[i]) {
+                    rejected += 1;
+                } else if p.parse(lines[i], &ctx, &mut scratch, &mut parsed).is_err() {
+                    failed += 1;
+                } else {
+                    verified += 1;
+                }
+            }
+            if rejected + failed > 0 {
+                decisions.push(format!("verify: the signature rejected {rejected} and the strategy failed {failed} of {} data lines", data.len()));
+            }
+        }
+        Err(e) => decisions.push(format!("the definition does not compile: {e}")),
+    }
+    let header_line = bodies.iter().find(|b| b.starts_with(b"#fields")).map(|b| lossy(b)).unwrap_or_default();
+    let templates = vec![TemplateEvidence {
+        id: 1,
+        pattern: header_line,
+        support: data.len() as u64,
+        verified,
+        examples: data.iter().take(3).map(|&i| lossy(bodies[i])).collect(),
+        members: data.iter().map(|&i| i as u32).collect(),
+        slots,
+        history: vec![format!("delimited: the `#fields` header names the {n} columns every data line has")],
+    }];
+    let fingerprint = fnv(&fields);
+    let evidence = Evidence {
+        source: source.to_string(),
+        lines_seen: lines.len() as u64,
+        lines_used: (lines.len() as u64).saturating_sub(unmatched.count),
+        params: params.clone(),
+        envelope,
+        templates,
+        unmatched,
+        decisions,
+        fingerprint,
+    };
+    Proposal { source: source.to_string(), definition, evidence, updates: None }
+}
+
 /// Runs inference over the unknown lines of one source. Lines are whole events as
 /// stored (terminators included). Never fails: a source with nothing usable yields a
 /// proposal with zero templates, which the engine does not write.
@@ -414,6 +575,14 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     let mut decisions = Vec::new();
     let (syslog, example_header, bodies, headed) = bodies(lines);
     decisions.push(format!("envelope: syslog header on {headed} of {} lines -> syslog = {syslog} (a fifth is enough)", lines.len()));
+    let headers = cluster::headers(&bodies);
+    if let Some(h) = header_fitting(&bodies, &headers, params) {
+        if !syslog {
+            return infer_delimited(source, lines, &bodies, EnvelopeEvidence { syslog, example_header }, h, params, decisions);
+        }
+        // a delimiter signature anchors to the line start, which the envelope defeats
+        decisions.push(format!("header: `#fields` names {} columns and every data line fits, but the source carries a syslog envelope, so the pattern path runs", h.fields.len()));
+    }
     let mut toks: Vec<Vec<Tok<'_>>> = bodies.iter().map(|b| token::tokenize(b)).collect();
     let mut too_long: Vec<usize> = Vec::new();
     for (i, t) in toks.iter_mut().enumerate() {
@@ -424,7 +593,7 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     }
     let clusters = assign(&toks, params);
     decisions.push(format!("clustering: {} lines into {} clusters at similarity {}", toks.iter().filter(|t| !t.is_empty()).count(), clusters.len(), params.similarity));
-    let input = Input { toks, headers: cluster::headers(&bodies) };
+    let input = Input { toks, headers };
     let toks = &input.toks;
     for h in &input.headers {
         decisions.push(format!("header: `#fields` names {} columns separated by {:?}; a template with exactly that many columns takes its slot names from it", h.fields.len(), h.sep as char));
@@ -550,16 +719,8 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
             ts_fields.push(s.name.clone());
         }
     }
-    let name = format!("{}_inferred", slug(source));
     let definition = ParserDefinition {
-        parser: Meta {
-            name,
-            vendor: "unknown".into(),
-            product: source.to_string(),
-            description: Some(format!("Inferred from {} unknown lines of {source}; review every slot name before trusting.", lines.len())),
-            version: 1,
-            origin: Some("inferred".into()),
-        },
+        parser: meta(source, lines.len()),
         matcher,
         envelope: Envelope { syslog },
         strategy: Strategy { kind: StrategyKind::Pattern, patterns, ..Default::default() },
@@ -641,6 +802,10 @@ pub fn infer_with_prior(source: &str, lines: &[&[u8]], prior: &ParserDefinition,
         p.evidence.decisions.push(format!("prior strategy `{}` parses only {:.0}% of the lines with the signature bypassed; this is a new format, so the proposal stands alone", prior.strategy.kind.name(), parse_rate * 100.0));
         return p;
     };
+    if kind == "patterns_added" && p.definition.strategy.kind != StrategyKind::Pattern {
+        p.evidence.decisions.push("the drifted lines are a delimited file with a `#fields` header; the proposal stands alone as a delimiter definition".into());
+        return p;
+    }
     if p.definition.strategy.patterns.is_empty() && kind == "patterns_added" {
         p.evidence.decisions.push("no new template reached the definition; nothing to add to the prior".into());
         return p;
@@ -1048,7 +1213,7 @@ mod tests {
         named(&s, "id_orig_p", "int", "header `id.orig_p` (column 4, written `id_orig_p`)");
         assert!(s.iter().all(|s| s.2), "every slot is named by the header: {s:#?}");
         let p = infer("conn.log", &lines(text), &Params::default());
-        assert_eq!(p.evidence.unmatched.by_reason.get("below_support"), Some(&3), "the header lines are not events: {:#?}", p.evidence.unmatched);
+        assert_eq!(p.evidence.unmatched.by_reason.get("header"), Some(&3), "the header lines are not events: {:#?}", p.evidence.unmatched);
         assert_eq!(p.evidence.templates[0].verified, 4);
         assert_eq!(p.definition.timestamp[0].field.as_deref(), Some("ts"));
         assert!(p.evidence.decisions.iter().any(|d| d.contains("`#fields` names 6 columns")), "{:#?}", p.evidence.decisions);
@@ -1057,6 +1222,82 @@ mod tests {
         let s = slots(&other);
         assert!(s.iter().all(|s| !s.3.contains("header")), "{s:#?}");
         named(&s, "timestamp", "timestamp", "the slot's own type");
+    }
+
+    const ZEEK: &str = "#separator \\x09\n\
+#set_separator\t,\n\
+#fields\tts\tuid\tid.orig_h\tid.orig_p\tduration\tuser_agent\tinfo_code\n\
+#types\ttime\tstring\taddr\tport\tinterval\tstring\tcount\n\
+1788598139.619101\tCxag613FOqKD0xpr26\t192.168.148.3\t51988\t0.5\tMozilla/5.0 (X11)\t-\n\
+1788598139.641962\tCy2eHt2diBn0JThuV8\t192.168.148.4\t51992\t-\tcurl/8.4.0\t-\n\
+1788598139.663136\tCrgAkX2woehl3n5097\t192.168.148.5\t52008\t1.25\tMozilla/5.0 (Macintosh)\t-\n\
+1788598139.676846\tCRLsyU1FtJtCOYVhzh\t192.168.148.6\t52024\t3.0\tGo-http-client/1.1\t-\n\
+#close\t2026-09-05-09-37-23\n";
+
+    #[test]
+    fn a_fitting_header_under_a_syslog_envelope_takes_the_pattern_path() {
+        let wrapped: Vec<String> = ZEEK.lines().map(|l| format!("<13>Sep  5 09:37:23 sensor {l}")).collect();
+        let refs: Vec<&[u8]> = wrapped.iter().map(String::as_bytes).collect();
+        let p = infer("http.log", &refs, &Params::default());
+        assert!(p.definition.envelope.syslog);
+        assert_eq!(p.definition.strategy.kind, StrategyKind::Pattern, "{:#?}", p.evidence.decisions);
+        assert!(p.evidence.decisions.iter().any(|d| d.contains("carries a syslog envelope, so the pattern path runs")), "{:#?}", p.evidence.decisions);
+    }
+
+    #[test]
+    fn a_fitting_header_makes_one_delimiter_definition_that_parses_every_row() {
+        let p = infer("http.log", &lines(ZEEK), &Params::default());
+        let d = &p.definition;
+        assert_eq!(d.strategy.kind, StrategyKind::Delimiter, "{:#?}", p.evidence.decisions);
+        assert_eq!(d.strategy.delimiter.as_deref(), Some("tab"));
+        assert_eq!(d.strategy.fields, ["ts", "uid", "id_orig_h", "id_orig_p", "duration", "user_agent", "info_code"]);
+        assert!(d.strategy.patterns.is_empty());
+        assert_eq!(d.timestamp.len(), 1);
+        assert_eq!(d.timestamp[0].field.as_deref(), Some("ts"));
+        assert_eq!(d.matcher.regex.as_deref(), Some(r"^(?:[0-9]{9,19}(?:\.[0-9]+)?)\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*\t[^\t]*[\r\n]*$"));
+        let e = &p.evidence;
+        assert_eq!(e.templates.len(), 1);
+        let t = &e.templates[0];
+        assert!(t.pattern.starts_with("#fields\tts\tuid"), "{}", t.pattern);
+        assert_eq!((t.support, t.verified), (4, 4), "{:#?}", e.decisions);
+        assert_eq!(e.unmatched.by_reason.get("header"), Some(&5), "{:#?}", e.unmatched);
+        assert_eq!(e.unmatched.count, 5);
+        let kinds: Vec<(&str, &str)> = t.slots.iter().map(|s| (s.name.as_str(), s.kind.as_str())).collect();
+        // one `-` among four durations is a rare dissenter, as in the pattern path; two spaced agents are not
+        assert_eq!(kinds, [("ts", "timestamp"), ("uid", "word"), ("id_orig_h", "ipv4"), ("id_orig_p", "int"), ("duration", "float"), ("user_agent", "text"), ("info_code", "text")]);
+        assert!(t.slots.iter().all(|s| s.suggested && s.reason.starts_with("header `")), "{:#?}", t.slots);
+        assert_eq!(t.slots[2].reason, "header `id.orig_h` (column 3, written `id_orig_h`)");
+        assert_eq!(t.slots[6].distinct, 1);
+        // the file loads and parses every data row under the device's names
+        let toml = toml::to_string(d).unwrap();
+        let parser = ulpf_parse::load_str(std::path::Path::new("gen.toml"), &toml).unwrap();
+        let ctx = Context { receipt_epoch_nanos: 0, default_offset_secs: 0 };
+        let (mut scratch, mut parsed) = (Scratch::default(), Parsed::default());
+        let rows: Vec<&[u8]> = lines(ZEEK).into_iter().filter(|l| l[0] != b'#').collect();
+        assert_eq!(rows.len(), 4);
+        for row in &rows {
+            assert!(parser.matches(row), "{}", lossy(row));
+            parser.parse(row, &ctx, &mut scratch, &mut parsed).unwrap();
+            assert_eq!(parsed.get(b"info_code").map(|v| v.as_ref()), Some(&b"-"[..]));
+        }
+        parser.parse(rows[0], &ctx, &mut scratch, &mut parsed).unwrap();
+        assert_eq!(parsed.get(b"id_orig_h").map(|v| v.as_ref()), Some(&b"192.168.148.3"[..]));
+        assert_eq!(parsed.get(b"user_agent").map(|v| v.as_ref()), Some(&b"Mozilla/5.0 (X11)"[..]));
+        assert!(parsed.timestamp.is_some(), "the ts column is the event time");
+        assert!(!parser.matches(b"#close\t2026-09-05-09-37-23\n"));
+    }
+
+    #[test]
+    fn mixed_column_counts_fall_back_to_the_pattern_path() {
+        let text = ZEEK.replace("\t3.0\tGo-http-client/1.1\t-\n", "\t3.0\tGo-http-client/1.1\t-\textra\n");
+        let p = infer("http.log", &lines(&text), &Params::default());
+        assert_eq!(p.definition.strategy.kind, StrategyKind::Pattern, "{:#?}", p.evidence.decisions);
+        assert!(!p.evidence.unmatched.by_reason.contains_key("header"), "{:#?}", p.evidence.unmatched);
+        assert!(p.evidence.decisions.iter().any(|d| d.starts_with("clustering:")), "{:#?}", p.evidence.decisions);
+        // and a second, different header is two headers, not one
+        let two = ZEEK.replace("#types\t", "#fields\tone\ttwo\n#types\t");
+        let p = infer("http.log", &lines(&two), &Params::default());
+        assert_eq!(p.definition.strategy.kind, StrategyKind::Pattern, "{:#?}", p.evidence.decisions);
     }
 
     #[test]

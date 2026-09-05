@@ -269,7 +269,8 @@ impl Pending {
     pub fn write(&self, proposal: &Proposal, lines: &[Vec<u8>]) -> Result<WriteOutcome, ReviewError> {
         // a fresh proposal with nothing to parse is nothing; an update composed on a kv or
         // delimiter prior legitimately has no `patterns` (its strategy is the prior's)
-        if proposal.evidence.templates.is_empty() || (proposal.definition.strategy.patterns.is_empty() && proposal.updates.is_none()) {
+        let pattern = proposal.definition.strategy.kind == ulpf_parse::def::StrategyKind::Pattern;
+        if proposal.evidence.templates.is_empty() || (pattern && proposal.definition.strategy.patterns.is_empty() && proposal.updates.is_none()) {
             return Ok(WriteOutcome::SkippedEmpty);
         }
         let id = Self::id_for(&proposal.source);
@@ -332,8 +333,11 @@ impl Pending {
             }
         }
         let kept: Vec<&TemplateEvidence> = rec.evidence.templates.iter().filter(|t| keep.contains(&t.id)).collect();
-        def.strategy.patterns = kept.iter().map(|t| t.pattern.clone()).collect();
-        def.strategy.pattern = None;
+        // a delimiter definition's one template is the header line, not a pattern
+        if def.strategy.kind == ulpf_parse::def::StrategyKind::Pattern {
+            def.strategy.patterns = kept.iter().map(|t| t.pattern.clone()).collect();
+            def.strategy.pattern = None;
+        }
         let text = toml::to_string(&def).map_err(|e| ReviewError::Io(e.to_string()))?;
         atomic_write(&self.toml_path(id), text.as_bytes())?;
         rec.edited = true;
