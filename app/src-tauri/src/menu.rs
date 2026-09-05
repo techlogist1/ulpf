@@ -5,13 +5,14 @@ use std::path::PathBuf;
 use std::thread;
 
 use tauri::image::Image;
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_opener::OpenerExt;
 
 use crate::ingest::ingest_paths;
+use crate::intensity::{self, Intensity};
 use crate::{config_file, start, stop, toast, Engine};
 
 pub(crate) fn install(app: &AppHandle) -> tauri::Result<()> {
@@ -24,8 +25,16 @@ pub(crate) fn install(app: &AppHandle) -> tauri::Result<()> {
         true,
         &[&PredefinedMenuItem::about(app, None, None)?, &PredefinedMenuItem::separator(app)?, &item("quit", "Quit ULPF", Some("CmdOrCtrl+Q"))?],
     )?;
-    let file = Submenu::with_items(
+    // One setting for how hard the engine works, its labels carrying this machine's own
+    // numbers so nobody has to know the core count to choose. `check_marks` finds these
+    // items again through the ids "file" and "intensity".
+    let cores = intensity::cores();
+    let chosen = intensity::load(app);
+    let choice = |i: Intensity| CheckMenuItem::with_id(app, i.id(), i.label(cores), true, i == chosen, None::<&str>);
+    let intensity_menu = Submenu::with_id_and_items(app, "intensity", "Intensity", true, &[&choice(Intensity::Low)?, &choice(Intensity::Balanced)?, &choice(Intensity::Max)?])?;
+    let file = Submenu::with_id_and_items(
         app,
+        "file",
         "File",
         true,
         &[
@@ -35,6 +44,7 @@ pub(crate) fn install(app: &AppHandle) -> tauri::Result<()> {
             &item("open_output", "Open output folder", Some("CmdOrCtrl+Shift+E"))?,
             &item("open_browser", "Open in browser", Some("CmdOrCtrl+Shift+B"))?,
             &PredefinedMenuItem::separator(app)?,
+            &intensity_menu,
             &item("choose_data", "Choose data directory…", None)?,
         ],
     )?;
@@ -113,7 +123,7 @@ pub(crate) fn action(app: &AppHandle, id: &str) {
                 // is (its store, output and pending proposals stay where they were).
                 thread::spawn(move || {
                     stop(&h);
-                    start(&h, dir);
+                    start(&h, dir, "Restarting");
                 });
             });
         }
@@ -140,7 +150,11 @@ pub(crate) fn action(app: &AppHandle, id: &str) {
         }
         "show" => show(app),
         "quit" => app.exit(0),
-        _ => {}
+        _ => {
+            if let Some(i) = Intensity::from_id(id) {
+                intensity::choose(app, i);
+            }
+        }
     }
 }
 
