@@ -118,8 +118,18 @@ adds `--receipt` to `run`, then syslog listeners.
 - In flight: UI (worktree wf_fe15bb9f-bc9-1), soak socket runs, corpus generators, parser
   fixes, Parquet sink (feasibility GO: parquet 59.3.0 default-features=false + snap, 27 deps,
   static link verified, +655 KB, 875k rows/s, RG 8192; additional sink, rolled in serve).
-- Not yet: multi-core measurement (needs a quiet machine: soak runs until ~16:00), review
-  pass, demo script rewrite, container rebuild, push.
+- UI (Opus worker, `frontend-design` loaded, worktree merged at 5fbcf05): seven screens
+  verified in Chrome against the real server by the worker and reviewed by the lead from
+  headless-Chrome captures of a populated server (samples + two pending proposals + a
+  replay + a verify + both sockets fed): live counter grid with the funnel and named
+  drop-offs, review with the naming reasons per slot, traceback with digest/chain/timestamp
+  verdicts in plain English and byte-range highlighting, pivot with the device-lane
+  timeline and the seen-with panel, replay with the why box above the counts. Found and
+  fixed from the review: the "approved" badge came from a negative priority (OpenVPN and
+  IOS are hand-written at -1); the engine now stamps `origin = "inferred"` (0aaca31).
+  The Chrome extension was unreachable from this session, hence headless captures.
+- Not yet: multi-core measurement (needs a quiet machine), review pass, demo script
+  rewrite, container rebuild, push.
 
 ### Tried and abandoned (v2)
 - Recovering the output whenever it is empty: a fresh output beside an existing store
