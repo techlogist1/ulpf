@@ -267,7 +267,16 @@ else:
     check("sent (file+udp+tcp)   vs framed", sent, stages["framed"])
 check("framed                vs stored", stages["framed"], stages["stored"])
 check("stored                vs emitted", stages["stored"], stages["emitted"] if stages["emitted"] is not None else out_lines)
-check("stored                vs verify records", stages["stored"], records)
+if records is not None and stages["stored"] is not None and not drained and records >= stages["stored"]:
+    # The store kept writing after the metrics sample was taken, so more records than the
+    # snapshot counted is a stale reading. Only a SHORTFALL here would be a lost record.
+    ahead = records - stages["stored"]
+    unknown.append("stored vs verify records (stale poll)")
+    P(f"  ??    {'stored                vs verify records':<34} {stages['stored']:>14,}  vs  {records:>14,}")
+    P(f"        verify counts {ahead:,} more ({ahead/max(rate or 1, 1):.1f} s of events): the store kept")
+    P("        writing after the last metrics poll. Only a shortfall here would be a lost record.")
+else:
+    check("stored                vs verify records", stages["stored"], records)
 if sent_udp or sent_tcp or got_udp or got_tcp:
     check("udp sent              vs udp source events", sent_udp, got_udp if srcs else None)
     check("tcp sent              vs tcp source events", sent_tcp, got_tcp if srcs else None)
@@ -286,8 +295,19 @@ block = re.compile(r"^(stages:|signals:|queue:|inference:|drift:|parse_failed|pe
 noise = [l for l in serve.splitlines()
          if re.search(r"input problem|load problem|shrank|panic|error|reload:", l, re.I)
          and not block.match(l.strip())]
+# The RSS sampler is a 1 s loop in the same process as the SSE client. If it stopped
+# for the same window, the host suspended (a laptop sleeping) and the server never
+# stalled: both clocks froze together. Only a gap the sampler did NOT see is a stall.
+host_gaps = [b[0] - a[0] for a, b in zip(rss, rss[1:]) if b[0] - a[0] > 5]
 if sse.get("gaps_over_5s"):
-    fail.append(f"{sse['gaps_over_5s']} SSE gaps over 5 s (max {sse['max_gap_secs']:.1f} s)")
+    covered = len(host_gaps) >= sse["gaps_over_5s"] and max(host_gaps, default=0) >= sse["max_gap_secs"] * 0.8
+    if covered:
+        P(f"  note  {sse['gaps_over_5s']} SSE gaps over 5 s (max {sse['max_gap_secs']:.0f} s) match "
+          f"{len(host_gaps)} gaps in the 1 s RSS sampler (max {max(host_gaps):.0f} s):")
+        P("        the host suspended, both clocks froze together. Not a server stall.")
+    else:
+        fail.append(f"{sse['gaps_over_5s']} SSE gaps over 5 s (max {sse['max_gap_secs']:.1f} s) "
+                    f"the RSS sampler did not see: the server stalled")
 if sse.get("errors"):
     noise += [f"sse: {e}" for e in sse["errors"][:5]]
 P("-" * 78)
