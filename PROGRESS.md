@@ -115,9 +115,25 @@ adds `--receipt` to `run`, then syslog listeners.
   PROVENANCE.md (licences read; Elastic-2.0 sources recorded, not copied), generated
   Suricata and Squid captures under `corpus/generated/`; OpenVPN and nginx/HAProxy/Zeek
   generators relaunched; a parser-fidelity worker is fixing what the real data breaks.
-- In flight: UI (worktree wf_fe15bb9f-bc9-1), soak socket runs, corpus generators, parser
-  fixes, Parquet sink (feasibility GO: parquet 59.3.0 default-features=false + snap, 27 deps,
-  static link verified, +655 KB, 875k rows/s, RG 8192; additional sink, rolled in serve).
+- Soak (soak worker, four runs, D62): run1 12 min 10,005,840 events PASS (RSS 11-84 MB,
+  slope -0.26 MB/min, SSE max gap 0.52 s); run3 10 min 14,976,000 events PASS (RSS 11-103 MB
+  flat over awake time, queue 13/64, 0 blocks); burst 100k/s base + 300k/s burst 8,220,000
+  events PASS with the queue at 64/64 and 537 backpressure blocks, zero loss; socket run:
+  TCP exact, UDP 47% kernel drops matched by `netstat -s -p udp` (fixed: the 8 MiB
+  SO_RCVBUF request was refused by macOS and the default stayed; negotiated down now and
+  reported). Same runs found `framed`/`stored` credited per file, not per batch (fixed).
+- Corpus + parsers (D63): real captures under `corpus/real` and generated captures from
+  real Suricata 7, Squid 6.13, OpenVPN 2.4/2.5/2.6 (file and syslog forms), nginx 1.27,
+  HAProxy 2.9, Zeek 8.2 under `corpus/generated`, each with PROVENANCE.md and SETUP.md;
+  index in `corpus/README.md`. Six parsers fixed from vendor documentation against the real
+  data (ASA rfc5424/EMBLEM headers: 335 lines from 100% pattern_no_match to 100% parsed;
+  PAN-OS empty serial; OpenVPN syslog and ISO 8601 forms; IOS SISF; SonicOS empty address
+  parts; legacy FortiOS keys); real lines promoted into samples and fixtures.
+- Parquet (D64): `--parquet FILE` on run and serve, rolled files, 107 tests, static image.
+- Unseen formats for the live inference demo: nginx access/error, HAProxy httplog, Zeek
+  conn/dns/http/ssl (TSV and JSON), OpenVPN 2.6 file and syslog forms; each graded by
+  `ulpf infer` in its PROVENANCE.md (e.g. nginx access 1 template 1548/1548, Zeek dns 3
+  templates 3400/3409, Zeek TSV http.log the honest failure at 40 templates/100 lines).
 - UI (Opus worker, `frontend-design` loaded, worktree merged at 5fbcf05): seven screens
   verified in Chrome against the real server by the worker and reviewed by the lead from
   headless-Chrome captures of a populated server (samples + two pending proposals + a

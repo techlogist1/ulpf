@@ -966,3 +966,28 @@ fixture on synthetic data proved nothing; 100% `pattern_no_match` on 335 real AS
 was the first thing the real data said. **Ruled out.** Pattern-matching the sample into
 submission (every change cites the vendor form it implements); copying Elastic-licensed
 fixtures (the best messy captures, and not ours to redistribute).
+
+## D64. Parquet is an additional sink behind `--parquet`, never the primary output
+**Decision.** `crates/ulpf-parquet` is a leaf crate over `parquet` 59.3.0 with default
+features off and `snap` on (27 dependencies, no thrift or arrow crate; the static musl
+build is unchanged, the binary grows 320 KiB). Schema `ulpf_event`: raw_id, time
+(TIMESTAMP_MILLIS), parser, source, class_uid, the emitted JSON line verbatim as
+`normalized`, and the five entity columns; SNAPPY, row groups of 8192 (peak RSS ~42 MB
+versus ~150 MB at 65,536 for a 3% larger file). The sink lives on the output thread only,
+is not constructed when the flag is absent, and in `serve` rolls to a new file every
+`--parquet-roll-rows` or `--parquet-roll-secs`, writing `.part` and renaming on close so
+no reader ever sees a file without its footer. Counters `parquet_rows`, `parquet_files`,
+`parquet_errors`; a failed write stops the sink and says so, the JSON Lines output is
+unaffected. Measured on a 497,607-event slice under load: 292k events/s without the
+flag, 135k with it (0.46x), of which ~2.6 µs per row is re-parsing the emitted line for
+the scalar columns and ~1.5 µs the copy plus SNAPPY; the file is 3.6x smaller than the
+JSON Lines with the whole line kept. **Anchor.** `crates/ulpf-parquet/src/lib.rs`,
+`crates/ulpf/src/sink.rs`, the sink calls in `output_thread`, `crates/ulpf/tests/parquet.rs`.
+**Principle.** Raw completeness first: a Parquet file truncated by a kill is worth zero
+bytes (verified: pyarrow refuses it) while the JSON Lines truncated at the same point still
+yields every complete line, so the sink that can lose everything cannot be the one the
+pipeline's promise rests on. **Ruled out.** Parquet as the output format (the tail,
+traceback, pivot and diff read lines by offset); `arrow` (the whole point of the plain
+column writer is the dependency count); zero-copy column staging (the scalar columns are
+available from the entity arena and would halve the cost; deferred: the flag is optional
+and off in every measured number).
