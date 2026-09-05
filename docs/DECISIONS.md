@@ -1939,8 +1939,16 @@ chain (a tampered last record would vanish from `verify` instead of being named)
 running line count kept in the meta across runs (a killed run leaves it stale, and the
 scan runs only when an earlier run's lines are already in the file); `Option` inside
 `RawStore` instead of inside `Live` (every store method would grow a closed branch for a
-state only the engine creates). **Not done.** A verify or replay thread still running when
-`serve` returns is not joined (both are bounded and finish on their own; a cancel-and-join
-at stop is a separate change); a fourth Windows failure outside this brief,
-`udp_and_tcp_events_enter_the_store_and_output_exactly_once_in_order` timing out, is
-recorded in PROGRESS with what the branch's Windows run shows.
+state only the engine creates). **Also on the branch.** The Windows run after the three fixes
+named a fourth failure outside the tester's report: the syslog test received 2010 of 3000
+loopback datagrams because the Windows `set_recv_buffer` was the no-op D74 allowed (the
+socket stayed at the 64 KiB default). It now makes the same two calls as unix through
+Winsock's `setsockopt`/`getsockopt` (`ws2_32`, which std already links; no new dependency,
+the unix path untouched), and the test's timeout prints the counters as they stood. Runs:
+33997160230 (baseline: roundtrip 1224, parquet teardown 32, syslog timeout), 33997927604
+(after the three fixes: the stop test's "open while serving" check on a platform that cannot
+list descriptors, and the syslog loss with its counters), 33998281457 (green, every
+target). **Not done.** A verify or replay thread still running when `serve` returns is not
+joined (both are bounded and finish on their own; a cancel-and-join at stop is a separate
+change). Nobody has run the branch on a Windows machine by hand; the CI runner is the
+evidence.
