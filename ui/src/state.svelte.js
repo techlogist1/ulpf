@@ -28,7 +28,9 @@ export function row(ev) {
   const l = ev.line
   return {
     flags: flagsOf(l),
-    text: JSON.stringify(l ?? null).toLowerCase(),
+    // ponytail: the first 64 KiB of the line. A 4 MB single-line record kept whole would put
+    // 2 GB in a full tail; a term past 64 KiB still matches in the export, which reads the file.
+    text: JSON.stringify(l ?? null).slice(0, 65536).toLowerCase(),
     raw_id: ev.raw_id,
     time: fmt.stamp(leaf(l, 'metadata.event_time_rfc3339') ?? l?.time),
     parser: leaf(l, 'ulpf.parser') ?? null,
