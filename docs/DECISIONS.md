@@ -1137,3 +1137,60 @@ lower-casing keys (case is the device's); raising `max_templates` for http.log (
 cap is the shape of the data: every combination of method, status and mime type is a cluster;
 the fix is a delimiter-strategy proposal built from the header, which `Strategy` already
 expresses losslessly, a second proposal path, not a threshold).
+
+## D69. One token block, two embedded faces, colour only for state
+**Decision.** The redesigned UI is built on a single `:root` block at the top of
+`ui/src/app.css`: surfaces (`--bg`, `--bg-1`, `--bg-2`, `--sel`), lines, three ink levels,
+four state colours each with a wash (`ok` = proved or streaming, `warn` = look at this,
+`bad` = broken, `pend` = waiting for a human), eight provenance tints whose hue is an index
+(which field owns which bytes in the traceback, which device owns which lane in the pivot),
+a six-step type scale (11 to 28 px), an eight-step spacing scale (2 to 48 px), one 22 px row
+height. Dark is the default; the light theme redefines only the colour tokens under
+`:root[data-theme=light]`. Neutrals carry everything that is not state, including links and
+the primary button (inverted ink, no hue). Text is IBM Plex Sans 400/600 and every number,
+id, address, raw byte and code is IBM Plex Mono 400/500, both with tabular figures by default,
+Latin-1 subsets taken byte-identical from IBM's own releases (`@ibm/plex-sans@1.1.0`,
+`@ibm/plex-mono@2.5.0`, OFL-1.1, licence committed under `ui/fonts/`) and inlined into
+`app.css` as `data:font/woff2` by `build.assetsInlineLimit` in `ui/vite.config.js`, 78,656
+bytes, so the binary serves them air-gapped; the served page requests `/app.js`, `/app.css`
+and `/api/*` and nothing else. Every text pair meets WCAG AA in both themes (lowest 4.64:1;
+the table is in `docs/design.md`). **Anchor.** `ui/src/app.css` lines 1-60 and the
+`@font-face` block, `ui/vite.config.js`, `ui/fonts/`, `docs/design.md`. **Principle.**
+Data-ink: the counters, the timeline and the raw bytes are the content; chrome recedes, and
+colour that does not mean state is noise a 3am operator has to read past. **Ruled out.**
+Inter + JetBrains Mono (two unrelated designs, and Inter's figures are proportional unless
+every counter asks for the feature); a font CDN (a runtime request the isolation script
+would catch); system fonts only (no guarantee of tabular figures anywhere); a tokens file
+each component imports (Svelte scoped styles would duplicate the cascade per component); a
+second light stylesheet; a brand accent; cards, gradients, glass and glow.
+
+## D70. Every write from the UI passes one keyboard-reachable confirmation
+**Decision.** Approve, reject, replay and verify open the same `Confirm` component: a letter
+opens it (`a`, `x`, `v`), focus lands on the confirming button, Enter confirms, Esc cancels,
+Tab moves between the two, and the opening letter can never confirm; the box states the
+exact file path, version and re-detection that will follow, and reject is marked as danger.
+Mouse users get the same box, so there is no single-click write path. The approve flow is
+captured one frame per key (`docs/screens/approve-1..5-1280.png`). **Anchor.**
+`ui/src/Confirm.svelte`, the `asking` state in `ui/src/Review.svelte`, `docs/design.md`
+"The confirmation". **Principle.** Approve is the one action that changes what the engine
+parses (D45); it is deliberate by construction, not by care. **Ruled out.** A single-key
+approve (an accidental key would write a parser); the browser's `confirm()` (unstyled,
+inconsistent with the keyboard map, blocked in some webviews); a hold-to-confirm gesture
+(mouse only).
+
+## D71. Long lists and the raw record are virtualised on one component
+**Decision.** One `VList.svelte` (fixed-height rows, the visible window plus a six-row margin,
+the selection kept in view) renders the tail, the pivot timeline and entity search, the
+replay diff entries, both traceback field lists and the byte ruler. The ruler is a virtual
+list of row start offsets computed once per record (text rows never split a UTF-8 sequence,
+hex rows are sixteen bytes), so a 4 MB single-line record shows its ruler 1.3 s after
+navigation with 24 to 30 rows in the DOM and scrolls to any offset; the SSE client batches
+frames so a 400,000-event drop at the queue's high-water mark kept the tail and counters live
+with zero skipped frames. Navigation is in-app throughout (hash routes, breadcrumb trail,
+Backspace along the pivot trail, Esc to the list), nothing depends on browser back or a
+visible URL bar, so the same build runs in the desktop webview (D72). **Anchor.**
+`ui/src/VList.svelte`, `ui/src/Traceback.svelte` (`starts`, `segments`),
+`ui/src/state.svelte.js` (`pushTrail`), `docs/design.md` "Under load". **Principle.**
+Performance is part of the design: a screen that freezes on the record a judge asks for is
+not designed. **Ruled out.** Rendering the whole record as one text node (a 4 MB node froze
+the page); a virtual-list dependency for thirty lines; `history.back()` for back actions.

@@ -47,11 +47,23 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
 - [ ] A3. Honest throughput: -j 1, 2, 4, 7 (three runs at -j 7) on the 5M bench, load average
       recorded with each; every README/PROGRESS/demo-script sentence that could read as
       single-core states the thread count with the -j 1 figure beside it.
-- [ ] B. UI redesigned in place (same routes, same API, same three-file embedding): tokens in one
-      place, bundled open-licence text + mono faces, dark default with light through tokens, AA
-      contrast, keyboard map, virtualised lists, throttled SSE; `docs/design.md`; captures of every
-      screen at two widths plus a keyboard-only approve traversal under `docs/screens/` with an
-      index. Kill timer 3 h from dispatch; a coherent partial beats an incoherent whole.
+- [x] B. (D69-D71; merged 22:45 IST as b85c1c4, five commits 273d2d9..00062be, verified by an
+      independent Opus pass: git surface ui/ + docs/design.md + docs/screens/ only, dist exactly
+      three files with no runtime fetch, fonts real WOFF2 byte-identical to IBM's release with the
+      OFL text, the contrast table reproduced, 44 captures all indexed both ways, the API paths
+      called by the new src identical to the old, its own capture of #/live from its own server)
+      UI redesigned in place: one token block, IBM Plex Sans + Mono embedded (78,656 bytes), dark
+      default with light through tokens, AA everywhere (lowest 4.64:1), keyboard map with `?`
+      overlay, one `VList` for every long list and the byte ruler (4 MB record: ruler in 1.3 s,
+      24-30 DOM rows), one keyboard-reachable confirmation for approve/reject/replay/verify;
+      `docs/design.md`; `ui/capture.mjs` (CDP, no puppeteer) re-takes every capture; 44 PNGs at
+      1280 and 2560 under `docs/screens/` with README.md and index.json. Contract gaps the UI
+      labels honestly rather than papering over (server unchanged tonight, follow-ups): no
+      instantaneous queue depth in the metrics frame (high-water and blocks shown instead);
+      `events_per_sec` is a decaying run average, not a windowed rate; `/api/pivot` paging by
+      `before_id` is prose-only; `/api/events/{id}.emitted` is null once out of the tail ring.
+      Not done: automated UI tests; the merge-mid-state capture; light theme captured on two
+      screens only; not yet rendered in the Tauri webview (C).
 - [ ] C. Desktop app: Tauri 2 shell in `app/` at the repo root, `ulpf` as a sidecar, `serve` on
       launch against an app-owned data directory, webview at the server's localhost URL, clean
       stop on quit; then, each its own commit: file/folder drop with confirmation, native dialogs
@@ -93,6 +105,11 @@ measurements with their commands. Nothing else: no logs, no transcripts. No work
 longer than about four minutes (backgrounded and polled past that).
 
 ### Verified state (v3, rolling; every line was run, not read)
+- 22:47 IST: B merged (b85c1c4): `cargo test --workspace` 110 passed, 0 failed, 2 ignored;
+  clippy `-D warnings` clean (0 warnings); `cargo build --release` embeds the new dist (binary
+  8,759,400 bytes); the lead's own grep of `ui/dist` for `https?://`, `@import` and `<link`
+  finds only Svelte's error-message URLs inside thrown strings, the XHTML namespace constant,
+  the same-origin stylesheet link and the inline `data:,` icon.
 - 22:20 IST: A1 merged (42e5a1a): `cargo test --workspace` 110 passed, 0 failed, 2 ignored;
   `cargo clippy --workspace --all-targets -- -D warnings` clean; `cargo build --release` 1m20s;
   the merged binary's `ulpf infer corpus/generated/zeek/json/conn.log` gives 1 template, 19
