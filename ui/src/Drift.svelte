@@ -8,7 +8,7 @@
   let sel = $state(-1)
 
   // The state of each source when this screen opened; a state that changes later pops, the initial one does not.
-  let seen = null
+  let seen = $state(null)
   async function load() {
     const r = await api('GET', '/api/drift')
     if (r.ok) { list = r.data; err = null; seen ??= Object.fromEntries(list.map((d) => [d.source, d.state])) } else err = r.data

@@ -158,8 +158,8 @@ an idle link is a plain line (`docs/screens/flow-reduced-1280.png`).
 
 | token | value | use |
 |---|---|---|
-| `--d1` | 120 ms | a value or badge changed, a selection moved, a queue bar grew |
-| `--d2` | 240 ms | a screen arrived, a result replaced a confirmation, a pulse hid or showed |
+| `--d1` | 120 ms | a value or badge changed |
+| `--d2` | 240 ms | a screen arrived, a result replaced a confirmation, a pulse hid or showed, a queue bar grew, a chain mark or the branch lit |
 | `--ease` | `cubic-bezier(0.2, 0, 0, 1)` | decelerate: things arrive and settle, nothing bounces |
 | `--pulse` | 6 px | one dash of the flow pulse |
 | `--pitch` | 32 px | dash to dash; one animation loop travels one pitch |
@@ -200,11 +200,11 @@ pulses stop and the notice names the last frame's time.
 | approve or reject completed | the result notice arrives with `enter` | the confirmation was replaced by what was written |
 | a verify finished after the screen opened | the verdict arrives with `enter`; the one on screen at open does not | the state changed while the reader watched |
 | a drift state changed after the screen opened | the state tag pops | the source tripped, proposed or cleared |
-| a station's selection moved (h / l) | border colour over `--d1` | the reader's own action |
-| the queue bar, the chain's newest mark | width and colour over `--d2` / `--d1` | a depth or a record count the frame reported |
+| the queue bar, the chain's newest mark, the branch's link | width, colour and opacity over `--d2` | a depth, a record count or a buffer the frame reported |
 | replay and verify in flight | the meter and the busy sweep (unchanged) | work in progress |
 
-Forbidden and absent: hover transitions, a hero animation on load, per-event particles,
+Forbidden and absent: hover transitions, a selection moving (h / l on Flow snaps like j / k on every
+list: the reader's own action reports nothing new), a hero animation on load, per-event particles,
 pulses on the vertical tray link (a proposal waiting is a state, so that link is lit `--pend`,
 not moving), any easing on data that did not change.
 

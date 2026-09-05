@@ -404,7 +404,7 @@ details summary { cursor: pointer; color: var(--fg-2); font-size: var(--t0); }
 .flow .lede span { color: var(--fg-1); font-size: var(--t1); line-height: 1.35; }
 .flow .lede .src { color: var(--fg-2); font-size: var(--t0); }
 .flow .line { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr) minmax(7em, 0.9fr)) minmax(0, 1fr); gap: var(--s5) 0; align-items: start; }
-.flow .station { display: grid; gap: var(--s1); align-content: start; min-width: 0; padding: var(--s3) var(--s3) var(--s3) 0; color: inherit; text-decoration: none; border-top: 2px solid var(--line-2); transition: border-color var(--d1) var(--ease); }
+.flow .station { display: grid; gap: var(--s1); align-content: start; min-width: 0; padding: var(--s3) var(--s3) var(--s3) 0; color: inherit; text-decoration: none; border-top: 2px solid var(--line-2); }
 .flow .station:hover { border-top-color: var(--fg-1); }
 .flow .station.sel { border-top-color: var(--fg); }
 .flow .station .name { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; font-size: var(--t1); }
@@ -432,7 +432,7 @@ details summary { cursor: pointer; color: var(--fg-2); font-size: var(--t0); }
 .flow .chain .marks i.none { background: none; border: 1px dashed var(--line-2); }
 .flow .chain .marks.grew i.new { background: var(--ok); }
 .flow .branch { padding-right: var(--s3); }
-.flow .branch .node { display: grid; gap: var(--s1); padding-left: var(--s3); border-left: 2px solid var(--line-2); transition: border-color var(--d2) var(--ease); color: inherit; text-decoration: none; }
+.flow .branch .node { display: grid; gap: var(--s1); padding-left: var(--s3); border-left: 2px solid var(--line-2); color: inherit; text-decoration: none; }
 .flow .branch.lit .node { border-left-color: var(--pend); }
 .flow .branch .node .lab { color: var(--fg); font-weight: 600; font-size: var(--t0); justify-content: flex-start; gap: var(--s3); }
 .flow .branch .node .lab kbd { font-weight: 400; font-size: var(--t-1); color: var(--fg-2); }
