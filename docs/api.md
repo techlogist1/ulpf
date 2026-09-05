@@ -56,8 +56,10 @@ before it was read. Nothing blocks the engine on a slow client.
 `duplicate`, `rejected`, `no_templates`), `approved`, `rejected`, `reloads`.
 
 `ParserInfo = { "name", "vendor", "product", "priority": i32, "strategy": "kv|delimiter|json|cef|leef|pattern",
-"subs": n, "origin": "hand|approved", "detected": u64 }` (`detected` counts events this
-process routed to the parser).
+"subs": n, "origin": "hand|approved", "version": u64, "detected": u64 }` (`detected` counts
+events this process routed to the parser; `origin` is `approved` when the definition carries
+`[parser] origin = "inferred"`, which the inference engine writes; a hand-written parser with a
+negative priority stays `hand`).
 
 `GET /api/tail?after=<raw_id>&limit=N` → `TailFrame` with events whose id is greater
 than `after` (omit for the newest `N`, max 500).
@@ -361,8 +363,9 @@ tripped/proposed first. The `sources` array in `MetricsFrame` gains `"parser": s
 
 Pending records gain: `"updates": string|null` (the parser this proposal replaces),
 `"version": u64` (proposed), `"current_version": u64|null`. `GET /api/pending/{id}` gains
-`"current_definition": string|null` and `"diff": string|null` (a unified diff of the
-current file against the proposal, for the review screen's diff view). Approving an
+`"update_kind": "patterns_added"|"matcher_widened"|null` (how the update was composed on
+the prior), `"current_definition": string|null` and `"diff": string|null` (a unified diff
+of the current file against the proposal, for the review screen's diff view). Approving an
 update writes over `parsers/<name>.toml` atomically, keeps the replaced file as
 `pending/approved/<name>.v<current>.toml`, and the approve response gains
 `"replaced_version": u64|null`. A hand-written parser's `[parser]` table may carry

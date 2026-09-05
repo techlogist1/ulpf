@@ -33,6 +33,9 @@ pub struct Meta {
     /// Bumped by an approved drift update; a hand-written file may set it.
     #[serde(default = "one", skip_serializing_if = "is_one")]
     pub version: u64,
+    /// `inferred` when the inference engine wrote the definition; absent for a hand-written one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub origin: Option<String>,
 }
 
 fn one() -> u64 {

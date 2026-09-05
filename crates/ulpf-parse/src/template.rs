@@ -139,7 +139,7 @@ impl Template {
     /// signature substrings the inference engine found constant across the cluster.
     pub fn to_definition(&self, name: &str, vendor: &str, product: &str, contains: Vec<String>) -> ParserDefinition {
         ParserDefinition {
-            parser: Meta { name: name.to_owned(), vendor: vendor.to_owned(), product: product.to_owned(), description: None, version: 1 },
+            parser: Meta { name: name.to_owned(), vendor: vendor.to_owned(), product: product.to_owned(), description: None, version: 1, origin: None },
             matcher: Matcher { contains, starts_with: None, regex: None, priority: 0 },
             envelope: Envelope { syslog: true },
             strategy: Strategy::pattern(&self.to_pattern()),

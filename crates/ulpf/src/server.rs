@@ -190,7 +190,8 @@ fn parsers_json(live: &Live) -> Value {
                     "priority": d.matcher.priority,
                     "strategy": d.strategy.kind.name(),
                     "subs": d.sub.len(),
-                    "origin": if d.matcher.priority < 0 { "approved" } else { "hand" },
+                    "origin": if d.parser.origin.as_deref() == Some("inferred") { "approved" } else { "hand" },
+                    "version": d.parser.version,
                     "detected": hits.get(&d.parser.name).copied().unwrap_or(0),
                 })
             })

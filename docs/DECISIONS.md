@@ -891,3 +891,25 @@ id order for one producer is now enforced by taking the sequence where the ids a
 batch's source; per-peer batches keep every existing path correct with no worker change);
 a thread pool for TCP (a connection is a device; devices are few and long-lived);
 tokio for the listeners (the engine's threads and a blocking `recv` are the whole design).
+
+## D61. The UI is seven windows onto `Live`, judged on two of them
+**Decision.** Svelte 5 screens at hash routes `#/live`, `#/review[/:id]`, `#/trace/:id`,
+`#/pivot[/:kind/:value]`, `#/replay`, `#/drift`, `#/integrity`, every control bound to a
+route in `docs/api.md`, nothing computed from anything the API does not say (a missing
+field is a contract gap raised to the lead, not a placeholder). The live tail renders on
+`requestAnimationFrame`, caps rows at the tail size and drops frames it could not render,
+showing the count. Traceback highlights provenance by byte range, not field name (two
+fields sharing a key stay distinct), and a field whose span strictly contains other
+reported fields yields to its parts, so a Check Point record lights as its thirty pairs,
+not one block; hover on a normalized field lights its bytes and vice versa, `h` toggles
+hex, click pins. Pivot's hero is a device-lane timeline with a time scale, kinds in
+investigator order from `status.schema.entities`, related entities one click from
+re-pivoting with a breadcrumb trail. Replay sets the `why` lines larger than the counters
+they explain. Keyboard everywhere: `j`/`k`, `Enter`, `Esc`, `/`, `?`, digits for screens.
+Built to three fixed files (`app.js` 127 KB), system font stacks, tokens at the top of
+`ui/src/app.css`, no external request. **Anchor.** `ui/src/*.svelte`, `ui/src/keys.js`,
+`ui/README.md`; D48, D50. **Principle.** The UI is a window, not the product (D50):
+every number on screen is one the engine printed; two screens (traceback, pivot) got the
+design budget, the rest stayed quiet and dense. **Ruled out.** Highlighting by field name
+(collides on repeated keys); a mock server shipped with the UI (the worker's throwaway mock
+died the moment the real routes existed); decorative motion (an operations tool at 3am).

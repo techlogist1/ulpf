@@ -287,7 +287,7 @@ fn slot_evidence(s: &cluster::Slot, cols: &[Col]) -> SlotEvidence {
 /// envelope is already stripped from the bodies it is tested on).
 fn compile_pattern(pattern: &str) -> Result<Parser, String> {
     let def = ParserDefinition {
-        parser: Meta { name: "candidate".into(), vendor: "x".into(), product: "x".into(), description: None, version: 1 },
+        parser: Meta { name: "candidate".into(), vendor: "x".into(), product: "x".into(), description: None, version: 1, origin: None },
         matcher: Matcher { contains: vec![], starts_with: None, regex: Some(".".into()), priority: 0 },
         envelope: Envelope { syslog: false },
         strategy: Strategy::pattern(pattern),
@@ -540,6 +540,7 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
             product: source.to_string(),
             description: Some(format!("Inferred from {} unknown lines of {source}; review every slot name before trusting.", lines.len())),
             version: 1,
+            origin: Some("inferred".into()),
         },
         matcher,
         envelope: Envelope { syslog },
@@ -618,6 +619,7 @@ pub fn infer_with_prior(source: &str, lines: &[&[u8]], prior: &ParserDefinition,
     }
     let mut def = prior.clone();
     def.parser.version = prior.parser.version + 1;
+    def.parser.origin.get_or_insert_with(|| "inferred".into());
     def.parser.description = Some(format!("v{}: updated from {} drifted lines of {source} on top of v{}; review the added patterns and the signature.", def.parser.version, lines.len(), prior.parser.version));
     if kind == "patterns_added" {
         let mut pats = prior.strategy.patterns.clone();
