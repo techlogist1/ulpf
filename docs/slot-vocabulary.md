@@ -17,6 +17,10 @@ adding them to a mapping is a mapping decision, not a parser one.
 
 ## Rule order
 
+0. **Names the input carries** (the first table) — a JSON object's key, or the column
+   name a `#fields` header gives. These are the device's vocabulary verbatim, so they win
+   over everything below, including the slot's type: Zeek's `ts` stays `ts`, and the
+   generated `[[timestamp]]` spec follows whatever the timestamp slot is called.
 1. **Shape rules** (the table's second half) — they read the line's structure, so they win
    over a key: `kernel: [{rule}]` must not be named after the syslog tag.
 2. **The slot's own type** — a `timestamp` slot is `timestamp`.
@@ -31,6 +35,19 @@ adding them to a mapping is a mapping decision, not a parser one.
 
 A name that repeats inside one template gets a `_2` suffix. The generated definition's slot
 names are exactly these names.
+
+## Names the input carries
+
+| Context | Name | Reason string | Notes |
+|---|---|---|---|
+| `{"key":{value}` — a line that opens with `{`; the tokenizer keeps `"key":` as a constant word, so only the value is a slot | the key, sanitized to `[A-Za-z0-9_]` (`id.orig_h` → `id_orig_h`) | ``json key `id.orig_h` (written `id_orig_h`)`` | A nested object names by its innermost key and the reason says so: ``json key `orig_h` (innermost key of a nested object)`` (the path is not tracked; Zeek's keys are flat, `id.orig_h` is one key). An array's elements take the array's key: ``json key `answers` (first array element)``; a second element gets `_2`. Case is kept (`AA`, `TTLs`). Example: Zeek `json/conn.log`, `{"ts":1788598139.6,"uid":"CDs4H0…","id.orig_h":"192.168.148.3"}`. |
+| `#fields<sep>name<sep>name…` among the buffered lines (Zeek TSV; `<sep>` is the byte after `#fields`, `\t` for Zeek, and never a letter or digit) | header field *i*, sanitized, for the slot in column *i* | ``header `id.orig_h` (column 3, written `id_orig_h`)`` | Fires only for a template whose every member line has exactly the header's column count (separators counted in the raw text, so constant columns that folded into the pattern still count). A slot's column is the separator count before it in the seed line. A slot whose own value contains the separator spans several columns and stays generic: ``header names columns 5-6 but this one slot spans them all``. The header lines themselves stay in `unmatched.below_support`: a header is not an event. The decision log records ``header: `#fields` names 22 columns separated by '\t'``. Example: Zeek `conn.log`. |
+
+Neither rule fires when its trigger is absent: a line that does not open with `{` tokenizes
+exactly as before, a buffer without a `#fields` line names nothing from a header, and nothing
+else in the pipeline changes. Because a JSON key or header name replaces the slot's type as
+the name, the generated definition's `[[timestamp]]` follows the timestamp slot's actual
+name (`ts`), one candidate per distinct name.
 
 ## Keys
 
