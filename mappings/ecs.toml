@@ -109,7 +109,7 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 
 # --- log / severity ----------------------------------------------------------------
 # The enum below carries the canonical bucket name; `event.severity` is its id.
-"log.level" = ["sev", "severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity", "log_level", "loglevel", "confidence_level", "rule_priority"]
+"log.level" = ["sev", "cef_severity", "severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity", "log_level", "loglevel", "confidence_level", "rule_priority"]
 
 # --- observer: for perimeter devices the logging device is the observer, not the host
 "observer.hostname" = ["devname", "device_name", "hostname", "dvchost", "syslog_host", "device", "dvc_host", "node", "host", "origin", "cluster_name"]
@@ -290,9 +290,12 @@ field = "log.level"
 id_field = "event.severity"
 other = { value = "unknown" }
 
-# Bare digits are the syslog scale; LEEF `sev` (1-10, 10 the most severe) is bucketed by
-# field and listed first under [fields] so a syslog envelope's `syslog_severity` never
-# outranks the device's own value. A CEF header severity arrives as `severity` and is read on the syslog scale.
+# Bare digits are the syslog scale; LEEF `sev` (1-10, 10 the most severe) and CEF's header
+# severity (0-10, ArcSight's own buckets: "The valid integer values are: 0-3=Low, 4-6=Medium,
+# 7-8=High, and 9-10=Very-High") are bucketed by field under their own source names and listed
+# ahead of `syslog_severity` under [fields] so a syslog envelope never outranks the device's own
+# value. Very-High lands on `critical`, the most severe named bucket here below `emergency`,
+# which is the syslog scale's 0 and has no CEF counterpart.
 [[enum.values]]
 value = "informational"
 id = 1
@@ -303,25 +306,25 @@ raw_by_field = { "alert.severity" = ["4"], "ipspri" = ["3"], "sev" = ["1", "2"] 
 value = "low"
 id = 2
 raw = ["low", "minor", "warning", "warn", "4"]
-raw_by_field = { "alert.severity" = ["3"], "ipspri" = ["2"], "sev" = ["3", "4"] }
+raw_by_field = { "alert.severity" = ["3"], "ipspri" = ["2"], "sev" = ["3", "4"], "cef_severity" = ["0", "1", "2", "3"] }
 
 [[enum.values]]
 value = "medium"
 id = 3
 raw = ["medium", "med", "moderate", "error", "err", "3"]
-raw_by_field = { "alert.severity" = ["2"], "sev" = ["5", "6"] }
+raw_by_field = { "alert.severity" = ["2"], "sev" = ["5", "6"], "cef_severity" = ["4", "5", "6"] }
 
 [[enum.values]]
 value = "high"
 id = 4
 raw = ["high", "major", "critical-low", "2", "crit"]
-raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"], "sev" = ["7", "8"] }
+raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"], "sev" = ["7", "8"], "cef_severity" = ["7", "8"] }
 
 [[enum.values]]
 value = "critical"
 id = 5
 raw = ["critical", "1", "alert", "severe"]
-raw_by_field = { "sev" = ["9", "10"] }
+raw_by_field = { "sev" = ["9", "10"], "cef_severity" = ["9", "10"] }
 
 [[enum.values]]
 value = "emergency"

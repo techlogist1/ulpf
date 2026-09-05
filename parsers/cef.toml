@@ -9,7 +9,7 @@
 # host CEF:0|...`). Escaping: a pipe in the header is `\|`; a backslash anywhere is `\\`;
 # an equals sign in an extension value is `\=`; pipes in the extension need no escape.
 # The strategy names the seven header fields cef_version, device_vendor, device_product,
-# device_version, signature_id, name, severity and emits every extension key as written
+# device_version, signature_id, name, cef_severity and emits every extension key as written
 # (src, dst, spt, dpt, proto, act, suser, duser, dvchost, dvc, rt, msg, request,
 # requestMethod, requestClientApplication, app, in, out, cat, cs1..cs6 + cs1Label..,
 # deviceDirection (0 inbound, 1 outbound), outcome, reason, shost, dhost, smac, dmac,
@@ -17,9 +17,14 @@
 # Time: rt (deviceReceiptTime) "is MMM dd yyyy HH:mm:ss or milliseconds since epoch";
 # epoch first, then the textual layout (read by `auto`: the syslog shape with a year,
 # tolerating the fraction or zone a connector may append), then the syslog header.
-# CEF severity is 0-10 (0-3 Low, 4-6 Medium, 7-8 High, 9-10 Very-High); the mapping's
-# numeric severity table is the syslog 0-7 scale, so a numeric CEF severity is
-# canonicalised on the wrong scale (see mappings/ocsf.toml, [[enum]] severity).
+# Severity, verbatim: "agentSeverity is a string or integer and it reflects the importance
+# of the event. The valid string values are: Unknown, Low, Medium, High, and Very-High. The
+# valid integer values are: 0-3=Low, 4-6=Medium, 7-8=High, and 9-10=Very-High." The header
+# field is therefore named cef_severity, not severity: the mapping's bare-digit table is the
+# syslog 0-7 scale that cisco_asa and cisco_ios write under the name severity, and one source
+# name can carry only one scale. Both mappings bucket cef_severity on ArcSight's ranges
+# (Very-High -> Critical); see mappings/ocsf.toml, [[enum]] severity. A definition for a
+# specific CEF-speaking device that adds subs sees the header value as cef_severity too.
 # Priority 0 beside the vendor parsers: the matcher needs the format's own header before
 # any pipe, which no vendor sample carries. A definition for a specific CEF-speaking
 # device that adds subs must declare `priority = 1` to take its lines from this one.

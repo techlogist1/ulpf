@@ -119,7 +119,7 @@ kind = "cef"
     assert_field(&out, "cef_version", b"0");
     assert_field(&out, "device_vendor", b"Vendor");
     assert_field(&out, "name", b"Name with | pipe");
-    assert_field(&out, "severity", b"5");
+    assert_field(&out, "cef_severity", b"5");
     assert_field(&out, "src", b"10.0.0.5");
     assert_field(&out, "spt", b"1234");
     assert_field(&out, "msg", b"hello world a=b");

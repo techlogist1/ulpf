@@ -43,7 +43,7 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 "connection_info.tcp_flags" = ["tcpflags", "tcp_flags"]
 "connection_info.community_uid" = ["community_id"]
 "action" = ["action", "act", "utmaction", "disposition", "Action", "verdict", "filter_action", "fw_action", "result_action", "rule_action", "alert.action", "cache_status", "status"]
-"severity" = ["sev", "severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity"]
+"severity" = ["sev", "cef_severity", "severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity"]
 "status" = ["result", "auth_status", "aaa_status", "login_status", "state", "session_end_reason", "connevent", "outcome", "responseElements.ConsoleLogin", "conn_state"]
 "status_detail" = ["reason", "teardown_reason", "status_reason", "termination_reason", "note"]
 "device.hostname" = ["devname", "device_name", "hostname", "dvchost", "syslog_host", "device", "dvc_host", "node", "host", "origin"]
@@ -136,10 +136,13 @@ id = 2
 raw = ["deny", "denied", "drop", "dropped", "block", "blocked", "block-url", "block-continue", "reject", "rejected", "discard", "discarded", "refuse", "refused", "prevent", "prevented", "quarantine", "quarantined", "reset", "reset-both", "reset-client", "reset-server", "fail", "failed", "failure", "login-fail", "ssl-login-fail", "invalid", "timeout", "timed_out", "expired", "tcp_denied", "tcp_denied_reply", "unauthorized", "sinkhole", "0"]
 
 # The bare digits are the syslog scale (0 emergency .. 7 debug). LEEF `sev` is 1-10 with
-# 10 the most severe, bucketed by field below, and listed first under [fields] so a syslog
-# envelope's `syslog_severity` never outranks the device's own value. CEF's header `severity` is 0-10 the same
-# way up, but it arrives under the name `severity` that syslog-scaled devices use too, so
-# a numeric CEF severity is read on the syslog scale (see parsers/cef.toml).
+# 10 the most severe, and CEF's header severity is 0-10 the same way up; both are bucketed by
+# field below under their own source names, and both are listed ahead of `syslog_severity`
+# under [fields] so a syslog envelope never outranks the device's own value. The CEF buckets
+# are ArcSight's own ("The valid integer values are: 0-3=Low, 4-6=Medium, 7-8=High, and
+# 9-10=Very-High", CEF Implementation Standard, chapter 1); Very-High lands on Critical, the
+# most severe named bucket here below Fatal, which is the syslog scale's 0 and has no CEF
+# counterpart.
 [[enum]]
 field = "severity"
 id_field = "severity_id"
@@ -156,25 +159,25 @@ raw_by_field = { "alert.severity" = ["4"], "ipspri" = ["3"], "sev" = ["1", "2"] 
 value = "Low"
 id = 2
 raw = ["low", "minor", "warning", "warn", "4"]
-raw_by_field = { "alert.severity" = ["3"], "ipspri" = ["2"], "sev" = ["3", "4"] }
+raw_by_field = { "alert.severity" = ["3"], "ipspri" = ["2"], "sev" = ["3", "4"], "cef_severity" = ["0", "1", "2", "3"] }
 
 [[enum.values]]
 value = "Medium"
 id = 3
 raw = ["medium", "med", "moderate", "error", "err", "3"]
-raw_by_field = { "alert.severity" = ["2"], "sev" = ["5", "6"] }
+raw_by_field = { "alert.severity" = ["2"], "sev" = ["5", "6"], "cef_severity" = ["4", "5", "6"] }
 
 [[enum.values]]
 value = "High"
 id = 4
 raw = ["high", "major", "critical-low", "2", "crit"]
-raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"], "sev" = ["7", "8"] }
+raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"], "sev" = ["7", "8"], "cef_severity" = ["7", "8"] }
 
 [[enum.values]]
 value = "Critical"
 id = 5
 raw = ["critical", "1", "alert", "severe"]
-raw_by_field = { "sev" = ["9", "10"] }
+raw_by_field = { "sev" = ["9", "10"], "cef_severity" = ["9", "10"] }
 
 [[enum.values]]
 value = "Fatal"

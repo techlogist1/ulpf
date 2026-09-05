@@ -50,8 +50,11 @@ fn flatten<'a>(prefix: &mut String, key: &str, v: serde_json::Value, out: &mut P
     prefix.truncate(base);
 }
 
+// `cef_severity`, not `severity`: CEF's scale is 0-10 (0-3 Low .. 9-10 Very-High) while the
+// devices that emit a bare `severity` are on the syslog 0-7 scale, and one source name can
+// only carry one scale. The mapping buckets this name (mappings/ocsf.toml, [[enum]] severity).
 static CEF_HEADER: [&[u8]; 7] = [
-    b"cef_version", b"device_vendor", b"device_product", b"device_version", b"signature_id", b"name", b"severity",
+    b"cef_version", b"device_vendor", b"device_product", b"device_version", b"signature_id", b"name", b"cef_severity",
 ];
 
 fn unescape_if_needed(raw: &[u8]) -> Cow<'_, [u8]> {
