@@ -65,6 +65,8 @@ pub struct Config {
     /// Syslog listeners for `serve`; `None` binds nothing.
     pub syslog_udp: Option<std::net::SocketAddr>,
     pub syslog_tcp: Option<std::net::SocketAddr>,
+    /// Build the entity index beside the output (D55). Off skips the index thread entirely.
+    pub pivot_index: bool,
     /// Additional columnar sink. `None` (the default) constructs nothing.
     pub parquet: Option<PathBuf>,
     /// Watch mode only: close the current Parquet file after this many rows or this
@@ -379,6 +381,7 @@ pub struct Live {
     pub seq: AtomicU64,
     pub syslog_udp: Option<std::net::SocketAddr>,
     pub syslog_tcp: Option<std::net::SocketAddr>,
+    pub index_entities: bool,
     /// The addresses the listeners actually bound (port 0 resolved), once they are up.
     pub syslog_bound: Mutex<(Option<std::net::SocketAddr>, Option<std::net::SocketAddr>)>,
     /// The UDP receive buffer the kernel granted, in bytes (0 until the listener is up).
@@ -703,6 +706,7 @@ impl Live {
             seq: AtomicU64::new(0),
             syslog_udp: cfg.syslog_udp,
             syslog_tcp: cfg.syslog_tcp,
+            index_entities: cfg.pivot_index,
             syslog_bound: Mutex::new((None, None)),
             syslog_udp_rcvbuf: AtomicU64::new(0),
             prior_output_store,
@@ -1725,7 +1729,7 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
         let _ = &file;
         // the entity index beside the output: derived data on its own thread (D55);
         // nothing sits beside a device such as /dev/null
-        if !output_is_sink(&live.output) {
+        if live.index_entities && !output_is_sink(&live.output) {
             match PivotWriter::start(&live.output, live.queue_cap) {
                 Ok(pw) => {
                     *live.pivot_counters.lock().unwrap_or_else(|e| e.into_inner()) = Some(pw.counters());

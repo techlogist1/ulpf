@@ -50,6 +50,7 @@ fn udp_and_tcp_events_enter_the_store_and_output_exactly_once_in_order() {
         receipt_nanos: None,
         syslog_udp: Some("127.0.0.1:0".parse().unwrap()),
         syslog_tcp: Some("127.0.0.1:0".parse().unwrap()),
+        pivot_index: true,
         parquet: None,
         parquet_roll: None,
     };

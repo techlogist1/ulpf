@@ -107,6 +107,7 @@ fn the_server_is_a_window_onto_a_live_engine() {
         receipt_nanos: None,
         syslog_udp: None,
         syslog_tcp: None,
+        pivot_index: true,
         parquet: None,
         parquet_roll: None,
     };

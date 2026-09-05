@@ -52,6 +52,12 @@ struct EngineArgs {
     /// reproducible run; the fixture harness uses 2026-09-04T12:00:00Z.
     #[arg(long)]
     receipt: Option<String>,
+    /// Build the entity index beside the output: `on` or `off`. Default `off` for `run`
+    /// (bulk throughput; `ulpf pivot --rebuild` builds it afterwards) and `on` for `serve`
+    /// (the UI pivots live). Measured 2026-09-05: the index thread caps a run at ~27k
+    /// events/s on this machine, one tenth of the pipeline without it.
+    #[arg(long, value_parser = clap::builder::BoolishValueParser::new())]
+    pivot: Option<bool>,
     /// Also write the normalized events to this Parquet file (an additional sink; the
     /// JSON Lines output is always written). A Parquet file is unreadable until closed.
     #[arg(long)]
@@ -228,6 +234,7 @@ impl EngineArgs {
             tail_capacity,
             syslog_udp: None,
             syslog_tcp: None,
+            pivot_index: self.pivot.unwrap_or(false),
             receipt_nanos: match &self.receipt {
                 Some(text) => {
                     let ctx = ulpf_time::Context { receipt_epoch_nanos: engine::now_nanos(), default_offset_secs: 0 };
@@ -305,6 +312,7 @@ pub fn main() -> Result<()> {
             let mut cfg = args.config(watch, tail, Some(roll))?;
             cfg.syslog_udp = syslog_udp;
             cfg.syslog_tcp = syslog_tcp;
+            cfg.pivot_index = args.pivot.unwrap_or(true);
             let live = engine::Live::open(&cfg, true)?;
             for p in live.load_problems.lock().unwrap_or_else(|e| e.into_inner()).iter() {
                 eprintln!("load problem: {p}");

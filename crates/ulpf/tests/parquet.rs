@@ -39,6 +39,7 @@ fn config(dir: &Path, inputs: Vec<PathBuf>, parquet: Option<PathBuf>, roll: Opti
         receipt_nanos: None,
         syslog_udp: None,
         syslog_tcp: None,
+        pivot_index: true,
         parquet,
         parquet_roll: roll,
     }

@@ -48,6 +48,7 @@ fn config(dir: &Path, inputs: Vec<PathBuf>, threshold: usize) -> Config {
         receipt_nanos: None,
         syslog_udp: None,
         syslog_tcp: None,
+        pivot_index: true,
         parquet: None,
         parquet_roll: None,
     }
