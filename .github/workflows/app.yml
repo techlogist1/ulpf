@@ -106,22 +106,28 @@ jobs:
       - name: build
         run: cargo build --release -p ulpf --target ${{ matrix.target }}
 
-      # The claim on the tin: one file, no loader, no libc on the host.
-      - name: prove the linux binary is static
-        run: |
-          bin=target/${{ matrix.target }}/release/ulpf
-          file "$bin"
-          ldd "$bin" || true
-          file "$bin" | grep -Eq 'static(-pie)? linked|statically linked'
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-
+      # The release profile keeps debug info (57 MB on musl); a download does not need it,
+      # and the Dockerfile strips for the same reason. MSVC keeps its symbols in a .pdb.
       - name: name it for the release
         shell: bash
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/ulpf${{ matrix.ext }} \
-             dist/ulpf-${{ github.ref_name }}-${{ matrix.target }}${{ matrix.ext }}
+          out=dist/ulpf-${{ github.ref_name }}-${{ matrix.target }}${{ matrix.ext }}
+          cp target/${{ matrix.target }}/release/ulpf${{ matrix.ext }} "$out"
+          case "${{ matrix.target }}" in
+            *linux-musl)   strip "$out" ;;
+            *apple-darwin) strip -x "$out" ;;
+          esac
           ls -l dist
+
+      # The claim on the tin, checked on the file that ships: one binary, no loader.
+      - name: prove the linux binary is static
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: |
+          bin=dist/ulpf-${{ github.ref_name }}-${{ matrix.target }}
+          file "$bin"
+          ldd "$bin" || true
+          file "$bin" | grep -Eq 'static(-pie)? linked|statically linked'
 
       - uses: actions/upload-artifact@v7
         with:
