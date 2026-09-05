@@ -6,7 +6,7 @@ use serde_json::{Map, Value};
 use ulpf_parse::Parsed;
 use ulpf_time::Policies;
 
-use crate::def::{ClassRule, MappingFile};
+use crate::def::{ClassRule, EntityKind, MappingFile};
 
 /// What the engine knows about an event that the mapping cannot: identity and provenance.
 pub struct Provenance<'a> {
@@ -30,10 +30,35 @@ pub struct NormalizeStats {
     pub enum_other: u32,
     pub time_from_receipt: bool,
     pub utf8_lossy: bool,
+    /// Per `EntityKind` (indexed by `kind as usize`), the index into `parsed.fields` of the
+    /// source field that fed that kind's schema path; `None` when nothing fed it.
+    pub entities: [Option<u32>; 5],
+}
+
+/// One schema field the mapping set from a source field. Cold path (`Mapping::provenance`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldProvenance {
+    /// Dotted schema path, as it appears in the emitted line.
+    pub path: String,
+    /// Index into `parsed.fields`.
+    pub field_index: u32,
+    /// The mapping rewrote the value (enum canonicalisation).
+    pub canonical: bool,
+    /// The emitted value as text.
+    pub value: String,
 }
 
 /// (canonical value, id)
 type Canonical = (String, Option<i64>);
+
+/// What became of one parsed field: dropped as an absent value, fed a schema field, or
+/// landed under `unmapped`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Fate {
+    Absent,
+    Winner,
+    Unmapped,
+}
 
 struct EnumTable {
     id_field: Option<String>,
@@ -41,8 +66,15 @@ struct EnumTable {
     other: Option<(String, Option<i64>)>,
     /// lowercase raw → (canonical, id)
     raw: HashMap<Vec<u8>, Canonical>,
-    /// (source field, lowercase raw) → (canonical, id)
-    raw_by_field: HashMap<(Vec<u8>, Vec<u8>), Canonical>,
+    /// source field → lowercase raw → (canonical, id). Nested so a lookup borrows both
+    /// keys instead of cloning them per event.
+    raw_by_field: HashMap<Vec<u8>, HashMap<Vec<u8>, Canonical>>,
+}
+
+impl EnumTable {
+    fn lookup(&self, source_key: &[u8], lower: &[u8]) -> Option<&Canonical> {
+        self.raw_by_field.get(source_key).and_then(|m| m.get(lower)).or_else(|| self.raw.get(lower))
+    }
 }
 
 struct SchemaField {
@@ -58,6 +90,9 @@ pub struct Mapping {
     aliases: HashMap<Vec<u8>, (usize, usize)>,
     enums: Vec<EnumTable>,
     default_class: ClassRule,
+    /// Per `EntityKind`, the `fields` index of its schema path (`None` when the mapping
+    /// declares no path, or a path no source field can feed).
+    entity_field: [Option<usize>; 5],
 }
 
 impl Mapping {
@@ -97,8 +132,9 @@ impl Mapping {
                     raw.insert(r.to_ascii_lowercase().into_bytes(), (v.value.clone(), v.id));
                 }
                 for (src, list) in &v.raw_by_field {
+                    let per_field: &mut HashMap<Vec<u8>, Canonical> = raw_by_field.entry(src.as_bytes().to_vec()).or_default();
                     for r in list {
-                        raw_by_field.insert((src.as_bytes().to_vec(), r.to_ascii_lowercase().into_bytes()), (v.value.clone(), v.id));
+                        per_field.insert(r.to_ascii_lowercase().into_bytes(), (v.value.clone(), v.id));
                     }
                 }
             }
@@ -119,7 +155,32 @@ impl Mapping {
             constants: Default::default(),
             when: vec![],
         });
-        Ok(Mapping { file, fields, aliases, enums, default_class })
+        let mut entity_field = [None; 5];
+        for kind in EntityKind::ALL {
+            let Some(path) = file.entities.path(kind) else { continue };
+            match fields.iter().position(|f| f.path == path) {
+                Some(i) => entity_field[kind as usize] = Some(i),
+                None => {
+                    // a path only a constant or an enum id can set carries no source field:
+                    // legal (the caller falls back), but a typo must not pass silently
+                    let settable = file
+                        .class
+                        .iter()
+                        .chain(file.default_class.iter())
+                        .any(|c| c.constants.contains_key(path))
+                        || file.enums.iter().any(|e| e.id_field.as_deref() == Some(path));
+                    if !settable {
+                        return Err(format!("[entities] {} = `{path}`: no [fields] entry, class constant or enum id_field sets that path", kind.name()));
+                    }
+                }
+            }
+        }
+        Ok(Mapping { file, fields, aliases, enums, default_class, entity_field })
+    }
+
+    /// The declared entity paths, for `GET /api/status` and the index rebuild.
+    pub fn entities(&self) -> &crate::def::Entities {
+        &self.file.entities
     }
 
     pub fn schema_name(&self) -> &str {
@@ -150,6 +211,32 @@ impl Mapping {
         &self.default_class
     }
 
+    /// Which parsed field feeds each schema field: `winners[schema field] = (alias rank,
+    /// index into `parsed.fields`)`, lowest rank wins and the first field wins a tie;
+    /// `fate[parsed field]` is the same answer from the field's side, so the caller needs
+    /// no second `absent`/alias lookup. `normalize` and `provenance` both see the world
+    /// through this one routine, so the two cannot disagree.
+    fn choose(&self, parsed: &Parsed<'_>, winners: &mut Vec<Option<(usize, u32)>>, fate: &mut Vec<Fate>) {
+        winners.clear();
+        winners.resize(self.fields.len(), None);
+        fate.clear();
+        fate.resize(parsed.fields.len(), Fate::Unmapped);
+        for (i, f) in parsed.fields.iter().enumerate() {
+            if self.absent(&f.value) {
+                fate[i] = Fate::Absent;
+                continue;
+            }
+            if let Some(&(idx, rank)) = self.aliases.get(&*f.key)
+                && winners[idx].is_none_or(|(r, _)| rank < r)
+            {
+                winners[idx] = Some((rank, i as u32));
+            }
+        }
+        for (_, fi) in winners.iter().flatten() {
+            fate[*fi as usize] = Fate::Winner;
+        }
+    }
+
     /// Appends one JSON line (with trailing newline) for `parsed` to `out`.
     pub fn normalize(&self, parsed: &Parsed<'_>, prov: &Provenance<'_>, out: &mut Vec<u8>) -> NormalizeStats {
         let mut stats = NormalizeStats::default();
@@ -158,37 +245,27 @@ impl Mapping {
         let class = self.select_class(parsed);
         stats.class_uid = class.uid;
 
-        // best alias rank seen per schema field, so a lower-ranked alias never overrides
-        let mut chosen: Vec<Option<(usize, Value)>> = (0..self.fields.len()).map(|_| None).collect();
-        let mut chosen_src: Vec<Option<Vec<u8>>> = (0..self.fields.len()).map(|_| None).collect();
-        for f in &parsed.fields {
-            if self.absent(&f.value) {
+        let mut winners = Vec::new();
+        let mut fate = Vec::new();
+        self.choose(parsed, &mut winners, &mut fate);
+        for (kind, slot) in self.entity_field.iter().enumerate() {
+            if let Some(fi) = slot {
+                stats.entities[kind] = winners[*fi].map(|(_, i)| i);
+            }
+        }
+
+        // everything that did not win its schema field keeps its data under `unmapped`
+        for (i, f) in parsed.fields.iter().enumerate() {
+            if fate[i] != Fate::Unmapped {
                 continue;
             }
             let key = lossy(&f.key, &mut stats);
             let value_text = lossy(&f.value, &mut stats);
-            match self.aliases.get(&*f.key) {
-                Some(&(idx, rank)) => {
-                    let better = chosen[idx].as_ref().is_none_or(|(r, _)| rank < *r);
-                    if better {
-                        if let Some((_, prev)) = chosen[idx].take() {
-                            // demoted alias keeps its data
-                            unmapped_insert(&mut unmapped, String::from_utf8_lossy(chosen_src[idx].as_deref().unwrap_or_default()).into_owned(), prev);
-                            stats.mapped -= 1;
-                        }
-                        chosen[idx] = Some((rank, Value::String(value_text.into_owned())));
-                        chosen_src[idx] = Some(f.key.to_vec());
-                        stats.mapped += 1;
-                    } else {
-                        unmapped_insert(&mut unmapped, key.into_owned(), Value::String(value_text.into_owned()));
-                    }
-                }
-                None => unmapped_insert(&mut unmapped, key.into_owned(), Value::String(value_text.into_owned())),
-            }
+            unmapped_insert(&mut unmapped, key.into_owned(), Value::String(value_text.into_owned()));
         }
-        for (idx, slot) in chosen.into_iter().enumerate() {
+        for (idx, slot) in winners.iter().enumerate() {
             let field = &self.fields[idx];
-            let Some((_, value)) = slot else {
+            let Some((_, fi)) = *slot else {
                 if let Some(ei) = field.enum_idx
                     && let Some((name, id)) = &self.enums[ei].unknown
                 {
@@ -199,14 +276,14 @@ impl Mapping {
                 }
                 continue;
             };
+            let src = &parsed.fields[fi as usize];
+            let value = Value::String(lossy(&src.value, &mut stats).into_owned());
+            stats.mapped += 1;
             match field.enum_idx {
                 Some(ei) => {
                     let table = &self.enums[ei];
-                    let raw = value.as_str().unwrap_or_default();
-                    let lower = raw.to_ascii_lowercase().into_bytes();
-                    let src = chosen_src[idx].clone().unwrap_or_default();
-                    let hit = table.raw_by_field.get(&(src.clone(), lower.clone())).or_else(|| table.raw.get(&lower));
-                    match hit {
+                    let lower = value.as_str().unwrap_or_default().to_ascii_lowercase().into_bytes();
+                    match table.lookup(&src.key, &lower) {
                         Some((name, id)) => {
                             set_path(&mut root, &field.path, Value::String(name.clone()));
                             if let (Some(idf), Some(id)) = (&table.id_field, id) {
@@ -221,7 +298,7 @@ impl Mapping {
                                     set_path(&mut root, idf, Value::from(*id));
                                 }
                             }
-                            unmapped_insert(&mut unmapped, String::from_utf8_lossy(&src).into_owned(), value);
+                            unmapped_insert(&mut unmapped, String::from_utf8_lossy(&src.key).into_owned(), value);
                         }
                     }
                 }
@@ -302,6 +379,41 @@ impl Mapping {
         serde_json::to_writer(&mut *out, &Value::Object(root)).expect("writing to a Vec cannot fail");
         out.push(b'\n');
         stats
+    }
+
+    /// Cold path (one traceback request): for every schema field `normalize` would set
+    /// from a source field, which field fed it and what the emitted value is. Fields the
+    /// mapping synthesises (class constants, enum `unknown`, enum id fields, `metadata.*`)
+    /// have no entry, and neither has an enum miss with no `other` value, because nothing
+    /// is emitted at that path.
+    pub fn provenance(&self, parsed: &Parsed<'_>) -> Vec<FieldProvenance> {
+        let mut winners = Vec::new();
+        let mut fate = Vec::new();
+        self.choose(parsed, &mut winners, &mut fate);
+        let mut out = Vec::new();
+        for (idx, slot) in winners.iter().enumerate() {
+            let Some((_, fi)) = *slot else { continue };
+            let field = &self.fields[idx];
+            let src = &parsed.fields[fi as usize];
+            let text = String::from_utf8_lossy(&src.value).into_owned();
+            let (canonical, value) = match field.enum_idx {
+                Some(ei) => {
+                    let table = &self.enums[ei];
+                    let lower = text.to_ascii_lowercase().into_bytes();
+                    match table.lookup(&src.key, &lower).or(table.other.as_ref()) {
+                        Some((name, _)) => (true, name.clone()),
+                        None => continue,
+                    }
+                }
+                None if field.is_int => match as_int(Value::String(text)) {
+                    Value::String(s) => (false, s),
+                    v => (false, v.to_string()),
+                },
+                None => (false, text),
+            };
+            out.push(FieldProvenance { path: field.path.clone(), field_index: fi, canonical, value });
+        }
+        out
     }
 }
 

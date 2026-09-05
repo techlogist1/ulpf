@@ -11,4 +11,4 @@ mod mapping;
 
 pub use def::*;
 pub use load::{LoadError, LoadReport, load_dir, load_files};
-pub use mapping::{Mapping, NormalizeStats, Provenance};
+pub use mapping::{FieldProvenance, Mapping, NormalizeStats, Provenance};

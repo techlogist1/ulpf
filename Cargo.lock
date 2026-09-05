@@ -986,6 +986,7 @@ dependencies = [
  "futures-util",
  "memchr",
  "memmap2",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",

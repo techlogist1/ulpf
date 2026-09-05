@@ -135,6 +135,24 @@ enum Cmd {
         #[arg(long, default_value = "ulpf.ulpf-store")]
         store: PathBuf,
     },
+    /// Print one entity's timeline from the index beside the output, or rebuild that index.
+    Pivot {
+        /// src_ip, dst_ip, user, dst_port or device.
+        kind: Option<String>,
+        value: Option<String>,
+        #[arg(long, short, default_value = "out.jsonl")]
+        output: PathBuf,
+        #[arg(long, default_value_t = 50)]
+        limit: usize,
+        /// Re-derive the whole index from the output file.
+        #[arg(long)]
+        rebuild: bool,
+        #[arg(long, default_value = "mappings")]
+        mappings: PathBuf,
+        /// Mapping schema name (default: the first loaded).
+        #[arg(long)]
+        schema: Option<String>,
+    },
     /// Emit fixture skeleton lines for a sample file (review each line before committing).
     Fixture {
         sample: PathBuf,
@@ -424,6 +442,58 @@ pub fn main() -> Result<()> {
                 rec.sha256.iter().map(|b| format!("{b:02x}")).collect::<String>()
             );
             std::io::stdout().lock().write_all(rec.bytes)?;
+            Ok(())
+        }
+        Cmd::Pivot { kind, value, output, limit, rebuild, mappings, schema } => {
+            if rebuild {
+                let mut maps = ulpf_normalize::load_dir(&mappings).with_context(|| format!("mappings directory {}", mappings.display()))?;
+                for e in &maps.errors {
+                    eprintln!("mapping problem: {e}");
+                }
+                let idx = match &schema {
+                    Some(name) => maps.mappings.iter().position(|m| m.schema_name() == *name).with_context(|| format!("no mapping named `{name}`"))?,
+                    None => {
+                        anyhow::ensure!(!maps.mappings.is_empty(), "no usable mapping in {}", mappings.display());
+                        0
+                    }
+                };
+                let mapping = maps.mappings.swap_remove(idx);
+                let report = crate::pivot::rebuild(&output, &mapping, 1024)?;
+                eprintln!(
+                    "rebuilt {} from {} events, {} postings, {} unreadable lines in {:.3} s",
+                    crate::pivot::index_path(&output).display(),
+                    report.events,
+                    report.postings,
+                    report.unreadable_lines,
+                    report.elapsed_secs
+                );
+                return Ok(());
+            }
+            let (Some(kind), Some(value)) = (kind, value) else { bail!("usage: ulpf pivot KIND VALUE --output out.jsonl, or ulpf pivot --rebuild --output out.jsonl") };
+            let kind = ulpf_normalize::EntityKind::from_name(&kind)
+                .with_context(|| format!("unknown entity kind `{kind}`; one of src_ip, dst_ip, user, dst_port, device"))?;
+            let index = crate::pivot::PivotIndex::open(&output)?;
+            let page = index.query(&crate::pivot::PivotQuery {
+                kind,
+                value: value.as_bytes(),
+                limit,
+                before: None,
+                after: None,
+                order: crate::pivot::Order::Desc,
+            })?;
+            eprintln!(
+                "{} {}: {} events on {} device(s), {} .. {}",
+                kind.name(),
+                value,
+                page.total,
+                page.devices.len(),
+                page.first_time.unwrap_or(0),
+                page.last_time.unwrap_or(0)
+            );
+            let mut out = std::io::stdout().lock();
+            for e in &page.events {
+                writeln!(out, "{}", serde_json::to_string(&e.line)?)?;
+            }
             Ok(())
         }
         Cmd::Fixture { sample, parsers, mappings, tz } => {
