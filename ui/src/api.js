@@ -43,6 +43,14 @@ export const fmt = {
   pct: (x) => (x == null ? '–' : `${(Number(x) * 100).toFixed(1)}%`),
   pairs: (list) => (Array.isArray(list) && list.length ? list.map(([r, n]) => `${r} ${fmt.n(n)}`).join('  ') : 'none'),
   time: (ms) => (ms == null ? '–' : new Date(ms).toISOString().replace('T', ' ').replace('Z', '')),
+  // "2026-09-04T10:23:00.000Z" or epoch ms -> "09-04 10:23:00.000". The year is identical on
+  // every row of a tail, and carrying it truncated the seconds, which is the part being read.
+  stamp: (v) => {
+    if (v == null || v === '') return '–'
+    const s = typeof v === 'number' ? fmt.time(v) : String(v)
+    const m = s.match(/\d{4}-(\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?)/)
+    return m ? `${m[1]} ${m[2]}` : s
+  },
   clock: (ms) => (ms == null ? '–' : new Date(ms).toISOString().slice(11, 23)),
   day: (ms) => (ms == null ? '–' : new Date(ms).toISOString().slice(0, 10)),
   ago: (s) => {
@@ -62,7 +70,11 @@ export function summarize(line) {
   const out = []
   const src = ep('src_endpoint.ip', 'src_endpoint.port')
   const dst = ep('dst_endpoint.ip', 'dst_endpoint.port')
-  if (src || dst) out.push(`${src ?? '?'} ${dst ? '> ' + dst : ''}`.trim())
+  // src > dst when both are known; a lone endpoint stands on its own rather than
+  // beside a placeholder for the half the event does not carry.
+  if (src && dst) out.push(`${src} > ${dst}`)
+  else if (src) out.push(src)
+  else if (dst) out.push(`> ${dst}`)
   for (const k of ['connection_info.protocol_name', 'app_name', 'actor.user.name', 'user.name', 'firewall_rule.name', 'finding_info.title', 'http_request.url.hostname', 'dns_query.hostname']) {
     const v = p(k)
     if (v != null && v !== '') out.push(String(v))

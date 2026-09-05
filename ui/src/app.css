@@ -91,7 +91,7 @@ h3 { font-size: var(--t); font-weight: 600; margin: 0; color: var(--ink-dim); }
 .empty { color: var(--muted); padding: var(--s4); border: 1px dashed var(--rule); background: var(--panel); }
 .two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--s4); align-items: start; }
 .split { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--s4); align-items: start; }
-.split.sources { grid-template-columns: minmax(0, 1.42fr) minmax(0, 1fr); }
+.split.sources { grid-template-columns: minmax(0, 1.62fr) minmax(0, 1fr); }
 .split.review { grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); }
 .stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s3); align-content: start; }
 @media (max-width: 1100px) { .two, .split, .split.sources, .split.review { grid-template-columns: minmax(0, 1fr); } }
@@ -143,6 +143,9 @@ h3 { font-size: var(--t); font-weight: 600; margin: 0; color: var(--ink-dim); }
 .tbl td.grow { white-space: normal; word-break: break-all; }
 .tbl td.cut { max-width: 1px; overflow: hidden; text-overflow: ellipsis; }
 .tbl td.ell { max-width: 72ch; overflow: hidden; text-overflow: ellipsis; }
+.tbl td.mono.ell { max-width: 46ch; }
+/* a descriptive cell that must never push a counted column off the table */
+.tbl td.tight { max-width: 15ch; overflow: hidden; text-overflow: ellipsis; }
 /* A tail table is relaid out several times a second: fixed layout stops the browser
    measuring every one of the 500 rows to size the columns, which is what stalls a
    full-rate stream. Column widths come from the colgroup. */
@@ -207,6 +210,8 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .ol { margin: 0; padding-left: 1.6em; color: var(--ink-dim); }
 .ol li { font-family: var(--font-mono); font-size: var(--t-sm); padding: 1px 0; }
 .tbl td.reason { color: var(--muted); white-space: normal; overflow-wrap: anywhere; width: 40ch; min-width: 26ch; }
+/* slot examples: wrap rather than push the table into a horizontal scroll */
+.tpl .tbl td:last-child { white-space: normal; overflow-wrap: anywhere; }
 .tpl .wrap { max-width: 100%; }
 .tpl .ex pre, .tpl .pattern { max-width: 100%; }
 
@@ -278,8 +283,10 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .keymap dd { margin: 0; color: var(--ink-dim); }
 .keymap .grp { color: var(--muted); font-size: var(--t-sm); border-bottom: 1px solid var(--rule); padding-bottom: 2px; margin-bottom: var(--s2); }
 
-/* replay: the 4am answer, set larger than the counters it explains */
+/* replay: the 4am answer, set larger than the counters it explains. Verbatim and complete,
+   but bounded: a report that names thirty files must not push the summary below the fold. */
 .why { background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--accent); padding: var(--s3) var(--s4); display: grid; gap: var(--s2); }
+.why .lines { max-height: 30vh; overflow: auto; display: grid; gap: var(--s2); }
 .why h3 { color: var(--ink); }
 .why p { margin: 0; font-family: var(--font-mono); font-size: var(--t-md); color: var(--ink-dim); line-height: 1.5; }
 .why .bar { margin-top: var(--s1); }

@@ -7,7 +7,7 @@ export function row(ev) {
   const l = ev.line
   return {
     raw_id: ev.raw_id,
-    time: leaf(l, 'metadata.event_time_rfc3339') ?? fmt.time(l?.time),
+    time: fmt.stamp(leaf(l, 'metadata.event_time_rfc3339') ?? l?.time),
     parser: leaf(l, 'ulpf.parser') ?? null,
     status: leaf(l, 'ulpf.parse_status') ?? 'unknown',
     cls: l?.class_name ?? '',

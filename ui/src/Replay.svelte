@@ -101,8 +101,10 @@
     <div class="head"><h2>Report for v{report.version}</h2><span class="note">against v{report.previous_version ?? '–'}, {fmt.n(report.events)} events in {fmt.f(report.elapsed_secs, 2)}s at {fmt.n(Math.round(report.events_per_sec))}/s</span></div>
 
     <div class="why">
-      <h3>Why the output changed</h3>
-      {#each report.why ?? [] as w}<p>{w}</p>{:else}<p class="is-dim">The report carries no explanation.</p>{/each}
+      <div class="head"><h3>Why the output changed</h3><span class="note">{fmt.n(report.why?.length ?? 0)} line{report.why?.length === 1 ? '' : 's'}, from the report verbatim</span></div>
+      <div class="lines">
+        {#each report.why ?? [] as w}<p>{w}</p>{:else}<p class="is-dim">The report carries no explanation.</p>{/each}
+      </div>
       <div class="bar sm muted">
         <span>output <span class="mono" title={report.output}>{base(report.output)}</span></span>
         {#if report.diff}<span>diff <span class="mono" title={report.diff}>{base(report.diff)}</span></span>{/if}
@@ -132,7 +134,8 @@
 
     <div class="split">
       <div>
-        <div class="head"><h2>Parser changes</h2></div>
+        <div class="head"><h2>Parser changes</h2><span class="note">which parser claimed an event before and after</span></div>
+        <div class="scroll" style="max-height:34vh">
         <table class="tbl">
           <thead><tr><th>before</th><th>after</th><th class="num">events</th></tr></thead>
           <tbody>
@@ -147,9 +150,11 @@
             {/each}
           </tbody>
         </table>
+        </div>
       </div>
       <div>
-        <div class="head"><h2>By field</h2></div>
+        <div class="head"><h2>By field</h2><span class="note">{fmt.n(report.summary?.by_field?.length ?? 0)} schema paths, most affected first</span></div>
+        <div class="scroll" style="max-height:34vh">
         <table class="tbl">
           <thead><tr><th>path</th><th class="num">added</th><th class="num">lost</th><th class="num">changed</th></tr></thead>
           <tbody>
@@ -165,6 +170,7 @@
             {/each}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   </section>
@@ -190,14 +196,17 @@
           <thead><tr><th class="num">raw</th><th>kind</th><th>parser before</th><th>parser after</th><th>added</th><th>lost</th><th>changed</th></tr></thead>
           <tbody>
             {#each entries as e, i (e.raw_id + e.kind)}
+              {@const add = pairs(e.added).map(([k, v]) => `${k}=${v}`).join('  ')}
+              {@const lost = pairs(e.lost).map(([k, v]) => `${k}=${v}`).join('  ')}
+              {@const chg = pairs(e.changed).map(([k, v]) => `${k}: ${v[0]} to ${v[1]}`).join('  ')}
               <tr class="click" class:sel={i === sel} onclick={() => (location.hash = `#/trace/${e.raw_id}`)}>
                 <td class="num">{e.raw_id}</td>
                 <td><span class="tag" class:ok={e.kind === 'only_in_new'} class:bad={e.kind === 'only_in_old'} class:warn={e.kind === 'changed'}>{e.kind}</span></td>
                 <td class="mono is-dim">{e.parser_before ?? '—'}</td>
                 <td class="mono">{e.parser_after ?? '—'}</td>
-                <td class="mono is-ok">{pairs(e.added).map(([k, v]) => `${k}=${v}`).join('  ')}</td>
-                <td class="mono is-bad">{pairs(e.lost).map(([k, v]) => `${k}=${v}`).join('  ')}</td>
-                <td class="mono is-warn">{pairs(e.changed).map(([k, v]) => `${k}: ${v[0]} to ${v[1]}`).join('  ')}</td>
+                <td class="mono is-ok ell" title={add}>{add}</td>
+                <td class="mono is-bad ell" title={lost}>{lost}</td>
+                <td class="mono is-warn ell" title={chg}>{chg}</td>
               </tr>
             {/each}
           </tbody>

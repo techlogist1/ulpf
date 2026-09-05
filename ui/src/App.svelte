@@ -28,7 +28,11 @@
   }
   let route = $state(parse(location.hash))
   let helpOpen = $state(false)
-  window.addEventListener('hashchange', () => { route = parse(location.hash); helpOpen = false })
+  window.addEventListener('hashchange', () => {
+    route = parse(location.hash)
+    helpOpen = false
+    window.scrollTo(0, 0) // a new screen starts at its own top, not where the last one was read
+  })
   loadStatus()
 
   function onKey(e) {
@@ -103,7 +107,7 @@
 
 {#if helpOpen}
   <div class="overlay" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false }}>
-    <div class="keymap" role="dialog" aria-modal="true" aria-label="Keyboard map" tabindex="-1">
+    <div class="keymap" role="dialog" aria-modal="true" aria-label="Keyboard map" tabindex="-1" {@attach (el) => el.focus()}>
       <h2>Keys</h2>
       <div class="grp">Anywhere</div>
       <dl>
