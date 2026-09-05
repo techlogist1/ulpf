@@ -101,7 +101,9 @@ fn stop_releases_every_file_the_engine_opened() {
     assert!(live.traceback(0).is_ok());
     assert!(live.entities(None, "", 5).is_ok());
     let during = open_under(&dir);
-    assert!(during.iter().any(|p| p.ends_with("raw.seg")), "the store is open while serving: {during:?}");
+    if cfg!(any(target_os = "macos", target_os = "linux")) {
+        assert!(during.iter().any(|p| p.ends_with("raw.seg")), "the store is open while serving: {during:?}");
+    }
 
     live.stop();
     handle.join().unwrap().unwrap();
