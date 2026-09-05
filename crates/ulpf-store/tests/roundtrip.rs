@@ -234,6 +234,68 @@ fn segment_ahead_of_index_reindexes_complete_records_and_drops_a_torn_tail() {
     assert_eq!(r.get(RawId(50)).unwrap().bytes, b"next\n");
 }
 
+fn file_len(path: std::path::PathBuf) -> u64 {
+    std::fs::metadata(path).unwrap().len()
+}
+
+/// The shape Windows refuses: a reader has the files mapped while a writer reopens the
+/// store over a torn tail. Recovery must reclaim the tail without shrinking either file
+/// (SetEndOfFile on a mapped file fails with ERROR_USER_MAPPED_FILE; on POSIX the reader
+/// would fault instead), the mapped reader keeps every record it had, and a fresh reader
+/// does not mistake the reclaimed bytes for records.
+#[test]
+fn a_reader_mapped_across_a_reopen_keeps_its_records_and_no_file_shrinks() {
+    let dir = temp("live-map");
+    fill(&dir, 50);
+    let mapped = RawReader::open(&dir).unwrap();
+    assert_eq!(mapped.len(), 50);
+    // the crash: a torn record after 49, a torn index entry after its 50 entries
+    OpenOptions::new().append(true).open(dir.join("raw.seg")).unwrap().write_all(b"ULPF\x32\x00\x00\x00\x00\x00\x00\x00torn").unwrap();
+    OpenOptions::new().append(true).open(dir.join("raw.idx")).unwrap().write_all(&[1, 2, 3]).unwrap();
+    let (seg_before, idx_before) = (file_len(dir.join("raw.seg")), file_len(dir.join("raw.idx")));
+    {
+        let mut s = RawStore::open(&dir).unwrap();
+        assert_eq!(s.len(), 50);
+        assert_eq!(file_len(dir.join("raw.seg")), seg_before, "the torn tail is reclaimed by position, never by truncation");
+        assert_eq!(file_len(dir.join("raw.idx")), idx_before);
+        let src = s.source_id("a.log").unwrap();
+        assert_eq!(s.append(src, 4, b"after\n").unwrap(), RawId(50));
+        s.flush(true).unwrap();
+    }
+    assert_eq!(mapped.len(), 50, "the reader mapped across the reopen is bounded to what it opened with");
+    assert!(mapped.verify().ok());
+    assert_eq!(mapped.get(RawId(49)).unwrap().bytes, b"event 49\n");
+    let r = RawReader::open(&dir).unwrap();
+    assert_eq!(r.len(), 51);
+    assert!(r.verify().ok(), "{:?}", r.verify().first_bad);
+    assert_eq!(r.get(RawId(50)).unwrap().bytes, b"after\n");
+
+    // the index-ahead direction: six entries name records the segment never received;
+    // recovery zeroes them in place and a reader stops before them. The test's own cut is
+    // made with no mapping alive, since that is exactly what Windows refuses.
+    drop(mapped);
+    drop(r);
+    let cut = offset_of(&dir, 45);
+    let seg_len = file_len(dir.join("raw.seg"));
+    OpenOptions::new().write(true).open(dir.join("raw.seg")).unwrap().set_len(cut).unwrap();
+    assert_eq!(RawReader::open(&dir).unwrap().len(), 45, "a reader on the crashed store stops at the last record the segment holds");
+    let idx_len = file_len(dir.join("raw.idx"));
+    {
+        let mut s = RawStore::open(&dir).unwrap();
+        assert_eq!(s.len(), 45);
+        assert_eq!(file_len(dir.join("raw.idx")), idx_len, "six stale entries are zeroed, the index is not cut");
+        assert!(file_len(dir.join("raw.seg")) < seg_len, "the test cut the segment, recovery did not extend it");
+        let src = s.source_id("a.log").unwrap();
+        assert_eq!(s.append(src, 5, b"again\n").unwrap(), RawId(45));
+        s.flush(true).unwrap();
+    }
+    let r = RawReader::open(&dir).unwrap();
+    assert_eq!(r.len(), 46, "five zeroed entries behind the last record are not records");
+    assert!(r.verify().ok(), "{:?}", r.verify().first_bad);
+    drop(r);
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
 #[test]
 fn the_writer_reads_its_own_records_back_by_id() {
     let dir = std::env::temp_dir().join(format!("ulpf-store-get-{}", std::process::id()));
