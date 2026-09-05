@@ -93,7 +93,15 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       `events_per_sec` is a decaying run average, not a windowed rate; `/api/pivot` paging by
       `before_id` is prose-only; `/api/events/{id}.emitted` is null once out of the tail ring.
       Not done: automated UI tests; the merge-mid-state capture; light theme captured on two
-      screens only; not yet rendered in the Tauri webview (C).
+      screens only. Rendered in the Tauri webview by C's verifications. Lane P (merged 01:15
+      IST as 8ccb8e5, one commit 61a6a4c, judged by a strongest-tier verifier that re-ran each
+      fix over CDP and looked at all 17 changed captures): the nine minor findings from the
+      Chrome-driven pass fixed in the UI alone (the approve result scrolls into view and takes
+      focus, the written-to path wraps, axis ticks are distinct, seen-with bars are the share
+      of the events they were computed over, both store sizes formatted, no negative zero,
+      the tail note says click or Enter, the sources table fits at 1512 (stack breakpoint
+      1650), the field legend clips to two rows with an `All N keys` button); 114 tests, clippy
+      clean, dist rebuilt byte-identical, no external reference.
 - [x] C. (D73; merged 23:12 IST as ce3826e, twelve commits acd42c7..cdb4d9b, verified by an
       independent Opus pass that launched the .app itself: clean data dir, `server.url` in
       2 s, `/api/status`, a new source in the feed within 1 s, quit leaves no app process and
@@ -159,6 +167,9 @@ measurements with their commands. Nothing else: no logs, no transcripts. No work
 longer than about four minutes (backgrounded and polled past that).
 
 ### Verified state (v3, rolling; every line was run, not read)
+- 01:15 IST (06 Sep): P merged (8ccb8e5): `cargo test --workspace` 114 passed, 0 failed, 2
+  ignored; clippy clean; release build 8,777,448 bytes embedding P's dist (the new strings are
+  in the binary); the lead's grep of `ui/dist` finds no external reference.
 - 23:12 IST: C merged (ce3826e): `cargo test --workspace` 114 passed, 0 failed, 2 ignored;
   clippy clean; release build 8,777,448 bytes (unchanged by the cfg shims, as intended);
   `cargo metadata --no-deps` at the root lists the seven engine crates only, so `app/` stays
@@ -230,6 +241,7 @@ final sequence in order (rebuild, re-bundle with the sidecar SHA checked, isolat
 serve and docker modes, cold start, demo runner, quiet soak, verified state, commit, push).
 
 ### In flight
+- (P merged 01:15 IST; V2 and K relaunched on the merged build at 01:17; then the final sequence.)
 - Lane P since 23:27 IST (own worktree of main): the twelve minor findings from lane V's
   Chrome-driven pass (scroll to the approve result, the written-to path overflow, repeated
   axis ticks, uninformative seen-with bars, an unformatted number, negative zero, the tail
