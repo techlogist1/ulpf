@@ -67,7 +67,7 @@ impl PeerBuf {
         let bytes = self.buf.len() as u64;
         let started = self.receipts.first().copied().unwrap_or_else(now_nanos);
         let (first, seq) = {
-            let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+            let mut store = live.store()?;
             let source = match self.source_id {
                 Some(s) => s,
                 None => {

@@ -208,8 +208,10 @@ impl Versions {
             if !path.exists() && meta.is_none() {
                 break;
             }
+            // v1 is the live output: its meta count is right at the last clean stop and
+            // stale while a serve appends, so it is always counted from the file
             let events = match &meta {
-                Some(m) if m.events > 0 => m.events,
+                Some(m) if v > 1 && m.events > 0 => m.events,
                 _ => count_lines(&path),
             };
             out.push(VersionInfo {
@@ -263,7 +265,7 @@ impl Versions {
     }
 }
 
-fn count_lines(path: &Path) -> u64 {
+pub(crate) fn count_lines(path: &Path) -> u64 {
     let Ok(f) = File::open(path) else { return 0 };
     let mut r = BufReader::with_capacity(1 << 20, f);
     let mut n = 0u64;

@@ -345,10 +345,27 @@ pub enum TracebackError {
     Io(String),
 }
 
+/// The writer behind `Live::store`; the lock is held for the guard's lifetime.
+pub struct StoreGuard<'a>(std::sync::MutexGuard<'a, Option<RawStore>>);
+
+impl std::ops::Deref for StoreGuard<'_> {
+    type Target = RawStore;
+    fn deref(&self) -> &RawStore {
+        self.0.as_ref().expect("checked by Live::store while this guard held the lock")
+    }
+}
+
+impl std::ops::DerefMut for StoreGuard<'_> {
+    fn deref_mut(&mut self) -> &mut RawStore {
+        self.0.as_mut().expect("checked by Live::store while this guard held the lock")
+    }
+}
+
 pub struct Live {
     pub metrics: Metrics,
     pipeline: RwLock<Arc<Pipeline>>,
-    pub store: Mutex<RawStore>,
+    /// `None` once `run`/`serve` returned: stop closes every file the engine opened (D82).
+    store: Mutex<Option<RawStore>>,
     pub tail: Tail,
     pub sources: Mutex<BTreeMap<String, SourceStats>>,
     /// Events routed to each parser by name, this process.
@@ -386,6 +403,9 @@ pub struct Live {
     pivot_index: Mutex<Option<PivotIndex>>,
     pub receipt_nanos: Option<i64>,
     pub recovered: AtomicU64,
+    /// The output's byte length when this run's first line was written (after recovery
+    /// truncated a torn tail): 0 means every line in the file is this run's.
+    pub output_start: AtomicU64,
     /// Batch sequence, assigned under the store lock so several producers (files, UDP,
     /// TCP) hand the output thread batches in raw id order.
     pub seq: AtomicU64,
@@ -609,7 +629,15 @@ pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratc
 /// `-` (stdout) or a device such as `/dev/null`: an output nothing can be written beside
 /// (no version meta, no entity index) and nothing can be recovered from.
 pub fn output_is_sink(path: &Path) -> bool {
-    path.as_os_str() == "-" || path.starts_with("/dev")
+    path.as_os_str() == "-" || path.starts_with("/dev") || (cfg!(windows) && is_nul(path))
+}
+
+/// `NUL`, `\\.\NUL` or `\\?\NUL`: the device Windows has in place of `/dev/null`. Only on
+/// Windows, so a Unix file that happens to be named NUL stays a file.
+fn is_nul(path: &Path) -> bool {
+    let s = path.to_string_lossy();
+    let name = s.strip_prefix(r"\\.\").or_else(|| s.strip_prefix(r"\\?\")).unwrap_or(&s);
+    name.eq_ignore_ascii_case("nul")
 }
 
 pub fn now_nanos() -> i64 {
@@ -685,7 +713,7 @@ impl Live {
         Ok(Arc::new(Live {
             metrics: Metrics::default(),
             pipeline: RwLock::new(Arc::new(pipeline)),
-            store: Mutex::new(store),
+            store: Mutex::new(Some(store)),
             tail: Tail::new(cfg.tail_capacity.max(1)),
             sources: Mutex::new(BTreeMap::new()),
             parser_hits: Mutex::new(HashMap::new()),
@@ -719,6 +747,7 @@ impl Live {
             pivot_index: Mutex::new(None),
             receipt_nanos: cfg.receipt_nanos,
             recovered: AtomicU64::new(0),
+            output_start: AtomicU64::new(0),
             seq: AtomicU64::new(0),
             in_flight: Arc::new(AtomicI64::new(0)),
             rate_samples: Mutex::new(VecDeque::new()),
@@ -752,7 +781,7 @@ impl Live {
             _ => self.pipeline(),
         };
         let (reader, total, names) = {
-            let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+            let mut store = self.store().map_err(|e| ReplayError::Io(e.to_string()))?;
             store.flush(false).map_err(|e| ReplayError::Io(e.to_string()))?;
             let total = store.len();
             let names = store.source_names().map_err(|e| ReplayError::Io(e.to_string()))?;
@@ -796,7 +825,7 @@ impl Live {
         if state.running {
             return Err(IntegrityError::Running);
         }
-        let reader = self.store.lock().unwrap_or_else(|e| e.into_inner()).reader().map_err(|e| IntegrityError::Io(e.to_string()))?;
+        let reader = self.store().and_then(|mut s| s.reader()).map_err(|e| IntegrityError::Io(e.to_string()))?;
         let records = reader.len();
         state.running = true;
         drop(state);
@@ -831,9 +860,10 @@ impl Live {
 
     /// `GET /api/integrity` without the checkpoints: what the store is, and the last verify.
     pub fn integrity_summary(&self) -> serde_json::Value {
-        let (records, store_id, genesis, head) = {
-            let store = self.store.lock().unwrap_or_else(|e| e.into_inner());
-            (store.len(), ulpf_store::hex(&store.store_id()), ulpf_store::hex(&store.genesis()), store.head().map(|h| ulpf_store::hex(&h)))
+        // a closed store (the engine stopped) reports as empty rather than failing the route
+        let (records, store_id, genesis, head) = match self.store() {
+            Ok(store) => (store.len(), ulpf_store::hex(&store.store_id()), ulpf_store::hex(&store.genesis()), store.head().map(|h| ulpf_store::hex(&h))),
+            Err(_) => (0, String::new(), String::new(), None),
         };
         let state = self.integrity.lock().unwrap_or_else(|e| e.into_inner());
         serde_json::json!({
@@ -844,7 +874,7 @@ impl Live {
     }
 
     pub fn attestation(&self) -> std::io::Result<Attestation> {
-        Ok(self.store.lock().unwrap_or_else(|e| e.into_inner()).reader()?.attest())
+        Ok(self.store()?.reader()?.attest())
     }
 
     /// One entity's timeline from the index beside the output; the index is opened once.
@@ -912,9 +942,9 @@ impl Live {
                 *self.parsers_signature.lock().unwrap_or_else(|e| e.into_inner()) = parsers_signature(&self.parsers_dir);
                 self.metrics.reloads.fetch_add(1, Relaxed);
                 let generation = self.generation.fetch_add(1, Relaxed) + 1;
-                let store_id = ulpf_store::hex(&self.store.lock().unwrap_or_else(|e| e.into_inner()).store_id());
                 if !output_is_sink(&self.output)
-                    && let Err(e) = Versions::new(&self.output).write_live_meta(&store_id, &schema, generation, files)
+                    && let Ok(store) = self.store()
+                    && let Err(e) = Versions::new(&self.output).write_live_meta(&ulpf_store::hex(&store.store_id()), &schema, generation, files)
                 {
                     eprintln!("ulpf: version meta: {e:#}");
                 }
@@ -945,6 +975,28 @@ impl Live {
 
     pub fn stopped(&self) -> bool {
         self.stop.load(Relaxed)
+    }
+
+    /// The store writer, or an error once the engine has stopped and closed it: a request
+    /// racing shutdown gets a value, not a panic.
+    pub fn store(&self) -> std::io::Result<StoreGuard<'_>> {
+        let guard = self.store.lock().unwrap_or_else(|e| e.into_inner());
+        if guard.is_none() {
+            return Err(std::io::Error::other("the store is closed: the engine has stopped"));
+        }
+        Ok(StoreGuard(guard))
+    }
+
+    /// Releases every file the engine opened for itself: the store (segment, index and
+    /// catalogue) and the pivot index's read connection. Called once `run`/`serve` has
+    /// joined every thread; Unix tolerates a handle left open here, Windows does not
+    /// (the directory cannot be removed while one exists), so stop must mean stopped.
+    fn close(&self) {
+        let store = self.store.lock().unwrap_or_else(|e| e.into_inner()).take();
+        if let Some(mut store) = store {
+            let _ = store.flush(true);
+        }
+        *self.pivot_index.lock().unwrap_or_else(|e| e.into_inner()) = None;
     }
 
     /// The pending directory, or `NotFound`: with inference off there is nothing to review.
@@ -1160,7 +1212,7 @@ impl Live {
     /// times its size with them); the bytes route serves them raw.
     pub fn traceback_with(&self, id: u64, with_bytes: bool) -> Result<Traceback, TracebackError> {
         let (rec, names) = {
-            let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+            let mut store = self.store().map_err(|e| TracebackError::Io(e.to_string()))?;
             let rec = store.get(RawId(id)).map_err(|e| TracebackError::Io(e.to_string()))?;
             match rec {
                 Some(r) => (r, store.source_names().unwrap_or_default()),
@@ -1171,7 +1223,7 @@ impl Live {
         let recomputed: [u8; 32] = sha2::Sha256::digest(&rec.bytes).into();
         let hex = |d: &[u8]| d.iter().map(|b| format!("{b:02x}")).collect::<String>();
         let (chain, prev_chain) = {
-            let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+            let mut store = self.store().map_err(|e| TracebackError::Io(e.to_string()))?;
             let chain = store.chain(RawId(id)).map_err(|e| TracebackError::Io(e.to_string()))?.unwrap_or([0; 32]);
             let prev = if id == 0 { store.genesis() } else { store.chain(RawId(id - 1)).map_err(|e| TracebackError::Io(e.to_string()))?.unwrap_or([0; 32]) };
             (chain, prev)
@@ -1330,9 +1382,22 @@ fn finish(live: &Arc<Live>, t: Threads<'_>, ingest_result: Result<()>) -> Result
 fn report(live: &Arc<Live>, elapsed: Duration, inference: Duration, input_problems: Vec<String>) -> Result<Report> {
     let snapshot = live.metrics.snapshot(elapsed.as_secs_f64(), live.threads, live.queue_cap);
     {
-        let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+        let mut store = live.store()?;
         store.flush(true)?;
         store.record_run(live.started_nanos, now_nanos(), &serde_json::to_string(&snapshot)?)?;
+    }
+    // The live meta's event count is the output's line count: what this run emitted when
+    // the output started empty, else counted from the file (an earlier run's lines plus
+    // this run's), so the meta never disagrees with the counter block or the file.
+    if !output_is_sink(&live.output) {
+        let versions = Versions::new(&live.output);
+        if let Some(mut meta) = versions.read_meta(1) {
+            let fresh = snapshot.emitted > 0 && live.output_start.load(Relaxed) == 0;
+            meta.events = if fresh { snapshot.emitted } else { replay::count_lines(&live.output) };
+            if let Err(e) = versions.write_meta(&meta) {
+                eprintln!("ulpf: version meta: {e:#}");
+            }
+        }
     }
     Ok(Report {
         snapshot,
@@ -1371,7 +1436,7 @@ fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI6
     if output_is_sink(&live.output) {
         return Ok(0);
     }
-    let store_id = ulpf_store::hex(&live.store.lock().unwrap_or_else(|e| e.into_inner()).store_id());
+    let store_id = ulpf_store::hex(&live.store()?.store_id());
     match &live.prior_output_store {
         // a fresh output beside an existing store starts at the store's next id (ids continue)
         None => return Ok(0),
@@ -1422,7 +1487,7 @@ fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI6
     };
     let first = last_id.map(|l| l + 1).unwrap_or(0);
     let (reader, names, total) = {
-        let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+        let mut store = live.store()?;
         let total = store.len();
         if first >= total {
             return Ok(0);
@@ -1450,7 +1515,7 @@ fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI6
         // the sequence is taken under the store lock like every producer's (D60): a
         // listener already running must not slip a batch ahead of the recovered ones
         let seq = {
-            let _store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+            let _store = live.store()?;
             live.seq.fetch_add(1, Relaxed)
         };
         let batch = Batch { seq, file: Arc::clone(&ctx), receipt_nanos: 0, first_raw_id: id, ranges, receipts, sources };
@@ -1482,7 +1547,7 @@ pub fn run(cfg: &Config) -> Result<Report> {
         let ingest_result = (|| {
             recover_output(&live, &t.batch_tx, &t.in_flight, &mut input_problems)?;
             // a restart over the same inputs and store continues where the store ends
-            let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().context("reconciling ingest offsets with the store")?;
+            let resume = live.store()?.ingested_bytes().context("reconciling ingest offsets with the store")?;
             for (path, name) in &files {
                 let start = resume.get(name).copied().unwrap_or(0);
                 ingest_file(&live, path, name, start, true, true, &t.batch_tx, &t.in_flight, &mut input_problems)?;
@@ -1491,10 +1556,15 @@ pub fn run(cfg: &Config) -> Result<Report> {
         })();
         finish(&live, t, ingest_result)
     });
-    // Whatever happened downstream, every appended record reaches disk before we report.
-    live.store.lock().unwrap_or_else(|e| e.into_inner()).flush(true)?;
-    let (elapsed, inference) = timing?;
-    report(&live, elapsed, inference, input_problems)
+    // Whatever happened downstream, every appended record reaches disk before we report,
+    // and every file the engine opened is closed before we return (D82).
+    let result = (|| {
+        live.store()?.flush(true)?;
+        let (elapsed, inference) = timing?;
+        report(&live, elapsed, inference, input_problems)
+    })();
+    live.close();
+    result
 }
 
 struct Tailed {
@@ -1537,14 +1607,18 @@ pub fn serve(live: &Arc<Live>, poll: Duration) -> Result<Report> {
         }
         finish(live, t, ingest_result.and(listener_result))
     });
-    live.store.lock().unwrap_or_else(|e| e.into_inner()).flush(true)?;
-    let (elapsed, inference) = timing?;
-    report(live, elapsed, inference, input_problems)
+    let result = (|| {
+        live.store()?.flush(true)?;
+        let (elapsed, inference) = timing?;
+        report(live, elapsed, inference, input_problems)
+    })();
+    live.close();
+    result
 }
 
 #[allow(clippy::too_many_arguments)]
 fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight: &AtomicI64, problems: &mut Vec<String>) -> Result<()> {
-    let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().context("reconciling ingest offsets with the store")?;
+    let resume = live.store()?.ingested_bytes().context("reconciling ingest offsets with the store")?;
     let mut files: HashMap<PathBuf, Tailed> = HashMap::new();
     while !live.stopped() {
         for root in &live.watch {
@@ -1646,7 +1720,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
         live.metrics.bytes.fetch_add(len, Relaxed);
     }
     let start = (start as usize).min(len as usize);
-    let source = live.store.lock().unwrap_or_else(|e| e.into_inner()).source_id(name)?;
+    let source = live.store()?.source_id(name)?;
     let ingest_started = now_nanos();
     let ctx = Arc::new(FileCtx { backing: Backing::Mapped(mmap), name: name.to_string(), names: HashMap::new() });
     let mut count = 0u64;
@@ -1678,7 +1752,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
         // taken, then the batch escapes, so a crash can never reissue an id that was
         // already emitted and a second producer cannot slip a later batch ahead.
         let (batch_first, seq) = {
-            let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+            let mut store = live.store()?;
             let first = store.len();
             for r in &ranges {
                 store.append(source, receipt, &bytes[r.clone()]).context("raw store append failed; aborting to avoid an incomplete store")?;
@@ -1707,7 +1781,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
         }
     }
     if count > 0 {
-        let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+        let mut store = live.store()?;
         store.flush(false)?;
         store.record_ingest(source, first_id, count, (consumed - start) as u64, ingest_started)?;
     }
@@ -1874,6 +1948,9 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
         pending.insert(e.seq, (e.buf, e.count, e.first_raw_id, e.entities));
         while let Some((buf, count, first_raw_id, entities)) = pending.remove(&next) {
             let at = pos.unwrap_or_else(|| if output_is_sink(&live.output) { 0 } else { std::fs::metadata(&live.output).map(|m| m.len()).unwrap_or(0) });
+            if pos.is_none() {
+                live.output_start.store(at, Relaxed);
+            }
             w.write_all(&buf).context("writing output")?;
             live.metrics.emitted.fetch_add(count, Relaxed);
             live.metrics.output_bytes.fetch_add(buf.len() as u64, Relaxed);
