@@ -1345,15 +1345,17 @@ writes for the store on every platform (changes unix behaviour); making `libc` u
 (it compiles unused on Windows); one workflow per OS or a hand-written bundling step
 (tauri-action already names the bundles per target and handles the release).
 
-## D75: reserved for lane-5-xml
+## D75: reserved for the xml branch of the demo morning
 D75 is the xml strategy and the Windows Event definition (branch `lane-5-xml`, written on that
-branch); its entry arrives with the branch.
+branch); it does not merge before the demo and its entry arrives with the branch. D76 is below,
+written on `lane-6-index`.
 
 ## D76. The entity index's cost was SQLite's page cache, not the per-value upsert: 64 MiB of cache and one transaction per queue-full
 **Decision.** The pivot writer opens its connection with `PRAGMA cache_size = -65536` (64 MiB,
 was SQLite's default 2 MiB) and joins everything queued at the moment it wakes into one
-transaction (the channel's capacity bounds the group: 64 batches in the engine and in
-`rebuild`, was 8, `COMMIT_BATCHES`). Nothing else changed: same tables, same indexes, same
+transaction (in practice a group is about a queue-full, 64 batches in the engine and in
+`rebuild`; draining unblocks the producer, so the group is bounded by relative speed, not
+by the channel's capacity; was 8 per transaction, `COMMIT_BATCHES`). Nothing else changed: same tables, same indexes, same
 routes, same `ulpf pivot --rebuild`, same single writer, and the proof that the contract
 held is byte equality: main's binary and this branch's ran the same slice with `--receipt`
 pinned (outputs identical, 643,727,851 bytes), then `ulpf pivot KIND VALUE --output out
@@ -1403,8 +1405,7 @@ of a run whose entities repeat, before and after, inside the noise of a host at 
 5,032 / 6,317 events/s, sys 15-18 s, worse than main at any load measured: a larger
 transaction against a 2 MiB cache spills each page more often, not less. That is why D66's
 commit-group tuning found nothing and concluded the cost was cardinality; the cache is
-the enabling change and the larger group multiplies it (the cache alone, with the group
-of 8, was not measured: a gap). **What remains (profile of this branch, 4 s from 2 s in,
+the enabling change; the larger group's own share is measured below (attribution closed). **What remains (profile of this branch, 4 s from 2 s in,
 load 17 with a `cargo test` beside it).** The pivot thread is still the bottleneck and still
 100% busy, now in CPU: 884 samples in the postings insert (`sqlite3BtreeIndexMoveto`,
 record compares, page fetches that hit the cache), 549 and 525 in the two upserts, 351 in
@@ -1432,7 +1433,7 @@ events in 700.1 s, 7,142 events/s, sys 181 s, RSS 1,389 MB, load before 17.3, pe
 binary (2 MiB): 1,187,840 events in 228 s, 5,210 events/s, when it was stopped at load 24 (started at
 12.2) with this branch's merge build beside it; the run would not have ended before the timer. The output's growth during the 256 MiB run names the shape: 16 MB/s
 (~11,800 events/s) in the first minutes, 6 MB/s (~4,500) in the last. The arithmetic: a
-group of 64 batches lands ~100,000 inserts into each of three value-keyed trees; while a
+queue-full group of ~64 batches lands ~100,000 inserts into each of three value-keyed trees; while a
 tree has fewer leaves than that, the group's dirty set is the tree and fits the cache (the
 slice: 149 MB index, 0.6 s of sys); once each tree runs to tens of thousands of leaves,
 every random insert dirties its own page, the group's dirty set is the index, and each

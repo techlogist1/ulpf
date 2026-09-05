@@ -127,8 +127,9 @@ impl PivotWriter {
                 let mut drained: Vec<BatchBuf> = Vec::new();
                 while let Ok(batch) = rx.recv() {
                     // one transaction per *group* of batches: everything already queued
-                    // joins this one (the channel's capacity bounds the group), so a
-                    // producer that is ahead costs one commit per queue-full and the
+                    // joins this one (draining unblocks the producer, so the group is bounded by
+                    // relative speed, not by the capacity; in practice it is about a queue-full), so
+                    // a producer that is ahead costs one commit per queue-full and the
                     // value-keyed pages are rewritten once per group, not once per batch
                     drained.clear();
                     drained.push(batch);
