@@ -48,3 +48,18 @@ Captured headlessly by `ui/capture.mjs` against a populated `ulpf serve` (0.1.0 
 | empty-replay-1280.png | replay | 1280 | empty state: no output versions yet |
 | empty-drift-1280.png | drift | 1280 | empty state: no source established yet: the thresholds in words |
 | empty-integrity-1280.png | integrity | 1280 | empty state: an empty store: the genesis is fixed, the head appears with the first record |
+
+## The desktop app (lane C, `app/`)
+
+Captured with `screencapture -x` of the real ULPF.app window built from the branch (`pnpm tauri build`). The add-files, drag, review and approve steps were driven with the computer-use tools (native open panel by Cmd+O, Cmd+Shift+G and a typed path; a real mouse drag from a Finder window; clicks inside the webview), so these are tool-driven captures, not headless ones.
+
+| file | what it shows | how |
+|---|---|---|
+| app-launch.png | first launch from a clean data directory: the title reads `ULPF · engine ok · 0 events · 0 pending`, the served live feed inside the window, 12 parsers seeded | `open ULPF.app`, screencapture |
+| app-add-files.png | File > Add files… with samples/cisco_asa.log: the notice `Added 1 file to the watch folder: cisco_asa.log`, the source row and the title at 30 events | tool-driven (computer use): Cmd+O, Cmd+Shift+G, path, Return |
+| app-drop.png | samples/juniper_srx.log dragged from a Finder window onto the app: the notice and the source row at 16 events | tool-driven (computer use): left_click_drag from Finder |
+| app-review.png | heldout/mikrotik.log dropped: the title shows 1 pending and the Review screen inside the app shows the proposal's definition and evidence | tool-driven (computer use) |
+| app-approved.png | the proposal approved inside the app: `Approved as mikrotik_inferred, written to …/dev.ulpf.desktop/parsers/…`, 0 pending | tool-driven (computer use) |
+| app-tray.png | the tray menu (Show ULPF, Open output folder, Open in browser, Quit ULPF) while the window is closed and the engine keeps ingesting; the icon itself sits under this Mac's notch overlay | menu opened through Accessibility, screencapture |
+| app-output-folder.png | File > Open output folder: Finder with out.jsonl selected in the app's data directory | screencapture |
+| app-open-in-browser.png | Open in browser: the same server session in Chrome after a relaunch, records 313 | screencapture |

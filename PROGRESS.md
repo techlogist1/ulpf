@@ -80,16 +80,40 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       `before_id` is prose-only; `/api/events/{id}.emitted` is null once out of the tail ring.
       Not done: automated UI tests; the merge-mid-state capture; light theme captured on two
       screens only; not yet rendered in the Tauri webview (C).
-- [ ] C. Desktop app: Tauri 2 shell in `app/` at the repo root, `ulpf` as a sidecar, `serve` on
-      launch against an app-owned data directory, webview at the server's localhost URL, clean
-      stop on quit; then, each its own commit: file/folder drop with confirmation, native dialogs
-      (data directory, open output folder), sidecar health + counters in the chrome, tray so
-      closing the window keeps the ingest. Five verifications recorded with results. Kill timer
-      90 min to a launching shell showing the live feed; on fire, the app directory goes to a
-      branch with a note and main stays clean.
-- [ ] C-CI. GitHub Actions workflow: macOS and Windows runners build the sidecar and the shell,
-      bundle an installer each, attach both to a tagged release; run URL and artifact names here;
-      Windows not run on a Windows machine tonight, the five owner checks listed.
+- [x] C. (D73; merged 23:12 IST as ce3826e, twelve commits acd42c7..cdb4d9b, verified by an
+      independent Opus pass that launched the .app itself: clean data dir, `server.url` in
+      2 s, `/api/status`, a new source in the feed within 1 s, quit leaves no app process and
+      removes `server.url`, relaunch on a new port with the same store id, head and record
+      count) Desktop app: Tauri 2 shell in `app/` (own workspace; root `cargo metadata` lists
+      the seven engine crates only), ulpf as a sidecar on a free localhost port against
+      `~/Library/Application Support/dev.ulpf.desktop` (parsers and mappings seeded once),
+      splash then navigate to the served UI, Quit kills the child (D59 makes it safe). Each
+      its own commit and each verified by the worker on screen: drop and Add files… through
+      one `ingest_paths` with a visible notice (`app-drop.png` is a real Finder drag driven
+      with the computer-use tools, `app-add-files.png` the native panel); Choose data
+      directory… restarts the engine, Open output folder reveals `out.jsonl`, Open in browser;
+      the title `ULPF · engine ok · N events · M pending` once a second; tray with Show, Open
+      output folder, Open in browser, Quit, closing the window keeps the ingest (emitted 280
+      to 291 with the window hidden). The five verifications: (a) launch, (b) drop shows in the
+      feed, (c) `heldout/mikrotik.log` proposed and approved inside the app, (d) no orphan after
+      tray Quit, plain Quit and the CI-built bundle, (e) relaunch resumes (291 records and
+      lines before and after, 313 after a new drop). Captures `docs/screens/app-*.png`,
+      indexed. Not done: `engine down (exit N)` never provoked; the tray icon's glyph sits
+      under this Mac's notch overlay so only its menu is captured.
+- [x] C-CI. (D74; `.github/workflows/app.yml`) macOS and Windows runners build the sidecar and
+      the shell and bundle installers; run on the final commit
+      https://github.com/techlogist1/ulpf/actions/runs/33980779377 green on both (macOS
+      6m02s, Windows 9m13s); artifacts `windows-x64-nsis` 5,351,146 B, `windows-x64-msi`
+      7,794,850 B, `darwin-aarch64-app` 7,855,749 B, `darwin-aarch64-dmg` 7,606,904 B. First
+      push 22:22 IST, both green by 22:34; one red Windows job on the feature commit (E0521 in
+      `menu.rs`, an app-handle borrow in the Windows tray branch), fixed in cdb4d9b, green at
+      23:02, inside the sixty-minute rule. Windows shims: `#[cfg(windows)]` `FileExt` in the
+      store and a no-op `set_recv_buffer`, unix lines unchanged. The Windows build has NOT been
+      run on a Windows machine tonight; the five owner checks are in `app/README.md`: launch
+      (window shows the live feed, `%APPDATA%\dev.ulpf.desktop\server.url`, `/api/status`
+      answers), drop `samples/cisco_asa.log` (notice, events in the feed), drop
+      `heldout/mikrotik.log` then Review and Approve, Quit from the tray (also after closing
+      the window) leaves no `ulpf.exe`, relaunch keeps `/api/integrity` records and appends.
 - [x] D. (D67; `scripts/demo.sh`; two `--auto` passes 21:53 and 21:55 IST; `--check` PASS) Demo
       runner: one command plays the demo script step by step (fresh `demo/`, parsers copy, paced
       known-format drops, one unseen-format drop on cue, what-to-click prompts, clean reset),
@@ -121,6 +145,10 @@ measurements with their commands. Nothing else: no logs, no transcripts. No work
 longer than about four minutes (backgrounded and polled past that).
 
 ### Verified state (v3, rolling; every line was run, not read)
+- 23:12 IST: C merged (ce3826e): `cargo test --workspace` 114 passed, 0 failed, 2 ignored;
+  clippy clean; release build 8,777,448 bytes (unchanged by the cfg shims, as intended);
+  `cargo metadata --no-deps` at the root lists the seven engine crates only, so `app/` stays
+  outside the engine build.
 - 22:54 IST: A1b merged (4d031ec): `cargo test --workspace` 114 passed, 0 failed, 2 ignored;
   clippy clean; release build 8,777,448 bytes; the lead's own `ulpf infer corpus/generated/
   zeek/http.log` on it: 1,545 lines, 1,536 used, 1 template, 9 unmatched `{"header": 9}`,
@@ -173,9 +201,9 @@ round; same return format. It is a separate lane because it edits `lib.rs infer(
 A1 verifier reads A1's tree, and it merges only after A1 does.
 
 ### In flight
-- C running since 22:12 IST in `.claude/worktrees/wf_b664b6d7-603-1`; A1b since 22:14 in
-  `.claude/worktrees/a1b`; lane V (the Chrome-driven pass over the merged UI, captures under
-  `docs/screens/tool-*.png` in its own worktree) since 22:48. A1 and B are merged.
+- Lane V (the Chrome-driven pass over the merged UI, captures under `docs/screens/tool-*.png`
+  in its own worktree) since 22:48; the A3 bench watcher; then the app is rebuilt from the
+  merged tree and driven with the computer-use tools. A1, A1b, B and C are merged.
 - A2 and A3 run from a detached watcher started 22:21 IST (`quiet-measure.sh` in the session
   scratchpad, `pgrep -fl quiet-measure`): before each bench width and before the soak it waits
   for a quiet machine (1-min load under 4, no rustc/cargo/ld), samples the load every 2 s

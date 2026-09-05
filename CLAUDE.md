@@ -237,7 +237,7 @@ input for any output line (`ulpf.raw_id`).
 ## Working files
 - `PROGRESS.md` — hackathon demo script first, then the v1 and v0.1 checklists, verified
   state, tried and abandoned, next action.
-- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out (D1-D68).
+- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out (D1-D74).
 - `docs/api.md` — the HTTP and SSE contract the server and UI are built against.
 - `docs/parser-format.md` — the definition format reference for teammates.
 - `docs/timestamps.md` — timestamp survey, auto-detection order, zone table, policies.
@@ -246,3 +246,7 @@ input for any output line (`ulpf.raw_id`).
 - `docs/retention.md` — how segment rotation and retention would work without weakening
   append-only, the single writer, permanent ids or the chain; a design note, not built.
 - `docs/evaluation.md` — the scorecard and the 04:00 procedure.
+- `docs/design.md` — the UI's tokens, type and spacing scales, colour semantics with the contrast
+  table, component inventory and keyboard map (D69-D71); `docs/screens/` the captures.
+- `app/` — the Tauri 2 desktop shell around the unchanged binary (D73), its own workspace; CI in
+  `.github/workflows/app.yml` bundles macOS and Windows installers (D74).

@@ -1251,3 +1251,77 @@ column (a column with rare `-` dissenters would reject those rows); a majority-f
 regex (a second matcher shape for an input that exists nowhere in the corpus); raising
 `max_templates` (40 templates at cap was the shape of the data, D68); a dummy pattern to slip
 past `Pending::write` (a wrong file that fails validation).
+
+## D73. The desktop app is a shell around the unchanged binary: sidecar, free port, splash then navigate
+**Decision.** `app/` is a Tauri 2 application with its own Cargo workspace (an empty
+`[workspace]` table keeps it out of the root workspace, so `cargo test --workspace` and the
+engine build are unaffected; `cargo metadata` at the root lists the seven engine crates only)
+and its own pnpm package. The engine, server and UI are the ulpf binary bundled as a sidecar
+(`bundle.externalBin`, `binaries/ulpf-<host triple>[.exe]` copied by `app/scripts/sidecar.sh`,
+which CI runs too). On launch the shell binds `127.0.0.1:0`, reads the port, releases it, and
+starts `ulpf serve` with every path absolute against an app-owned data directory
+(`app_data_dir`: `~/Library/Application Support/dev.ulpf.desktop` on macOS,
+`%APPDATA%\dev.ulpf.desktop` on Windows; `watch/`, `store/`, `out.jsonl`, `pending/`,
+`parsers/` and `mappings/` seeded from bundled resources only when they hold no TOML, so an
+approved or edited parser is never overwritten; one absolute path in `app_config_dir/data_dir`
+overrides it). The window opens on a bundled splash and `WebviewWindow::navigate` moves it to
+the served URL once `/api/status` answers; the URL is written to `<data>/server.url` only then
+and removed on stop. Files and folders dropped on the window, or picked through File > Add
+files… / Add folder…, go through one `ingest_paths`: copied into `<data>/staging` on the same
+volume and renamed into `watch/` under a unique name (folders keep their structure, regular
+files only), so the engine's poller never reads a half-written file; the confirmation is one
+element injected into whatever page the window shows with `WebviewWindow::eval`, replaced by
+the next notice, so the served UI is not restyled and does not know the shell exists. The
+title is `ULPF · engine ok · N events · M pending` once a second from `/api/metrics`
+(`engine.emitted`, this run's counter, the counter block's meaning) and `/api/pending`;
+`engine down (exit N)` when the child dies. Closing the window hides it on both platforms
+and the engine keeps ingesting; the tray (menu bar on macOS, a runtime-drawn template glyph;
+notification area on Windows, an owned copy of the app icon) offers Show, Open output folder,
+Open in browser, Quit; Quit kills the child outright from `RunEvent::ExitRequested` and
+`Exit` (`Child::kill`: SIGKILL on macOS, TerminateProcess on Windows), which the engine's kill
+recovery makes safe (D59), and a generation counter keeps an earlier child's exit from
+touching the current one. **Anchor.** `app/src-tauri/src/lib.rs` (`start`, `splash`,
+`navigate`, `toast`, `stop`, the run-event handler), `ingest.rs`, `menu.rs`, `title.rs`,
+`app/src-tauri/tauri.conf.json`, `app/scripts/sidecar.sh`, `app/README.md`. **Principle.**
+The engine is frozen; the app owns launch, paths, drop and quit, and nothing else. **Ruled
+out.** A Tauri crate inside the root workspace (tauri, wry and tao in every engine build);
+creating the webview with `WebviewUrl::External` only once the server is up (no window for
+the first seconds, and every restart needs the splash anyway); a fixed port (collides with a
+demo server on 7878); parsing the engine's `serving http://` stderr line (couples the shell to
+a log line and races the first request); copying straight into `watch/`; pointing the engine
+at the dropped path (the drop must survive the original moving); a native dialog per drop; a
+notification area in the served UI (a UI change for the shell's sake); re-copying parsers on
+every launch; a graceful stop signal (std has none cross-platform, and D59 makes it
+unnecessary); macOS-only hide-on-close (on Windows the last window closing would end the
+ingest the tray exists to keep); a bundle identifier ending in `.app` (Tauri warns it collides
+with the bundle extension; it is `dev.ulpf.desktop`).
+
+## D74. Windows is built by CI behind two cfg shims, and has not been run on a Windows machine
+**Decision.** `.github/workflows/app.yml` runs on every push and on `v*` tags: a matrix of
+`macos-latest` and `windows-latest` builds the engine (`cargo build --release -p ulpf`),
+names the sidecar per host triple through `app/scripts/sidecar.sh` (Git Bash on Windows;
+`.gitattributes` keeps `*.sh` at LF), and `tauri-apps/tauri-action@v1` bundles `.app` + `.dmg`
+and NSIS `.exe` + `.msi`, uploads them as run artifacts on every push and attaches them to a
+draft release on a tag; a concurrency group cancels a superseded run; `Swatinem/rust-cache`
+covers both workspaces. The engine compiles on Windows behind exactly the two shims the brief
+allowed: `crates/ulpf-store/src/store.rs` gains a `#[cfg(windows)]` local `FileExt` whose
+`read_at`/`write_at` loop over `seek_read`/`seek_write` and restore the cursor, with the unix
+import now `#[cfg(unix)]` and no unix line changed; `crates/ulpf/src/syslog.rs`'s
+`set_recv_buffer` is `#[cfg(windows)]` a no-op returning 0 with the asked/granted line saying
+so. First green run on both runners 22:34 IST, twelve minutes after the first push; the
+feature commit's Windows job then failed once (`E0521` in `menu.rs`: the Windows-only tray
+branch borrowed the app handle through `default_window_icon().cloned()`), fixed by building
+an owned `Image`; the final run on cdb4d9b (`actions/runs/33980779377`) is green on both,
+artifacts `windows-x64-nsis` (5,351,146 bytes), `windows-x64-msi` (7,794,850),
+`darwin-aarch64-app` (7,855,749), `darwin-aarch64-dmg` (7,606,904). The CI-built macOS bundle
+was launched on this Mac and behaved as the local build. Nobody has launched the Windows
+installers: `app/README.md` lists the five checks for the Windows rig (launch with
+`server.url` and `/api/status`; drop or Add files shows the events; `heldout/mikrotik.log`
+proposes and approves; Quit from the tray, also after closing the window, leaves no
+`ulpf.exe`; relaunch keeps the record count and appends to `out.jsonl`). **Anchor.**
+`.github/workflows/app.yml`, `.gitattributes`, `crates/ulpf-store/src/store.rs` (`FileExt`),
+`crates/ulpf/src/syslog.rs` (`set_recv_buffer`), `app/README.md`. **Principle.** A build
+nobody ran is a build, not a verification; say which is which. **Ruled out.** Positional
+writes for the store on every platform (changes unix behaviour); making `libc` unix-only
+(it compiles unused on Windows); one workflow per OS or a hand-written bundling step
+(tauri-action already names the bundles per target and handles the release).
