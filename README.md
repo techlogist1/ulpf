@@ -209,6 +209,18 @@ loop: `eval/run.sh eval/tools/ulpf.toml`, scorecard committed at
 `eval/results/ulpf-20260905T140426Z-33371/scorecard.md`, 2026-09-05. Run-to-run variance
 is about ±10%.
 
+**Which build.** Every number in a scorecard is a `--profile dist` number: fat LTO, one
+codegen unit, and what CI ships, what the Docker image holds and what
+`eval/tools/ulpf.toml` builds. `cargo build --release` is deliberately the other profile —
+no LTO, so a stranger's first build finishes in about a minute — and it is what the quick
+start above runs and what the harness's cold-start criterion therefore times. The two are
+the same source, so only throughput and memory can differ between them at all, and on this
+M1 Pro they do not differ measurably: lane P timed both on a 500,000-line slice and got
+best-of-eight 1.791 s for dist against 1.690 s for release, medians 2.120 s and 2.164 s —
+the two orderings disagree, which is what "inside the noise" looks like. Reproduce a
+headline figure with `cargo build --profile dist -p ulpf`; reproduce the quick start with
+`cargo build --release`.
+
 Three other figures exist and each measures something different:
 
 - **337,471 events/s** is the *discarded-output* figure: the same file with
