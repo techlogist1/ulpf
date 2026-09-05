@@ -25,8 +25,12 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       was 2 ahead (7c76587, 4577440: the Parquet worker's crate and `--parquet` flag, 19 files)
       and is the one re-applied on main as eb2e2c4 ("parquet: --parquet writes a columnar copy",
       18 files, same crate, same flag, the diff being the merge onto the then-current engine).
-- [ ] A2. Socket soak re-run after the `SO_RCVBUF` negotiation (D62): loss %, RSS range, event
-      count recorded in D62 beside the 47% figure; if loss is still material it is a demo warning.
+- [~] A2. Socket soak re-run after the `SO_RCVBUF` negotiation (D62 amendment): run 4, loaded
+      machine (load 11-49, host suspended 16 min mid-run), 9,000,000 sent; rcvbuf granted
+      8 MiB; UDP 911,692/2,400,000 (62% kernel drops, netstat delta 1,488,318 vs shortfall
+      1,488,308), TCP exact, RSS 16.5-714 MB, PARTIAL. DEMO WARNING: UDP syslog on a loaded
+      laptop loses datagrams in the kernel; feed the demo device over TCP or a file. Quiet
+      re-run still owed (needs the workers' builds finished; `caffeinate -i` now prevents sleep).
 - [ ] A3. Honest throughput: -j 1, 2, 4, 7 (three runs at -j 7) on the 5M bench, load average
       recorded with each; every README/PROGRESS/demo-script sentence that could read as
       single-core states the thread count with the -j 1 figure beside it.
@@ -91,10 +95,8 @@ which. New kill timers: A1 22:25, C shell 22:25 (features and CI to about 23:40)
 
 ### In flight
 - A1, B, C running since 21:00 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`.
-- A2 soak run 1 (started 20:24, 5 min at 10k file + 8k UDP + 8k TCP, burst 60 s x3): the
-  generator sent 9,000,000 and the server is draining a file backlog; the machine was at
-  load 11-49 throughout (three release builds), so this is the shared-machine data point, not
-  the quiet one; a quiet re-run follows when the workers stop building.
+- A2 quiet re-run owed (run 4 above was the loaded data point). Host sleep found by the soak
+  report: `caffeinate -i -t 21600` started 21:56 IST.
 - A3 waits for a quiet machine (load recorded with every run; `scratch` bench script ready).
 - D: `scripts/demo.sh` drafted (interactive, `--auto`, `--check`, `--reset`); its `--check`
   proves every command is verbatim in this file's demo script (the demo commands here now use

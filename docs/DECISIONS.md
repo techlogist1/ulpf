@@ -955,6 +955,25 @@ number of blocks at a stated rate, not a sentence; a partial run is labelled par
 **Ruled out.** A fixed 3x burst as the saturation proof (it never filled the queue at
 sustainable base rates); counting the kernel's UDP drops as engine loss (invisible to the
 process by construction; measured from the sender and `netstat`).
+**Amendment (2026-09-05 21:55, run 4, after the `SO_RCVBUF` negotiation).** Socket mode,
+5 min at 10k/s file + 8k/s UDP + 8k/s TCP with the 60 s x3 burst, 9,000,000 sent
+(`scripts/soak.sh --minutes 5 --file-rate 10000 --udp 127.0.0.1:5514 --udp-rate 8000 --tcp
+127.0.0.1:5515 --tcp-rate 8000`). Not the quiet re-run the brief asked for: three release
+builds ran beside it (load 11-49) and the report's own clock check shows the host suspended
+for 16 minutes mid-run (11 SSE gaps matched by 11 RSS-sampler gaps, max 961 s), so the file
+generator fell 12,608 chunks behind and the run was stopped before it drained (verdict
+PARTIAL by the harness's rule; stored vs emitted was a lag, not a loss). What it measured:
+`GET /api/status` reports `udp_rcvbuf: 8388608`, the full 8 MiB granted (the earlier run had
+the 786 KB default after a silent refusal); UDP 911,692 of 2,400,000 received (62% shortfall)
+against `netstat -s -p udp` dropped-due-to-full-socket-buffers rising by 1,488,318 for a
+1,488,308 shortfall, so every missing datagram is a kernel drop, none an engine loss; TCP
+exact, 2,400,000 = 2,400,000; RSS 16.5 to 714 MB (the in-flight backlog), 75 MB at the end.
+Under this load the listener spent its time blocked on the full queue (64/64, 2,362
+backpressure blocks), which is the designed policy (D60): the buffer only absorbs a burst as
+long as the listener drains it. Demo warning until a quiet run says otherwise: UDP at 8k/s
+on a loaded laptop loses datagrams in the kernel; TCP or the file path loses nothing.
+`caffeinate -i` now runs for the rest of the session so the host cannot suspend a measurement
+again.
 
 ## D63. Real captures fix parsers from vendor documentation, and stay in the samples
 **Decision.** Real captures (public sources with permissive licences, and captures
