@@ -51,7 +51,7 @@ source document in hand; Haiku banned (D30). Baseline at a9d0dd8: 71 tests, clip
       pivot timeline, replay diff, drift alerts, integrity status; batched SSE; keyboard.
 - [x] 13. (D64; `--parquet` on run and serve, rolled files, static image verified; 0.46x on the output thread when enabled, off by default) Parquet output, only after 1-12 are green; crate and static build verified first.
 - [ ] 14. Regression: full suite, clippy, alloc test, round-trip, isolation; bench within variance.
-- [ ] 15. `aposd-critique` pass, every finding fixed or closed with evidence.
+- [x] 15. (D65) `aposd-critique` pass: seven graders, every critical/high/medium finding fixed in two commits (37e41d6 and its predecessor), two closed with evidence, four deferred with triggers.
 - [ ] 16. This file's demo script rewritten (commands, expected output, reset, 04:00
       procedure); CLAUDE.md, DECISIONS.md, docs current; committed and pushed.
 - Out of scope by the brief: segment rotation and retention (design note only, `docs/retention.md`).

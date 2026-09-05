@@ -994,3 +994,47 @@ traceback, pivot and diff read lines by offset); `arrow` (the whole point of the
 column writer is the dependency count); zero-copy column staging (the scalar columns are
 available from the entity arena and would halve the cost; deferred: the flag is optional
 and off in every measured number).
+
+## D65. The v2 review pass: what changed, what was closed, what is deferred
+**Decision.** Seven Opus graders ran `aposd-critique` read-only, one per crate group,
+returning graded tables and findings ranked by what hurts at 04:00. Fixed, in two commits
+(store/engine/syslog/sink, then parse/time/infer/server/pending/pivot/replay/cli): the
+attestation check now compares the head and refuses an empty checkpoint list (a store
+rewritten from record 0 with a stripped attestation verified clean before); the reader
+maps the index before the segment (a verify beside a live serve could name phantom
+corruption); checked offset arithmetic on bytes read from disk; resume offsets summed
+from the records rather than the catalogue's ingest rows (rows written per file after the
+batch loop are not a watermark once sockets interleave; the store test that asserted the
+rows' claimed 400 bytes now asserts the records' 396); recovery takes its sequence under
+the store lock; per-source stats use the arrival clock and the batch's first source
+(socket sources looked permanently quiet to the drift judge, recovered batches formed a
+"recovered" source); drift clears itself after four clean windows (the field existed, the
+transition did not); the output offset for postings is taken at the first write, after
+recovery may have truncated, and a stale entity index is dropped after recovery; UDP peer
+buffers grow on demand and idle peers are evicted; a listener flush failure stops the run
+loudly; the Parquet row is built from the entity arena (schema-agnostic, no JSON re-parse,
+and the OCSF-only columns under `--schema ecs` are gone) and an existing target is refused;
+a failed RFC 5424 parse truncates its half-pushed fields; the per-source hint cannot
+outrank a higher-priority parser (a generated parser could otherwise keep a line a hand
+parser owns); `%s` on non-digits is no match and a bare number is an instant only at nine
+digits (the corpus case that read `20260904` as August 1970 was the wrong answer encoded
+as expected); drift-update members index the pending lines file; no widening of a prior's
+signature to the catch-all; the `[[timestamp]]` spec follows emitted patterns; an update
+composed on a kv or delimiter prior is written; pending ids are slug-only and the review
+diff is capped at 4,000 lines; the pending list carries `updates`/`version`; four runtime
+threads; the pivot cursor is `(time, raw id)` in the API and the UI; a partial replay is
+never the comparison base; rebuild maps the output; zone offsets are range-checked.
+**Closed with evidence.** "`drift_lines_routed` counts lines whether or not drift tripped":
+the increment is inside `if routing`, which is true only in `Tripped`/`Proposed`; unknown
+lines of a tripped source are drift evidence by design (D54). "A damaged record aborts the
+replay": the snapshot is the writer's flushed files, so an unreadable record is corruption,
+which `ulpf verify` names; a replay that silently skips it would hide that. **Deferred,
+with the trigger.** Generating the signature from in-definition templates only (changes
+generated matchers; re-grade `heldout/` when touched; today's looser matcher only claims
+lines that then reach inference again under D45). `NEXT_SLOT` growing per reload (each
+reload adds one capture-locations slot per pattern per worker; measured negligible at
+fifty approvals; revisit if a deployment reloads thousands of times). Persisting the diff
+index the replay already built (rebuilt once per version on first page request). Decoding
+the record header in one place (four copies agree today; a change to the layout is the
+trigger). **Anchor.** the two "review fixes" commits; `PROGRESS.md` "Review pass (v2)".
+**Principle.** As D51: closed by a fix or by written evidence, never by a known-issues list.
