@@ -3,8 +3,8 @@
 Every sample and every corpus file through the built binary, one fresh store each.
 Regenerate with `scripts/coverage.sh > docs/coverage.md`.
 
-- binary: `./target/release/ulpf` at commit `14d3b0c`
-- generated: 2026-09-05 21:43 UTC
+- binary: `./target/release/ulpf` at commit `a9faf79`
+- generated: 2026-09-05 21:57 UTC
 - per file: `ulpf run <file> --store <fresh> --output <scratch> --infer-threshold 0 --report-json <scratch>`; every number below is a field of that JSON report.
 - `lines` is the file's own line count; `framed` is what the engine made of it, so the two differ where a collector folded one event over two lines.
 - `PROVENANCE.md` and `setup/` are documentation and are not run.
