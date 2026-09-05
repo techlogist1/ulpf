@@ -4,7 +4,9 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 // Fixed output names: the Rust binary embeds dist/index.html, dist/app.js, dist/app.css
 // with include_str! and serves them at /, /app.js, /app.css.
 export default defineConfig({
-  plugins: [svelte()],
+  // List rows are divs reached by j/k/Enter at the screen level (keys.js), so the per-row
+  // key-handler warning is noise here.
+  plugins: [svelte({ onwarn: (w, handler) => { if (w.code !== 'a11y_click_events_have_key_events') handler(w) } })],
   base: '/',
   build: {
     cssCodeSplit: false,

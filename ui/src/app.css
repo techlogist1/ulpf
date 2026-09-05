@@ -113,7 +113,8 @@ main { max-width: var(--page-max); margin: 0 auto; padding: var(--s5) var(--gutt
 .split { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--s6); align-items: start; }
 .split.review { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
 .split.sources { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
-@media (max-width: 1100px) { .two, .split, .split.review, .split.sources { grid-template-columns: minmax(0, 1fr); } }
+.split.pivot { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
+@media (max-width: 1100px) { .two, .split, .split.review, .split.sources, .split.pivot { grid-template-columns: minmax(0, 1fr); } }
 .panel { background: var(--bg-1); border: 1px solid var(--line); }
 .pad { padding: var(--s4); }
 .bar { display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; }
@@ -136,7 +137,7 @@ main { max-width: var(--page-max); margin: 0 auto; padding: var(--s5) var(--gutt
 .problems li { font-family: var(--mono); font-size: var(--t0); }
 
 /* ---- state marks ---- */
-.tag { display: inline-block; font: 500 var(--t-1)/1.5 var(--mono); padding: 0 5px; border: 1px solid var(--line-2); color: var(--fg-1); white-space: nowrap; vertical-align: 1px; }
+.tag { display: inline-block; text-transform: none; font: 500 var(--t-1)/1.5 var(--mono); padding: 0 5px; border: 1px solid var(--line-2); color: var(--fg-1); white-space: nowrap; vertical-align: 1px; }
 .tag.ok { color: var(--ok); border-color: var(--ok); }
 .tag.warn { color: var(--warn); border-color: var(--warn); }
 .tag.bad { color: var(--bad); border-color: var(--bad); }
@@ -285,10 +286,12 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .trail a, .trail .cur { font-family: var(--mono); }
 .trail .cur { color: var(--fg); font-weight: 500; }
 .trail .sep { color: var(--fg-2); }
-.trail .back { color: var(--fg-2); }
+.trail .back { color: var(--fg-2); margin-left: var(--s3); }
+.trail .tag { vertical-align: 0; }
 .entity { display: flex; align-items: baseline; gap: var(--s4); }
 .entity .kind { color: var(--fg-2); font-size: var(--t0); }
 .entity .val { font: 500 var(--t3)/1.2 var(--mono); letter-spacing: -0.01em; }
+.entity .facts { align-self: baseline; }
 .lanes { display: grid; gap: 0; --lname: 16em; --lcount: 5em; }
 .lane { display: grid; grid-template-columns: var(--lname) minmax(0, 1fr) var(--lcount); gap: var(--s4); align-items: center; height: var(--row); border-bottom: 1px solid var(--line); }
 .lane .lname { font-family: var(--mono); font-size: var(--t0); color: var(--fg-1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-left: var(--s3); box-shadow: inset 2px 0 0 var(--c); }
@@ -309,7 +312,9 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .related li a { text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .related li a:hover { text-decoration: underline; }
 .related li .n { color: var(--fg-2); }
-.related .bar-n { height: 3px; background: var(--fg-1); }
+.related li .share { flex: 0 0 5em; height: 3px; background: var(--line); }
+.related li .share i { display: block; height: 100%; background: var(--fg-1); }
+.related li a.dev { box-shadow: inset 2px 0 0 var(--c); padding-left: var(--s3); }
 .kinds { display: flex; gap: 0; border: 1px solid var(--line-3); border-radius: 2px; overflow: hidden; }
 .kinds button { background: none; border: 0; border-right: 1px solid var(--line-3); padding: 2px var(--s4); cursor: pointer; color: var(--fg-1); font-size: var(--t0); }
 .kinds button:last-child { border-right: 0; }
@@ -338,6 +343,9 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .diff .del { background: var(--bad-bg); color: var(--bad); }
 .diff .hunk { color: var(--fg-2); background: var(--bg-2); }
 .confirm { border: 1px solid var(--fg); padding: var(--s4) var(--s5); display: grid; gap: var(--s3); background: var(--bg-1); }
+.confirm.danger { border-color: var(--bad); }
+.confirm.danger > b { color: var(--bad); }
+.confirm:focus-visible { outline-offset: 2px; }
 .confirm b { font-weight: 600; }
 .confirm .what { font-size: var(--t0); color: var(--fg-1); display: grid; gap: var(--s1); }
 .confirm .what code { color: var(--fg); }
