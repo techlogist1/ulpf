@@ -123,7 +123,8 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
   at startup. A malformed file is reported with path and line; the others still load.
   v0.1 ships 12: cisco_asa, cisco_ios, fortinet_fortigate, openvpn, palo_alto_panos,
   pfsense_filterlog, check_point, juniper_srx, sonicwall, sophos_xg, squid_access,
-  suricata_eve. Every one was written from the vendor's log reference, not from a
+  suricata_eve; v4 adds cef, leef and cloudtrail (generic containers and AWS CloudTrail
+  records, written from their specifications), 15 in all. Every one was written from the vendor's log reference, not from a
   worker's memory; a fixture that passes only proves the code is self-consistent.
 - `mappings/*.toml` — one per output schema (`ocsf.toml`). Same loading rules.
 - `samples/<parser>.log` — paired sample for each parser. Synthetic until real samples

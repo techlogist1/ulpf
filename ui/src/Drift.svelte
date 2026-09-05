@@ -7,9 +7,11 @@
   let err = $state(null)
   let sel = $state(-1)
 
+  // The state of each source when this screen opened; a state that changes later pops, the initial one does not.
+  let seen = $state(null)
   async function load() {
     const r = await api('GET', '/api/drift')
-    if (r.ok) { list = r.data; err = null } else err = r.data
+    if (r.ok) { list = r.data; err = null; seen ??= Object.fromEntries(list.map((d) => [d.source, d.state])) } else err = r.data
   }
   load()
   $effect(() => { live.drift.length; load() })
@@ -62,7 +64,7 @@
       <tbody>
         {#each rows as d, i (d.source)}
           <tr class:sel={i === sel} class:click={!!proposalOf(d)} onclick={() => proposalOf(d) && (location.hash = `#/review/${encodeURIComponent(proposalOf(d))}`)}>
-            <td><span class="tag {tone(d.state)}">{d.state}</span></td>
+            <td>{#key d.state}<span class="tag {tone(d.state)}" class:pop={seen && seen[d.source] !== d.state}>{d.state}</span>{/key}</td>
             <td class="mono">{d.source}</td>
             <td class="mono">{d.parser}</td>
             <td class="num" title={d.window?.events ? '' : 'the window was drained when the source tripped; its misses went to inference'}>

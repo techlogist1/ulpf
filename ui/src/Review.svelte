@@ -207,7 +207,7 @@
           <span class="note">{detail.updates ? `overwrites parsers/${detail.updates}.toml on approval` : 'written to the parsers directory on approval'}</span>
         </div>
         {#if result?.done}
-          <div class="notice {result.kind}" tabindex="-1" {@attach reveal}>
+          <div class="notice {result.kind} arrive" tabindex="-1" {@attach reveal}>
             <b>{result.title}</b>
             {#if result.proof}<div class="proof">{#each result.proof as [k, v]}<span>{k}</span><b>{v}</b>{/each}</div>{/if}
             {#if result.problems?.length}<ul class="problems">{#each result.problems as p}<li>{p}</li>{/each}</ul>{/if}

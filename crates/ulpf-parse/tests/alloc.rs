@@ -36,9 +36,9 @@ unsafe impl GlobalAlloc for Counting {
 #[global_allocator]
 static ALLOCATOR: Counting = Counting;
 
-const ZERO_ALLOCATION_FAMILIES: [&str; 10] = [
+const ZERO_ALLOCATION_FAMILIES: [&str; 12] = [
     "cisco_asa", "cisco_ios", "fortinet_fortigate", "juniper_srx", "openvpn", "palo_alto_panos",
-    "pfsense_filterlog", "sonicwall", "sophos_xg", "squid_access",
+    "pfsense_filterlog", "sonicwall", "sophos_xg", "squid_access", "cef", "leef",
 ];
 
 #[test]
