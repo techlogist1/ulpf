@@ -1,0 +1,16 @@
+LEEF:1.0|IBM|QRadar|7.5|Login|devTime=Sep 03 2026 10:15:20	devTimeFormat=MMM dd yyyy HH:mm:ss	src=192.0.2.0	dst=172.50.123.1	sev=5	cat=anomaly	srcPort=81	dstPort=21	usrName=joe.black
+LEEF:2.0|Vendor|Product|1.0|100|^|devTime=1788516923123^src=203.0.113.9^dst=10.0.0.7^srcPort=51234^dstPort=22^proto=6^sev=7^cat=firewall^usrName=jdoe^srcBytes=120^dstBytes=0
+LEEF:2.0|Vendor|Product|1.0|101|x5E|devTime=1788516930^src=10.0.0.5^dst=203.0.113.50^srcPort=51000^dstPort=443^proto=tcp^url=https://www.example.com/^usrName=asmith^sev=2
+LEEF:2.0|Vendor|Product|1.0|102||devTime=2026-09-03T10:15:20.123+0000	devTimeFormat=yyyy-MM-dd'T'HH:mm:ss.SSSZ	src=10.0.0.1	dst=10.0.0.2	proto=17	srcPort=5353	dstPort=53	sev=1
+LEEF:2.0|Vendor|Product|1.0|103|devTime=2026-09-03 10:15:21	devTimeFormat=yyyy-MM-dd HH:mm:ss	src=10.0.0.1	dst=10.0.0.2	sev=3	cat=policy
+LEEF:2.0|Vendor|VPN|4.2|200|^|devTime=Sep 03 2026 10:15:22.500^devTimeFormat=MMM dd yyyy HH:mm:ss.SSS^usrName=jdoe^src=203.0.113.9^dst=10.0.0.5^isLoginEvent=true^srcMAC=00:0D:60:AF:1B:61^srcPreNAT=192.168.1.20^srcPostNAT=203.0.113.9^realm=corp^sev=4
+LEEF:2.0|Vendor|VPN|4.2|201|^|devTime=1788516935^usrName=jdoe^src=203.0.113.9^dst=10.0.0.5^isLogoutEvent=true^sev=1
+LEEF:1.0|Vendor\|Inc|Product|1.0|104|devTime=1788516940000	src=10.0.0.3	dst=10.0.0.4	policy=a\=b	sev=2
+<13>Jan 18 11:07:53 192.168.1.1 LEEF:1.0|Vendor|Product|1.0|105|src=192.0.2.0	dst=172.50.123.1	sev=5	cat=anomaly	srcPort=81	dstPort=21	usrName=joe.black
+<13>1 2019-01-18T11:07:53.520Z 192.168.1.1 leef - - - LEEF:2.0|Vendor|Product|1.0|106|^|src=192.0.2.0^dst=172.50.123.1^sev=5^srcPort=81^dstPort=21^usrName=joe.black
+LEEF:2.0|Vendor|Relay|1.0|107|^|devTime=1788516950000^src=10.0.0.9^dst=10.0.0.10^sev=3^resource=forwarded CEF:0|Security|threatmanager|1.0|100|worm|10|src=1.2.3.4
+LEEF:2.0|Vendor|Product|1.0|108|^|devTime=09/03/2026 10:15:23^devTimeFormat=MM/dd/yyyy HH:mm:ss^src=10.0.0.1^dst=10.0.0.2^sev=6^srcPackets=10^dstPackets=8
+LEEF:2.0|Vendor|Proxy|6.0|300|^|devTime=03/Sep/2026:10:15:24 +0530^devTimeFormat=dd/MMM/yyyy:HH:mm:ss Z^src=10.0.0.5^dst=203.0.113.50^dstPort=443^url=https://www.example.com/index.html^usrName=asmith^sev=2
+LEEF:2.0|Vendor|Product|1.0|109|^|devTime=Sep 03 2026 10:15:25 AM^devTimeFormat=MMM dd yyyy hh:mm:ss a^src=10.0.0.1^dst=10.0.0.2^sev=1
+LEEF:2.0|Vendor|VPN|4.2|200|^|devTime=1788516960000^usrName=jörg^src=203.0.113.9^dst=10.0.0.5^isLoginEvent=true^sev=4
+LEEF:2.0|Vendor|Product|1.0|110|^|devTime=03 Sep 2026 10:15:26^devTimeFormat=dd MMM yyyy HH:mm:ss^src=10.0.0.1^dst=10.0.0.2^sev=1
