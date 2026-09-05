@@ -365,6 +365,20 @@ pub struct PivotPage {
     pub events: Vec<PivotEvent>,
     pub next_before: Option<i64>,
     pub next_before_id: Option<u64>,
+    /// What each part of the query cost, so a slow pivot names its cause.
+    pub elapsed_ms: Elapsed,
+}
+
+/// Milliseconds per part of `query`: the entity header (counts, devices, dictionaries),
+/// the timeline walk, the `related` co-occurrence scan, the page's lines read back from
+/// the output, and the whole.
+#[derive(Debug, Clone, Copy, Default, Serialize)]
+pub struct Elapsed {
+    pub header: f64,
+    pub timeline: f64,
+    pub related: f64,
+    pub lines: f64,
+    pub total: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -423,10 +437,24 @@ fn decode(blob: &[u8], mut f: impl FnMut(Entry)) {
     }
 }
 
+/// A read-only connection. No SQLite mutex: rusqlite's `Connection` is not `Sync`, so the
+/// per-call lock the serialized mode takes bought nothing and cost a fifth of a `related`
+/// scan. Pages come through mmap, so a scan re-reads nothing through `pread` and copies
+/// nothing into a page cache; the file only ever grows, which is the case mmap is safe for.
+fn open_reader(path: &Path) -> Result<Connection> {
+    let flags = rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_URI | rusqlite::OpenFlags::SQLITE_OPEN_NO_MUTEX;
+    let conn = Connection::open_with_flags(path, flags).with_context(|| format!("opening pivot index {}", path.display()))?;
+    conn.busy_timeout(std::time::Duration::from_millis(2000)).ok();
+    conn.pragma_update(None, "mmap_size", 1i64 << 30).ok();
+    Ok(conn)
+}
+
 /// Read side. Opens the index read-only beside the output and reads line text from the
 /// output file by offset; WAL lets it run while the writer thread appends.
 pub struct PivotIndex {
     conn: Connection,
+    /// One connection per other kind: `related` scans the four kinds on four threads.
+    scanners: Vec<Mutex<Connection>>,
     output: PathBuf,
     file: Mutex<Option<std::fs::File>>,
 }
@@ -435,13 +463,14 @@ impl PivotIndex {
     /// `output` is the JSON Lines path; the index is `<output>.pivot` beside it.
     pub fn open(output: &Path) -> Result<PivotIndex> {
         let path = index_path(output);
-        let conn = Connection::open_with_flags(&path, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY | rusqlite::OpenFlags::SQLITE_OPEN_URI)
-            .with_context(|| format!("opening pivot index {}", path.display()))?;
-        conn.busy_timeout(std::time::Duration::from_millis(2000)).ok();
-        Ok(PivotIndex { conn, output: output.to_path_buf(), file: Mutex::new(None) })
+        let conn = open_reader(&path)?;
+        let scanners = (1..EntityKind::ALL.len()).map(|_| open_reader(&path).map(Mutex::new)).collect::<Result<Vec<_>>>()?;
+        Ok(PivotIndex { conn, scanners, output: output.to_path_buf(), file: Mutex::new(None) })
     }
 
     pub fn query(&self, q: &PivotQuery<'_>) -> Result<PivotPage> {
+        let started = std::time::Instant::now();
+        let ms = |t: std::time::Instant| t.elapsed().as_secs_f64() * 1e3;
         let kind = q.kind as u8;
         let (total, first_time, last_time): (u64, Option<i64>, Option<i64>) = self
             .conn
@@ -452,10 +481,16 @@ impl PivotIndex {
                 e => Err(e),
             })?;
         let devices = self.devices(kind, q.value)?;
-        let (window, page) = self.walk(q)?;
-        let (related, related_over) = self.related(q.kind, &window)?;
         let dict_dev = self.dict_devices()?;
         let dict_par = self.dict_parsers()?;
+        let header = ms(started);
+        let t = std::time::Instant::now();
+        let (window, page) = self.walk(q)?;
+        let timeline = ms(t);
+        let t = std::time::Instant::now();
+        let (related, related_over) = self.related(q.kind, &window)?;
+        let related_ms = ms(t);
+        let t = std::time::Instant::now();
         let full = page.len() >= q.limit.clamp(1, 500);
         let next_before = if full { page.last().map(|e| e.time_ms) } else { None };
         let next_before_id = if full { page.last().map(|e| e.raw_id) } else { None };
@@ -469,6 +504,8 @@ impl PivotIndex {
                 line: self.line(e.offset, e.len),
             })
             .collect();
+        let lines = ms(t);
+        let elapsed_ms = Elapsed { header, timeline, related: related_ms, lines, total: ms(started) };
         Ok(PivotPage {
             kind: q.kind.name(),
             value: String::from_utf8_lossy(q.value).into_owned(),
@@ -481,6 +518,7 @@ impl PivotIndex {
             events,
             next_before,
             next_before_id,
+            elapsed_ms,
         })
     }
 
@@ -624,9 +662,15 @@ impl PivotIndex {
         if window.is_empty() {
             return Ok((out, 0));
         }
-        let ids: std::collections::HashSet<u64> = window.iter().map(|e| e.raw_id).collect();
         let lo = window.iter().map(|e| e.raw_id).min().unwrap_or(0);
         let hi = window.iter().map(|e| e.raw_id).max().unwrap_or(0);
+        // membership as one bit per id over the window's span: a posting is tested with a
+        // shift, not a hash, and the span is bounded by the store's id range
+        let mut bits = vec![0u64; (hi - lo) as usize / 64 + 1];
+        for e in window {
+            let i = (e.raw_id - lo) as usize;
+            bits[i / 64] |= 1 << (i % 64);
+        }
         let span: i64 = self
             .conn
             .prepare_cached("SELECT v FROM meta WHERE k = 'max_span'")?
@@ -636,41 +680,22 @@ impl PivotIndex {
                 e => Err(e),
             })?;
         let floor = lo.saturating_sub(span.max(0) as u64);
+        let others: Vec<EntityKind> = EntityKind::ALL.into_iter().filter(|k| *k != kind).collect();
+        let bits = &bits;
+        let scanned: Vec<Result<(Vec<RelatedValue>, usize, u64)>> = std::thread::scope(|s| {
+            let handles: Vec<_> = others
+                .iter()
+                .zip(&self.scanners)
+                .map(|(other, conn)| s.spawn(move || scan_related(&conn.lock().unwrap_or_else(|e| e.into_inner()), *other, floor, lo, hi, bits)))
+                .collect();
+            handles.into_iter().map(|h| h.join().unwrap_or_else(|_| Err(anyhow::anyhow!("a related scan thread panicked")))).collect()
+        });
         let mut covered_from = lo;
-        for other in EntityKind::ALL {
-            if other == kind {
-                continue;
-            }
-            let mut stmt = self
-                .conn
-                .prepare_cached("SELECT value, first_id, blob FROM postings WHERE kind = ?1 AND first_id >= ?2 AND first_id <= ?3 ORDER BY first_id DESC LIMIT ?4")?;
-            let mut rows = stmt.query(rusqlite::params![other as u8, floor as i64, hi as i64, RELATED_ROW_BUDGET as i64])?;
-            let mut counts: HashMap<Vec<u8>, u64> = HashMap::new();
-            let mut n_rows = 0usize;
-            let mut lowest = lo;
-            while let Some(row) = rows.next()? {
-                let value: Vec<u8> = row.get(0)?;
-                let first_id: i64 = row.get(1)?;
-                let blob: Vec<u8> = row.get(2)?;
-                let mut hits = 0u64;
-                decode(&blob, |e| {
-                    if ids.contains(&e.raw_id) {
-                        hits += 1;
-                    }
-                });
-                if hits > 0 {
-                    *counts.entry(value).or_default() += hits;
-                }
-                lowest = first_id.max(0) as u64;
-                n_rows += 1;
-            }
+        for (other, scanned) in others.iter().zip(scanned) {
+            let (top, n_rows, lowest) = scanned?;
             if n_rows >= RELATED_ROW_BUDGET {
                 covered_from = covered_from.max(lowest);
             }
-            let mut top: Vec<RelatedValue> =
-                counts.into_iter().map(|(v, events)| RelatedValue { value: String::from_utf8_lossy(&v).into_owned(), events }).collect();
-            top.sort_by(|a, b| b.events.cmp(&a.events).then_with(|| a.value.cmp(&b.value)));
-            top.truncate(10);
             out.insert(other.name().to_owned(), top);
         }
         let over = window.iter().filter(|e| e.raw_id >= covered_from).count() as u64;
@@ -703,6 +728,36 @@ impl PivotIndex {
         }
         serde_json::from_slice(&buf).unwrap_or(serde_json::Value::Null)
     }
+}
+
+/// One kind's share of `related`: the ten most frequent values of `other` among the
+/// window's events (`bits` over `[lo, hi]`), reading at most `RELATED_ROW_BUDGET` posting
+/// rows newest first. Returns (top ten, rows read, the lowest first_id read). Blobs are
+/// borrowed from the row; only a value that hit is copied.
+fn scan_related(conn: &Connection, other: EntityKind, floor: u64, lo: u64, hi: u64, bits: &[u64]) -> Result<(Vec<RelatedValue>, usize, u64)> {
+    let mut stmt = conn.prepare_cached("SELECT value, first_id, blob FROM postings WHERE kind = ?1 AND first_id >= ?2 AND first_id <= ?3 ORDER BY first_id DESC LIMIT ?4")?;
+    let mut rows = stmt.query(rusqlite::params![other as u8, floor as i64, hi as i64, RELATED_ROW_BUDGET as i64])?;
+    let mut counts: HashMap<Vec<u8>, u64> = HashMap::new();
+    let mut n_rows = 0usize;
+    let mut lowest = lo;
+    while let Some(row) = rows.next()? {
+        let mut hits = 0u64;
+        decode(row.get_ref(2)?.as_blob()?, |e| {
+            if e.raw_id >= lo && e.raw_id <= hi {
+                let i = (e.raw_id - lo) as usize;
+                hits += (bits[i / 64] >> (i % 64)) & 1;
+            }
+        });
+        if hits > 0 {
+            *counts.entry(row.get_ref(0)?.as_blob()?.to_vec()).or_default() += hits;
+        }
+        lowest = row.get::<_, i64>(1)?.max(0) as u64;
+        n_rows += 1;
+    }
+    let mut top: Vec<RelatedValue> = counts.into_iter().map(|(v, events)| RelatedValue { value: String::from_utf8_lossy(&v).into_owned(), events }).collect();
+    top.sort_by(|a, b| b.events.cmp(&a.events).then_with(|| a.value.cmp(&b.value)));
+    top.truncate(10);
+    Ok((top, n_rows, lowest))
 }
 
 fn prefix_end(prefix: &[u8]) -> Vec<u8> {
