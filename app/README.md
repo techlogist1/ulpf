@@ -89,9 +89,12 @@ installers CI produced, not guessed; each line says how it was checked.
 installers are attached to the pre-release:
 `https://github.com/techlogist1/ulpf/releases/tag/<tag>` (the tags are `v0.1.0-rc1`,
 `v0.1.0-rc2`, …), assets `ULPF_0.1.0_x64-setup.exe` (NSIS, the one to use) and
-`ULPF_0.1.0_x64_en-US.msi`. **`tauri-action` creates the release as a draft, and a draft
-release is invisible to anyone not logged in with write access — publish it (Releases > the
-tag > Edit > Publish release, "Set as a pre-release") or the link 404s for the teammate.**
+`ULPF_0.1.0_x64_en-US.msi`. **`tauri-action` creates that release as a draft, and a draft's
+files are invisible to anyone not logged in with write access. Measured, not assumed: an
+unauthenticated fetch of the `v0.1.0-rc1` page at 03:52 IST answers 200 and is titled
+`Release v0.1.0-rc1` — because the tag exists — and `ULPF_0.1.0_x64-setup.exe` does not
+appear on it at all. Publish the release (Releases > the tag > Edit > Publish release, with
+"Set as a pre-release" ticked) or the teammate lands on a page with nothing to download.**
 
 **SmartScreen.** The installer is unsigned, so Windows shows a blue dialog,
 `Windows protected your PC`. Click **More info**, then **Run anyway**. (There is no
@@ -104,9 +107,9 @@ gets an installer that fails or an app whose window never paints. It is now
 `{"type": "offlineInstaller"}` in `src-tauri/tauri.conf.json` (JSON has no comments, so the
 reason is here): the full WebView2 runtime installer is inside the bundle, about 127 MB, and
 the machine needs no network at install time. Tauri's prerequisites page says Windows 10
-1803 and later already carry the runtime, in which case the embedded installer is skipped. Nothing is fetched at run
-time, ever: the app talks only to the engine on 127.0.0.1 (the ULPF invariant), and the
-served UI has no external reference.
+1803 and later already carry the runtime, in which case the embedded installer is skipped.
+Nothing is fetched at run time, ever: the app talks only to the engine on 127.0.0.1 (the
+ULPF invariant), and the served UI has no external reference.
 
 **The sidecar is found where it is installed.** Verified by unpacking the CI artifact of run
 33990295166 (`7z x ULPF_0.1.0_x64-setup.exe`): the NSIS payload is `ulpf-app.exe`
@@ -120,13 +123,17 @@ so `%APPDATA%` under a user name with spaces is passed as one argument by the OS
 shell (`Command::args`, no quoting to get wrong). Drops, the native pickers and the tray go
 through Tauri's own abstractions (`WindowEvent::DragDrop`, `tauri-plugin-dialog`,
 `TrayIconBuilder`), and the staging rename is `<data>/staging` → `<data>/watch` inside the
-one data directory, so it is never a cross-volume rename.
+one data directory, so it is never a cross-volume rename (Windows refuses those). If Windows
+does refuse a rename anyway — a virus scanner still holding the copy — the notice says so
+(`Not copied: <name> (…)`) instead of swallowing it.
 
 **One dependency the engine still has.** `ulpf.exe` imports `VCRUNTIME140.dll`
 (`strings ulpf.exe | grep -i vcruntime` on the artifact; `ulpf-app.exe` does not) — it comes
 from the C in `rusqlite`'s bundled SQLite. On a machine without the Microsoft Visual C++
-2015-2022 redistributable the engine cannot start, the window shows
-`The engine stopped …` and `engine.log` names the missing DLL. Either install the
+2015-2022 redistributable the engine cannot start. Windows fails that in the loader, before
+the program runs, so the window shows `The engine stopped (exit 3221225781)` — that is
+0xC0000135, STATUS_DLL_NOT_FOUND — with `It printed nothing.` and an empty `engine.log`; that
+exact pair of symptoms is this missing DLL. Either install the
 redistributable (`winget install Microsoft.VCRedist.2015+.x64`), or build the Windows engine
 with `RUSTFLAGS=-C target-feature=+crt-static`, which links that runtime into `ulpf.exe` and
 leaves nothing to install.
@@ -159,8 +166,10 @@ Checked against Tauri 2's prerequisites page (v2.tauri.app/start/prerequisites),
 2. **SmartScreen.** `Windows protected your PC` → **More info** → **Run anyway**. The NSIS
    wizard installs per user; no admin prompt.
 3. **Launch** from the Start menu (`ULPF`). The splash reads *Starting the engine*, then the
-   window becomes the live feed. `%APPDATA%\dev.ulpf.desktop\server.url` exists and
-   `curl (Get-Content $env:APPDATA\dev.ulpf.desktop\server.url)/api/status` answers JSON.
+   window becomes the live feed. `%APPDATA%\dev.ulpf.desktop\server.url` exists, and in
+   PowerShell
+   `Invoke-RestMethod "$(Get-Content $env:APPDATA\dev.ulpf.desktop\server.url)/api/status"`
+   answers JSON.
 4. **Drop** `samples\cisco_asa.log` on the window. A notice at the bottom names the file;
    Live (key 1) shows the source and the counters move within seconds.
 5. **Drop** `heldout\mikrotik.log`. Within a few seconds the title says `1 pending`.
