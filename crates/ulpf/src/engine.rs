@@ -575,6 +575,12 @@ pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratc
     }
 }
 
+/// `-` (stdout) or a device such as `/dev/null`: an output nothing can be written beside
+/// (no version meta, no entity index) and nothing can be recovered from.
+pub fn output_is_sink(path: &Path) -> bool {
+    path.as_os_str() == "-" || path.starts_with("/dev")
+}
+
 pub fn now_nanos() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos() as i64).unwrap_or(0)
 }
@@ -640,7 +646,7 @@ impl Live {
         let threshold = if pending.is_some() { cfg.infer_threshold } else { 0 };
         let store_id = ulpf_store::hex(&store.store_id());
         let mut prior_output_store = None;
-        if cfg.output.as_os_str() != "-" {
+        if !output_is_sink(&cfg.output) {
             let versions = Versions::new(&cfg.output);
             prior_output_store = versions.read_meta(1).map(|m| m.store_id);
             versions.write_live_meta(&store_id, pipeline.mapping.schema_name(), 0, pipeline.files.clone()).with_context(|| format!("writing the version meta beside {}", cfg.output.display()))?;
@@ -697,8 +703,8 @@ impl Live {
     /// snapshotted (ids below its length now) through the writer's files; the pipeline is
     /// the current one, or a fresh load when a different schema is asked for.
     pub fn start_replay(self: &Arc<Self>, schema: Option<&str>) -> Result<(u64, u64), ReplayError> {
-        if self.output.as_os_str() == "-" {
-            return Err(ReplayError::Invalid("replay needs a file output, not stdout".into()));
+        if output_is_sink(&self.output) {
+            return Err(ReplayError::Invalid("replay needs a file output, not stdout or a device".into()));
         }
         let mut state = self.replay.lock().unwrap_or_else(|e| e.into_inner());
         if state.running.is_some() {
@@ -873,7 +879,7 @@ impl Live {
                 self.metrics.reloads.fetch_add(1, Relaxed);
                 let generation = self.generation.fetch_add(1, Relaxed) + 1;
                 let store_id = ulpf_store::hex(&self.store.lock().unwrap_or_else(|e| e.into_inner()).store_id());
-                if self.output.as_os_str() != "-"
+                if !output_is_sink(&self.output)
                     && let Err(e) = Versions::new(&self.output).write_live_meta(&store_id, &schema, generation, files)
                 {
                     eprintln!("ulpf: version meta: {e:#}");
@@ -1233,7 +1239,7 @@ fn report(live: &Arc<Live>, elapsed: Duration, inference: Duration, input_proble
 /// agree again with no duplicate and no gap. Returns how many records were recovered.
 fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI64, problems: &mut Vec<String>) -> Result<u64> {
     use std::io::{Read, Seek, SeekFrom};
-    if live.output.as_os_str() == "-" {
+    if output_is_sink(&live.output) {
         return Ok(0);
     }
     let store_id = ulpf_store::hex(&live.store.lock().unwrap_or_else(|e| e.into_inner()).store_id());
@@ -1675,13 +1681,16 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
     } else {
         file = File::options().create(true).append(true).open(&live.output).with_context(|| format!("creating output {}", live.output.display()))?;
         pos = file.metadata().map(|m| m.len()).unwrap_or(0);
-        // the entity index beside the output: derived data on its own thread (D55)
-        match PivotWriter::start(&live.output, live.queue_cap) {
-            Ok(pw) => {
-                *live.pivot_counters.lock().unwrap_or_else(|e| e.into_inner()) = Some(pw.counters());
-                pivot = Some(pw);
+        // the entity index beside the output: derived data on its own thread (D55);
+        // nothing sits beside a device such as /dev/null
+        if !output_is_sink(&live.output) {
+            match PivotWriter::start(&live.output, live.queue_cap) {
+                Ok(pw) => {
+                    *live.pivot_counters.lock().unwrap_or_else(|e| e.into_inner()) = Some(pw.counters());
+                    pivot = Some(pw);
+                }
+                Err(e) => eprintln!("ulpf: pivot index disabled: {e:#}"),
             }
-            Err(e) => eprintln!("ulpf: pivot index disabled: {e:#}"),
         }
         Box::new(BufWriter::with_capacity(1 << 20, file))
     };

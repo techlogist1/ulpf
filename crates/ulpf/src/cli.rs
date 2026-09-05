@@ -317,7 +317,7 @@ pub fn main() -> Result<()> {
             print_report(&report?)
         }
         Cmd::Replay { engine: args, report_json } => {
-            anyhow::ensure!(args.output.as_os_str() != "-", "replay needs a file output (--output), not stdout");
+            anyhow::ensure!(!engine::output_is_sink(&args.output), "replay needs a file output (--output), not stdout or a device");
             let reader = ulpf_store::RawReader::open(&args.store).with_context(|| format!("opening store {}", args.store.display()))?;
             let names = match reader.source_names() {
                 Ok(n) => n,
