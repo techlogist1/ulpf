@@ -1,0 +1,472 @@
+# Elastic Common Schema, pragmatic subset. Field names, types and every constrained
+# vocabulary below were taken from the ECS 9.5.0 reference on 2026-09-05
+# (elastic.co/guide/en/ecs/current: ecs-field-reference, ecs-event, ecs-network,
+# ecs-source, ecs-destination, ecs-observer, ecs-user, ecs-rule, ecs-url, ecs-http,
+# ecs-dns, ecs-tls, ecs-related, ecs-allowed-values-event-category), not from memory.
+#
+# Second output schema, same twelve parsers, no parser edit: this file is the whole
+# diff. Source-field vocabulary only; no vendor or parser name appears here.
+#
+# Where ECS is stricter than the mapping format, the file stays honest rather than
+# tidy:
+#  * ECS constrains event.kind/category/type/outcome and network.direction/transport to
+#    published value lists. An enum here therefore falls back to the legal catch-all
+#    (`unknown`) or to nothing at all, never to an invented "Other", and the raw value
+#    still lands under `unmapped`.
+#  * event.action is deliberately not enumerated: ECS says it is "not standardized" and
+#    keeps the source's own word, so the vendor value passes through as written.
+#  * event.category and event.type are arrays in ECS; only [[class]] constants can emit
+#    an array, so the class rules carry them and each event gets exactly one array.
+#  * A source field can feed exactly one schema path, so related.ip / related.user
+#    (which want the same value in two places, as an array) are not expressible and are
+#    left out. Same reason event.outcome draws on the result/status fields rather than
+#    on the action fields that feed event.action.
+#  * Values are passed through byte for byte: no lowercasing, no splitting. So
+#    tls.version keeps the vendor's "TLSv1.2" instead of ECS's "1.2" + version_protocol,
+#    and source.mac keeps colons instead of RFC 7042 dashes. Transforms belong to the
+#    normalizer, not to a value list.
+#  * Fields with no honest ECS home stay in `unmapped`, visible: session/connection ids
+#    (ECS has no network.session.id), the vendor's own log type/subtype, elapsed time
+#    (ECS event.duration is nanoseconds, these are seconds).
+#  * ECS is the narrower schema, so two source fields more often want one path (a policy
+#    id and a signature id both want rule.id). The first listed wins and the loser stays
+#    in `unmapped` under its own name; it is never invented a second home.
+
+[schema]
+name = "ecs"
+version = "9.5.0"
+
+# The five schema paths the pivot index groups events by. Kinds are fixed; the paths are
+# this schema's business, so the index never learns a vendor field name. `device` falls
+# back to the ingest source name when the path is absent from an event.
+# `observer`, not `host`: ECS defines an observer as "a special network, security, or
+# application device used to detect, observe, or create network, security, or
+# application-related events" and names firewalls, proxies and IDS/IPS as the examples
+# (ecs-observer), while `host` is the machine that generated the event. A perimeter
+# device reports on traffic that is not its own, so it is the observer.
+[entities]
+src_ip = "source.ip"
+dst_ip = "destination.ip"
+user = "user.name"
+dst_port = "destination.port"
+device = "observer.hostname"
+
+# Source values that mean "nothing here". Dropped before mapping, never in `unmapped`.
+[values]
+absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
+
+[fields]
+# --- source / destination: the ECS baseline for anything with an IP -----------------
+"source.ip" = ["srcip", "src_ip", "src", "sourceip", "attacker", "source_ip", "source_address", "source-address", "srcaddr", "SourceIP", "client_ip", "c-ip", "shost_ip", "remote_ip", "peer_ip", "peer_addr", "ip_src"]
+"source.port" = ["srcport", "src_port", "spt", "source_port", "source-port", "SourcePort", "sport", "s_port", "client_port", "peer_port", "src_port_num"]
+"source.mac" = ["srcmac", "src_mac", "smac", "srcMac", "source_mac"]
+"source.domain" = ["srcname", "src_host", "src_machine_name", "shost", "source_host", "client_name"]
+"source.nat.ip" = ["xlatesrc", "natsrc", "natSrc", "nat_src_ip", "tran_src_ip", "src_mapped_ip", "nat-source-address", "transip"]
+"source.nat.port" = ["xlatesport", "natsport", "nat_src_port", "tran_src_port", "src_mapped_port", "nat-source-port"]
+"source.geo.country_name" = ["srccountry", "src_country", "srcloc", "SourceCountry"]
+"source.geo.country_iso_code" = ["src_country_code"]
+"source.bytes" = ["sentbyte", "bytes_sent", "bytes_out", "out", "sent", "sent_bytes", "bytes-from-client", "bytes_from_client", "outbound-bytes", "client_outbound_bytes", "flow.bytes_toserver", "client_bytes", "request_bytes", "cn_bytes_out"]
+"source.packets" = ["sentpkt", "packets_sent", "packets_out", "pkts_sent", "spkt", "packets-from-client", "packets_from_client", "outbound-packets", "flow.pkts_toserver", "sent_pkts"]
+"source.user.name" = ["srcuser", "src_user_name", "src_user", "login_user", "session_owner"]
+
+"destination.ip" = ["dstip", "dst_ip", "dst", "victim", "destination_ip", "destination_address", "destination-address", "dstaddr", "DestinationIP", "server_ip", "dest_ip", "ip_dst", "assigned_ip", "remote_ip_dst"]
+"destination.port" = ["dstport", "dst_port", "dpt", "destination_port", "destination-port", "DestinationPort", "dport", "d_port", "server_port", "dest_port", "dst_port_num"]
+"destination.mac" = ["dstmac", "dst_mac", "dmac", "dstMac", "destination_mac"]
+"destination.domain" = ["dstname", "dst_host", "dst_machine_name", "dhost", "destination_host", "server_host", "hostname_dst"]
+"destination.nat.ip" = ["xlatedst", "natdst", "natDst", "nat_dst_ip", "tran_dst_ip", "dst_mapped_ip", "nat-destination-address", "mapped_ip"]
+"destination.nat.port" = ["xlatedport", "natdport", "nat_dst_port", "tran_dst_port", "dst_mapped_port", "nat-destination-port", "mapped_port"]
+"destination.geo.country_name" = ["dstcountry", "dst_country", "dstloc", "DestinationCountry"]
+"destination.geo.country_iso_code" = ["dst_country_code"]
+"destination.bytes" = ["rcvdbyte", "bytes_received", "bytes_in", "in", "rcvd", "rcvd_bytes", "bytes_recv", "recv_bytes", "bytes-from-server", "bytes_from_server", "inbound-bytes", "server_outbound_bytes", "flow.bytes_toclient", "server_bytes", "response_bytes", "cn_bytes_in"]
+"destination.packets" = ["rcvdpkt", "packets_received", "packets_in", "pkts_received", "rpkt", "packets-from-server", "packets_from_server", "inbound-packets", "flow.pkts_toclient", "rcvd_pkts"]
+"destination.user.name" = ["dstuser", "duser", "dst_user_name", "recipient"]
+
+# --- network -----------------------------------------------------------------------
+"network.transport" = ["protocol", "proto", "Protocol", "protocol-id", "protocol-name", "protocol_id", "transport", "ip_proto", "proto_name", "IPProtocol", "protoid", "protocol_type"]
+"network.direction" = ["direction", "ifdir", "conn_direction", "Direction", "flow_direction", "dir_disp"]
+"network.type" = ["ipversion", "address_family", "ip_version"]
+"network.protocol" = ["app_proto"]
+"network.application" = ["app", "application", "appi_name", "application_name", "application-name", "appName", "app_name", "service", "service_id", "service-name", "service_name", "nested-application", "nested_application", "tunneled_app", "dst_service", "src_service", "sproc", "dproc"]
+"network.community_id" = ["community_id"]
+"network.bytes" = ["bytes", "total_bytes", "size", "bytes_total"]
+"network.packets" = ["packets", "pkts", "packet_count", "total_packets"]
+"network.forwarded_ip" = ["xff", "xff_ip"]
+
+# --- event -------------------------------------------------------------------------
+# ECS: "not standardized", the source's own word. No enum, no canonicalisation.
+"event.action" = ["action", "act", "utmaction", "disposition", "Action", "verdict", "filter_action", "fw_action", "rule_action", "alert.action", "cache_status", "cache_result", "status", "connevent"]
+"event.outcome" = ["result", "auth_status", "aaa_status", "login_status", "result_action", "state"]
+"event.code" = ["msg_id", "logid", "event_id", "eventid", "message_id", "signature_id_header", "mnemonic", "log_id", "msgid", "m", "code_id", "syslog_msgid", "code"]
+"event.reason" = ["reason", "teardown_reason", "status_reason", "termination_reason", "note", "session_end_reason", "flow.reason", "justification"]
+"event.id" = ["uuid", "event_uid", "record_id", "eventuuid", "loguid", "transactionid", "incidentserialno"]
+
+# --- log / severity ----------------------------------------------------------------
+# The enum below carries the canonical bucket name; `event.severity` is its id.
+"log.level" = ["severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity", "log_level", "loglevel", "confidence_level", "rule_priority"]
+
+# --- observer: for perimeter devices the logging device is the observer, not the host
+"observer.hostname" = ["devname", "device_name", "hostname", "dvchost", "syslog_host", "device", "dvc_host", "node", "host", "origin", "cluster_name"]
+"observer.ip" = ["devip", "device_ip", "dvc_ip", "fw", "fw_ip"]
+"observer.serial_number" = ["devid", "device_id", "serial", "sn", "serial_number", "serialnumber", "dvc", "hostid"]
+"observer.vendor" = ["device_vendor"]
+"observer.product" = ["device_product", "product"]
+"observer.version" = ["build_info", "daemon_version", "contentver"]
+"observer.ingress.interface.name" = ["srcintf", "src_interface", "in_interface", "in_intf", "inbound_if", "packet-incoming-interface", "source-interface-name", "deviceInboundInterface", "inif", "src_zone_interface", "interface", "ifname", "intf", "in_iface"]
+"observer.egress.interface.name" = ["dstintf", "dst_interface", "out_interface", "out_intf", "outbound_if", "destination-interface-name", "deviceOutboundInterface", "outif", "dst_zone_interface", "mapped_interface"]
+"observer.ingress.zone" = ["srczone", "srcZone", "src_zone", "source-zone-name", "inzone", "inzone_name", "src_zone_name", "from_zone"]
+"observer.egress.zone" = ["dstzone", "dstZone", "dst_zone", "destination-zone-name", "outzone", "outzone_name", "dst_zone_name", "to_zone"]
+
+# --- user --------------------------------------------------------------------------
+"user.name" = ["user", "usrName", "usr", "suser", "user_name", "username", "userName", "login", "common_name", "cn", "auth_user", "remote_user", "admin", "process_user"]
+"user.domain" = ["user_domain", "realm"]
+"user.group.name" = ["group", "group_name", "user_gp", "usergroupname", "dynusergroup_name"]
+
+# --- rule: firewall policies and IDS signatures are both "rules" in ECS. Policy names
+#     rank first, so an IPS event that also carries a policy id keeps the policy under
+#     rule.* and the signature under `unmapped` rather than the other way round.
+"rule.name" = ["policyname", "rule_name", "acl", "access_list", "rule", "rule-name", "policy_name", "policy-name", "fw_rule_name", "rulename", "acl_name", "filter_name", "attack", "attack-name", "signature", "signature_msg", "alert.signature", "threat_name", "threatname", "protection_name", "sig_name", "signature_name", "ips_signature", "alert_name", "name"]
+"rule.id" = ["policyid", "rule_id", "fw_rule_id", "ruleid", "rule_uid", "policy_id", "tracker", "rulenum", "subrulenum", "attackid", "alert.signature_id", "signature_id", "threat_id", "threatid", "sid", "sig_id", "ips_id", "protection_id"]
+"rule.uuid" = ["rule_uuid", "poluuid", "layer_uuid", "dst_uuid", "src_uuid"]
+"rule.ruleset" = ["layer_name", "rulebase-name", "ips_policy_id", "idp_policy_id", "appfilter_policy_id", "policy_type", "policytype"]
+"rule.category" = ["eventtype", "attack_category", "alert.category", "threat_category", "thr_category", "ipscat", "protection_type", "category", "class", "classification", "matched_category", "subcategory_of_app", "category_of_app"]
+"rule.description" = ["alert.metadata", "attack_info", "malware_action", "threat_desc", "vuln_desc"]
+
+# --- url / http / user agent -------------------------------------------------------
+"url.original" = ["url", "request_url", "requestUrl", "uri", "request_uri", "http.url", "resource", "cs-uri", "URL"]
+"url.domain" = ["http.hostname", "hostname_http", "http_host", "domain", "cs-host", "site", "request_host"]
+"url.scheme" = ["scheme"]
+"http.request.method" = ["method", "request_method", "requestMethod", "http_method", "cs-method", "http.http_method", "methods"]
+"http.request.referrer" = ["referer", "referrer", "requestContext", "http.http_refer", "cs(Referer)"]
+"http.response.status_code" = ["status_code", "http_status", "response_code", "httpresponsecode", "sc-status", "http.status", "http_code", "http_response_code"]
+"http.response.bytes" = ["http.length"]
+"http.response.mime_type" = ["content_type", "contenttype", "mime_type", "http.http_content_type", "sc-content-type"]
+"http.version" = ["http.protocol"]
+"user_agent.original" = ["user_agent", "agent", "requestClientApplication", "cs(User-Agent)", "http.http_user_agent", "ua", "web_client_type"]
+
+# --- dns ---------------------------------------------------------------------------
+"dns.question.name" = ["qname", "dns.rrname", "dns.queries.0.rrname", "query", "dns_query", "domain_name", "qry_name"]
+"dns.question.type" = ["qtype", "dns.rrtype", "dns.queries.0.rrtype", "query_type", "qry_type"]
+"dns.response_code" = ["dns.rcode"]
+"dns.id" = ["dns.id", "dns.tx_id", "tx_id"]
+"dns.type" = ["dns.type"]
+
+# --- tls ---------------------------------------------------------------------------
+"tls.version" = ["tls_version", "tls.version", "ssl_version"]
+"tls.cipher" = ["cipher"]
+"tls.client.server_name" = ["sni", "tls.sni", "server_name_indication", "server_name"]
+"tls.server.x509.subject.distinguished_name" = ["tls.subject", "cert_subject", "subject"]
+"tls.server.x509.issuer.distinguished_name" = ["tls.issuerdn", "issuer"]
+"tls.server.x509.serial_number" = ["tls.serial", "cert_serial"]
+"tls.server.hash.sha1" = ["tls.fingerprint"]
+
+# --- base --------------------------------------------------------------------------
+"message" = ["msg", "message", "logdesc", "raw_message", "description", "opaque", "event_description", "log_message", "text", "content"]
+
+# ECS types: only these are numbers. event.code, rule.id, dns.id and
+# network.community_id are keywords in ECS and stay strings.
+[types]
+int = [
+  "source.port", "destination.port", "source.nat.port", "destination.nat.port",
+  "source.bytes", "destination.bytes", "source.packets", "destination.packets",
+  "network.bytes", "network.packets",
+  "http.response.status_code", "http.response.bytes",
+]
+
+# ---------------------------------------------------------------------------- enums
+# ECS publishes the allowed values for these fields, so an unlisted raw value becomes
+# the legal catch-all (or nothing) and is preserved under `unmapped`; there is no ECS
+# equivalent of OCSF's `Other`. None of them declare `unknown`: a field ECS never saw a
+# value for is absent, not guessed.
+
+# event.outcome: ECS allows exactly failure / success / unknown.
+[[enum]]
+field = "event.outcome"
+other = { value = "unknown" }
+
+[[enum.values]]
+value = "success"
+raw = ["success", "successful", "succeeded", "succeed", "ok", "pass", "passed", "granted", "accept", "accepted", "allow", "allowed", "permit", "permitted", "complete", "completed", "up", "true", "yes"]
+
+[[enum.values]]
+value = "failure"
+raw = ["failure", "failed", "fail", "error", "deny", "denied", "reject", "rejected", "invalid", "unauthorized", "incorrect", "timeout", "timed_out", "expired", "refused", "block", "blocked", "drop", "dropped", "down", "false", "no"]
+
+[[enum.values]]
+value = "unknown"
+raw = ["unknown", "na", "n/a", "none", "not-applicable"]
+
+# network.transport: ECS wants the lowercase transport keyword name. A value that is
+# neither a known name nor a known IANA number is left to `unmapped`, not guessed.
+[[enum]]
+field = "network.transport"
+
+[[enum.values]]
+value = "tcp"
+raw = ["tcp", "6", "tcp/ip"]
+
+[[enum.values]]
+value = "udp"
+raw = ["udp", "17"]
+
+[[enum.values]]
+value = "icmp"
+raw = ["icmp", "1", "ping"]
+
+[[enum.values]]
+value = "ipv6-icmp"
+raw = ["icmpv6", "ipv6-icmp", "icmp6", "58"]
+
+[[enum.values]]
+value = "gre"
+raw = ["gre", "47"]
+
+[[enum.values]]
+value = "esp"
+raw = ["esp", "50"]
+
+[[enum.values]]
+value = "ah"
+raw = ["ah", "51"]
+
+[[enum.values]]
+value = "sctp"
+raw = ["sctp", "132"]
+
+[[enum.values]]
+value = "igmp"
+raw = ["igmp", "2"]
+
+[[enum.values]]
+value = "vrrp"
+raw = ["carp", "vrrp", "112"]
+
+# network.type: OSI layer 3, ECS examples ipv4 / ipv6.
+[[enum]]
+field = "network.type"
+
+[[enum.values]]
+value = "ipv4"
+raw = ["ipv4", "4", "inet", "af_inet", "ip"]
+
+[[enum.values]]
+value = "ipv6"
+raw = ["ipv6", "6", "inet6", "af_inet6"]
+
+# network.direction: ECS allows ingress, egress, inbound, outbound, internal, external,
+# unknown. A perimeter device reports relative to the perimeter, so inbound/outbound.
+[[enum]]
+field = "network.direction"
+other = { value = "unknown" }
+
+[[enum.values]]
+value = "inbound"
+raw = ["inbound", "in", "incoming", "ingress", "to_server", "toserver", "server", "server-to-client", "rx"]
+
+[[enum.values]]
+value = "outbound"
+raw = ["outbound", "out", "outgoing", "egress", "to_client", "toclient", "client", "client-to-server", "tx"]
+
+[[enum.values]]
+value = "internal"
+raw = ["lateral", "internal", "local", "intrazone"]
+
+[[enum.values]]
+value = "external"
+raw = ["external", "interzone"]
+
+# log.level + event.severity. ECS leaves the event.severity scale to the source
+# ("according to your event source"); this one ascends with severity, 1..6.
+[[enum]]
+field = "log.level"
+id_field = "event.severity"
+other = { value = "unknown" }
+
+[[enum.values]]
+value = "informational"
+id = 1
+raw = ["informational", "information", "info", "notice", "debug", "debugging", "6", "7", "5", "verbose", "low-info"]
+raw_by_field = { "alert.severity" = ["4"], "ipspri" = ["3"] }
+
+[[enum.values]]
+value = "low"
+id = 2
+raw = ["low", "minor", "warning", "warn", "4"]
+raw_by_field = { "alert.severity" = ["3"], "ipspri" = ["2"] }
+
+[[enum.values]]
+value = "medium"
+id = 3
+raw = ["medium", "med", "moderate", "error", "err", "3"]
+raw_by_field = { "alert.severity" = ["2"] }
+
+[[enum.values]]
+value = "high"
+id = 4
+raw = ["high", "major", "critical-low", "2", "crit"]
+raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"] }
+
+[[enum.values]]
+value = "critical"
+id = 5
+raw = ["critical", "1", "alert", "severe"]
+
+[[enum.values]]
+value = "emergency"
+id = 6
+raw = ["0", "emergency", "emerg", "fatal", "panic"]
+
+# --------------------------------------------------------------------------- classes
+# One class rule = one (event.kind, event.category[], event.type[]) triple. The `when`
+# alternatives are identical to the other schema's: same source vocabulary, different
+# constants. First rule with a satisfied alternative wins; order matters. `*` means
+# present (and not an absent value). Expected event types per category are the ones
+# ECS publishes for that category.
+
+[[class]]
+uid = 1
+name = "authentication"
+category_uid = 1
+category_name = "authentication"
+# ECS expects start / end / info here; these rules match logon and logoff alike, so the
+# honest type is `info` rather than a coin flip between start and end.
+constants = { "event.kind" = "event", "event.category" = ["authentication"], "event.type" = ["info"] }
+when = [
+  { msg_id = ["113004", "113005", "113008", "113009", "113012", "113015", "113019", "113039", "722051", "722022", "722023", "722028", "722037", "716001", "716002", "605005", "605004", "611101", "611102", "111008", "111010"] },
+  { type = ["event"], subtype = ["system", "user", "vpn"], action = ["login", "logout", "login-failed", "logon", "logoff", "tunnel-up", "tunnel-down", "ssl-login-fail", "auth-logon", "auth-logout"] },
+  { type = ["SYSTEM"], subtype = ["auth", "sslvpn", "globalprotect", "ras", "userid", "vpn"] },
+  { type = ["USERID", "AUTHENTICATION", "GLOBALPROTECT"] },
+  { log_type = ["Authentication", "Event"], log_component = ["Firewall Authentication", "VPN", "SSL VPN", "Authentication"] },
+  { syslog_app = ["sshd", "pppd", "radiusd", "sudo", "login"] },
+  { event_kind = ["auth", "vpn"] },
+  { mnemonic = ["LOGIN_SUCCESS", "LOGIN_FAILED", "LOGOUT", "SSH2_USERAUTH", "AUTHPRIV"] },
+  { vpn_event = ["connection_initiated", "auth_failed", "certificate_rejected", "tls_failed", "disconnected", "inactivity_timeout", "address_assigned"] },
+  { vpn_feature_name = ["*"] },
+  { msg = ["Administrator login allowed", "Administrator login denied due to bad credentials", "User login successful", "User login failed"] },
+  { auth_status = ["*"] },
+  { aaa_status = ["*"] },
+]
+
+[[class]]
+uid = 2
+name = "web"
+category_uid = 2
+category_name = "web"
+constants = { "event.kind" = "event", "event.category" = ["network", "web"], "event.type" = ["connection", "access"] }
+when = [
+  { event_type = ["http"] },
+  { type = ["THREAT"], subtype = ["url"] },
+  { product = ["URL Filtering"] },
+  { request_method = ["*"] },
+  { method = ["*"], url = ["*"] },
+  { cache_result = ["*"] },
+  { cache_status = ["*"] },
+  { "http.http_method" = ["*"] },
+  { http_host = ["*"] },
+  { log_component = ["HTTP", "HTTPS", "Web Filter"] },
+  { msg = ["Web site hit", "Web site access denied", "Web site blocked"] },
+]
+
+[[class]]
+uid = 3
+name = "dns"
+category_uid = 3
+category_name = "network"
+constants = { "event.kind" = "event", "event.category" = ["network"], "event.type" = ["connection", "protocol"] }
+when = [
+  { event_type = ["dns"] },
+  { qname = ["*"] },
+  { "dns.rrname" = ["*"] },
+  { qtype = ["*"] },
+]
+
+[[class]]
+uid = 4
+name = "intrusion_detection"
+category_uid = 4
+category_name = "intrusion_detection"
+# ECS expects allowed / denied / info; one rule cannot tell a blocked detection from a
+# logged one, so `info` and the vendor's word in event.action.
+constants = { "event.kind" = "alert", "event.category" = ["intrusion_detection"], "event.type" = ["info"] }
+when = [
+  { type = ["utm"], subtype = ["ips", "virus", "webfilter", "app-ctrl", "anomaly", "dlp", "emailfilter", "waf"] },
+  { type = ["THREAT"] },
+  { event_type = ["alert", "anomaly"] },
+  { log_type = ["IDP", "IPS", "Anti-Virus", "Anti-Spam", "WAF", "ATP"] },
+  { log_component = ["IPS", "Anti-Virus", "Anti-Spam", "Web Filter", "Application Filter", "Web Content Policy"] },
+  { classification = ["*"], sid = ["*"] },
+  { attack_category = ["*"] },
+  { "alert.signature" = ["*"] },
+  { "attack-name" = ["*"] },
+  { protection_name = ["*"] },
+  { ipscat = ["*"] },
+  { sid = ["*"] },
+  { msg_id = ["733100", "733101", "733102", "733103", "733104", "733105", "400000", "400001", "400002", "400003", "400004", "400005", "400006", "400007", "400008", "400009", "400010", "400011", "400012", "400013", "400014", "400015", "400016", "400017", "400018", "400019", "400020", "400021", "400022", "400023", "400024", "400025", "400026", "400027", "400028", "400029", "400030", "400031", "400032", "400033", "400034", "400035", "400036", "400037", "400038", "400039", "400040", "400041", "400042", "400043", "400044", "400045", "400046", "400047", "400048", "400049", "400050"] },
+]
+
+# The allowed/denied decision is event.type in ECS (event.outcome is success/failure of
+# the reporting entity, not of a filtering verdict). These two rules read the same
+# action fields event.action passes through, and sit after the detection rule so a
+# blocked threat stays an intrusion_detection alert.
+[[class]]
+uid = 5
+name = "network_denied"
+category_uid = 5
+category_name = "network"
+constants = { "event.kind" = "event", "event.category" = ["network"], "event.type" = ["connection", "denied"] }
+when = [
+  { action = ["deny", "denied", "drop", "dropped", "block", "blocked", "block-url", "block-continue", "reject", "rejected", "discard", "discarded", "refuse", "refused", "prevent", "prevented", "reset", "reset-both", "reset-client", "reset-server", "sinkhole"] },
+  { fw_action = ["deny", "denied", "drop", "dropped", "block", "blocked", "reject", "rejected", "discard"] },
+  { rule_action = ["deny", "denied", "drop", "dropped", "block", "blocked", "reject", "rejected", "discard"] },
+  { utmaction = ["deny", "denied", "block", "blocked", "reset"] },
+  { disposition = ["deny", "denied", "drop", "dropped", "block", "blocked", "reject"] },
+  { verdict = ["deny", "denied", "drop", "dropped", "block", "blocked", "reject"] },
+  { status = ["deny", "denied", "drop", "dropped", "block", "blocked"] },
+]
+
+[[class]]
+uid = 6
+name = "network_allowed"
+category_uid = 6
+category_name = "network"
+constants = { "event.kind" = "event", "event.category" = ["network"], "event.type" = ["connection", "allowed"] }
+when = [
+  { action = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "passed", "forward", "forwarded"] },
+  { fw_action = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "forward"] },
+  { rule_action = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "forward"] },
+  { utmaction = ["allow", "allowed", "pass", "passed", "monitor"] },
+  { disposition = ["accept", "allow", "allowed", "permit", "permitted", "pass"] },
+  { verdict = ["accept", "allow", "allowed", "permit", "permitted", "pass"] },
+  { status = ["allow", "allowed", "accept", "permit"] },
+]
+
+[[class]]
+uid = 7
+name = "network"
+category_uid = 7
+category_name = "network"
+constants = { "event.kind" = "event", "event.category" = ["network"], "event.type" = ["connection"] }
+when = [
+  { type = ["traffic", "TRAFFIC"] },
+  { event_type = ["flow", "netflow", "fileinfo", "tls", "ssh", "smb", "ftp"] },
+  { log_type = ["Firewall", "Traffic", "Flow", "Session"] },
+  { log_component = ["Firewall Rule", "Firewall", "Invalid Traffic", "Appliance Access", "ICMP Error", "DoS", "Local ACLs", "NAT"] },
+  { msg_id = ["302013", "302014", "302015", "302016", "302020", "302021", "106001", "106002", "106006", "106007", "106010", "106012", "106013", "106014", "106015", "106016", "106017", "106018", "106020", "106021", "106022", "106023", "106100", "305009", "305010", "305011", "305012", "313001", "313004", "313005", "313008", "710002", "710003", "710005", "710006", "609001", "609002", "419001", "419002", "420002", "420003", "710001"] },
+  { mnemonic = ["IPACCESSLOGP", "IPACCESSLOGDP", "IPACCESSLOGNP", "IPACCESSLOGS", "IPACCESSLOGRP", "IPACCESSLOGRL", "FW_SESSION", "NAT", "SESSION_OPEN", "SESSION_CLOSE"] },
+  { tracker = ["*"] },
+  { src_ip = ["*"], dst_ip = ["*"] },
+  { srcip = ["*"], dstip = ["*"] },
+  { src = ["*"], dst = ["*"] },
+  { source_ip = ["*"], destination_ip = ["*"] },
+  { source_address = ["*"], destination_address = ["*"] },
+  { "source-address" = ["*"], "destination-address" = ["*"] },
+  { proto = ["*"] },
+  { protocol = ["*"] },
+]
+
+# No category: ECS would rather have event.category absent than wrong.
+[default_class]
+uid = 0
+name = "event"
+category_uid = 0
+category_name = "uncategorized"
+constants = { "event.kind" = "event" }
