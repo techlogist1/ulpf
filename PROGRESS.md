@@ -437,8 +437,37 @@ look at the captures and a grep of `ui/dist` for external references.
       without a prefix keeps its first byte (spec-undefined); a counted `invalid_leef` carries no
       header fields (the pipeline's Err shape for every strategy). Merge after the demo: the
       mapping additions are inside the severity enums, so the rebase onto main is trivial.
-- [ ] L8. Branch `lane-8-windows` pushed and described as ready for the owner's go: the three
-      test names, the Windows test job URL, D82 on the branch.
+- [x] L8. (pushed 04:53 IST, `origin/lane-8-windows` at 80a5bfc, based on 14d3b0c, D82 on the
+      branch; never merges tonight; ready for the owner's go after the demo) Three deterministic
+      Windows failures fixed with a test each: (1) the store reopen truncated a torn tail under a
+      live mapping, which Windows refuses (os error 1224): recovery now reclaims the tail in
+      place (the bytes beyond the recovered end are zeroed, the writer resumes there, neither
+      file is ever shrunk), the walk-back checks the last entry's digest and chain link and not
+      only its shape, and `RawReader::open` finds its logical end by dropping trailing entries
+      that are not a record while keeping a wrong-digest record for verify to name; test
+      `a_reader_mapped_across_a_reopen_keeps_its_records_and_no_file_shrinks`
+      (crates/ulpf-store/tests/roundtrip.rs; fails on the old code with "left: 3448 right:
+      3464"); the on-disk format is unchanged and D52/D56 survive (the reader still bounds to the
+      flushed count). (2) The parquet watch-mode teardown held files open after stop (os error
+      32): `Live.store` is now `Mutex<Option<RawStore>>` behind `Live::store()` and
+      `Live::close()` runs on every exit path of run and serve, dropping the store and the pivot
+      read connection; test `stop_releases_every_file_the_engine_opened` (crates/ulpf/tests/
+      stop.rs; with close neutered it names catalog.sqlite, its WAL, raw.seg and raw.idx). (3)
+      The null device: `output_is_sink` knows `NUL` on Windows, a device output leaves no meta
+      file, and the version meta counts what the file holds (the live count when the output
+      started empty, else a line count); tests `a_null_device_output_leaves_nothing_beside_it_or_
+      in_the_cwd` and `the_version_meta_counts_the_lines_the_output_holds` (crates/ulpf/tests/
+      output_meta.rs). Needed for a green suite, outside the three: the UDP receive buffer is
+      raised on Windows through Winsock (D74's no-op replaced). Windows job
+      `.github/workflows/windows-tests.yml` on the branch: baseline run 33997160230 FAILED three
+      targets (the three failures as the tester saw them), 33997927604 FAILED two, 33998281457
+      SUCCESS with 39 `test result: ok`, 33998494780 SUCCESS (docs push). Mac: 26 suites green,
+      clippy clean, the samples byte-identical through old and new binaries. The independent
+      verifier did not run (the session limit); the lead read the store diff (digest and chain
+      on the walk-back, zero-fill, the reader's logical end) and the run list. Gap the builder
+      recorded: a reader in another process can observe the zero region between the writer's
+      zero-fill and its next append (dropped by the walk-back; nothing in the format marks the
+      logical end explicitly).
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
