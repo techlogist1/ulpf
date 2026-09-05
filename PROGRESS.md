@@ -215,9 +215,15 @@ round; same return format. It is a separate lane because it edits `lib.rs infer(
 A1 verifier reads A1's tree, and it merges only after A1 does.
 
 ### In flight
-- Lane V (the Chrome-driven pass over the merged UI, captures under `docs/screens/tool-*.png`
-  in its own worktree) since 22:48; the A3 bench watcher; then the app is rebuilt from the
-  merged tree and driven with the computer-use tools. A1, A1b, B and C are merged.
+- Lane P since 23:35 IST (own worktree of main): the twelve minor findings from lane V's
+  Chrome-driven pass (scroll to the approve result, the written-to path overflow, repeated
+  axis ticks, uninformative seen-with bars, an unformatted number, negative zero, the tail
+  header wording, the sources table at 1512, the seven-row legend) fixed in the UI only, each
+  verified over CDP and re-captured under the existing file names; 45-minute stop; Opus
+  verifier. One worker because the findings are one screen family each and the fix is small.
+- After P merges: the app is rebuilt from the final tree (`pnpm tauri build` in `app/`) and
+  driven with the computer-use tools (launch, drop, approve, quit, relaunch); then the final
+  checks. A1, A1b, B, C and V are merged; the soak run 5 and the A3 bench are recorded.
 - A2 and A3 run from a detached watcher started 22:21 IST (`quiet-measure.sh` in the session
   scratchpad, `pgrep -fl quiet-measure`): before each bench width and before the soak it waits
   for a quiet machine (1-min load under 4, no rustc/cargo/ld), samples the load every 2 s
