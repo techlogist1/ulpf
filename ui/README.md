@@ -41,12 +41,15 @@ so the binary carries them and the page never fetches a font. After a build:
 
 ## Captures
 
-    node capture.mjs --base http://127.0.0.1:7881 --out ../docs/screens [--big <raw id>] [--approve <pending id>]
+    node capture.mjs --base http://127.0.0.1:7881 --out ../docs/screens [--big <raw id>] [--approve <pending id>] [--empty <base of a fresh server>] [--load <file> --watch <dir>]
 
 shoots every screen at 1280x800 and 2560x1440 against a populated `ulpf serve`, plus the
 stateful ones (hover, hex, the shortcut overlay, empty and error states, light theme, the
-keyboard-only approve flow, one capture per key) and writes `docs/screens/README.md`, one
-line per file. Needs Chrome at its usual path and `puppeteer-core` (a dev dependency).
+keyboard-only approve flow, one capture per key; Flow at rest, under `--load` copied into
+`--watch` two seconds before the shot, under reduced motion, and the 0 / l / s / Esc
+traversal) and writes `docs/screens/README.md` and `index.json`, one line per file, keeping
+the rows it did not shoot (tool-driven and desktop-app captures) from the previous index.
+Needs Chrome at its usual path and `puppeteer-core` (a dev dependency).
 
 ## Develop
 
@@ -58,6 +61,7 @@ Vite proxies `/api` to `http://127.0.0.1:7878` (a running `ulpf serve`).
 
 | hash | screen |
 |---|---|
+| `#/`, `#/flow` | the front door: six stations on one line with their counters, the pulses at the real rate, the queue, the chain, the inference branch and the tray; every station opens the screen behind it |
 | `#/live` | counters, sources, parsers, the tail; a tail row opens Traceback |
 | `#/review`, `#/review/<id>` | pending proposals; the TOML editor, evidence, diff, approve |
 | `#/trace/<raw_id>` | the record's bytes with every parsed field lit, digests and chain |
@@ -66,8 +70,18 @@ Vite proxies `/api` to `http://127.0.0.1:7878` (a running `ulpf serve`).
 | `#/drift` | sources whose established parser started missing |
 | `#/integrity` | store chain, verify, attestation |
 
-Keys: digits 1-7 pick a screen, `?` shows the full map, `/` is the search box on the
-screen you are on, `j`/`k` walk any list, Enter opens, Esc goes back.
+Keys: `0` is Flow, digits 1-7 pick a screen, `?` shows the full map, `/` is the search box
+on the screen you are on, `j`/`k` walk any list, Enter opens, Esc goes back (from a
+top-level screen, back to Flow). On Flow, `i s d p n e` open the screen behind a station,
+`r` the tray, `h`/`l` move along the line. Motion follows one rule (`docs/design.md`,
+Motion): it shows the truth of the system or it does not exist.
+
+## Under load, measured
+
+    node perf.mjs --base http://127.0.0.1:7891 --drop <120 MB file> --into <watch dir>/x.log --secs 40 --trace <raw id>
+
+opens Flow in headless Chrome, counts animation frames while the drop goes through the
+engine, and times the first painted row of that record's byte ruler.
 
 ## Under load
 

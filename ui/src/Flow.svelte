@@ -120,7 +120,7 @@
       <a class="station" class:sel={isSel('preserve')} href="#/integrity" title="Integrity: the chain, verify, the attestation">
         <span class="name">preserve<kbd>s</kbd></span>
         <b class="num">{fmt.n(e.stored)}</b>
-        <span class="lab">stored, digested, chained</span>
+        <span class="lab">stored and chained</span>
       </a>
       <span class="link" class:idle={!(rates.d.detected > 0)}><i class="pulse" data-k="detected" data-axis="x" {@attach pulse}></i></span>
       <!-- detect -->
@@ -138,7 +138,7 @@
       <a class="station" class:sel={isSel('parse')} href={latestTrace} title="Traceback: the newest record's bytes with every parsed field lit">
         <span class="name">parse<kbd>p</kbd></span>
         <b class="num">{fmt.n(e.parsed)}</b>
-        <span class="lab">the device's own fields</span>
+        <span class="lab">the device's fields</span>
         {#if failed > 0}<span class="loss" title={fmt.pairs(e.parse_failed)}>−{fmt.n(failed)} parse failed</span>{/if}
       </a>
       <span class="link" class:idle={!(rates.d.normalized > 0)}><i class="pulse" data-k="normalized" data-axis="x" {@attach pulse}></i></span>
@@ -159,12 +159,12 @@
 
       <!-- under the first link: the queue between the ingest thread and the workers -->
       <div class="under queue" style="grid-column: 2">
-        <span class="lab"><span>queue</span><span>{qdepth == null ? 'depth unreported' : `${fmt.n(qdepth)} of ${fmt.n(qcap)}`}</span></span>
+        <span class="lab"><span>queue</span>{#if qdepth != null}<span>{fmt.n(qdepth)} of {fmt.n(qcap)}</span>{/if}</span>
         <span class="track">
           {#if qdepth != null}<i style="width:{qcap ? Math.min(100, (100 * qdepth) / qcap) : 0}%"></i>{/if}
           <i class="hw" style="width:{qcap ? Math.min(100, (100 * qhw) / qcap) : 0}%"></i>
         </span>
-        <span class="n" class:is-warn={e.backpressure_blocks > 0}>high-water {fmt.n(qhw)} of {fmt.n(qcap)}{e.backpressure_blocks > 0 ? `, producer blocked ${fmt.n(e.backpressure_blocks)} times` : `, ${fmt.n(e.batches)} batches, never full`}</span>
+        <span class="n" class:is-warn={e.backpressure_blocks > 0}>high-water {fmt.n(qhw)} of {fmt.n(qcap)}{qdepth == null ? ', depth unreported' : ''}{e.backpressure_blocks > 0 ? `, producer blocked ${fmt.n(e.backpressure_blocks)} times` : `, ${fmt.n(e.batches)} batches, never full`}</span>
       </div>
 
       <!-- under preserve: the chain growing -->
