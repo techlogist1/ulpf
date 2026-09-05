@@ -135,6 +135,149 @@ stored and recomputed digest, the chain link, and the same bytes through today's
 
 ---
 
+## v4 (2026-09-06, 02:50-09:30 IST, autonomous): the demo morning
+
+Started 02:50 IST at 14d3b0c (main == origin/main, 114 tests, clippy clean, CI green on both
+runners). Two clocks: main freezes at 08:30 (nothing merges after); 08:30-09:30 is the final
+sequence (rebuild with the final dist, re-bundle the app with the sidecar SHA checked,
+isolation in run, serve and docker modes, cold start, two demo-runner passes, the verified
+state with its timestamp, commit, push, main == origin/main); the report by 09:30. A lane not
+merged by 08:30 stays on its branch, verified and described here; that is not a failure.
+The wake lock from last night (`caffeinate`, pid 6054) is left running.
+Skills: `software-design-philosophy` loaded by the lead for every interface decision; no
+`prompting-practices` skill on this machine (its requirements carried from the brief: clean
+lead context, five-line structured worker returns, kill timers, every claim run before it is
+believed); `example-skills:frontend-design` is loaded by the UI workers, not the lead; the
+skills-audit manifest is `~/Documents/dev/skills-audit/MANIFEST.md`; no `aposd` pass. Tiers:
+lead and every builder that touches design, `parsers/`, `mappings/`, server state or an
+engine crate on Fable; Opus for verifiers and for writing to a spec the lead holds (CI YAML,
+README, the measurement script); Haiku banned (D30).
+Kabir's LogLens repository with its labelled corpus is NOT reachable from this machine:
+searched 02:55 IST with `mdfind -name loglens`, `find / -maxdepth 5 -iname "*loglens*"`,
+`~/Documents/dev`, `~/Desktop`, `~/Downloads`, and the git remotes (origin only, plus one stale
+lane branch). The comparison is blocked on the corpus location; the owner supplies it as an
+addendum and `scripts/coverage.sh <dir>` (lane 4) then grades detection per file against the
+directory-name vendor. Nothing is fabricated in its place.
+The stale data directory `~/Library/Application Support/dev.ulpf.app` (first bundle
+identifier, dead data) was deleted 03:05 IST; `dev.ulpf.desktop` is the live one.
+
+### Fan-out (03:10 IST): five worker lanes, the lead on lane 2
+Every lane is one Workflow: a builder in its own git worktree, an independent Opus verifier
+that re-runs every claim, one fix round in the same worktree. Lanes start together; the only
+sequencing is named below. Return format (schema-enforced, nothing else): worktree, branch,
+commits, files, tests with the exact commands and pass/fail counts, clippy, decisions (each
+with the alternative ruled out and its anchor, for DECISIONS), contract gaps, uncertainties
+verified with their source, measurements with their commands, not done and why, and at most
+twenty-five lines for this file. No worker command over about four minutes (backgrounded and
+polled past that). Every worker claim is a claim until the lead has run it.
+
+| lane | owns (in its worktree) | tier | kill timer (IST) | merges tonight |
+|---|---|---|---|---|
+| 1 Flow screen and motion | `ui/`, `docs/design.md`, `docs/screens/` | Fable + frontend-design | 05:50 committed and captured, hard stop 06:00 | yes, after the lead looks at the captures |
+| 2 server truthfulness (lead) then UI plumbing | `crates/ulpf/src/{server,engine,pivot}.rs` additively, `docs/api.md`, tests; then `ui/` for badges, filter, export, bytes route | Fable (lead); Opus for the UI plumbing against the committed contract | API by 04:30; UI plumbing 04:30-06:15 | yes |
+| 3 CEF, LEEF, CloudTrail definitions; the Zeek http class rule | `parsers/`, `samples/`, `fixtures/`, `mappings/` (class rules and field lists, additive), `samples/README.md`, `docs/parser-format.md` (one line), the alloc test's family list only | Fable | 05:30 | yes |
+| 4 releases, README, measurement | `.github/workflows/`, `README.md`, `scripts/coverage.sh`, `docs/coverage.md` | Opus (the lead reviews every number) | 05:30 (the tag run may finish later) | yes |
+| 5 xml strategy + Windows Event | branch `lane-5-xml` only: `crates/ulpf-parse`, `parsers/windows_event.toml`, sample, fixture, `docs/parser-format.md`, `docs/DECISIONS.md` on the branch | Fable | 06:20, then push and stop | never (owner's go after the demo) |
+| 6 entity index cost | branch `lane-6-index` only: `crates/ulpf/src/pivot.rs`, `engine.rs` output thread, `docs/DECISIONS.md` on the branch | Fable | 05:20, then push and stop | never (owner's go after the demo) |
+
+Why not fewer: the six lanes touch disjoint trees (`ui/`; the server routes; `parsers/` with
+`mappings/`; CI and docs; a branch of `ulpf-parse`; a branch of the index), share no state,
+and each is two to three hours of wall-clock the others need not wait for; a builder doing
+two of them in sequence would put either the front door (lane 1) or the honest numbers
+(lane 4) after the freeze. Why not more: PROGRESS, DECISIONS and CLAUDE.md are lead-owned
+(workers return text, the lead writes it), the demo path is frozen, and a seventh lane would
+contend for the eight cores the measurements in lanes 4 and 6 need.
+Sequencing named: lane 2's UI plumbing starts only after the lead's API commit (it builds
+against `docs/api.md` v4, committed 03:10 before any dispatch); lane 4's coverage table is
+regenerated by the lead after lane 3 merges (the Zeek http class rule and three new families
+change the numbers); lane 1 merges before lane 2's UI plumbing, which is rebased on it (both
+edit `App.svelte` and append their own section to `app.css`). Ports: lane 1 7891-7895, lane 2
+7896-7899, lane 3 7901, lane 4 7902-7905, lane 6 7906-7910, the demo 7878 untouched.
+Clarifications folded in at 03:25 and 03:40 IST (no restart): every kill timer is a ceiling, not a
+schedule, and the aim is every lane through the gate well before 06:00, then a second adversarial
+pass over the merged tree and rehearsal; three tiers (Fable: design, merges, review of worker
+output, server state, the API contract, engine crates, the store; Opus: most implementation;
+Sonnet: mechanical work to a spec the lead holds; Haiku banned). The lanes already running keep
+their tiers (a restart was ruled out); every new dispatch follows the three-tier rule. Added lanes:
+lane 2 split into 2P (the pivot's 500 ms, Fable, ceiling 05:00), 2T (the v4 server tests against
+the contract, Opus, ceiling 05:15) and 2U (UI plumbing, Opus, ceiling 05:45); lane D (the demo
+runner as `ulpf demo`, Opus builder, Fable review, ceiling 05:30: orchestration of existing
+subcommands and the watch mechanism, same steps in the same order as the demo script, `--check`
+and `--reset`, `scripts/demo.sh` a thin wrapper); lane 7 (Windows as a first-class target, Opus
+builder, Fable review, ceiling 06:00: the installer reachable from the pre-release page, SmartScreen
+named, the webview runtime bundled offline where the framework offers it, sidecar and data
+directory through the platform abstractions, designed failure states, verified prerequisites,
+a Windows CI job that installs and launches the app or falls back to the sidecar and the demo's
+check mode, a new pre-release tag). Dependencies named: lane 7 edits `.github/workflows/app.yml`
+only after lane 4's YAML is on main (it merges main first); the smoke job's `ulpf demo --check`
+step is lane 7's after lane D merges; lane 2T's tests pass only once the lead's `v4:` commits land.
+Merge gate for every lane: `cargo test --workspace`, `cargo clippy --workspace --all-targets
+-- -D warnings`, `cargo build --release`, `ulpf check --pending pending`, `scripts/demo.sh
+--check`, `scripts/isolation.sh run` on the merged binary, and for a UI lane the lead's own
+look at the captures and a grep of `ui/dist` for external references.
+
+### Definition of done (each item checked only after running it)
+- [ ] L1. Flow screen: home, six stations, inference branch, pending tray, chain head, live
+      counters and a rate-proportional pulse from the metrics frame, reduced-motion static
+      diagram, empty/loading/error states, one key per station, motion pass over the seven
+      screens, captures under `docs/screens/`, `docs/design.md` Motion section, DECISIONS.
+- [~] L2a. (18fab3e, D77, D78; the lead) API: `queue` and `rate` in the frame, `emitted_from`
+      with the output-file lookup (`crates/ulpf/src/outfile.rs`, a binary search on the raw id;
+      the file cut to its last terminator is the snapshot), `?bytes=0`, `GET /api/events/{id}/bytes`,
+      `GET /api/export` (jsonl verbatim, csv as the eleven Parquet columns, `from`/`to`/`q`),
+      `pivot_index` in status. Smoke on a live server (03:35 IST, `--tail 5`, twelve samples and a
+      4,000,001-byte line, load 40 from the lanes): id 0 evicted from the ring came back with
+      `emitted_from: output` and its own `raw_id`; the bytes route's body equals the dropped file
+      byte for byte with `Content-Length` = `bytes_len`; a never-issued id is the JSON 404 on both
+      routes; the export equals the output file (`cmp`), `from=5&to=9` gives ids 5..9,
+      `q=DENY+tcp` gives 6 lines against an independent count of 6, the csv header and RFC 4180
+      quoting hold, `format=xml` is 422. The 24 MB finding measured on the 4 MB record: the full
+      JSON is 28,001,835 bytes in 0.43 s (`emitted` now adds a fourth copy of the 4 MB value),
+      `bytes=0` 16,001,835 bytes in 0.06 s (the parsed `message` value still appears in
+      `fields`, `provenance`, `normalized` and `emitted`), the bytes route 4,000,001 bytes in
+      0.011 s; so `?values=N` was added (a cut per long string with `value_len`, `values_cut`)
+      and measured at 03:37 on the same record with the rebuilt binary: full JSON 28,001,884
+      bytes in 0.24 s; `bytes=0` 16,001,884 in 0.044 s; `bytes=0&values=4096` 18,274 bytes in
+      0.025 s (`values_cut` 4: the `raw_message` field, its provenance, `normalized.message`,
+      `emitted.message`, each with `value_len` 4,000,000); the bytes route 4,000,001 bytes in
+      0.0025 s; a small record with `values=4096` has `values_cut` 0 and every `value_len` null.
+      116 tests, clippy clean. The pivot's 500 ms and `elapsed_ms` are lane 2P's; the server
+      tests are lane 2T's (three of four green at 03:30 against 18fab3e).
+- [ ] L2b. UI plumbing: trust badges per tail row and a flagged-only key, live filter across
+      every field, export link with the filter's terms, traceback over `/bytes`, seen-with
+      wording, queue depth and windowed rate where the Live screen labelled the gaps.
+- [ ] L3. `cef.toml`, `leef.toml`, `cloudtrail.toml` from the specifications with samples and
+      fixtures; class rules and field lists in both mappings; Zeek http `class_unknown` 0 on the
+      corpus file; no JSON catch-all (decision recorded); nginx and Apache deferred to after
+      the demo (recorded); Postfix held.
+- [ ] L4. Tag builds the static CLI for Linux musl, macOS and Windows beside the installers; a
+      Windows smoke job runs `ulpf.exe` over the samples and reads `/api/status`; pre-release
+      tag pushed and green with the run URL and artifact names; README front door; one
+      headline number; `scripts/coverage.sh` and `docs/coverage.md` from the counter block.
+- [ ] L5. Branch `lane-5-xml` pushed and described: what is coherent, what is not.
+- [ ] L6. Branch `lane-6-index` pushed and described: the profile, what was removed, the
+      numbers before and after, whether UDP loss falls with the index on.
+- [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
+
+### Verified state (v4, rolling; every line was run, not read)
+- 03:05 IST: main at 14d3b0c, `cargo build --release` up to date (8,777,448 bytes), `ulpf
+  check --pending pending` 12 parsers, 2 mappings, 0 problems (plus one uncommitted scratch
+  proposal in `pending/` from last night's bench, not loaded by the registry); `cargo test
+  --workspace` 114 passed, 0 failed.
+
+### In flight
+- (filled at each checkpoint)
+
+### Tried and abandoned (v4)
+- (none yet)
+
+### Next action (if this session is cut off here)
+Main is clean at the last commit named in the verified state. Lanes in flight are in their own
+worktrees under `.claude/worktrees/`; `git worktree list` names them; each branch is described
+above. The demo runs from main as before: `cargo build --release && scripts/demo.sh`.
+
+---
+
 ## v3 (2026-09-05 night session, autonomous): fixes, UI redesign, desktop app, demo runner
 
 Started 20:12 IST at 9d39679 (107 tests, clippy clean). The owner is away; this file and the

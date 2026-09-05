@@ -173,7 +173,8 @@ fn review_edge_cases_are_errors_as_values() {
     assert!(t.digest_match);
     assert_eq!(t.stored_sha256, t.recomputed_sha256);
     assert_eq!(t.source, "nginx_access.log");
-    assert!(t.text.contains("HTTP/1.1"), "{}", t.text);
+    let text = t.text.as_deref().unwrap_or("");
+    assert!(text.contains("HTTP/1.1"), "{text}");
     assert_eq!(t.now.parse_status, "no_parser");
     match live.traceback(1_000_000) {
         Err(TracebackError::NotFound { store_len }) => assert_eq!(store_len, 250),
