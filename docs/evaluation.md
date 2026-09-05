@@ -85,6 +85,22 @@ code/wall-time/note (`*.exit`, as `rc|seconds|note`), and any derived data
 tool's non-zero exit, timeout, or empty output is a normal, fully-reported
 result and never aborts the run -- see `nonzero_exit_behaviour` below.
 
+## Which build the numbers come from
+
+ULPF has two profiles. `[profile.dist]` (fat LTO, one codegen unit) is what CI
+ships, what the Docker image contains, and what `eval/tools/ulpf.toml`'s
+`[build].cmd` builds -- **every number in a scorecard is a dist number**, and
+the scorecard's header line `build declared by <tool.toml>: ...` names it. The
+default `[profile.release]` builds without LTO so a stranger's first build
+finishes in about a minute on any machine; it is what README's quick start
+runs, and therefore what the **cold_start** criterion executes and times. The
+two are the same source, so correctness, raw_preservation, damaged_inputs,
+unknown_format, isolation and kill_recovery read identically on either; only
+throughput and memory can differ, and those are reported on dist.
+
+A second tool declares its own optimized build in its own `.toml`; the harness
+has no opinion about profiles beyond running the `[build].cmd` it is given.
+
 ## Criteria
 
 ### throughput
@@ -97,6 +113,8 @@ in the declared output file. Three runs, fresh store each time; each run and
 the median of the three are reported.
 **Pass rule:** no pass/fail -- a reported number, for the head-to-head to compare.
 **Needs:** `run` template; an output file whose line count equals events processed.
+**Build:** the binary from `[build].cmd`, i.e. `--profile dist` for ULPF (see
+"Which build the numbers come from"); never the default release build.
 
 ### correctness
 **Measures:** parsed-event accuracy against `fixtures/*.expected.jsonl`.
@@ -201,7 +219,10 @@ automation does not drive interactively).
 the first failing command. A missing README or missing heading is a FAIL
 naming the missing step -- reported under `contract_gaps`, not swallowed as
 "not measurable", because an undocumented install path is itself the finding.
-**Reports:** the exact commands run and total wall time.
+**Reports:** the exact commands run and total wall time. Note this criterion
+runs whatever the README says, which for ULPF is the default (no-LTO) release
+build -- deliberately: cold start measures the path a stranger actually walks,
+not the one the shipped binary takes.
 
 ### memory
 **Measures:** peak RSS and its trend during the throughput run.
@@ -213,6 +234,7 @@ signal, not a regression fit (`ponytail:` ceiling in `eval/run.sh`; upgrade to
 a real least-squares slope if a borderline case needs it).
 **Pass rule:** reported, not scored -- a flat line and a climbing line read
 differently to a human without needing a threshold.
+**Build:** the dist binary, as throughput.
 
 ### kill_recovery
 **Measures:** whether killing the tool mid-run loses or double-counts events on restart.

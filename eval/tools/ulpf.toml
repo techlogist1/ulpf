@@ -8,8 +8,11 @@ description = "Universal Log Pre-processing Framework"
 
 [build]
 # {target_dir} is filled in by run.sh (CARGO_TARGET_DIR-equivalent), never by hand.
-cmd = "cargo build --release -p ulpf --target-dir \"{target_dir}\""
-binary = "{target_dir}/release/ulpf"
+# --profile dist is the shipped profile (fat LTO, one codegen unit): every number in a
+# scorecard is a dist number. The default release profile builds without LTO for speed
+# and is what README's quick start (and so the cold_start criterion) uses.
+cmd = "cargo build --profile dist -p ulpf --target-dir \"{target_dir}\""
+binary = "{target_dir}/dist/ulpf"
 
 [templates]
 # {input}: file or dir. {output}: jsonl path. {store}: scratch dir. {threads}: worker count.
