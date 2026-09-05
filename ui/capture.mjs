@@ -1,7 +1,7 @@
 // Captures every screen of a running `ulpf serve` headlessly, at 1280x800 and 2560x1440,
 // plus the stateful shots (hover, hex, overlay, empty, error, the keyboard-only approve
 // flow). Re-run: node capture.mjs --base http://127.0.0.1:7881 --out ../docs/screens
-//   [--big <raw id of the multi-megabyte record>] [--approve <pending id>] [--pivot kind=value]
+//   [--big <raw id of the multi-megabyte record>] [--approve <pending id>] [--update <pending id>] [--pivot kind=value]
 // Writes README.md beside the PNGs, one line per capture. Needs Chrome on this machine.
 import puppeteer from 'puppeteer-core'
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
@@ -26,7 +26,8 @@ if (!pivotArg) { const ent = (await j('/api/entities?limit=1')).entities?.[0]; i
 const [pk, pv] = (pivotArg ?? 'src_ip=').split('=')
 const pending = await j('/api/pending')
 const approveId = arg('approve', null) ?? pending.find((p) => !p.updates)?.id ?? pending[0]?.id
-const reviewId = pending.find((p) => p.templates > 3)?.id ?? pending[0]?.id
+const reviewId = pending.find((p) => p.templates > 3 && !p.updates)?.id ?? pending[0]?.id
+const updateId = arg('update', null) ?? pending.find((p) => p.updates)?.id
 const replay = await j('/api/replay')
 const missing = String((await j('/api/integrity')).records + 100000)
 
@@ -41,6 +42,7 @@ async function shot(name, width, height, url, what, prepare) {
   if (prepare) await prepare(page)
   const file = `${name}-${width}.png`
   await page.screenshot({ path: join(out, file) })
+  await page.evaluate(() => { try { localStorage.removeItem('ulpf.theme') } catch {} })
   index.push({ file, screen: name.replace(/-.*/, ''), width, what })
   await page.close()
   console.log(file)
@@ -52,10 +54,11 @@ for (const width of [1280, 2560]) {
   await shot('live', width, height, '#/live', 'live feed: rates, funnel, queue, tail, sources, parsers, every engine counter')
   await shot('review-list', width, height, '#/review', 'review: the pending proposals, kind, lines, templates, unmatched, problems')
   await shot('review-detail', width, height, `#/review/${encodeURIComponent(reviewId)}`, 'review: definition editor, actions, evidence with templates, slot names and the reason for each')
+  if (updateId) await shot('review-update', width, height, `#/review/${encodeURIComponent(updateId)}`, 'review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence')
   await shot('trace', width, height, `#/trace/${traceId}`, 'traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance')
   await shot('trace-hover', width, height, `#/trace/${traceId}`, 'traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields', async (p) => { await key(p, 'j'); await key(p, 'j'); await key(p, 'j'); await key(p, 'Enter') })
   await shot('trace-hex', width, height, `#/trace/${traceId}`, 'traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns', async (p) => { await key(p, 'j'); await key(p, 'j'); await key(p, 'Enter'); await key(p, 'h') })
-  if (bigId != null) await shot('trace-big', width, height, `#/trace/${bigId}`, 'traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive')
+  if (bigId != null) await shot('trace-big', width, height, `#/trace/${bigId}`, 'traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive', async (p) => { const el = await p.$('.bytes .vl'); await el.evaluate((e) => { e.scrollTop = e.scrollHeight / 3 }); await new Promise((r) => setTimeout(r, 300)) })
   await shot('pivot-search', width, height, '#/pivot', 'pivot: kind selector and the entities with the most events')
   await shot('pivot', width, height, `#/pivot/${encodeURIComponent(pk)}/${encodeURIComponent(pv)}`, `pivot of the busiest entity (${pk} ${pv}): device lanes on a time axis, the timeline, the related entities`)
   await shot('replay', width, height, '#/replay', `replay: why v${replay.last?.version ?? '?'} differs, counters, parser changes, by field, versions, the diff entries`)
@@ -66,6 +69,9 @@ await shot('keys', 1280, 800, '#/live', 'the shortcut overlay (?)', async (p) =>
 await shot('empty-trace', 1280, 800, '#/trace', 'empty state: traceback with no record chosen')
 await shot('error-trace', 1280, 800, `#/trace/${missing}`, `error state: a trace of raw id ${missing}, which the store never issued`)
 await shot('light-trace', 1280, 800, `#/trace/${traceId}`, 'the same traceback under the light theme (t)', async (p) => { await key(p, 't') })
+await shot('light-live', 1280, 800, '#/live', 'the live feed under the light theme (t)', async (p) => { await key(p, 't') })
+await shot('empty-pivot', 1280, 800, '#/pivot/user/nobody-has-this-name', 'empty state: a pivot on a value no event carries')
+await shot('reject-confirm', 1280, 800, `#/review/${encodeURIComponent(reviewId)}`, 'review: x opens the reject confirmation, marked as the destructive one; Enter confirms, Esc cancels', async (p) => { await key(p, 'x') })
 
 // Keyboard-only approve: open review, walk to the proposal, open it, a, Enter.
 if (approveId) {

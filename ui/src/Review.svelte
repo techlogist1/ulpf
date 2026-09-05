@@ -310,10 +310,10 @@
                 <tbody>
                   {#each t.slots as s}
                     <tr>
-                      <td><span class="slot-name" class:generic={!s.suggested}>{s.name}</span></td>
-                      <td class="mono is-dim">{s.kind}</td>
+                      <td class="slot"><span class="slot-name" class:generic={!s.suggested}>{s.name}</span></td>
+                      <td class="mono is-dim kind">{s.kind}</td>
                       <td class="reason">{s.reason ?? (s.suggested ? 'a rule produced this name; the server did not say which' : 'generic: no naming rule fired')}</td>
-                      <td class="mono is-dim">{s.preceded_by}</td>
+                      <td class="mono is-dim after" title={s.preceded_by}>{s.preceded_by}</td>
                       <td class="num">{fmt.n(s.distinct)}</td>
                       <td class="mono ex" title={(s.examples ?? []).join(' | ')}>{fmt.cut((s.examples ?? []).join('  '), 60)}</td>
                     </tr>
