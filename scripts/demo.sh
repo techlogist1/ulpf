@@ -75,7 +75,7 @@ say "0. reset"; run "$C_RESET"; run "$C_MK"
 say "1. server + UI (this is terminal 1)"
 printf '   $ %s\n' "$C_SERVE"; eval "$C_SERVE &"
 wait_http http://127.0.0.1:7878/api/status || { echo "server did not come up"; exit 1; }
-hint "open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)"
+hint "open http://127.0.0.1:7878  (0 Flow, 1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)"
 next
 
 say "2. known formats and a live device: the counters, sources and tail move"
