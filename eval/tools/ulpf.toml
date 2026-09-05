@@ -1,0 +1,47 @@
+# Tool config for the neutral eval harness (see docs/evaluation.md "how to add a
+# tool"). Placeholders are substituted literally (no shell involved -- see
+# eval/lib/run_async.py) so every one MUST be inside double quotes in the
+# template string, exactly as below, or a path containing a space breaks.
+
+name = "ulpf"
+description = "Universal Log Pre-processing Framework"
+
+[build]
+# {target_dir} is filled in by run.sh (CARGO_TARGET_DIR-equivalent), never by hand.
+cmd = "cargo build --release -p ulpf --target-dir \"{target_dir}\""
+binary = "{target_dir}/release/ulpf"
+
+[templates]
+# {input}: file or dir. {output}: jsonl path. {store}: scratch dir. {threads}: worker count.
+# --receipt pins the receipt clock to the instant the fixtures were generated with (see
+# fixtures/README.md), so events whose time falls back to receipt compare like for like.
+run = "\"{bin}\" run \"{input}\" --store \"{store}\" --output \"{output}\" --parsers \"{parsers}\" --mappings \"{mappings}\" --pending \"{pending}\" -j {threads} --receipt 2026-09-04T12:00:00Z"
+verify = "\"{bin}\" verify --store \"{store}\""
+raw_of = "\"{bin}\" raw {id} --store \"{store}\""
+check = "\"{bin}\" check --parsers \"{parsers}\" --mappings \"{mappings}\" --pending \"{pending}\""
+
+[container]
+image = "ulpf:static"
+build = "docker build -t {image} -f \"{dockerfile}\" \"{context}\""
+# {input_dir} is mounted read-only, {output_dir} read-write, both host paths.
+run = "docker run --rm --network none -v \"{input_dir}:/data/input:ro\" -v \"{output_dir}:/data/out\" {image} run /data/input --store /tmp/s --output /data/out/out.jsonl"
+
+[isolation]
+# ULPF also ships its own isolation proof; the harness's generic eval/lib/sockets.sh
+# sampler (below) is what actually runs for the scorecard, this is a cross-check.
+native_script = "scripts/isolation.sh"
+native_bin_env = "ULPF_BIN"
+
+[correctness]
+# Fixture "normalized" keys -> this tool's own output keys (see eval/lib/jsoncmp.py).
+key_map = "eval/tools/ulpf.keymap.json"
+# Dotted path in each output JSON object identifying which input event it came
+# from, in order. Required by the correctness/raw_preservation criteria.
+id_field = "ulpf.raw_id"
+
+[cold_start]
+readme = "README.md"
+heading = "## Quick start"
+# Commands from here on start a long-running server and are not executed by
+# the automated cold_start criterion; see docs/evaluation.md.
+stop_at_substring = " serve "

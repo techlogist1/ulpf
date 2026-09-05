@@ -186,82 +186,122 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 - [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D36, each with an anchor)
       current; every milestone committed and pushed to techlogist1/ulpf main.
 
-## Hackathon (start here at 3am)
+## Demo (10:00) and the 04:00 comparison: start here
 
-Everything below was run on 2026-09-05 on the M1 Pro from a clean checkout of this
-commit. Terminal 1 is the server, terminal 2 is everything else. All paths are relative
-to the repo root.
+Everything below was run on 2026-09-05 on the M1 Pro from a clean checkout. Terminal 1 is
+the server, terminal 2 everything else; paths are relative to the repo root. A store
+written before tonight is refused by name (the integrity chain changed the index): delete
+it and start over.
 
 ```
-cargo build --release                                   # ~1 min; binary target/release/ulpf
-./target/release/ulpf check --pending pending           # 12 parsers, 1 mapping, 0 problems
+cargo build --release                                      # ~1 min; binary target/release/ulpf
+./target/release/ulpf check --pending pending              # 12 parsers, 2 mappings (ocsf, ecs), 0 problems
 
-# 1. server + UI (terminal 1). Watches demo/watch, proposals go to pending/, approvals to parsers/.
-mkdir -p demo/watch
-./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending pending --infer-threshold 64
-#    -> ulpf: serving http://127.0.0.1:7878 ; ctrl-c prints the counter block
-#    open http://127.0.0.1:7878  (Live / Review / Traceback)
+# 0. reset between rehearsals (approvals land in parsers/; every generated file goes)
+rm -rf demo pending/*.toml pending/*.json pending/*.lines pending/approved pending/rejected parsers/*_inferred.toml
 
-# 2. known formats: counters and the tail move within 500 ms
+# 1. server + UI (terminal 1): watches demo/watch, listens for syslog on UDP and TCP 5514
+mkdir -p demo/watch demo/parsers && cp parsers/*.toml demo/parsers/
+./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending pending \
+    --parsers demo/parsers --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514 --infer-threshold 64
+#    -> ulpf: serving http://127.0.0.1:7878 ; syslog udp 127.0.0.1:5514, tcp 127.0.0.1:5514 ; 12 parsers loaded
+#    open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)
+
+# 2. known formats and a live device: counters, sources and the tail move within 500 ms
 cp samples/*.log demo/watch/
+python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);[s.sendto(l,('127.0.0.1',5514)) for l in open('heldout/edgerouter.log','rb').read().splitlines()]"
+#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed; syslog row: udp datagrams 250
 
-# 3. an unknown format: buffered as no_parser, clustered at 64 lines, "Review (1)" appears
+# 3. an unknown format from a file and from the socket: clustered at 64 lines, "Review (2)" appears
 cp heldout/mikrotik.log demo/watch/
-#    Review -> mikrotik: definition on the left, 14 templates with slots, examples,
-#    history and the decision log on the right. Uncheck a template + "Regenerate from kept"
-#    to drop it; edit the TOML and Save to see problems by line.
+#    Review -> mikrotik: 14 templates; every slot has a name and the REASON it was chosen
+#    (key `src-mac` before the value; vocabulary `{ip}:{port}->{ip}:{port}` names src/dst ...);
+#    generic slots stay ip1/word2 and say why. Uncheck a template + Regenerate to drop it.
 
 # 4. approve (UI button, or):
 curl -s -X POST http://127.0.0.1:7878/api/pending/mikrotik/approve
-#    -> {"name":"mikrotik_inferred","parsers_loaded":13,"now_detected":{"tested":250,"detected":250}}
-#    parsers/mikrotik_inferred.toml now exists; no restart happened (engine.reloads = 1)
+#    -> {"name":"mikrotik_inferred","parsers_loaded":13,"now_detected":{"tested":250,"detected":250},"replaced_version":null}
+#    demo/parsers/mikrotik_inferred.toml carries origin = "inferred"; Live -> parsers: origin approved
 
-# 5. the same events take the fast path
+# 5. the same events take the fast path; the pivot sees them
 cp heldout/mikrotik.log demo/watch/mikrotik-again.log
-#    Live -> sources: mikrotik-again.log detected 250, no_parser 0; parsers: mikrotik_inferred detected 250
+#    Live -> mikrotik-again.log detected 250. Pivot -> search src_ip -> pick 203.0.113.9:
+#    one attacker across OpenVPN, pfSense, ASA, Check Point, SRX, SonicWall in one lane-per-device timeline,
+#    "seen with" dst_ip 10.0.0.7, dst_port 22, user jdoe; click any related value to pivot again.
 
-# 6. traceback: click any tail row, or open http://127.0.0.1:7878/#/trace/60 , or:
-curl -s http://127.0.0.1:7878/api/events/60 | python3 -m json.tool | head -30
-#    stored and recomputed SHA-256 side by side, digest_match true, the line as emitted
-#    (no_parser, before approval) and the same bytes through the current parsers (mikrotik_inferred)
+# 6. traceback with provenance: click a tail row, or open http://127.0.0.1:7878/#/trace/0
+curl -s http://127.0.0.1:7878/api/events/0 | python3 -m json.tool | head -40
+#    stored and recomputed SHA-256, chain and prev_chain with chain_match, every parsed field with its
+#    byte range, every normalized path with the field and bytes it came from; hover a normalized field
+#    in the UI and its bytes light up in the raw record.
 
-# 7. throughput (terminal 2; the bench file is gitignored, generate once, ~25 s, 1.5 GB)
+# 7. replay: a parser bug, the fix, every past event corrected, the store untouched
+sed -i '' 's/{dst_ip:ip}/{dst_addr:ip}/g' demo/parsers/cisco_asa.toml     # the bug (reloads within 250 ms)
+cp samples/cisco_asa.log demo/watch/asa-under-the-bug.log                  # events written wrong
+cp parsers/cisco_asa.toml demo/parsers/                                     # the fix
+curl -s -X POST http://127.0.0.1:7878/api/replay                            # -> {"version":2,"started":true,"total":N}
+#    Replay -> v2 report: changed = the ASA events written under the bug, by_field dst_endpoint.ip added /
+#    unmapped.dst_addr lost, and the WHY box: "demo/parsers/cisco_asa.toml changed since v1 (sha256 .. -> ..)".
+./target/release/ulpf verify --store demo/store                             # exit 0: chain ok, nothing rewritten
+
+# 8. drift: a device changes its format mid-stream; the update proposal carries a diff
+python3 - <<'EOF'
+import time
+lines=open('heldout/mikrotik.log','rb').read().splitlines()
+hdr=b' '.join(lines[0].split()[:4])
+with open('demo/watch/gw-drift.log','ab') as f:
+    for _ in range(5):
+        for l in lines: f.write(l+b'\n')                                     # 1250 known lines: established
+    f.flush(); time.sleep(3)
+    for i in range(400):                                                     # a new message type
+        f.write(hdr+b' interface,info ether%d link up (speed %dG, full duplex)\n' % (1+i%8, [1,10,25][i%3]))
+EOF
+#    Drift -> gw-drift.log tripped (window rate vs baseline), lines routed; within 5 s Review shows
+#    mikrotik_inferred v2: the diff adds one pattern, the decisions say "prior covers 0 of 114 lines".
+#    Approve -> parsers/mikrotik_inferred.toml is v2, pending/approved/mikrotik_inferred.v1.toml kept.
+
+# 9. integrity: verify from the UI (Integrity -> Verify) or offline, and hand a stranger the attestation
+./target/release/ulpf attest --store demo/store --out demo/attestation.json
+./target/release/ulpf verify --store demo/store --attestation demo/attestation.json   # exit 0
+printf 'X' | dd of=demo/store/raw.seg bs=1 seek=200 conv=notrunc 2>/dev/null           # tamper one byte (rehearsal only!)
+./target/release/ulpf verify --store demo/store                                        # names the record, exit 1
+
+# 10. a second output schema with zero parser changes
+./target/release/ulpf run samples --store demo/ecs-store --output demo/ecs.jsonl --schema ecs --infer-threshold 0
+git log --oneline -1 -- mappings/ecs.toml ; git show --stat 5f7abd5 | tail -3         # mappings/ + one test file
+
+# 11. throughput (terminal 2, quiet machine; the bench file is gitignored, generate once, ~25 s, 1.5 GB)
 cargo run --release -p ulpf --example gen_bench -- 5000000 bench
 ./target/release/ulpf run bench/mixed-5000000.log --store /tmp/ulpf-bench --output /dev/null --infer-threshold 0
-#    2026-09-05 at 47965c8 (after the review fixes): 260k events/s, 79.3 MB/s (inference off);
-#    266k events/s with inference on (buffer 4096, final pass 0.062 s). Earlier runs the same
-#    day: 231k/258k. Expect +-10% run to run. Never quote a number you did not just measure.
+#    numbers: see "Verified state" below; never quote one you did not just measure
 
-# 8. isolation (needs the bench file; serve mode starts its own server on 7878, so stop terminal 1 first)
-scripts/isolation.sh run bench/mixed-5000000.log       # 2026-09-05: 46 samples, 0 sockets, ISOLATION PASS
-scripts/isolation.sh serve demo/watch 20               # 2026-09-05: LISTEN 127.0.0.1:7878 + one loopback client, PASS
-scripts/isolation.sh docker ulpf:static samples        # --network none, PASS
+# 12. kill recovery: kill -9 a run, restart it, same output id for id
+./target/release/ulpf run bench/mixed-5000000.log --store /tmp/kr --output /tmp/kr.jsonl --infer-threshold 0 & sleep 3; kill -9 $!
+./target/release/ulpf run bench/mixed-5000000.log --store /tmp/kr --output /tmp/kr.jsonl --infer-threshold 0
+#    -> "recovered: N stored records an interrupted run had not written to the output"; wc -l equals a clean run
 
-# 9. container (image 9.56 MB, UI embedded)
-docker build -t ulpf:static .
-mkdir -p demo/data && docker run --rm -p 7878:7878 -v "$PWD/demo/watch:/data/watch:ro" -v "$PWD/demo/data:/data" \
-  ulpf:static serve /data/watch --store /data/store --output /data/out.jsonl --pending /data/pending --listen 0.0.0.0:7878
-#    http://127.0.0.1:7878 from the host; the parsers inside the image are the ones at build time
-
-# offline inference without the server, for a file in hand:
-./target/release/ulpf infer heldout/edgerouter.log --pending pending --decisions
-
-# reset between rehearsals (approvals land in parsers/, so remove the generated one)
-rm -rf demo pending/*.toml pending/*.json pending/*.lines pending/approved pending/rejected parsers/*_inferred.toml
+# 13. isolation and container
+scripts/isolation.sh run bench/mixed-5000000.log ; scripts/isolation.sh serve demo/watch 20
+docker build -t ulpf:static . && scripts/isolation.sh docker ulpf:static samples
 ```
 
-When a proposal looks wrong: the evidence panel shows, per template, `support` (cluster
-size) beside `verified` (lines the compiled pattern matched first), the slot table with
-`distinct` counts and examples (a `word` slot with 2 distinct alphabetic values that should
-have been a constant means the keyword split declined: check the `preceded by` key against
-the identity list in D46), `history` (which splits and merges produced it), and the
-`decisions` log (every threshold decision in order). `unmatched` lists the lines no template
-took, by reason. `ulpf infer FILE --decisions` prints the same offline.
+### The 04:00 comparison (docs/evaluation.md, "The 04:00 procedure")
+Both tools, same machine, quiet (no soak, no builds, no Docker workloads), same bench file.
+`eval/tools/ulpf.toml` is ULPF's template; write `eval/tools/<other>.toml` for the other tool
+(build command, run/verify/raw_of templates, container, key map). Then, for each tool:
+`eval/run.sh eval/tools/<tool>.toml` (three runs of throughput inside; every raw output under
+`eval/results/<tool>-<timestamp>-<pid>/`). Compare the two `scorecard.md` files criterion by
+criterion; a criterion a tool cannot do reads "not measurable: reason", never pass. ULPF's own
+committed scorecard is `eval/results/ulpf-<timestamp>/scorecard.md`.
 
-When the fast path does not happen after approval: `engine.reloads` did not move (the
-parsers directory is not the one `serve` was started with), or `now_detected` was below
-`tested` (the matcher is too narrow: widen `[match]` in the approved file; the directory
-poller reloads on save).
+### What to say when something looks wrong
+A proposal that looks wrong: the evidence panel shows `support` beside `verified`, the slot
+table with the reason for every name, `history`, `decisions` and `unmatched` by reason;
+`ulpf infer FILE --decisions` prints the same offline. A replay diff nobody expected: the
+WHY box names every parser or mapping file whose digest changed since the previous version,
+and says so explicitly when none did. A source that stopped parsing: Drift shows the window
+rate against the baseline and where its lines went. A record in doubt: Traceback shows the
+stored and recomputed digest, the chain link, and the same bytes through today's parsers.
 
 ## v1 (2026-09-05 session, autonomous): the visible half
 
