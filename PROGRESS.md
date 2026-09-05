@@ -471,6 +471,28 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 05:29 IST: the lead's live look at the UI on the fresh binary, during a `demo --auto` pass
+  (05:22:23-05:23:19, 56 s, exit 0) and then on a scratch serve over the fifteen samples plus
+  `heldout/mikrotik.log`: Flow at 52 events/s with every station lit, the tray at 1 waiting and
+  1 approved; Live's tail with the trust flags and the proposal banner; Review's row, the
+  proposal (14 templates, every slot with its naming reason), the approve confirmation and the
+  result card (written to the scratch `parsers/`, parsers loaded 16, 250 of 250 re-detected),
+  pending empty afterwards; Pivot's 50 source addresses; Integrity's 559 records with genesis
+  and head. The footer's amber `frames skipped` / `events skipped` counters rise during the fast
+  drops (150 during the demo, 1,400 after replay and drift): the tail's honesty about what it
+  did not render, while framed, stored and emitted stay equal (1,059 each). After the pass every
+  screen shows `TypeError: Failed to fetch` with `retry 8s` in the footer: the designed
+  disconnected state, the server having stopped. The repo's `parsers/` still holds 15 files;
+  nothing was written outside the scratch directory.
+- 05:27 IST: lane 8's independent review (the lead, in place of the verifier the limit killed):
+  `cargo test --workspace` in its worktree at 80a5bfc, 39 result lines, 118 passed, 0 failed
+  (main's gate counts 116); the diff read in full: store recovery zeroes the tail beyond the
+  recovered end instead of shrinking the file and walks back on digest and chain, `Live.store`
+  is `Mutex<Option<RawStore>>` behind `Live::store()` so a request racing shutdown gets an error
+  value and not a panic, `close()` drops the store and the pivot connection after the threads
+  join, `is_nul` is Windows-only, the version meta's event count follows the file when the
+  output was not empty at start; the Windows suite job 33998281457 is green. Verdict: ready for
+  the owner's go after the demo; it changes engine.rs and the store, so it never merges tonight.
 - 05:11 IST: the 05:07 gate's release build had not finished (its last line was a `Compiling`
   line and the binary kept its 04:24 timestamp), so its `check` and `demo --check` ran on the
   binary from before lanes 2U and P; the gate script now prints `Finished` or `error` and the
@@ -510,15 +532,20 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
-- 05:08 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7 (each through the gate; the last
-  four under one gate, 05:07). Branches pushed: lane-5-xml, lane-6-index, lane-3b-cef-leef,
-  lane-8-windows. Running: 7B (Opus builder, Fable verifier, ceiling 07:10) and 4B (Opus, Fable,
-  ceiling 07:00), dispatched 05:05 after the owner cleared agents in low-priority mode. The
-  session limit hit at about 04:55 (resets 08:00): lane 7's builder died before returning, lane
-  8's verifier and the fix rounds of P and 2U never ran; the lead reviewed those diffs and
-  captures directly and carried the open findings to 4B and 7B (recorded per lane above). Still
-  the lead's: lane 8's independent review (its Windows job is green), the second adversarial
-  pass, two demo passes, the final sequence, the report.
+- 05:30 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7 (each through the gate; the last
+  four under one gate, 05:07; the binary re-verified 05:11). Branches pushed: lane-5-xml,
+  lane-6-index, lane-3b-cef-leef, lane-8-windows. Running: 7C (`lane-7b-app`, Opus builder, Fable
+  verifier, ceiling 07:10, dispatched 05:16 on main at f57e652) and 4B (`lane-4b-readme`, Opus,
+  Fable, ceiling 07:00, dispatched 05:05, four commits by 05:27). 7B (dispatched 05:05) was
+  stopped at 05:19: its worktree had been created at 14d3b0c, before lane 7's merge, so its
+  job-object draft sat on the old `lib.rs`; the diff is kept in the lead's scratch as a
+  reference and 7C carries the same items on the right base. The session limit hit at about
+  04:55 (resets 08:00): lane 7's builder died before returning, lane 8's verifier and the fix
+  rounds of P and 2U never ran; the lead reviewed those diffs and captures directly and carried
+  the open findings to 4B and 7C (recorded per lane above). Done by the lead since: lane 8's
+  review and the live UI look (Verified state). Still the lead's: the harness re-run on the
+  dist build on a quiet machine (4B's three runs at load 10 spread 192k-309k events/s), two demo
+  passes, the final sequence, the report.
 
 ### Tried and abandoned (v4)
 - Lane 2P's headline "cut 4-8x": measured only at load 28-36. The controlled pair on a quiet
