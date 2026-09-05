@@ -79,9 +79,9 @@ hint "open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Rep
 next
 
 say "2. known formats and a live device: the counters, sources and tail move"
-hint "watch Live while the twelve samples land one per second"
+hint "watch Live while the fifteen samples land one per second"
 run "$C_SAMPLES"; run "$C_UDP"
-hint "Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed"
+hint "Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 15 sample sources parsed"
 next
 
 say "3. an unknown format: clustered at 64 lines, 'Review' appears"

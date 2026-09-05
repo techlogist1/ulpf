@@ -1399,3 +1399,39 @@ lookup that is already logarithmic); serving the export from the tail ring (boun
 thousand lines) or from a re-run of the pipeline (re-parsing, and a second pass over the
 store); a per-event `flags` field for the export filter (the filter is a substring rule over
 the line text, the same on both sides).
+
+## D80. Three definitions on existing strategies, no JSON catch-all, the containers at priority 0
+**Decision.** `parsers/cef.toml`, `parsers/leef.toml` and `parsers/cloudtrail.toml` are written
+from their specifications (ArcSight CEF, IBM LEEF v2, AWS CloudTrail record contents; each
+header cites the page and the fetch date) on the cef, leef and json strategies the engine
+already had; `mappings/ocsf.toml` and `mappings/ecs.toml` gain their source names, an `API
+Activity` class (6003, activity Read when the record says `readOnly = true`, else 0 Unknown,
+because the record does not say whether a write is Create, Update or Delete and the schema
+marks `activity_id` required), and the alternatives that classify Zeek's http and conn rows
+once a proposal names their columns. The samples are the specifications' own examples, and
+`samples/README.md` says so. **Anchor.** The three definitions, the two mappings' `[fields]`
+and `[[class]]` additions, `fixtures/{cef,leef,cloudtrail}.expected.jsonl`,
+`crates/ulpf-parse/tests/alloc.rs` (cef and leef in the zero-allocation list). **Principle.**
+A parser is written from the format's own document; a mapping is additive; the wall holds
+(no schema name in a definition, no vendor in a mapping). **Ruled out.** A generic JSON
+catch-all (`json_generic` at priority -2 claiming any `{` line): it would detect the Zeek
+JSON files that are the live inference demo instead of proposing them, and a parsed but
+unnamed JSON event teaches the mapping nothing; only cloudtrail (matched on its five
+never-null top-level keys) and suricata_eve claim JSON lines. Priority -1 for cef and leef
+(where D45 puts generated parsers): a generated parser named before `cef` with the `.`
+fallback matcher would take CEF lines, and no CEF line could take the hinted fast path; the
+containers sit at 0 with matchers that require the format's own header before any pipe,
+which no vendor sample carries (the fixture test proves every existing sample still detects
+as itself), and a vendor definition for a CEF-speaking device declares `priority = 1`.
+Inferring the CloudTrail activity from the `eventName` verb (an open-ended per-service
+vocabulary in the mapping). nginx and Apache definitions: the first post-demo addition,
+because nginx is named as an unseen format for the live inference demo and a hand-written
+parser hours before it would remove the demo's unknown input. Postfix: held, no mail
+vocabulary in either schema and not a perimeter device. `sev` heads the `severity` and
+`log.level` source lists so a LEEF line behind a syslog `<pri>` keeps the device's own
+severity (first-present wins; no existing parser emits `sev`, and the twelve original samples
+are byte-identical through the old and new mappings). Two engine defects the lane found and
+could not fix in a definition are on branch `lane-3b-cef-leef` (CEF's header severity is
+named `severity`, the syslog scale's name, so its 0-10 scale is canonicalised backwards; a
+LEEF 2.0 delimiter written `0xHH` splits on the literal `0` with no counted failure); they
+are named in the two headers and merge after the demo.
