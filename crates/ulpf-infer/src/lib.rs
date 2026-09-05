@@ -577,7 +577,11 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     decisions.push(format!("envelope: syslog header on {headed} of {} lines -> syslog = {syslog} (a fifth is enough)", lines.len()));
     let headers = cluster::headers(&bodies);
     if let Some(h) = header_fitting(&bodies, &headers, params) {
-        return infer_delimited(source, lines, &bodies, EnvelopeEvidence { syslog, example_header }, h, params, decisions);
+        if !syslog {
+            return infer_delimited(source, lines, &bodies, EnvelopeEvidence { syslog, example_header }, h, params, decisions);
+        }
+        // a delimiter signature anchors to the line start, which the envelope defeats
+        decisions.push(format!("header: `#fields` names {} columns and every data line fits, but the source carries a syslog envelope, so the pattern path runs", h.fields.len()));
     }
     let mut toks: Vec<Vec<Tok<'_>>> = bodies.iter().map(|b| token::tokenize(b)).collect();
     let mut too_long: Vec<usize> = Vec::new();
@@ -1229,6 +1233,16 @@ mod tests {
 1788598139.663136\tCrgAkX2woehl3n5097\t192.168.148.5\t52008\t1.25\tMozilla/5.0 (Macintosh)\t-\n\
 1788598139.676846\tCRLsyU1FtJtCOYVhzh\t192.168.148.6\t52024\t3.0\tGo-http-client/1.1\t-\n\
 #close\t2026-09-05-09-37-23\n";
+
+    #[test]
+    fn a_fitting_header_under_a_syslog_envelope_takes_the_pattern_path() {
+        let wrapped: Vec<String> = ZEEK.lines().map(|l| format!("<13>Sep  5 09:37:23 sensor {l}")).collect();
+        let refs: Vec<&[u8]> = wrapped.iter().map(String::as_bytes).collect();
+        let p = infer("http.log", &refs, &Params::default());
+        assert!(p.definition.envelope.syslog);
+        assert_eq!(p.definition.strategy.kind, StrategyKind::Pattern, "{:#?}", p.evidence.decisions);
+        assert!(p.evidence.decisions.iter().any(|d| d.contains("carries a syslog envelope, so the pattern path runs")), "{:#?}", p.evidence.decisions);
+    }
 
     #[test]
     fn a_fitting_header_makes_one_delimiter_definition_that_parses_every_row() {
