@@ -15,14 +15,10 @@ export function typing(e) {
   return t instanceof HTMLElement && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)
 }
 
-// j/k or arrows move, Enter opens, Home/End jump. Returns true when it handled the key.
+// j/k or arrows move, Enter opens, g/G jump. Returns true when it handled the key.
+// The virtual lists keep their own selected row in view, so nothing scrolls here.
 export function nav(e, len, sel, set, open) {
-  const move = (n) => {
-    const i = Math.max(0, Math.min(len - 1, n))
-    set(i)
-    requestAnimationFrame(() => document.querySelector('tr.sel, li.sel')?.scrollIntoView({ block: 'nearest' }))
-    return true
-  }
+  const move = (n) => { set(Math.max(0, Math.min(len - 1, n))); return true }
   if (!len) return false
   if (e.key === 'j' || e.key === 'ArrowDown') return move(sel < 0 ? 0 : sel + 1)
   if (e.key === 'k' || e.key === 'ArrowUp') return move(sel < 0 ? 0 : sel - 1)
@@ -30,4 +26,14 @@ export function nav(e, len, sel, set, open) {
   if (e.key === 'G') return move(len - 1)
   if (e.key === 'Enter' && sel >= 0 && open) { open(sel); return true }
   return false
+}
+
+// Theme: dark by default (the operations context); `t` flips it, the choice is kept per browser.
+export function theme(next) {
+  let t = next
+  if (!t) { try { t = localStorage.getItem('ulpf.theme') } catch { /* private window */ } }
+  if (t === 'light') document.documentElement.dataset.theme = 'light'
+  else delete document.documentElement.dataset.theme
+  if (next) { try { localStorage.setItem('ulpf.theme', next) } catch { /* nothing to keep */ } }
+  return document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
 }
