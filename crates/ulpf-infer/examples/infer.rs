@@ -13,7 +13,7 @@ fn main() {
         println!("# T{:<3} support {:<4} verified {:<4} {}", t.id, t.support, t.verified, t.pattern);
         if args.iter().any(|a| a == "--slots") {
             for s in &t.slots {
-                println!("#      {}:{} <- `{}` ({} distinct) {:?}", s.name, s.kind, s.preceded_by, s.distinct, s.examples);
+                println!("#      {}:{} <- `{}` ({} distinct) {:?} [{}] {}", s.name, s.kind, s.preceded_by, s.distinct, s.examples, if s.suggested { "suggested" } else { "generic" }, s.reason);
             }
         }
     }

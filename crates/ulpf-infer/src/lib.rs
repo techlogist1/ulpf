@@ -67,6 +67,8 @@ pub struct SlotEvidence {
     pub name: String,
     pub kind: String,
     pub suggested: bool,
+    /// The rule that chose the name, in one line, or why the slot stayed `kind+n`.
+    pub reason: String,
     pub preceded_by: String,
     pub distinct: u64,
     pub examples: Vec<String>,
@@ -263,6 +265,7 @@ fn slot_evidence(s: &cluster::Slot, cols: &[Col]) -> SlotEvidence {
         name: s.name.clone(),
         kind: s.kind.name().to_string(),
         suggested: s.suggested,
+        reason: s.reason.clone(),
         preceded_by: s.preceded_by.clone(),
         distinct: distinct.len() as u64,
         examples: distinct.iter().take(3).map(|(v, _)| lossy(v)).collect(),
@@ -615,8 +618,8 @@ mod tests {
         assert_eq!(p.evidence.templates.len(), 1, "{:#?}", p.evidence.decisions);
         let t = &p.evidence.templates[0];
         assert!(t.pattern.contains("{?, len {len:int}}"), "{}", t.pattern);
-        assert!(t.pattern.contains("proto TCP (SYN), {ip1:ipv4}:{port1:port}->{ip2:ipv4}:{port2:port}"), "{}", t.pattern);
-        assert!(t.pattern.contains("in:{in:word}"), "{}", t.pattern);
+        assert!(t.pattern.contains("proto TCP (SYN), {src_ip:ipv4}:{src_port:port}->{dst_ip:ipv4}:{dst_port:port}"), "{}", t.pattern);
+        assert!(t.pattern.contains("in:{in_interface:word}"), "{}", t.pattern);
         assert!(t.pattern.contains("src-mac {src_mac:mac}"), "{}", t.pattern);
         assert_eq!(t.verified, 6, "{:#?}", p.evidence);
         assert_eq!(p.evidence.unmatched.count, 0);
@@ -677,7 +680,7 @@ mod tests {
         assert!(!p.definition.envelope.syslog);
         assert_eq!(p.evidence.templates.len(), 1, "{:#?}", p.evidence);
         let t = &p.evidence.templates[0];
-        assert!(t.pattern.starts_with("{ip1:ip} - {word1:word} [{timestamp:timestamp}] {quoted1:quoted} {int1:int} {int2:int} {quoted2:quoted} {quoted3:quoted}"), "{}", t.pattern);
+        assert!(t.pattern.starts_with("{src_ip:ip} - {user:word} [{timestamp:timestamp}] {request:quoted} {status_code:int} {bytes:int} {referer:quoted} {user_agent:quoted}"), "{}", t.pattern);
         assert_eq!(p.definition.timestamp.len(), 1);
         assert_eq!(t.verified, 5);
         assert_eq!(p.definition.parser.name, "nginx_access_inferred");
@@ -701,6 +704,157 @@ mod tests {
         assert_eq!(p.evidence.unmatched.by_reason.get("empty"), Some(&1));
         assert_eq!(p.evidence.unmatched.by_reason.get("below_support"), Some(&2));
         assert_eq!(p.evidence.unmatched.by_reason.get("no_template"), Some(&1), "{:#?}", p.evidence);
+    }
+
+
+    /// `(name, kind, suggested, reason)` per slot of the one template `text` produces.
+    fn slots(text: &str) -> Vec<(String, String, bool, String)> {
+        let p = infer("t.log", &lines(text), &Params::default());
+        assert_eq!(p.evidence.templates.len(), 1, "{:#?}", p.evidence);
+        p.evidence.templates[0].slots.iter().map(|s| (s.name.clone(), s.kind.clone(), s.suggested, s.reason.clone())).collect()
+    }
+
+    #[track_caller]
+    fn named(slots: &[(String, String, bool, String)], name: &str, kind: &str, reason_has: &str) {
+        let s = slots.iter().find(|s| s.0 == name).unwrap_or_else(|| panic!("no slot `{name}` in {slots:#?}"));
+        assert_eq!(s.1, kind, "slot `{name}`");
+        assert!(s.2, "slot `{name}` is not marked suggested");
+        assert!(s.3.contains(reason_has), "slot `{name}`: reason `{}` lacks `{reason_has}`", s.3);
+    }
+
+    #[track_caller]
+    fn generic(slots: &[(String, String, bool, String)], name: &str, reason_has: &str) {
+        let s = slots.iter().find(|s| s.0 == name).unwrap_or_else(|| panic!("no slot `{name}` in {slots:#?}"));
+        assert!(!s.2, "slot `{name}` is marked suggested");
+        assert!(s.3.contains(reason_has), "slot `{name}`: reason `{}` lacks `{reason_has}`", s.3);
+    }
+
+    #[test]
+    fn netfilter_keys_bracketed_rule_and_tcp_flags() {
+        let text = "\
+<4>Sep  4 10:15:23 gw kernel: [WAN_IN-default-D]IN=eth0 OUT=eth1 SRC=203.0.113.9 DST=10.0.0.1 LEN=60 TTL=51 PROTO=TCP SPT=44321 DPT=443 WINDOW=1221 SYN URGP=0
+<4>Sep  4 10:15:24 gw kernel: [WAN_IN-10-A]IN=eth1 OUT=eth0 SRC=203.0.113.10 DST=10.0.0.2 LEN=52 TTL=52 PROTO=TCP SPT=44322 DPT=22 WINDOW=1222 ACK URGP=0
+<4>Sep  4 10:15:25 gw kernel: [LAN_IN-default-D]IN=eth0 OUT=eth1 SRC=198.51.100.7 DST=10.0.0.3 LEN=40 TTL=53 PROTO=TCP SPT=1000 DPT=443 WINDOW=1223 RST URGP=0
+<4>Sep  4 10:15:26 gw kernel: [LAN_IN-20-A]IN=eth1 OUT=eth0 SRC=198.51.100.8 DST=10.0.0.4 LEN=44 TTL=54 PROTO=TCP SPT=1001 DPT=80 WINDOW=1224 PSH URGP=0
+";
+        let s = slots(text);
+        named(&s, "rule", "word", "bracketed label");
+        named(&s, "in_interface", "word", "IN={word}");
+        named(&s, "out_interface", "word", "OUT={word}");
+        named(&s, "src_ip", "ipv4", "SRC={ip}");
+        named(&s, "dst_ip", "ipv4", "DST={ip}");
+        named(&s, "src_port", "port", "SPT={port}");
+        named(&s, "dst_port", "port", "DPT={port}");
+        named(&s, "len", "int", "len {int}");
+        named(&s, "ttl", "int", "TTL={int}");
+        named(&s, "tcp_flags", "word", "TCP flag mnemonics");
+        // an unknown key still names its value, and says so
+        named(&s, "window", "int", "key `window` before the value");
+    }
+
+    #[test]
+    fn address_pair_around_the_arrow_and_icmp_type_code() {
+        let text = "\
+<134>Sep  4 10:15:23 gw firewall,info input: in:ether1 out:(none), src-mac 00:11:22:33:44:55, proto ICMP (type=8, code=0), 203.0.113.9->10.0.0.1, len 60
+<134>Sep  4 10:15:24 gw firewall,info input: in:ether2 out:(none), src-mac 00:11:22:33:44:66, proto ICMP (type=0, code=1), 203.0.113.10->10.0.0.2, len 52
+<134>Sep  4 10:15:25 gw firewall,info input: in:ether3 out:(none), src-mac 00:11:22:33:44:77, proto ICMP (type=3, code=0), 198.51.100.7->10.0.0.3, len 40
+<134>Sep  4 10:15:26 gw firewall,info input: in:ether1 out:(none), src-mac 00:11:22:33:44:88, proto ICMP (type=11, code=1), 198.51.100.8->10.0.0.4, len 44
+";
+        let s = slots(text);
+        named(&s, "src_ip", "ipv4", "names the pair src/dst");
+        named(&s, "dst_ip", "ipv4", "names the pair src/dst");
+        named(&s, "icmp_type", "int", "in an ICMP line");
+        named(&s, "icmp_code", "int", "in an ICMP line");
+        named(&s, "src_mac", "mac", "key `src-mac` before the value");
+        named(&s, "in_interface", "word", "in:{word}");
+    }
+
+    #[test]
+    fn ports_attached_to_the_addresses_of_a_pair() {
+        let text = "\
+<134>Sep  4 10:15:23 gw firewall,info input: in:ether1 out:(none), proto UDP, 203.0.113.9:44321->10.0.0.1:443, len 60
+<134>Sep  4 10:15:24 gw firewall,info input: in:ether2 out:(none), proto UDP, 203.0.113.10:44322->10.0.0.2:22, len 52
+<134>Sep  4 10:15:25 gw firewall,info input: in:ether3 out:(none), proto UDP, 198.51.100.7:1000->10.0.0.3:443, len 40
+<134>Sep  4 10:15:26 gw firewall,info input: in:ether1 out:(none), proto UDP, 198.51.100.8:1001->10.0.0.4:80, len 44
+";
+        let s = slots(text);
+        named(&s, "src_ip", "ipv4", "{ip}:{port}->{ip}:{port}");
+        named(&s, "src_port", "port", "{ip}:{port}->{ip}:{port}");
+        named(&s, "dst_ip", "ipv4", "{ip}:{port}->{ip}:{port}");
+        named(&s, "dst_port", "port", "{ip}:{port}->{ip}:{port}");
+    }
+
+    #[test]
+    fn sshd_pid_user_and_the_port_of_the_from_address() {
+        let text = "\
+<38>Sep  4 10:15:23 gw sshd[1201]: Accepted publickey for bob from 203.0.113.9 port 50000 ssh2
+<38>Sep  4 10:15:24 gw sshd[1202]: Accepted publickey for alice from 203.0.113.10 port 50001 ssh2
+<38>Sep  4 10:15:25 gw sshd[1203]: Accepted publickey for carol from 198.51.100.7 port 50002 ssh2
+<38>Sep  4 10:15:26 gw sshd[1204]: Accepted publickey for dave from 198.51.100.8 port 50003 ssh2
+";
+        let s = slots(text);
+        named(&s, "pid", "int", "{word}[{int}]:");
+        named(&s, "user", "word", "for {word} from");
+        named(&s, "src_ip", "ipv4", "from {ip}");
+        named(&s, "src_port", "port", "from {ip} port {port}");
+    }
+
+    #[test]
+    fn dhcpd_macs_and_the_words_that_name_nothing() {
+        let text = "\
+<30>Sep  4 10:15:23 gw dhcpd: DHCPACK on 10.0.0.5 to 23:af:69:b3:6d:91 via eth1
+<30>Sep  4 10:15:24 gw dhcpd: DHCPACK on 10.0.0.6 to 23:af:69:b3:6d:92 via eth2
+<30>Sep  4 10:15:25 gw dhcpd: DHCPACK on 10.0.0.7 to 23:af:69:b3:6d:93 via eth1
+<30>Sep  4 10:15:26 gw dhcpd: DHCPACK on 10.0.0.8 to 23:af:69:b3:6d:94 via eth2
+";
+        let s = slots(text);
+        named(&s, "dst_mac", "mac", "to {mac}");
+        named(&s, "via", "word", "via {word}");
+        generic(&s, "ip1", "`on` before the slot is a connective");
+    }
+
+    #[test]
+    fn a_preceding_constant_names_a_slot_but_a_syslog_tag_does_not() {
+        let text = "\
+<30>Sep  4 10:15:23 gw watchdog: alice reconnected after 5 seconds
+<30>Sep  4 10:15:24 gw watchdog: bob reconnected after 6 seconds
+<30>Sep  4 10:15:25 gw watchdog: carol reconnected after 7 seconds
+<30>Sep  4 10:15:26 gw watchdog: dave reconnected after 8 seconds
+";
+        let s = slots(text);
+        named(&s, "after", "int", "constant `after` before an int slot");
+        generic(&s, "word1", "`watchdog:` is a syslog tag, not a key");
+    }
+
+    #[test]
+    fn the_ncsa_combined_format_names_every_field_by_position() {
+        let text = r#"203.0.113.9 - - [04/Sep/2026:10:15:23 +0000] "GET /index.html HTTP/1.1" 200 5124 "-" "Mozilla/5.0"
+203.0.113.10 - bob [04/Sep/2026:10:15:24 +0000] "POST /api/login HTTP/1.1" 302 12 "https://example.com/" "curl/8.0"
+198.51.100.7 - - [04/Sep/2026:10:15:25 +0000] "GET /favicon.ico HTTP/1.1" 404 153 "-" "Mozilla/5.0"
+198.51.100.9 - alice [04/Sep/2026:10:15:27 +0000] "DELETE /x HTTP/1.1" 403 12 "-" "python-requests/2.31"
+"#;
+        let s = slots(text);
+        for (name, kind) in [
+            ("src_ip", "ipv4"), ("user", "word"), ("timestamp", "timestamp"), ("request", "quoted"),
+            ("status_code", "int"), ("bytes", "int"), ("referer", "quoted"), ("user_agent", "quoted"),
+        ] {
+            named(&s, name, kind, "NCSA");
+        }
+    }
+
+    #[test]
+    fn a_second_address_pair_stays_generic_and_says_why() {
+        let text = "\
+<134>Sep  4 10:15:23 gw firewall,info forward: in:ether1, 10.0.0.1:1000->1.1.1.1:80, NAT (10.0.0.1:1000->1.1.1.1:80)->2.2.2.2:80, len 60
+<134>Sep  4 10:15:24 gw firewall,info forward: in:ether2, 10.0.0.2:1001->1.1.1.2:81, NAT (10.0.0.2:1001->1.1.1.2:81)->2.2.2.3:81, len 52
+<134>Sep  4 10:15:25 gw firewall,info forward: in:ether3, 10.0.0.3:1002->1.1.1.3:82, NAT (10.0.0.3:1002->1.1.1.3:82)->2.2.2.4:82, len 40
+<134>Sep  4 10:15:26 gw firewall,info forward: in:ether1, 10.0.0.4:1003->1.1.1.4:83, NAT (10.0.0.4:1003->1.1.1.4:83)->2.2.2.5:83, len 44
+";
+        let s = slots(text);
+        named(&s, "src_ip", "ipv4", "names the pair src/dst");
+        named(&s, "dst_port", "port", "names the pair src/dst");
+        generic(&s, "ip1", "a second address pair on the line");
+        generic(&s, "port1", "a second address pair on the line");
     }
 
     #[test]
