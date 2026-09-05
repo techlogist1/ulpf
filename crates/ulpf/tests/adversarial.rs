@@ -36,6 +36,8 @@ fn config(inputs: Vec<PathBuf>, dir: &std::path::Path, parsers: PathBuf) -> Conf
         receipt_nanos: None,
         syslog_udp: None,
         syslog_tcp: None,
+        parquet: None,
+        parquet_roll: None,
     }
 }
 

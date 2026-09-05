@@ -916,3 +916,53 @@ every number on screen is one the engine printed; two screens (traceback, pivot)
 design budget, the rest stayed quiet and dense. **Ruled out.** Highlighting by field name
 (collides on repeated keys); a mock server shipped with the UI (the worker's throwaway mock
 died the moment the real routes existed); decorative motion (an operations tool at 3am).
+
+## D62. The soak is a reconciliation identity, and the burst rate is whatever fills the queue
+**Decision.** `scripts/soak.sh` starts `serve` on a fresh store, appends generated events
+(the twelve families mutated, never identical lines) to one watched file at a paced rate
+with a burst phase, optionally sends UDP and TCP syslog at their own rates, keeps one SSE
+client connected, samples RSS every second, and at the end asserts the identity
+`sent == framed == stored == emitted == verify records` with `corrupt == 0` and the
+chain intact. A run whose serve died before its counter block is reported from the last
+metrics poll with the arithmetic shown and the verdict PARTIAL, never PASS (`--report-only`).
+Measured on the M1 Pro (2026-09-05, machine shared with other agents): run1 12 min at
+12k/s, 10,005,840 events, RSS 11-84 MB, slope -0.26 MB/min, SSE max gap 0.52 s, PASS;
+run3 10 min at 20.8k/s with a 3x burst, 14,976,000 events, RSS 11-103 MB flat over awake
+time, PASS, queue high-water 13/64 and zero backpressure blocks because the pipeline
+keeps up; burst run at 100k/s base with a 300k/s burst, 8,220,000 events, queue 64/64,
+537 backpressure blocks, RSS peak 325 MB (the in-flight backlog), zero loss, PASS. The
+socket run (10k/s file + 8k/s UDP + 8k/s TCP) reconciled TCP exactly and lost 47% of UDP
+to the kernel (`netstat -s -p udp` dropped-due-to-full-socket-buffers 471,233 against a
+461,363 shortfall): the listener's 8 MiB `SO_RCVBUF` request equalled `kern.ipc.maxsockbuf`
+and was refused silently, leaving the 786 KB default; the listener now negotiates down and
+reports the granted size. The same runs exposed `framed`/`stored` being credited once per
+file after the batch loop, so a live reader saw `emitted > stored` under backpressure;
+both are credited per batch now. **Anchor.** `scripts/soak.sh`,
+`crates/ulpf/examples/soak_gen.rs`, `scripts/README.md`; `set_recv_buffer` in
+`crates/ulpf/src/syslog.rs`; the per-batch `fetch_add` in `ingest_file`. **Principle.**
+Measure the thing you report (D23): "the queue's saturation policy is exercised" is a
+number of blocks at a stated rate, not a sentence; a partial run is labelled partial.
+**Ruled out.** A fixed 3x burst as the saturation proof (it never filled the queue at
+sustainable base rates); counting the kernel's UDP drops as engine loss (invisible to the
+process by construction; measured from the sender and `netstat`).
+
+## D63. Real captures fix parsers from vendor documentation, and stay in the samples
+**Decision.** Real captures (public sources with permissive licences, and captures
+generated locally from real Suricata, Squid, OpenVPN 2.4/2.5/2.6, nginx, HAProxy and Zeek
+runs) live under `corpus/` with a PROVENANCE.md per directory and an index in
+`corpus/README.md`; Elastic-2.0 and unlicensed sources are recorded, not copied. Every
+parser the real data broke was fixed from the vendor's own documentation of that form and
+the fix's source is cited inline in the definition: Cisco ASA `logging emblem` and
+`logging timestamp rfc5424` header forms plus nine message ids; PAN-OS's empty serial
+column on an unlicensed VM-Series (a matcher fix, verified not to shift columns); OpenVPN
+over syslog (RFC 3164 `openvpn[pid]:`) and the 2.5+ ISO 8601 file-log stamp (Changes.rst:
+2.4 is the last ctime release; the 2.4.12 capture is the positive control) with four subs
+from the message strings in the source; IOS SISF; SonicOS empty address parts as optional
+groups; legacy FortiOS `device_id=`/`log_id=` keys. Permissively licensed real lines were
+appended to the samples with their source named in `samples/README.md`, and the fixtures
+regenerated and reviewed line by line (D30). **Anchor.** `corpus/`, `parsers/*.toml`,
+`samples/README.md`, `fixtures/*.expected.jsonl`. **Principle.** D30 again: a passing
+fixture on synthetic data proved nothing; 100% `pattern_no_match` on 335 real ASA lines
+was the first thing the real data said. **Ruled out.** Pattern-matching the sample into
+submission (every change cites the vendor form it implements); copying Elastic-licensed
+fixtures (the best messy captures, and not ours to redistribute).

@@ -52,6 +52,10 @@ struct EngineArgs {
     /// reproducible run; the fixture harness uses 2026-09-04T12:00:00Z.
     #[arg(long)]
     receipt: Option<String>,
+    /// Also write the normalized events to this Parquet file (an additional sink; the
+    /// JSON Lines output is always written). A Parquet file is unreadable until closed.
+    #[arg(long)]
+    parquet: Option<PathBuf>,
 }
 
 #[derive(Subcommand)]
@@ -91,6 +95,12 @@ enum Cmd {
         /// Listen for syslog over TCP (RFC 6587 octet counting or newline framing).
         #[arg(long)]
         syslog_tcp: Option<SocketAddr>,
+        /// Close the current Parquet file after this many rows (`--parquet` only).
+        #[arg(long, default_value_t = 1_000_000)]
+        parquet_roll_rows: u64,
+        /// Close the current Parquet file after this many seconds (`--parquet` only).
+        #[arg(long, default_value_t = 300)]
+        parquet_roll_secs: u64,
     },
     /// Run inference over one file as if no parser covered it; write the proposal to the pending directory.
     Infer {
@@ -199,7 +209,7 @@ pub fn parse_tz(s: &str) -> Result<i32> {
 }
 
 impl EngineArgs {
-    fn config(&self, inputs: Vec<PathBuf>, tail_capacity: usize) -> Result<engine::Config> {
+    fn config(&self, inputs: Vec<PathBuf>, tail_capacity: usize, parquet_roll: Option<(u64, Duration)>) -> Result<engine::Config> {
         let threads = self.threads.unwrap_or_else(|| std::thread::available_parallelism().map(|n| n.get().saturating_sub(1).max(1)).unwrap_or(1));
         Ok(engine::Config {
             inputs,
@@ -224,6 +234,8 @@ impl EngineArgs {
                 }
                 None => None,
             },
+            parquet: self.parquet.clone(),
+            parquet_roll: self.parquet.as_ref().and(parquet_roll),
         })
     }
 }
@@ -278,7 +290,8 @@ pub fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
         Cmd::Run { inputs, engine: args, report_json } => {
-            let cfg = args.config(inputs, 16)?;
+            // batch mode writes one Parquet file: there is nothing to roll for
+            let cfg = args.config(inputs, 16, None)?;
             let report = engine::run(&cfg)?;
             print_report(&report)?;
             if let Some(path) = report_json {
@@ -286,8 +299,9 @@ pub fn main() -> Result<()> {
             }
             Ok(())
         }
-        Cmd::Serve { watch, engine: args, listen, tail, ui_dir, poll_ms, syslog_udp, syslog_tcp } => {
-            let mut cfg = args.config(watch, tail)?;
+        Cmd::Serve { watch, engine: args, listen, tail, ui_dir, poll_ms, syslog_udp, syslog_tcp, parquet_roll_rows, parquet_roll_secs } => {
+            let roll = (parquet_roll_rows.max(1), Duration::from_secs(parquet_roll_secs.max(1)));
+            let mut cfg = args.config(watch, tail, Some(roll))?;
             cfg.syslog_udp = syslog_udp;
             cfg.syslog_tcp = syslog_tcp;
             let live = engine::Live::open(&cfg, true)?;

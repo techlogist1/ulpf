@@ -39,6 +39,8 @@ fn config(dir: &Path, inputs: Vec<PathBuf>) -> Config {
         receipt_nanos: None,
         syslog_udp: None,
         syslog_tcp: None,
+        parquet: None,
+        parquet_roll: None,
     }
 }
 
@@ -88,7 +90,7 @@ fn a_fixed_parser_replays_every_past_event_without_touching_the_store() {
     let names = reader.source_names().unwrap();
     let (pipeline, problems) = Pipeline::load(&cfg.parsers, &cfg.mappings, None, 0).unwrap();
     assert!(problems.is_empty(), "{problems:?}");
-    let total = reader.len();
+    assert_eq!(reader.len(), total, "the store holds exactly the emitted events");
     let job = Job { versions: versions.clone(), version: versions.next(), pipeline: Arc::new(pipeline), threads: 3, batch: 16, parsers_generation: 0, names, reader, total };
     let r = replay::run(job, &AtomicU64::new(0), &AtomicBool::new(false)).unwrap();
 

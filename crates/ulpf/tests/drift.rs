@@ -36,6 +36,8 @@ fn config(dir: &Path, inputs: Vec<PathBuf>) -> Config {
         receipt_nanos: None,
         syslog_udp: None,
         syslog_tcp: None,
+        parquet: None,
+        parquet_roll: None,
     }
 }
 

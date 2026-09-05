@@ -38,6 +38,7 @@ use crate::pending::{Pending, PendingSummary, ReviewError};
 use crate::pipeline::Pipeline;
 use crate::pivot::{PivotCounters, PivotIndex, PivotPage, PivotQuery, PivotWriter, Posting};
 use crate::replay::{self, ReplayProgress, ReplayReport, Versions};
+use crate::sink::Sink;
 use crate::tail::Tail;
 
 pub struct Config {
@@ -64,6 +65,11 @@ pub struct Config {
     /// Syslog listeners for `serve`; `None` binds nothing.
     pub syslog_udp: Option<std::net::SocketAddr>,
     pub syslog_tcp: Option<std::net::SocketAddr>,
+    /// Additional columnar sink. `None` (the default) constructs nothing.
+    pub parquet: Option<PathBuf>,
+    /// Watch mode only: close the current Parquet file after this many rows or this
+    /// long, whichever comes first, so a reader always has complete files to read.
+    pub parquet_roll: Option<(u64, Duration)>,
 }
 
 #[derive(Debug)]
@@ -334,6 +340,8 @@ pub struct Live {
     pub schema: Option<String>,
     pub default_offset_secs: i32,
     pub output: PathBuf,
+    pub parquet: Option<PathBuf>,
+    pub parquet_roll: Option<(u64, Duration)>,
     pub store_dir: PathBuf,
     pub watch: Vec<PathBuf>,
     pub threads: usize,
@@ -651,6 +659,8 @@ impl Live {
             schema: cfg.schema.clone(),
             default_offset_secs: cfg.default_offset_secs,
             output: cfg.output.clone(),
+            parquet: cfg.parquet.clone(),
+            parquet_roll: cfg.parquet_roll,
             store_dir: cfg.store.clone(),
             watch: cfg.inputs.clone(),
             threads: cfg.threads.max(1),
@@ -1676,6 +1686,17 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
         Box::new(BufWriter::with_capacity(1 << 20, file))
     };
     let mut pending: BTreeMap<u64, (Vec<u8>, u64, u64, EntityBatch)> = BTreeMap::new();
+    let mut sink = match &live.parquet {
+        Some(path) => match Sink::open(path, live.parquet_roll) {
+            Ok(s) => Some(s),
+            Err(e) => {
+                live.metrics.parquet_errors.fetch_add(1, Relaxed);
+                eprintln!("ulpf: parquet: {e}; the JSON Lines output is unaffected");
+                None
+            }
+        },
+        None => None,
+    };
     let mut next = 0u64;
     let mut since_flush = Instant::now();
     loop {
@@ -1711,6 +1732,17 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
                 pw.push_batch(&postings);
             }
             pos += buf.len() as u64;
+            if let Some(s) = &mut sink {
+                // one row per emitted line, in the order the JSON Lines file has them
+                for (i, line) in buf.split(|b| *b == b'\n').filter(|l| !l.is_empty()).enumerate() {
+                    s.push(first_raw_id + i as u64, line, &live.metrics);
+                }
+                if let Err(e) = s.end_batch(&live.metrics) {
+                    live.metrics.parquet_errors.fetch_add(1, Relaxed);
+                    eprintln!("ulpf: parquet: {e}; the sink is stopped, the JSON Lines output is unaffected");
+                    sink = None;
+                }
+            }
             // the buffer moves into the tail; the ring keeps ranges into it, no copy
             live.tail.push_batch(first_raw_id, buf);
             next += 1;
@@ -1725,6 +1757,10 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
     w.flush().context("flushing output")?;
     if let Some(pw) = pivot {
         pw.finish();
+    }
+    // the footer, and only now are the rows readable
+    if let Some(s) = sink {
+        s.finish(&live.metrics);
     }
     Ok(())
 }

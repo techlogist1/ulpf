@@ -35,8 +35,9 @@ before it was read. Nothing blocks the engine on a slow client.
 ## Read-only
 
 `GET /api/status` → `{ "version", "started_at": rfc3339, "listen", "store", "parsers_dir",
-"pending_dir", "output", "watch": [dir], "threads", "queue_capacity", "tail_capacity",
-"infer_threshold" }`
+"pending_dir", "output", "output_format": "jsonl", "parquet": path|null, "watch": [dir],
+"threads", "queue_capacity", "tail_capacity", "infer_threshold" }`. `output_format` is
+always `"jsonl"`: Parquet is an additional sink, not a replacement (see below).
 
 `GET /api/metrics` → `MetricsFrame`:
 ```
@@ -46,6 +47,7 @@ before it was read. Nothing blocks the engine on a slow client.
                    "last_seen": rfc3339|null, "pending_id": string|null } ],
   "parsers":   [ ParserInfo ],
   "pending_generation": u64,
+  "parquet":   { "rows": u64, "files": u64, "errors": u64 },
   "server":    { "sse_clients": u64, "review_errors": u64, "uptime_secs": f64 }
 }
 ```
@@ -159,6 +161,49 @@ patterns tried in definition order; `support` is the cluster size that produced 
 template with `verified` 0, or with `support` below `min_support` after a split, is kept
 in the evidence but left out of the definition (its `history` says so); `regenerate`
 puts it back. `generated` is the time the pending record was written.
+
+## Output format (item 13): JSON Lines always, Parquet as well
+
+`--parquet FILE` on `run` and `serve` adds a columnar copy of the normalized events. It
+is an *additional* sink and never a replacement: a Parquet file carries its schema and
+row-group index in a footer written at close, so an open file is unreadable, while the
+JSON Lines file is complete after every line. `output_format` in `/api/status` therefore
+stays `"jsonl"` and `parquet` names the file (or `null`).
+
+One row per emitted line, in emitted order (`raw_id` ascending), eleven columns:
+
+| column | type | null? | from |
+|---|---|---|---|
+| `raw_id` | `int64` | no | the raw store id, the same value as `ulpf.raw_id` |
+| `time` | `int64` `TIMESTAMP_MILLIS` (UTC) | no | the event's `time` |
+| `parser` | `utf8` | yes | `ulpf.parser`; null when no parser claimed the event |
+| `source` | `utf8` | no | `metadata.log_name` |
+| `class_uid` | `int32` | no | `class_uid` (0 = no class rule matched) |
+| `normalized` | `utf8` | no | the emitted JSON line, verbatim, without its newline |
+| `src_ip` | `utf8` | yes | `src_endpoint.ip` |
+| `dst_ip` | `utf8` | yes | `dst_endpoint.ip` |
+| `user` | `utf8` | yes | `user.name` |
+| `device` | `utf8` | yes | `device.hostname` |
+| `dst_port` | `int32` | yes | `dst_endpoint.port` when it is an integer |
+
+The ten scalar columns are the ones a SIEM filters on; anything else is one
+`json_extract` away in the `normalized` column, so no query needs the JSON Lines file.
+SNAPPY, row groups of 8192 rows.
+
+`run` writes exactly the file it was given, one file per run; a second run with the same
+`--parquet` path replaces it, where the JSON Lines output is appended to. `serve` rolls: the file
+being written is `<stem>.<seq>.parquet.part` and is renamed to `<stem>.<seq>.parquet`
+the moment its footer lands, so a reader that lists `*.parquet` only ever sees complete
+files. A file is closed after `--parquet-roll-rows` rows (default 1,000,000) or
+`--parquet-roll-secs` seconds (default 300), whichever comes first; the check runs once
+per batch, so a file can overshoot by up to one batch. `<stem>` is the `--parquet` path
+with a trailing `.parquet` removed.
+
+Counters, in `Snapshot` (so in the counter block, `GET /api/metrics` `engine`, and the
+`metrics` SSE event) and repeated as the frame's `parquet` object: `parquet_rows`,
+`parquet_files` (closed, therefore readable), `parquet_errors`. A write that fails is
+counted, reported on stderr and stops the sink; the run continues and the JSON Lines
+output is unaffected — the sink can never cost you an event.
 
 ## UI assets
 

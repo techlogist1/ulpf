@@ -14,4 +14,5 @@ pub mod pivot;
 pub mod replay;
 pub mod server;
 pub mod syslog;
+pub mod sink;
 pub mod tail;

@@ -236,6 +236,11 @@ fn metrics_frame(live: &Live) -> Value {
         "pivot": live.pivot_counters.lock().unwrap_or_else(|e| e.into_inner()).as_ref().map(|c| json!({ "batches": c.batches.load(Relaxed), "postings": c.postings.load(Relaxed), "blocked": c.blocked.load(Relaxed), "errors": c.errors.load(Relaxed) })),
         "syslog": { "udp_datagrams": live.metrics.syslog_udp_datagrams.load(Relaxed), "tcp_events": live.metrics.syslog_tcp_events.load(Relaxed), "tcp_connections": live.metrics.syslog_tcp_connections.load(Relaxed) },
         "drift": live.drift_alerts().into_iter().filter(|a| matches!(a.state, DriftState::Tripped | DriftState::Proposed)).collect::<Vec<_>>(),
+        "parquet": {
+            "rows": live.metrics.parquet_rows.load(Relaxed),
+            "files": live.metrics.parquet_files.load(Relaxed),
+            "errors": live.metrics.parquet_errors.load(Relaxed),
+        },
         "server": {
             "sse_clients": live.sse_clients.load(Relaxed),
             "review_errors": live.review_errors.load(Relaxed),
@@ -276,6 +281,9 @@ async fn status(State(app): State<App>) -> Json<Value> {
         "parsers_dir": live.parsers_dir,
         "pending_dir": live.pending.as_ref().map(|p| p.dir().to_path_buf()),
         "output": live.output,
+        // the JSON Lines file is always the output; parquet is an additional sink
+        "output_format": "jsonl",
+        "parquet": live.parquet,
         "watch": live.watch,
         "threads": live.threads,
         "queue_capacity": live.queue_cap,

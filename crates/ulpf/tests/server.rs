@@ -107,6 +107,8 @@ fn the_server_is_a_window_onto_a_live_engine() {
         receipt_nanos: None,
         syslog_udp: None,
         syslog_tcp: None,
+        parquet: None,
+        parquet_roll: None,
     };
     let live = Live::open(&cfg, true).unwrap();
     let server = Server::start(Arc::clone(&live), "127.0.0.1:0".parse().unwrap(), None).unwrap();
