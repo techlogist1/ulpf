@@ -236,7 +236,12 @@ look at the captures and a grep of `ui/dist` for external references.
       `bytes=0` 16,001,835 bytes in 0.06 s (the parsed `message` value still appears in
       `fields`, `provenance`, `normalized` and `emitted`), the bytes route 4,000,001 bytes in
       0.011 s; so `?values=N` was added (a cut per long string with `value_len`, `values_cut`)
-      and is measured below. The pivot's 500 ms and `elapsed_ms` are lane 2P's; the server
+      and measured at 03:37 on the same record with the rebuilt binary: full JSON 28,001,884
+      bytes in 0.24 s; `bytes=0` 16,001,884 in 0.044 s; `bytes=0&values=4096` 18,274 bytes in
+      0.025 s (`values_cut` 4: the `raw_message` field, its provenance, `normalized.message`,
+      `emitted.message`, each with `value_len` 4,000,000); the bytes route 4,000,001 bytes in
+      0.0025 s; a small record with `values=4096` has `values_cut` 0 and every `value_len` null.
+      116 tests, clippy clean. The pivot's 500 ms and `elapsed_ms` are lane 2P's; the server
       tests are lane 2T's (three of four green at 03:30 against 18fab3e).
 - [ ] L2b. UI plumbing: trust badges per tail row and a flagged-only key, live filter across
       every field, export link with the filter's terms, traceback over `/bytes`, seen-with
