@@ -104,6 +104,9 @@ fn the_server_is_a_window_onto_a_live_engine() {
         pending: Some(dir.join("pending")),
         infer_threshold: 20,
         tail_capacity: 500,
+        receipt_nanos: None,
+        syslog_udp: None,
+        syslog_tcp: None,
     };
     let live = Live::open(&cfg, true).unwrap();
     let server = Server::start(Arc::clone(&live), "127.0.0.1:0".parse().unwrap(), None).unwrap();

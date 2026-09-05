@@ -33,6 +33,9 @@ fn config(inputs: Vec<PathBuf>, dir: &std::path::Path, threads: usize) -> Config
         pending: None,
         infer_threshold: 0,
         tail_capacity: 16,
+        receipt_nanos: None,
+        syslog_udp: None,
+        syslog_tcp: None,
     }
 }
 
@@ -101,10 +104,11 @@ fn samples_directory_round_trips_through_store_and_output_in_order() {
     assert_eq!(unknown, s.no_parser, "unknown-format events are emitted, not dropped");
     assert!(unknown > 0, "samples/README.md is deliberately an unknown format");
 
-    // A second run on the same store appends; nothing earlier changes.
+    // A second run on the same store appends; nothing earlier changes. (The same file again
+    // would be resumed past, D59, so the second run brings a new source.)
     let before: Vec<Vec<u8>> = reader.iter().map(|r| r.unwrap().bytes.to_vec()).collect();
     drop(reader);
-    let cfg2 = Config { output: dir.join("out2.jsonl"), ..config(vec![repo().join("samples/cisco_asa.log")], &dir, 2) };
+    let cfg2 = Config { output: dir.join("out2.jsonl"), ..config(vec![repo().join("heldout/mikrotik.log")], &dir, 2) };
     let report2 = run(&cfg2).unwrap();
     let reader = RawReader::open(&cfg.store).unwrap();
     assert_eq!(reader.len(), s.framed + report2.snapshot.framed);

@@ -9,10 +9,20 @@ fn repo() -> PathBuf {
 }
 
 fn mapping() -> Mapping {
+    mapping_named("ocsf")
+}
+
+/// `mappings/` holds one file per output schema; every test names the one it asserts
+/// against, so adding a schema never silently re-points an existing test.
+fn mapping_named(name: &str) -> Mapping {
     let mut report = load_dir(&repo().join("mappings")).unwrap();
     assert!(report.errors.is_empty(), "{:?}", report.errors.iter().map(|e| e.to_string()).collect::<Vec<_>>());
-    assert_eq!(report.mappings.len(), 1);
-    report.mappings.remove(0)
+    let idx = report
+        .mappings
+        .iter()
+        .position(|m| m.schema_name() == name)
+        .unwrap_or_else(|| panic!("no mapping named `{name}` in {:?}", report.mappings.iter().map(|m| m.schema_name()).collect::<Vec<_>>()));
+    report.mappings.remove(idx)
 }
 
 fn registry() -> Registry {
@@ -65,14 +75,36 @@ fn get<'a>(v: &'a Value, path: &str) -> &'a Value {
     cur
 }
 
+/// The parser/mapping wall, from the mapping side: a mapping speaks source-field
+/// vocabulary only, so no vendor or parser identity may appear in the file at all.
+fn assert_no_vendor_vocabulary(file: &str) {
+    let text = std::fs::read_to_string(repo().join("mappings").join(file)).unwrap().to_ascii_lowercase();
+    for banned in ["fortinet", "cisco", "palo", "checkpoint", "check point", "juniper", "pfsense", "sonicwall", "sophos", "suricata", "squid", "openvpn", "vendor =", "parser ="] {
+        assert!(!text.contains(banned), "{file} must not reference `{banned}`");
+    }
+}
+
 #[test]
 fn ocsf_mapping_loads_and_has_no_vendor_vocabulary() {
     let m = mapping();
     assert_eq!(m.schema_name(), "ocsf");
-    let text = std::fs::read_to_string(repo().join("mappings/ocsf.toml")).unwrap().to_ascii_lowercase();
-    for banned in ["fortinet", "cisco", "palo", "checkpoint", "check point", "juniper", "pfsense", "sonicwall", "sophos", "suricata", "squid", "openvpn", "vendor =", "parser ="] {
-        assert!(!text.contains(banned), "mapping must not reference `{banned}`");
-    }
+    assert_no_vendor_vocabulary("ocsf.toml");
+}
+
+#[test]
+fn ecs_mapping_loads_and_has_no_vendor_vocabulary() {
+    let m = mapping_named("ecs");
+    assert_eq!(m.schema_name(), "ecs");
+    assert_eq!(m.file().schema.version.as_deref(), Some("9.5.0"), "the ECS release the field names were taken from");
+    assert_no_vendor_vocabulary("ecs.toml");
+    // The pivot kinds are fixed; the paths are the schema's business. Load already
+    // rejects a path nothing can set, so this only pins them to the ECS field sets:
+    // a perimeter device observes traffic that is not its own, so `observer`, not `host`.
+    let e = m.entities();
+    assert_eq!(
+        (e.src_ip.as_deref(), e.dst_ip.as_deref(), e.user.as_deref(), e.dst_port.as_deref(), e.device.as_deref()),
+        (Some("source.ip"), Some("destination.ip"), Some("user.name"), Some("destination.port"), Some("observer.hostname"))
+    );
 }
 
 #[test]
@@ -304,4 +336,217 @@ fn absurd_class_uid_is_rejected_at_load() {
     assert!(report.mappings.is_empty());
     let text = report.errors.iter().map(|e| e.to_string()).collect::<Vec<_>>().join("\n");
     assert!(text.contains("outside"), "{text}");
+}
+
+/// Done-item 8: the same twelve parsers, a second output schema, zero parser changes.
+/// One row per device family: a field the parser emits in the vendor's own vocabulary,
+/// and the ECS 9.5.0 path and value it must land on.
+#[test]
+fn ecs_maps_every_family_onto_ecs_paths() {
+    use serde_json::json;
+    let reg = registry();
+    let map = mapping_named("ecs");
+    // (parser, event index in its sample, expected ECS path → value)
+    let cases = vec![
+        // A firewall verdict is event.type in ECS (allowed/denied), never event.outcome.
+        (
+            "cisco_asa",
+            1,
+            vec![
+                ("event.code", json!("106023")),
+                ("event.action", json!("deny")),
+                ("event.category", json!(["network"])),
+                ("event.type", json!(["connection", "denied"])),
+                ("source.ip", json!("203.0.113.9")),
+                ("source.port", json!(44321)),
+                ("destination.ip", json!("10.0.0.7")),
+                ("destination.port", json!(22)),
+                ("network.transport", json!("tcp")),
+                ("rule.name", json!("outside_in")),
+                ("observer.hostname", json!("asa-edge-01")),
+                ("observer.ingress.interface.name", json!("outside")),
+                ("log.level", json!("low")),
+                ("event.severity", json!(2)),
+            ],
+        ),
+        (
+            "cisco_ios",
+            0,
+            vec![
+                ("event.code", json!("IPACCESSLOGP")),
+                ("event.action", json!("denied")),
+                ("event.type", json!(["connection", "denied"])),
+                ("rule.name", json!("outside-in")),
+                ("network.packets", json!(1)),
+            ],
+        ),
+        // The one ECS field ECS itself calls "not standardized" keeps the vendor's word.
+        (
+            "fortinet_fortigate",
+            0,
+            vec![
+                ("event.action", json!("accept")),
+                ("event.type", json!(["connection", "allowed"])),
+                ("source.ip", json!("10.0.0.5")),
+                ("source.bytes", json!(1234)),
+                ("destination.bytes", json!(5678)),
+                ("network.application", json!("HTTPS.BROWSER")),
+                ("rule.name", json!("LAN-to-WAN")),
+                ("rule.id", json!("1")),
+                ("observer.serial_number", json!("FGT60ETK19001234")),
+                ("observer.egress.interface.name", json!("wan1")),
+            ],
+        ),
+        (
+            "palo_alto_panos",
+            0,
+            vec![
+                ("event.action", json!("allow")),
+                ("event.reason", json!("aged-out")),
+                ("network.application", json!("dns")),
+                ("network.bytes", json!(190)),
+                ("source.nat.ip", json!("203.0.113.1")),
+                ("destination.nat.port", json!(53)),
+                ("observer.serial_number", json!("007951000012345")),
+                ("observer.ingress.zone", json!("trust")),
+                ("rule.uuid", json!("e8f3a2b1-1234-5678-9abc-def012345678")),
+            ],
+        ),
+        (
+            "check_point",
+            0,
+            vec![
+                ("event.action", json!("Accept")),
+                ("event.type", json!(["connection", "allowed"])),
+                ("source.ip", json!("10.0.1.10")),
+                ("network.transport", json!("udp")),
+                ("network.direction", json!("inbound")),
+                ("rule.name", json!("Allow DNS")),
+                ("observer.hostname", json!("gw-01")),
+            ],
+        ),
+        (
+            "juniper_srx",
+            0,
+            vec![
+                ("event.code", json!("RT_FLOW_SESSION_CREATE")),
+                ("source.nat.ip", json!("203.0.113.1")),
+                ("source.nat.port", json!(12345)),
+                ("observer.ingress.zone", json!("trust")),
+                ("observer.egress.zone", json!("untrust")),
+                ("rule.name", json!("allow-dns")),
+            ],
+        ),
+        (
+            "pfsense_filterlog",
+            0,
+            vec![
+                ("event.action", json!("block")),
+                ("event.type", json!(["connection", "denied"])),
+                ("network.type", json!("ipv4")),
+                ("network.direction", json!("inbound")),
+                ("rule.id", json!("1000000103")),
+                ("observer.ingress.interface.name", json!("igb0")),
+            ],
+        ),
+        (
+            "sonicwall",
+            0,
+            vec![
+                ("event.code", json!("98")),
+                ("source.mac", json!("00:11:22:33:44:55")),
+                ("destination.mac", json!("00:17:c5:aa:bb:cc")),
+                ("observer.serial_number", json!("18B1690729A8")),
+                ("observer.egress.zone", json!("WAN")),
+            ],
+        ),
+        (
+            "sophos_xg",
+            0,
+            vec![
+                ("event.code", json!("010101600001")),
+                ("event.action", json!("Allow")),
+                ("rule.name", json!("LAN to WAN")),
+                ("observer.serial_number", json!("A11111AAA1F9R30")),
+                ("destination.geo.country_iso_code", json!("USA")),
+            ],
+        ),
+        (
+            "squid_access",
+            0,
+            vec![
+                ("event.category", json!(["network", "web"])),
+                ("event.type", json!(["connection", "access"])),
+                ("event.action", json!("TCP_MISS")),
+                ("url.original", json!("http://example.com/")),
+                ("http.request.method", json!("GET")),
+                ("http.response.status_code", json!(200)),
+                ("http.response.mime_type", json!("text/html")),
+                ("network.bytes", json!(1234)),
+            ],
+        ),
+        (
+            "suricata_eve",
+            0,
+            vec![
+                ("event.kind", json!("alert")),
+                ("event.category", json!(["intrusion_detection"])),
+                ("rule.id", json!("2012234")),
+                ("rule.name", json!("ET WEB_SERVER Possible SQL Injection Attempt")),
+                ("rule.category", json!("Web Application Attack")),
+                ("network.community_id", json!("1:LQU9qZlK+B5F3KDmev6m5PMibrg=")),
+                ("network.protocol", json!("tls")),
+            ],
+        ),
+        (
+            "openvpn",
+            4,
+            vec![
+                ("event.category", json!(["authentication"])),
+                ("event.type", json!(["info"])),
+                ("user.name", json!("jdoe")),
+                ("source.ip", json!("203.0.113.9")),
+                ("network.type", json!("ipv4")),
+            ],
+        ),
+        // event.outcome is the success or failure of the reporting entity, so it lands on
+        // an authentication result and not on a filtering verdict.
+        (
+            "cisco_ios",
+            11,
+            vec![("event.category", json!(["authentication"])), ("event.outcome", json!("success")), ("user.name", json!("jdoe"))],
+        ),
+    ];
+    let mut families = std::collections::BTreeSet::new();
+    for (parser, idx, expect) in cases {
+        families.insert(parser);
+        let evs = events(&format!("{parser}.log"));
+        let (v, _) = normalize_line(&reg, &map, parser, &evs[idx], idx as u64);
+        for (path, want) in expect {
+            assert_eq!(get(&v, path), &want, "{parser}[{idx}] {path}");
+        }
+    }
+    assert_eq!(families.len(), 12, "every shipped parser family is covered: {families:?}");
+}
+
+/// The wall from the output side: two schemas over one parsed event share every source
+/// field and no output path. Neither file could name the other's vocabulary if it tried.
+#[test]
+fn the_same_parsed_event_lands_on_two_disjoint_schemas() {
+    let reg = registry();
+    let evs = events("fortinet_fortigate.log");
+    let (ecs, ecs_stats) = normalize_line(&reg, &mapping_named("ecs"), "fortinet_fortigate", &evs[0], 1);
+    let (ocsf, ocsf_stats) = normalize_line(&reg, &mapping(), "fortinet_fortigate", &evs[0], 1);
+    for ocsf_only in ["src_endpoint", "dst_endpoint", "connection_info", "firewall_rule", "finding_info", "traffic", "action", "action_id", "severity_id", "app_name", "type_uid"] {
+        assert!(ecs.get(ocsf_only).is_none(), "ECS output must not carry `{ocsf_only}`: {ecs}");
+    }
+    for ecs_only in ["event", "rule", "log", "source", "destination", "network", "url", "http", "dns", "tls"] {
+        assert!(ocsf.get(ecs_only).is_none(), "OCSF output must not carry `{ecs_only}`: {ocsf}");
+    }
+    assert_eq!(get(&ecs, "source.ip"), get(&ocsf, "src_endpoint.ip"), "one source field, two schema paths");
+    assert_eq!(
+        ecs_stats.mapped + ecs_stats.unmapped,
+        ocsf_stats.mapped + ocsf_stats.unmapped,
+        "every parsed field is accounted for under either schema"
+    );
 }

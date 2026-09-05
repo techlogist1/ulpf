@@ -55,6 +55,10 @@ pub struct FileDigest {
 pub struct Meta {
     pub version: u64,
     pub created: String,
+    /// The raw store this output was written from (hex store id), so a restart can tell
+    /// its own interrupted output from a fresh one or another store's.
+    #[serde(default)]
+    pub store_id: String,
     pub schema: String,
     pub parsers_generation: u64,
     pub files: Vec<FileDigest>,
@@ -236,8 +240,9 @@ impl Versions {
     }
 
     /// Records what the live output is being written with; called at open and reload.
-    pub fn write_live_meta(&self, schema: &str, generation: u64, files: Vec<FileDigest>) -> Result<()> {
+    pub fn write_live_meta(&self, store_id: &str, schema: &str, generation: u64, files: Vec<FileDigest>) -> Result<()> {
         let mut meta = self.read_meta(1).unwrap_or_default();
+        meta.store_id = store_id.to_string();
         if meta.version == 0 {
             meta.version = 1;
             let mut created = String::new();
@@ -328,9 +333,9 @@ pub fn run(job: Job, progress: &AtomicU64, cancel: &AtomicBool) -> Result<Replay
                     let mut failed = Vec::new();
                     hits.clear();
                     hits.resize(pipeline.registry.len(), 0);
-                    process_batch(&pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown, &mut failed);
+                    process_batch(&pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown, &mut failed, None);
                     metrics.add(&counts);
-                    if tx.send(Emitted { seq: batch.seq, buf: out, count: batch.ranges.len() as u64, first_raw_id: batch.first_raw_id }).is_err() {
+                    if tx.send(Emitted { seq: batch.seq, buf: out, count: batch.ranges.len() as u64, first_raw_id: batch.first_raw_id, entities: crate::engine::EntityBatch::default() }).is_err() {
                         break;
                     }
                 }
@@ -434,6 +439,7 @@ pub fn run(job: Job, progress: &AtomicU64, cancel: &AtomicBool) -> Result<Replay
     job.versions.write_meta(&Meta {
         version,
         created,
+        store_id: String::new(),
         schema,
         parsers_generation: job.parsers_generation,
         files: job.pipeline.files.clone(),
@@ -500,7 +506,7 @@ fn explain(versions: &Versions, previous: u64, files: &[FileDigest], summary: &D
 }
 
 /// `"ulpf":{...,"raw_id":N,...}` without parsing the line.
-fn raw_id_of(line: &[u8]) -> Option<u64> {
+pub(crate) fn raw_id_of(line: &[u8]) -> Option<u64> {
     let ulpf = memchr::memmem::find(line, b"\"ulpf\":{")?;
     let rest = &line[ulpf..];
     let k = memchr::memmem::find(rest, b"\"raw_id\":")? + 9;

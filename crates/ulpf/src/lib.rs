@@ -13,4 +13,5 @@ pub mod pipeline;
 pub mod pivot;
 pub mod replay;
 pub mod server;
+pub mod syslog;
 pub mod tail;

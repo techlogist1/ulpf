@@ -45,6 +45,9 @@ fn config(dir: &Path, inputs: Vec<PathBuf>, threshold: usize) -> Config {
         pending: Some(dir.join("pending")),
         infer_threshold: threshold,
         tail_capacity: 64,
+        receipt_nanos: None,
+        syslog_udp: None,
+        syslog_tcp: None,
     }
 }
 
@@ -65,8 +68,9 @@ fn unknown_format_becomes_a_proposal_and_approval_moves_it_to_the_fast_path() {
     assert!(report.pending[0].templates >= 10, "{:?}", report.pending[0]);
     assert_eq!(report.pending[0].problems, 0);
 
-    // the proposal parses nothing until approved: a second run still reports no_parser
-    let again = run(&config(&dir, vec![repo().join("heldout/mikrotik.log")], 64)).unwrap();
+    // the proposal parses nothing until approved: the same file into a fresh store (the
+    // same store would resume past it, D59) still reports no_parser
+    let again = run(&Config { store: dir.join("store2"), output: dir.join("out2.jsonl"), ..config(&dir, vec![repo().join("heldout/mikrotik.log")], 64) }).unwrap();
     assert_eq!(again.snapshot.no_parser, 250);
     assert_eq!(again.snapshot.proposals_written, 0, "same fingerprint is a duplicate, not a second proposal");
     assert!(again.snapshot.proposals_skipped.iter().any(|(r, n)| *r == "duplicate" && *n == 1), "{:?}", again.snapshot.proposals_skipped);
@@ -95,14 +99,14 @@ fn unknown_format_becomes_a_proposal_and_approval_moves_it_to_the_fast_path() {
     drop(live);
 
     // the same file now takes the fast path in a fresh run: detected, parsed, no proposal
-    let fast = run(&config(&dir, vec![repo().join("heldout/mikrotik.log")], 64)).unwrap();
+    let fast = run(&Config { store: dir.join("store3"), output: dir.join("out3.jsonl"), ..config(&dir, vec![repo().join("heldout/mikrotik.log")], 64) }).unwrap();
     let s = &fast.snapshot;
     assert_eq!(s.no_parser, 0, "{s}");
     assert_eq!(s.detected, 250);
     assert_eq!(s.parsed, 250, "parse_failed: {:?}", s.parse_failed);
     assert_eq!(s.infer_buffered, 0);
     assert!(fast.pending.is_empty(), "{:?}", fast.pending);
-    let out = std::fs::read_to_string(dir.join("out.jsonl")).unwrap();
+    let out = std::fs::read_to_string(dir.join("out3.jsonl")).unwrap();
     let last = out.lines().last().unwrap();
     let v: serde_json::Value = serde_json::from_str(last).unwrap();
     assert_eq!(v["ulpf"]["parser"], "mikrotik_inferred");
