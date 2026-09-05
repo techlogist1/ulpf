@@ -32,11 +32,13 @@ another directory (the old one is left as it is).
 
 ## Menus
 
-File: Add files… (Cmd/Ctrl+O), Add folder…, Open output folder, Open in browser, Choose data
-directory…. Tray (menu bar on macOS, notification area on Windows): Show, Open output
-folder, Open in browser, Quit. Closing the window hides it and the engine keeps ingesting;
-Quit is what stops the engine. The title reads `ULPF · engine ok · N events · M pending`
-once a second, or `engine down (exit N)` if the engine stopped.
+File: Add files… (Cmd/Ctrl+O), Add folder…, Open output folder, Open in browser, Intensity ▸
+(Low, Balanced, Max — the running one check-marked), Choose data directory…. Tray (menu bar
+on macOS, notification area on Windows): Show, Open output folder, Open in browser, Quit —
+no Intensity there, it is a File-menu setting only. Closing the window hides it and the
+engine keeps ingesting; Quit is what stops the engine. The title reads `ULPF · engine ok · N
+events · M pending · Balanced · 4 of 8 cores · index on` once a second (the intensity part is
+the next section), or `engine down (exit N)` if the engine stopped.
 
 ## Intensity: how hard the engine works
 
