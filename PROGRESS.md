@@ -192,9 +192,15 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       UDP 1,063,160/2,400,000 received, shortfall 1,336,840 against a netstat drop delta of
       1,336,894; file and TCP exact; framed = stored = emitted = verified 7,663,160, chain ok;
       engine 5,950 events/s with the index on beside two listeners; RSS max 930 MB (backlog).
-      DEMO WARNING: UDP syslog on a loaded laptop loses datagrams in the kernel; feed the demo
-      device over TCP or a file. A run with nothing else on the host is still owed and is the
-      last measurement of the session, after every lane has finished.
+      Run 6 (01:42-01:58 IST, 06 Sep, nothing else of the session running, load mean 4.1 peak
+      8.6 from the run itself): UDP 1,067,333/2,400,000, shortfall 1,332,667 against a netstat
+      drop delta of 1,332,731; file and TCP exact; 7,667,333 framed = stored = emitted =
+      verified, chain ok; engine 7,736 events/s with the index on, 2,980 backpressure blocks;
+      RSS max 986 MB. Three runs, one answer: the engine with the entity index on is the
+      bottleneck at 26k/s aggregate, the listener blocks by design (D60) and the kernel drops
+      UDP at 8k/s. DEMO RULE (firm): feed the demo device over TCP or the file path, or run
+      `serve --pivot off` when a UDP device must keep up. No engine change (the brief: a
+      warning, not a second fix).
 - [x] A3. (23:05-23:25 IST, from the quiet-window watcher: each run started at a one-minute load
       under 4 with no rustc/cargo/ld alive, load sampled every 2 s during the run; `ulpf run
       bench/mixed-5000000.log --output /dev/null --infer-threshold 0 -j N`, fresh store each
@@ -280,9 +286,18 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       runner: one command plays the demo script step by step (fresh `demo/`, parsers copy, paced
       known-format drops, one unseen-format drop on cue, what-to-click prompts, clean reset),
       existing subcommands and watch only; written while C was in flight, verified before C landed.
-- [ ] Final: full suite, clippy, `scripts/isolation.sh` on the final binary (UI checked for
-      external asset references first), the cold-start commands from `docs/evaluation.md`, one
-      complete pass of the demo runner, PROGRESS and DECISIONS current, pushed.
+- [x] Final (01:15-01:58 IST, 06 Sep, in this order on the final tree): the release binary rebuilt
+      with P's dist (`cargo build --release` up to date, 8,777,448 bytes, P's strings in it); the
+      app re-bundled with that sidecar (SHA-256 39d5bec1... equal for `ULPF.app/Contents/MacOS/ulpf`
+      and `target/release/ulpf`; `ULPF_0.1.0_aarch64.dmg` 7,971,800 B); `scripts/isolation.sh` PASS
+      in all three modes (run over the 5M bench: 30 samples, 0 sockets; serve for 20 s: 58 samples,
+      the one 127.0.0.1:7878 listener; docker `--network none` on the rebuilt `ulpf:static`);
+      the cold-start criterion PASS (fresh clone of HEAD, README's nine Quick-start commands,
+      94.8 s; `eval/results/ulpf-20260905T200729Z-11466/scorecard.md`); one `scripts/demo.sh
+      --auto` pass (proposal 0.9 s, update 5.4 s, replay v2 verified 1,044, attestation 2 of 2
+      over 2,694, tamper caught at raw id 0, reset clean); the quiet soak (run 6, D62: the same kernel-drop
+      result with nothing else on the host, so the demo rule is firm); then this
+      file's verified state, the commit and the push.
 - Automated UI tests remain absent; tonight's captures are the UI's verification.
 
 ### Fan-out 1 (20:20 IST): three lanes, then the lead's measurements
@@ -308,6 +323,19 @@ measurements with their commands. Nothing else: no logs, no transcripts. No work
 longer than about four minutes (backgrounded and polled past that).
 
 ### Verified state (v3, rolling; every line was run, not read)
+- 02:00 IST, 06 Sep, the final tree (the commit after 5e7dcd4): `cargo test --workspace`
+  114 passed, 0 failed, 2 ignored and clippy `-D warnings` clean at the P merge (8ccb8e5;
+  nothing under `crates/` changed after it); release binary 8,777,448 bytes with P's dist;
+  `ULPF.app` bundled 01:16 with that binary as its sidecar (SHA-256 equal); `scripts/
+  isolation.sh` PASS in run (0 sockets, 30 samples), serve (one 127.0.0.1:7878 listener, 58
+  samples) and docker (`--network none`, image rebuilt 01:19) modes; cold start PASS (fresh
+  clone, nine Quick-start commands, 94.8 s, scorecard committed); `scripts/demo.sh --auto`
+  PASS (proposal 0.9 s, update 5.4 s, replay 1,044 verified, attestation 2/2 over 2,694,
+  tamper at raw id 0 caught, reset clean); `scripts/demo.sh --check` 18 ok under zsh and
+  under bash; the quiet soak run 6 as in A2 and D62; V2's nine computer-use captures and
+  V's fifteen Chrome captures under `docs/screens/` with all 76 PNGs indexed both ways;
+  `git worktree list` main only. Pushed to origin/main at the end of this list's commit;
+  the CI run on main is recorded in the line below it once it finishes.
 - 01:15 IST (06 Sep): P merged (8ccb8e5): `cargo test --workspace` 114 passed, 0 failed, 2
   ignored; clippy clean; release build 8,777,448 bytes embedding P's dist (the new strings are
   in the binary); the lead's grep of `ui/dist` finds no external reference.
@@ -382,46 +410,25 @@ final sequence in order (rebuild, re-bundle with the sidecar SHA checked, isolat
 serve and docker modes, cold start, demo runner, quiet soak, verified state, commit, push).
 
 ### In flight
-- (P merged 01:15 IST; V2 and K relaunched on the merged build at 01:17; then the final sequence.)
-- Lane P since 23:27 IST (own worktree of main): nine of the twelve minor findings from lane
-  V's Chrome-driven pass, the nine the UI alone can fix (the other three are server-side and
-  deferred: the seen-with count wording against `related_over`, the one 608 ms frame while a
-  4 MB record renders after a 24 MB JSON fetch, `GET /api/pivot` at 500 ms for a 19k-event
-  entity) (scroll to the approve result, the written-to path overflow, repeated
-  axis ticks, uninformative seen-with bars, an unformatted number, negative zero, the tail
-  header wording, the sources table at 1512, the seven-row legend) fixed in the UI only, each
-  verified over CDP and re-captured under the existing file names; 45-minute stop; Opus
-  verifier. One worker because the findings are one screen family each and the fix is small.
-- 23:32 IST, the owner lifted the parallelism cap (limits are not the constraint, waste is;
-  Opus at default reasoning for drives, captures and checks, Fable for design, merges and
-  anything touching the store, hot path or API). Started at once: the app bundled from the
-  current main (`pnpm tauri build`, warmed cache) then lane V2 (Opus, computer-use: launch,
-  drop, approve, quit without orphan, relaunch; captures `docs/screens/app-tool-*.png`) and
-  lane K (Opus, read-only completeness critic over this section, D67-D74, the screens index
-  and the run records; returns every claim it could not reproduce).
-- Sequential by a named dependency, the final binary (P changes `ui/dist`, which the binary
-  embeds): after P merges, `cargo build --release`, the app re-bundled and its launch and
-  approve re-checked, `scripts/isolation.sh` on that binary, the cold-start criterion
-  (`docs/evaluation.md`: a fresh clone runs README's Quick start), one `scripts/demo.sh --auto`
-  pass, then the push. Sequential by a quiet machine: the soak run with nothing else on the
-  host, last. A1, A1b, B, C and V are merged; soak run 5 and the A3 bench are recorded.
-- A2 run 5 and A3 ran from a detached watcher started 22:21 IST (a `quiet-measure.sh` in the
-  session scratchpad): before each bench width and before the soak it waited for a quiet
-  machine (1-min load under 4, no rustc/cargo/ld), sampled the load every 2 s during the run
-  and recorded before/after/peak beside every number. Its records (`a3/results.txt`,
-  `a2/run5/soak.log`, the netstat and rcvbuf captures) lived under `/private/tmp` and did not
-  survive the 00:57 reboot; the numbers in A2, A3, D62 and README were transcribed from them
-  while they existed and are the only copy. The final quiet soak is run by hand at the end.
+- Nothing. Every lane is merged (A1, A1b, B, C, V, P, V2, K's fixes) and every worktree is
+  removed; `git worktree list` shows main only. The wake lock (`caffeinate`, pid in
+  `pgrep -x caffeinate`) is the only process of the session left running; stop it with
+  `pkill -x caffeinate`.
+- Deferred, recorded where they belong: the three server-side UI findings (item B's contract
+  gaps and the P bullet above); `class_unknown` on Zeek http fields (mapping work, D72); the
+  Windows installers never launched on a Windows machine (D74, the five owner checks in
+  `app/README.md`); the stale data directory `~/Library/Application Support/dev.ulpf.app` left
+  by the first bundle identifier on this Mac (dead data, nothing reads it; delete by hand).
 
 ### Tried and abandoned (v3)
 - (none yet)
 
 ### Next action (if this session is cut off here)
-Merge whichever lane has landed on its branch (`git branch -a`; the worktrees under
-`.claude/worktrees/` hold uncommitted work if a builder died again: inspect `git status` there
-before deleting anything), by running `cargo test --workspace --release` and
-`cargo clippy --workspace --all-targets -- -D warnings` on the merged tree before committing to
-main; then A2/A3 numbers into D62 and item 9; then `scripts/demo.sh --auto` once, then commit it.
+Nothing is half done. For the demo: `scripts/demo.sh` from a built tree (`cargo build --release`;
+ports 7878, 5514 and 5515 free), or the desktop app from `app/src-tauri/target/release/bundle/
+macos/ULPF.app` (rebuild with `app/scripts/sidecar.sh && cd app && pnpm tauri build`). For the
+04:00 comparison: `docs/evaluation.md`. If a number here is questioned, the command that
+produced it is beside it; re-run it.
 
 ---
 

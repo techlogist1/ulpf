@@ -992,6 +992,22 @@ lose nothing. The lesson for the soak itself: 26k/s aggregate with the index on 
 measured index-on rate (28-31k/s, D66), so the harness should either turn the index off or
 halve its rates when the question is socket loss rather than engine throughput.
 
+**Amendment (2026-09-06 01:42-01:58, run 6, the quiet run the brief asked for).** Same
+command, nothing else of the session running (no build, no lane, no browser; load 4.5 at
+start, mean 4.1 and peak 8.6 over 501 samples, all of it the run's own processes; 2.4 at the
+end; `caffeinate` holding the host awake). The result is the same as the two loaded runs:
+9,000,000 sent; `udp_rcvbuf` 8,388,608 granted; UDP 1,067,333 of 2,400,000 received, shortfall
+1,332,667 against `netstat -s -p udp` full-socket-buffer drops rising by 1,332,731; file
+4,200,000 and TCP 2,400,000 exact; framed = stored = emitted = verified 7,667,333, chain ok,
+0 corrupt; queue 64/64 with 2,980 backpressure blocks; the engine at 7,736 events/s over the
+run with the entity index on; RSS 16.8 to 986 MB (the in-flight backlog), 483 MB at the end;
+drain 254 s. So the loss is not the host's load: at 26k/s aggregate with the index on, the
+engine is the bottleneck, the listener blocks on the full queue (D60, by design) and the
+kernel drops UDP at 8k/s whatever the buffer. The demo rule is now firm, not a warning: feed
+the demo device over TCP or the file path, or run `serve` with `--pivot off` when a UDP
+device must keep up. No engine change tonight (the brief: a warning, not a second fix); the
+fix that would change the number is the index cost (D66), not the socket.
+
 ## D63. Real captures fix parsers from vendor documentation, and stay in the samples
 **Decision.** Real captures (public sources with permissive licences, and captures
 generated locally from real Suricata, Squid, OpenVPN 2.4/2.5/2.6, nginx, HAProxy and Zeek
