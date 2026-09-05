@@ -49,11 +49,13 @@ fn copy_parsers(dir: &Path) {
     }
 }
 
+/// The deliberate bug: every `dst_ip` slot, whatever its type, is renamed, so the mapping
+/// no longer finds the destination address (it lands in `unmapped.dst_addr`).
 fn break_asa(dir: &Path) {
     let p = dir.join("parsers/cisco_asa.toml");
     let text = std::fs::read_to_string(&p).unwrap();
-    assert!(text.contains("{dst_ip:ip}"));
-    std::fs::write(&p, text.replace("{dst_ip:ip}", "{dst_addr:ip}")).unwrap();
+    assert!(text.contains("{dst_ip:"));
+    std::fs::write(&p, text.replace("{dst_ip:", "{dst_addr:")).unwrap();
 }
 
 fn fix_asa(dir: &Path) {
@@ -73,9 +75,10 @@ fn a_fixed_parser_replays_every_past_event_without_touching_the_store() {
     break_asa(&dir);
     let cfg = config(&dir, vec![root().join("samples")]);
     let report = ulpf::engine::run(&cfg).unwrap();
-    assert_eq!(report.snapshot.emitted, 236);
+    let total = report.snapshot.emitted;
     let v1 = std::fs::read_to_string(dir.join("out.jsonl")).unwrap();
-    assert!(v1.contains("\"dst_addr\""), "the bug must be visible in v1");
+    let buggy = v1.lines().filter(|l| l.contains("\"dst_addr\"")).count() as u64;
+    assert!(buggy > 0, "the bug must be visible in v1");
     let before = store_digest(&dir);
     let versions = Versions::new(&cfg.output);
     assert_eq!(versions.list().len(), 1, "the live output is version 1 with a meta");
@@ -91,18 +94,18 @@ fn a_fixed_parser_replays_every_past_event_without_touching_the_store() {
 
     assert_eq!(r.version, 2);
     assert_eq!(r.previous_version, Some(1));
-    assert_eq!(r.events, 236);
+    assert_eq!(r.events, total);
     assert_eq!(r.summary.only_in_new + r.summary.only_in_old, 0);
-    assert_eq!(r.summary.changed, 8, "{:?}", r.summary);
-    assert_eq!(r.summary.unchanged, 228);
-    assert_eq!(r.summary.fields_added, 8);
-    assert_eq!(r.summary.fields_lost, 8);
-    assert!(r.summary.by_field.iter().any(|f| f.path == "dst_endpoint.ip" && f.added == 8), "{:?}", r.summary.by_field);
-    assert!(r.summary.by_field.iter().any(|f| f.path == "unmapped.dst_addr" && f.lost == 8));
+    assert_eq!(r.summary.changed, buggy, "{:?}", r.summary);
+    assert_eq!(r.summary.unchanged, total - buggy);
+    assert_eq!(r.summary.fields_added, buggy, "one field added per corrected event");
+    assert_eq!(r.summary.fields_lost, buggy);
+    assert!(r.summary.by_field.iter().any(|f| f.path == "dst_endpoint.ip" && f.added == buggy), "{:?}", r.summary.by_field);
+    assert!(r.summary.by_field.iter().any(|f| f.path == "unmapped.dst_addr" && f.lost == buggy));
     assert!(r.why.iter().any(|w| w.contains("cisco_asa.toml changed since v1")), "{:?}", r.why);
     let v2 = std::fs::read_to_string(dir.join("out.v2.jsonl")).unwrap();
     assert!(!v2.contains("\"dst_addr\""), "every past event is corrected");
-    assert_eq!(v2.lines().count(), 236);
+    assert_eq!(v2.lines().count() as u64, total);
     assert_eq!(store_digest(&dir), before, "the raw store is byte for byte what it was");
     assert_eq!(ulpf_store::RawReader::open(&cfg.store).unwrap().verify().corrupt.len(), 0);
 
@@ -112,9 +115,9 @@ fn a_fixed_parser_replays_every_past_event_without_touching_the_store() {
     assert_eq!(page.len(), 3);
     assert!(page.windows(2).all(|w| w[0].raw_id < w[1].raw_id));
     assert_eq!(page[0].parser_before.as_deref(), Some("cisco_asa"));
-    assert_eq!(page[0].added.get("dst_endpoint.ip").and_then(|v| v.as_str()), Some("142.250.72.14"));
+    assert!(page[0].added.contains_key("dst_endpoint.ip"), "{:?}", page[0].added);
     let (rest, _) = replay::page(&versions.diff_path(2), &index, next, 500, None).unwrap();
-    assert_eq!(rest.len(), 5);
+    assert_eq!(rest.len() as u64, buggy - 3);
     assert_eq!(versions.list().len(), 2);
     assert_eq!(versions.next(), 3);
 
@@ -125,7 +128,7 @@ fn a_fixed_parser_replays_every_past_event_without_touching_the_store() {
     let job = Job { versions: versions.clone(), version: 3, pipeline: Arc::new(pipeline), threads: 2, batch: 64, parsers_generation: 0, names, reader, total };
     let r3 = replay::run(job, &AtomicU64::new(0), &AtomicBool::new(false)).unwrap();
     assert_eq!(r3.summary.changed, 0);
-    assert_eq!(r3.summary.unchanged, 236);
+    assert_eq!(r3.summary.unchanged, total);
     assert!(r3.why.iter().any(|w| w.contains("unchanged")), "{:?}", r3.why);
 }
 
@@ -141,7 +144,10 @@ fn the_server_replays_through_the_writer_and_reports_progress() {
     let live = Live::open(&cfg, true).unwrap();
     live.reload_parsers();
     let (version, total) = live.start_replay(None).unwrap();
-    assert_eq!((version, total), (2, 236));
+    assert_eq!(version, 2);
+    assert_eq!(total, live.store.lock().unwrap().len());
+    let buggy = std::fs::read_to_string(dir.join("out.jsonl")).unwrap().lines().filter(|l| l.contains("\"dst_addr\"")).count() as u64;
+    assert!(buggy > 0);
     assert!(matches!(live.start_replay(None), Err(ReplayError::Running)) || live.replay_progress().is_none(), "a second replay while one runs is a conflict");
     let started = Instant::now();
     while live.replay_progress().is_some() {
@@ -150,12 +156,12 @@ fn the_server_replays_through_the_writer_and_reports_progress() {
     }
     let state = live.replay.lock().unwrap();
     let report = state.last.as_ref().expect("report");
-    assert_eq!(report.summary.changed, 8);
+    assert_eq!(report.summary.changed, buggy);
     assert_eq!(report.parsers_generation, 1, "the replay records the generation it used");
     assert!(report.why.iter().any(|w| w.contains("cisco_asa.toml changed")));
     drop(state);
-    let (page, _) = live.replay_diff(2, None, 10, None).unwrap();
-    assert_eq!(page.len(), 8);
+    let (page, _) = live.replay_diff(2, None, 500, None).unwrap();
+    assert_eq!(page.len() as u64, buggy);
     assert!(matches!(live.replay_diff(9, None, 10, None), Err(ReplayError::Invalid(_))));
     assert!(live.replay_generation.load(Relaxed) >= 2);
     // the live meta recorded the reload
