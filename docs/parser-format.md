@@ -25,7 +25,7 @@ priority = 0                # higher is tried first when several parsers could m
 syslog = true               # strip <pri> and an RFC 3164 / RFC 5424 header first
 
 [strategy]
-kind = "pattern"            # kv | delimiter | json | cef | leef | pattern
+kind = "pattern"            # kv | delimiter | json | cef | leef | pattern | xml
 pattern = '%ASA-{severity:int}-{msg_id:int}: {message:rest}'
 
 [[timestamp]]               # candidates tried in order; omit the section to use the
@@ -65,6 +65,7 @@ timestamp precedes them.
 | `json` | none | Nested keys flatten with `.`; arrays index from 0 (`tags.0`). Nulls are dropped. |
 | `cef` | none | Header fields: `cef_version`, `device_vendor`, `device_product`, `device_version`, `signature_id`, `name`, `cef_severity`; extension pairs as-is. The seventh field is `cef_severity`, not `severity`, because CEF's scale is 0-10 while a device that writes a bare `severity` is on the syslog 0-7 scale; a vendor definition that speaks CEF and adds `[[sub]]`s sees the header value under `cef_severity` too. |
 | `leef` | none | LEEF 1.0 (tab) and 2.0 (declared delimiter: one literal byte, or the hex value spelled `xHH`, `XHH`, `0xHH` or `0XHH`). A hex prefix whose digits do not parse is `invalid_leef`, not a silent fall back to tab. |
+| `xml` | none | One document per event. Elements nest with `.` like `json`; attributes and text are fields; `<Data Name="X">v</Data>` is `EventData.X`. See "XML" below. |
 | `pattern` | `pattern` or `patterns` (first match wins), `regex` (raw, `(?P<name>...)`), `anchor` (`start` default, `full`, `none`) | See slot syntax below. |
 
 A generated definition (`origin = "inferred"`) is usually `kind = "pattern"`. When the unknown
@@ -76,6 +77,49 @@ whole line (D72). Zeek's TSV logs are the case it exists for.
 
 A key that does not belong to the kind is an error (`key 'pattern' does not apply to
 kind 'kv'`), so a typo cannot silently become a no-op.
+
+### XML
+
+`kind = "xml"` reads one XML document per event, the form Windows Event Forwarding,
+`wevtutil` and the agents built on `EvtRender` hand on (Event Viewer's multi-line
+rendering collapsed to one line). Rules, with the Windows Event shape as the example:
+
+* The root element is the document, not a key: `<Event><System><EventID>4624` is the
+  field `System.EventID`. Nested elements join with `.` the way `json` keys do.
+* An attribute is a field under its element: `<Provider Name="P" Guid="G"/>` gives
+  `System.Provider.Name` and `System.Provider.Guid`; `<TimeCreated SystemTime="..."/>`
+  gives `System.TimeCreated.SystemTime`; `<Execution ProcessID="716" ThreadID="760"/>`
+  gives `System.Execution.ProcessID` and `System.Execution.ThreadID`.
+* An element whose only attribute is `Name` and which carries text is a named value:
+  `<Data Name="LogonType">3</Data>` under `EventData` is `EventData.LogonType`, and the
+  `Name` attribute itself is not a field. That is the `EventData` shape of every Windows
+  provider, Sysmon included. An element with a `Name` and no text yields nothing.
+* A repeated element without a name is numbered: `<Data>a</Data><Data>b</Data>` is
+  `EventData.Data` then `EventData.Data2`, `EventData.Data3`, ... (any key that would
+  repeat inside one event gets the counter, so nothing is silently overwritten).
+* Namespace prefixes are stripped from element and attribute names (`<ns:Item>` is
+  `Item`), and `xmlns` / `xmlns:*` declarations are not fields.
+* Text is kept as written, including surrounding spaces (`User32 ` is what the device
+  sent); whitespace-only text between elements (pretty-printed input) is not a field.
+  CDATA is text without entity decoding. The XML declaration, comments and processing
+  instructions are skipped; an empty element (`<Correlation/>`) yields nothing.
+* Entity references in text and attribute values are decoded: `&amp;` `&lt;` `&gt;`
+  `&quot;` `&apos;` `&#N;` `&#xN;`. Anything else after `&` (an unknown name, a
+  reference cut off at the end of the line) is kept as written. A value with no `&` is a
+  span of the event; a value with one is the strategy's single materialisation, counted
+  like a JSON value or an unescaped quoted value.
+* Failures are counted as `invalid_xml`, never a panic: input that is not UTF-8, no
+  element at all, an unterminated tag (`<Event` or `</a` cut off), a stray `<` in text.
+  A document whose closing tags were cut off still yields the fields it carried. A 1 MB
+  attribute is one borrowed span.
+* Field names are the XML's own, so `[[timestamp]]`, `[[sub]] when` and mappings use
+  the dotted paths (`field = "System.TimeCreated.SystemTime"`,
+  `when = { "System.EventID" = "4624" }`). A sub that only adds constants re-parses
+  `System.EventID` with `pattern = "{_:int}"`, which emits nothing and matches.
+
+Not handled: DTD entity declarations (the reference stays as written), UTF-16 input (a
+counted failure; convert at the forwarder), and a document with more than one root (the
+second root's fields are numbered like any repeat).
 
 ## Pattern slot syntax
 
