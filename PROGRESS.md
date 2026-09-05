@@ -331,8 +331,24 @@ look at the captures and a grep of `ui/dist` for external references.
       the alloc test); a hexadecimal `ProcessId` under an `int` field (`as_int` reads `0x`,
       `crates/ulpf-normalize/src/mapping.rs`). Not merged tonight by rule: endpoint telemetry
       outside the perimeter line, kept as evidence of extensibility.
-- [ ] L6. Branch `lane-6-index` pushed and described: the profile, what was removed, the
-      numbers before and after, whether UDP loss falls with the index on.
+- [x] L6. (pushed 04:49 IST, `origin/lane-6-index` at 9389be7, contains main at d62a01c; D76 on
+      the branch; never merges tonight) The profile named the cost: SQLite's 2 MiB page cache
+      spilling the three value-keyed B-trees to the WAL several times per transaction and the
+      checkpoint copying them again (93% of the pivot thread in pwrite/pread). Fix: a 64 MiB page
+      cache (`CACHE_KIB`, `PRAGMA cache_size`) and one transaction per drained group. On the
+      468k-event slice, index on: main 31,118 events/s median, the branch 49,735 (at higher load),
+      back to back at the same load 9,497 -> 48,424 (5.1x); the cache alone is the gain (58,611
+      with the old group of 8), the group a few percent; answers identical (pivot on three
+      entities over both indexes). The cliff: at 5M never-repeating events (index 1.57 GB) the
+      branch runs at 7,142 events/s (10,005 with 256 MiB), sys-bound again, so the cache is a fix
+      while the index fits and a knob past it; the two feeds that remove the cliff (sorted runs
+      merged, or an index fed from the output file that lags instead of blocking) change D55 and
+      are named, not built. One soak with the index on ran at unequal load to run 6, so the UDP
+      comparison is not settled; the A2 demo rule (TCP or file, never UDP with the index on)
+      stands. 122 tests, clippy clean, `crates/ulpf/tests/pivot.rs` unchanged. The Opus
+      verifier's four findings (a misreported merge state, a gap that was not one, a stale
+      sentence in D76, a bound the code does not enforce) closed in the fix round. A later merge
+      touches pivot.rs and docs/DECISIONS.md only.
 - [x] L2T. (merged 04:17 IST as 50b288f, `crates/ulpf/tests/v4_api.rs`) Four contract tests
       against the merged main: queue depth and the windowed rate in the frame; `emitted_from`
       tail then output on a five-event ring, `?bytes=0`, the bytes route byte-for-byte against
@@ -430,6 +446,14 @@ look at the captures and a grep of `ui/dist` for external references.
   The tamper moved to byte 100, inside record 0's body whatever the first sample is (the segment
   and record headers end at byte 68). Post-demo question for the owner, recorded not built:
   whether the record header's receipt time belongs under the chain (a store-format change).
+- A flake, not fixed tonight: `crates/ulpf/tests/v4_api.rs` `pivot_pages_by_the_cursor_pair_and_
+  reports_its_timings` failed once at load 37 on lane 6's worktree ("saw 31 of 32") and passed
+  three times alone and in the full run. Mechanism (read from `walk` in pivot.rs, main's read
+  path): a page takes the first `limit*4` entries past the cursor in raw-id order and re-sorts
+  by device time, so an event whose device time disagrees with arrival order by more than that
+  window is skipped; the test copies every sample into a watch directory and the poll's
+  interleaving under load sets the order. Post-demo: widen the candidate window or make the
+  test's input order deterministic.
 
 ### Next action (if this session is cut off here)
 Main is clean at the last commit named in the verified state. Lanes in flight are in their own
