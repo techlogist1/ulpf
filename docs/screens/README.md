@@ -66,7 +66,7 @@ The 44 `*-1280.png` / `*-2560.png` captures in the first table without a tool-dr
 
 ## The desktop app (lane C, `app/`)
 
-Captured with `screencapture -x` of the real ULPF.app window built from the branch (`pnpm tauri build`). The add-files, drag, review and approve steps were driven with the computer-use tools (native open panel by Cmd+O, Cmd+Shift+G and a typed path; a real mouse drag from a Finder window; clicks inside the webview), so these are tool-driven captures, not headless ones.
+Captured with `screencapture -x` of the real ULPF.app window built from the branch (`pnpm tauri build`). The add-files, drag, review and approve steps were driven with the computer-use tools; the `app-tool-*` rows at the end are the second, end-to-end pass on the final bundle (01:19-01:31 IST, 06 Sep), every step driven with the computer-use tools (native open panel by Cmd+O, Cmd+Shift+G and a typed path; a real mouse drag from a Finder window; clicks inside the webview), so these are tool-driven captures, not headless ones.
 
 | file | what it shows | how |
 |---|---|---|
@@ -78,3 +78,12 @@ Captured with `screencapture -x` of the real ULPF.app window built from the bran
 | app-tray.png | the tray menu (Show ULPF, Open output folder, Open in browser, Quit ULPF) while the window is closed and the engine keeps ingesting; the icon itself sits under this Mac's notch overlay | menu opened through Accessibility, screencapture |
 | app-output-folder.png | File > Open output folder: Finder with out.jsonl selected in the app's data directory | screencapture |
 | app-open-in-browser.png | Open in browser: the same server session in Chrome after a relaunch, records 313 | screencapture |
+| app-tool-launch.png | first launch against an empty data directory: the live feed, 12 parsers loaded, `server.url` written and the title reading `ULPF · engine ok · 0 events · 0 pending` | tool-driven (computer use) |
+| app-tool-drop.png | samples/cisco_asa.log dragged from a Finder window onto the window: the notice `Added 1 file to the watch folder: cisco_asa.log`, 30 events in the tail and in the title | tool-driven (computer use) |
+| app-tool-live.png | the live feed a moment later: funnel 30/30/30/30/30/30, the cisco_asa.log source row, queue 1/64 | tool-driven (computer use) |
+| app-tool-approve.png | heldout/mikrotik.log added through File > Add files…: the proposal open in Review (definition, 14 templates, slot names with the reason for each) with the approve confirmation raised, before it is confirmed | tool-driven (computer use) |
+| app-tool-approved.png | the same proposal after Enter: `Approved: mikrotik_inferred is active`, written to `…/dev.ulpf.desktop/parsers/mikrotik_inferred.toml`, 13 parsers loaded, 250 of 250 buffered lines on the fast path, 0 pending | tool-driven (computer use) |
+| app-tool-output-folder.png | File > Open output folder (Cmd+Shift+E): Finder with out.jsonl selected in the app's data directory | tool-driven (computer use) |
+| app-tool-datadir-panel.png | File > Choose data directory…: the native folder panel, cancelled without changing anything | tool-driven (computer use) |
+| app-tool-tray.png | the tray menu (Show ULPF, Open output folder, Open in browser, Quit ULPF) with the window closed and the engine still serving; this Mac's notch utility covers the icon, so the menu was opened through Accessibility | tool-driven (computer use) |
+| app-tool-relaunch.png | after Quit and a second launch: a new port answers, the store keeps its 280 records and out.jsonl its 280 lines, and the parsers table carries mikrotik_inferred with origin `approved` | tool-driven (computer use) |

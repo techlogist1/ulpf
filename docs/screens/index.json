@@ -467,5 +467,68 @@
     "width": null,
     "what": "Open in browser: the same server session in Chrome after a relaunch, records 313",
     "how": "screencapture"
+  },
+  {
+    "file": "app-tool-launch.png",
+    "screen": "app",
+    "width": null,
+    "what": "first launch against an empty data directory: the live feed, 12 parsers loaded, `server.url` written and the title reading `ULPF \u00b7 engine ok \u00b7 0 events \u00b7 0 pending`",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tool-drop.png",
+    "screen": "app",
+    "width": null,
+    "what": "samples/cisco_asa.log dragged from a Finder window onto the window: the notice `Added 1 file to the watch folder: cisco_asa.log`, 30 events in the tail and in the title",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tool-live.png",
+    "screen": "app",
+    "width": null,
+    "what": "the live feed a moment later: funnel 30/30/30/30/30/30, the cisco_asa.log source row, queue 1/64",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tool-approve.png",
+    "screen": "app",
+    "width": null,
+    "what": "heldout/mikrotik.log added through File > Add files\u2026: the proposal open in Review (definition, 14 templates, slot names with the reason for each) with the approve confirmation raised, before it is confirmed",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tool-approved.png",
+    "screen": "app",
+    "width": null,
+    "what": "the same proposal after Enter: `Approved: mikrotik_inferred is active`, written to `\u2026/dev.ulpf.desktop/parsers/mikrotik_inferred.toml`, 13 parsers loaded, 250 of 250 buffered lines on the fast path, 0 pending",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tool-output-folder.png",
+    "screen": "app",
+    "width": null,
+    "what": "File > Open output folder (Cmd+Shift+E): Finder with out.jsonl selected in the app's data directory",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tool-datadir-panel.png",
+    "screen": "app",
+    "width": null,
+    "what": "File > Choose data directory\u2026: the native folder panel, cancelled without changing anything",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tool-tray.png",
+    "screen": "app",
+    "width": null,
+    "what": "the tray menu (Show ULPF, Open output folder, Open in browser, Quit ULPF) with the window closed and the engine still serving; this Mac's notch utility covers the icon, so the menu was opened through Accessibility",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tool-relaunch.png",
+    "screen": "app",
+    "width": null,
+    "what": "after Quit and a second launch: a new port answers, the store keeps its 280 records and out.jsonl its 280 lines, and the parsers table carries mikrotik_inferred with origin `approved`",
+    "how": "tool-driven (computer use)"
   }
 ]
