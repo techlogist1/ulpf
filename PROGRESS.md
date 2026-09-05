@@ -33,8 +33,15 @@ source document in hand; Haiku banned (D30). Baseline at a9d0dd8: 71 tests, clip
       (`docs/slot-vocabulary.md`); every name marked suggested with its reason in evidence.
 - [x] 8. (D58; branch diff = `mappings/ecs.toml` + one test file) ECS: `mappings/ecs.toml` only plus `--schema ecs`; the diff touches mappings and
       the selector only.
-- [ ] 9. Multi-core: measured -j scaling before and after any change; single writer and one
-      sequencer preserved; alloc and round-trip tests untouched; honest numbers recorded.
+- [x] 9. Multi-core: parsing was already partitioned at event boundaries across N workers
+      with one ingest thread, one writer and one sequencer (D19, D60); no engine change was
+      needed and none was made. Measured 2026-09-05 18:31 on the M1 Pro (load 8 at start,
+      other agents active), 5,000,000 events, 1526 MB, `--output /dev/null`, inference off:
+      -j 1 66,827 events/s (74.8 s); -j 2 118,038 (42.4 s); -j 4 218,391 (22.9 s); -j 7
+      265,752 / 212,427 / 250,674 (median 250,674, 76.5 MB/s). Backpressure engaged at
+      every width (4,789 blocks at -j 1 down to 492 at -j 7): the ingest thread outruns the
+      workers, so parallelism is the throughput. Against v1's 260k on a quiet machine this is
+      within the stated ±10% variance. The pivot index and `--parquet` costs are below.
 - [x] 10. (D63; `corpus/README.md`; six parsers fixed from vendor docs; unseen: nginx, HAProxy, Zeek, OpenVPN 2.6) Corpus: real captures (web, licence read) and locally generated captures (tool
       version + exact setup) replace synthetic samples where obtained; three unseen formats;
       the twelve parsers fixed against the real data.
