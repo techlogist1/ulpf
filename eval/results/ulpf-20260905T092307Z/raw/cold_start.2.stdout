@@ -1,0 +1,14 @@
+parser  check_point              Check Point Log Exporter (2 subs, 1 timestamp candidates)
+parser  cisco_asa                Cisco ASA (10 subs, 0 timestamp candidates)
+parser  cisco_ios                Cisco IOS (11 subs, 1 timestamp candidates)
+parser  fortinet_fortigate       Fortinet FortiGate (0 subs, 3 timestamp candidates)
+parser  juniper_srx              Juniper SRX (4 subs, 0 timestamp candidates)
+parser  openvpn                  OpenVPN OpenVPN (18 subs, 1 timestamp candidates)
+parser  palo_alto_panos          Palo Alto Networks PAN-OS (4 subs, 3 timestamp candidates)
+parser  pfsense_filterlog        Netgate pfSense (13 subs, 0 timestamp candidates)
+parser  sonicwall                SonicWall SonicOS (3 subs, 2 timestamp candidates)
+parser  sophos_xg                Sophos Sophos Firewall (0 subs, 1 timestamp candidates)
+parser  squid_access             Squid Cache (2 subs, 1 timestamp candidates)
+parser  suricata_eve             Suricata Suricata (0 subs, 1 timestamp candidates)
+mapping ocsf                     64 fields, 4 enums, 5 classes
+12 parsers, 1 mappings loaded; 0 problems

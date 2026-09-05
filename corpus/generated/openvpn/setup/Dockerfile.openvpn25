@@ -1,0 +1,8 @@
+# Second image, for the version-comparison capture: OpenVPN 2.5.1
+# (Debian 11 "bullseye"). Measured, not assumed: 2.5.1 ALREADY writes the
+# modern "YYYY-MM-DD HH:MM:SS" prefix, so the ctime form the shipped
+# parsers/openvpn.toml matches is 2.4-and-earlier only -- see PROVENANCE.md.
+FROM debian:bullseye-slim
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openvpn iproute2 procps ca-certificates \
+    && rm -rf /var/lib/apt/lists/*

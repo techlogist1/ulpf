@@ -1,0 +1,18 @@
+<166>Sep 04 2026 10:15:23 asa-edge-01 : %ASA-6-302013: Built outbound TCP connection 12345 f
+<164>Sep  4 10:15:24 asa-edge-01 %ASA-4-106023: Deny tcp src outside:203.0.113.9/44321 dst inside:10.0.0.7/22 by access-group "outside_in" [0x8ed66b60, 0x0]
+<166>Sep 04 2026 10:15:25 asa-edge-01 : %ASA-6-302014: Teardown TCP connection 12345 for outside:142.250.72.14/443 to inside:10.0.0.5/51234 duration 0:00:30 bytes 6912 TCP FINs
+<166>Sep 04 2026 10:15:26 asa-edge-01 : %ASA-6-106100: access-list inside_out permitted tcp inside/10.0.0.5(51235) -> outside/142.250.72.14(443) hit-cnt 1 first hit [0x1234abcd, 0x0]
+<166>Sep 04 2026 10:15:27 asa-edge-01 : %ASA-6-305011: Built dynamic TCP translation from inside:10.0.0.5/51235 to outside:203.0.113.5/51235
+<166>Sep 04 2026 10:15:28 asa-edge-01 : %ASA-6-113004: AAA user authentication Successful : server =  10.0.0.2 : user = jdoe
+<163>Sep 04 2026 10:15:29 asa-edge-01 : %ASA-3-710003: TCP access denied by ACL from 203.0.113.9/44323 to outside:203.0.113.5/443
+<166>Sep 04 2026 10:15:30 asa-edge-01 : %ASA-6-302015: Built inbound UDP connection 12346 for outside:198.51.100.7/53 (198.51.100.7/53) to inside:10.0.0.53/53 (203.0.113.5/53)
+<164>Sep 04 2026 10:15:31 asa-edge-01 : %ASA-4-106023: Deny icmp src outside:203.0.113.9 dst inside:10.0.0.7 (type 8, code 0) by access-group "outside_in" [0x8ed66b60, 0x0]
+<166>Sep 04 2026 10:15:32 asa-edge-01 : %ASA-6-722051: Group <RemoteAccess> User <jørgen> IP <203.0.113.77> IPv4 Address <10.99.0.5> IPv6 address <::> assigned to session
+<167>2026-09-04T10:15:33Z asa-edge-01 : %AS
+%ASA-6-302014: Teardown UDP connection 12346 for outside:198.51.100.7/53 to inside:10.0.0.53/53 duration 0:00:02 bytes 312
+<166>Sep 04 2026 10:15:34 asa-edge-01 : %ASA-6-302013: Built outbound TCP connection 12347 for outside:142.250.72.14/443 (142.250.7
+<166>Sep 04 2026 10:15:35 asa-edge-01 : %ASA-6-302013: Built outbound TCP connection 9 for outside:10.1.2.1/22 to inside:10.1.1.2/53496
+<166>Sep 04 2026 10:15:36 asa-edge-01 : %ASA-auth-6-113004: AAA user authentication Successful : server =  10.0.0.2 : user = asmith
+<166>Sep 04 2026 10:15:37 ftd-01 : %FTD-6-302014: Teardown TCP connection 9 for outside:10.1.2.1/22 to inside:10.1.1.2/53496 duration 0:01:02 bytes 4210 TCP FINs
+<166>Sep 04 2026 10:15:38 asa-edge-01 : %ASA-6-113004: AAA user authentication Successful: server = 10.0.0.2, User = jdoe
+<166>Sep 04 2026 10:15:39 asa-edge-01 : %ASA-6-106100: access-list inside_out permitted tcp inside/10.0.0.5(51236) -> outside/142.250.72.14(443) hit-cnt 1 (first hit)

@@ -1,0 +1,2356 @@
+<134>Sep  5 08:47:31 haproxy[7]: 192.168.148.3:33790 [05/Sep/2026:08:47:31.708] fe_http be_nginx/nginx1 0/0/4/14/18 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<132>Sep  5 08:47:51 haproxy[7]: Proxy fe_http stopped (cumulated conns: FE: 1, BE: 0).
+
+<132>Sep  5 08:47:51 haproxy[7]: Proxy fe_tls stopped (cumulated conns: FE: 0, BE: 0).
+
+<132>Sep  5 08:47:51 haproxy[7]: Proxy stats stopped (cumulated conns: FE: 0, BE: 0).
+
+<132>Sep  5 08:47:51 haproxy[7]: Proxy be_nginx stopped (cumulated conns: FE: 0, BE: 1).
+
+<132>Sep  5 08:47:51 haproxy[7]: Proxy be_nginx_tls stopped (cumulated conns: FE: 0, BE: 0).
+
+<132>Sep  5 08:48:24 haproxy[7]: Proxy fe_http stopped (cumulated conns: FE: 0, BE: 0).
+
+<132>Sep  5 08:48:24 haproxy[7]: Proxy fe_tls stopped (cumulated conns: FE: 0, BE: 0).
+
+<132>Sep  5 08:48:24 haproxy[7]: Proxy stats stopped (cumulated conns: FE: 0, BE: 0).
+
+<132>Sep  5 08:48:24 haproxy[7]: Proxy be_nginx stopped (cumulated conns: FE: 0, BE: 0).
+
+<132>Sep  5 08:48:24 haproxy[7]: Proxy be_nginx_tls stopped (cumulated conns: FE: 0, BE: 0).
+
+<133>Sep  5 08:48:25 haproxy[8]: be_nginx/nginx1 changed its IP from (none) to 192.168.148.2 by docker/dns1.
+
+<133>Sep  5 08:48:25 haproxy[8]: Server be_nginx/nginx1 ('nginx1') is UP/READY (resolves again).
+
+<133>Sep  5 08:48:25 haproxy[8]: Server be_nginx/nginx1 administratively READY thanks to valid DNS answer.
+
+<133>Sep  5 08:48:25 haproxy[8]: be_nginx_tls/nginx1 changed its IP from (none) to 192.168.148.2 by DNS cache.
+
+<133>Sep  5 08:48:25 haproxy[8]: Server be_nginx_tls/nginx1 ('nginx1') is UP/READY (resolves again).
+
+<133>Sep  5 08:48:25 haproxy[8]: Server be_nginx_tls/nginx1 administratively READY thanks to valid DNS answer.
+
+<133>Sep  5 08:48:25 haproxy[8]: be_nginx/nginx2 changed its IP from (none) to 192.168.148.5 by docker/dns1.
+
+<133>Sep  5 08:48:25 haproxy[8]: Server be_nginx/nginx2 ('nginx2') is UP/READY (resolves again).
+
+<133>Sep  5 08:48:25 haproxy[8]: Server be_nginx/nginx2 administratively READY thanks to valid DNS answer.
+
+<133>Sep  5 08:48:25 haproxy[8]: be_nginx_tls/nginx2 changed its IP from (none) to 192.168.148.5 by DNS cache.
+
+<133>Sep  5 08:48:25 haproxy[8]: Server be_nginx_tls/nginx2 ('nginx2') is UP/READY (resolves again).
+
+<133>Sep  5 08:48:25 haproxy[8]: Server be_nginx_tls/nginx2 administratively READY thanks to valid DNS answer.
+
+<134>Sep  5 08:48:38 haproxy[8]: 192.168.148.3:58644 [05/Sep/2026:08:48:38.128] fe_http be_nginx/nginx1 0/0/1/0/1 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:48:38 haproxy[8]: 192.168.148.3:37174 [05/Sep/2026:08:48:38.703] fe_tls be_nginx_tls/nginx1 1/0/53 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 08:48:39 haproxy[8]: 192.168.148.3:45982 [05/Sep/2026:08:48:39.184] stats stats/<STATS> 0/0/0/0/0 200 31434 - - LR-- 1/1/0/0/0 0/0 "GET /stats HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:51988 [05/Sep/2026:08:48:59.619] fe_http be_nginx/nginx2 0/0/0/1/1 200 153 - - ---- 1/1/0/0/0 0/0 "DELETE /api/ HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:51992 [05/Sep/2026:08:48:59.642] fe_http be_nginx/nginx1 0/0/0/6/6 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:52008 [05/Sep/2026:08:48:59.663] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "DELETE /api/ HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:52024 [05/Sep/2026:08:48:59.677] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:52026 [05/Sep/2026:08:48:59.687] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:52028 [05/Sep/2026:08:48:59.702] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:52032 [05/Sep/2026:08:48:59.716] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:52040 [05/Sep/2026:08:48:59.726] fe_http be_nginx/nginx1 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:48:59 haproxy[8]: 192.168.148.3:52056 [05/Sep/2026:08:48:59.737] fe_http be_nginx/nginx2 0/0/0/0/0 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /new HTTP/1.1"
+
+<134>Sep  5 08:49:02 haproxy[8]: 192.168.148.3:52072 [05/Sep/2026:08:49:02.770] fe_http be_nginx/nginx1 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:02 haproxy[8]: 192.168.148.3:52074 [05/Sep/2026:08:49:02.829] fe_http be_nginx/nginx2 0/0/1/0/1 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 08:49:02 haproxy[8]: 192.168.148.3:52080 [05/Sep/2026:08:49:02.861] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:02 haproxy[8]: 192.168.148.3:52084 [05/Sep/2026:08:49:02.895] fe_http be_nginx/nginx2 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:02 haproxy[8]: 192.168.148.3:52092 [05/Sep/2026:08:49:02.948] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:49:02 haproxy[8]: 192.168.148.3:52094 [05/Sep/2026:08:49:02.998] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52106 [05/Sep/2026:08:49:03.041] fe_http be_nginx/nginx1 0/0/0/3/3 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52118 [05/Sep/2026:08:49:03.086] fe_http be_nginx/nginx2 0/0/0/2/2 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52132 [05/Sep/2026:08:49:03.123] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE / HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52148 [05/Sep/2026:08:49:03.146] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "OPTIONS /old HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52164 [05/Sep/2026:08:49:03.169] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52168 [05/Sep/2026:08:49:03.289] fe_http be_nginx/nginx2 0/0/0/5/5 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52170 [05/Sep/2026:08:49:03.350] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52172 [05/Sep/2026:08:49:03.404] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "DELETE /new HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52186 [05/Sep/2026:08:49:03.444] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /admin HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52188 [05/Sep/2026:08:49:03.490] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52196 [05/Sep/2026:08:49:03.524] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52200 [05/Sep/2026:08:49:03.559] fe_http be_nginx/nginx2 0/0/0/1/1 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE / HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52216 [05/Sep/2026:08:49:03.612] fe_http be_nginx/nginx1 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52226 [05/Sep/2026:08:49:03.676] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:03 haproxy[8]: 192.168.148.3:52230 [05/Sep/2026:08:49:03.727] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 08:49:06 haproxy[8]: 192.168.148.3:55634 [05/Sep/2026:08:49:06.754] fe_http be_nginx/nginx2 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 08:49:06 haproxy[8]: 192.168.148.3:55650 [05/Sep/2026:08:49:06.771] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:06 haproxy[8]: 192.168.148.3:55652 [05/Sep/2026:08:49:06.790] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:06 haproxy[8]: 192.168.148.3:55660 [05/Sep/2026:08:49:06.810] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:49:06 haproxy[8]: 192.168.148.3:55674 [05/Sep/2026:08:49:06.845] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 08:49:06 haproxy[8]: 192.168.148.3:55686 [05/Sep/2026:08:49:06.887] fe_http be_nginx/nginx1 0/0/0/0/0 500 142 - - ---- 1/1/0/0/0 0/0 "HEAD /boom HTTP/1.1"
+
+<134>Sep  5 08:49:09 haproxy[8]: 192.168.148.3:55688 [05/Sep/2026:08:49:09.905] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:09 haproxy[8]: 192.168.148.3:55692 [05/Sep/2026:08:49:09.914] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:49:09 haproxy[8]: 192.168.148.3:55708 [05/Sep/2026:08:49:09.926] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:49:09 haproxy[8]: 192.168.148.3:55710 [05/Sep/2026:08:49:09.935] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:09 haproxy[8]: 192.168.148.3:55712 [05/Sep/2026:08:49:09.946] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:09 haproxy[8]: 192.168.148.3:55722 [05/Sep/2026:08:49:09.955] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:09 haproxy[8]: 192.168.148.3:55728 [05/Sep/2026:08:49:09.967] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 08:49:09 haproxy[8]: 192.168.148.3:55732 [05/Sep/2026:08:49:09.975] fe_http be_nginx/nginx1 0/0/0/1/1 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 08:49:13 haproxy[8]: 192.168.148.3:55744 [05/Sep/2026:08:49:13.002] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 08:49:13 haproxy[8]: 192.168.148.3:55756 [05/Sep/2026:08:49:13.034] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 08:49:16 haproxy[8]: 192.168.148.3:56222 [05/Sep/2026:08:49:16.099] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 08:49:16 haproxy[8]: 192.168.148.3:56228 [05/Sep/2026:08:49:16.115] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:49:16 haproxy[8]: 192.168.148.3:56242 [05/Sep/2026:08:49:16.143] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:49:16 haproxy[8]: 192.168.148.3:56246 [05/Sep/2026:08:49:16.161] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 08:49:16 haproxy[8]: 192.168.148.3:56254 [05/Sep/2026:08:49:16.178] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /missing HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56268 [05/Sep/2026:08:49:19.190] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56272 [05/Sep/2026:08:49:19.198] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56286 [05/Sep/2026:08:49:19.209] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56290 [05/Sep/2026:08:49:19.216] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56304 [05/Sep/2026:08:49:19.226] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56320 [05/Sep/2026:08:49:19.235] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56336 [05/Sep/2026:08:49:19.249] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56350 [05/Sep/2026:08:49:19.259] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56364 [05/Sep/2026:08:49:19.270] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56380 [05/Sep/2026:08:49:19.280] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56384 [05/Sep/2026:08:49:19.293] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56398 [05/Sep/2026:08:49:19.302] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /admin HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56402 [05/Sep/2026:08:49:19.310] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56412 [05/Sep/2026:08:49:19.318] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56414 [05/Sep/2026:08:49:19.327] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56426 [05/Sep/2026:08:49:19.335] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56432 [05/Sep/2026:08:49:19.343] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56436 [05/Sep/2026:08:49:19.351] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56440 [05/Sep/2026:08:49:19.360] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56456 [05/Sep/2026:08:49:19.367] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56472 [05/Sep/2026:08:49:19.377] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56478 [05/Sep/2026:08:49:19.384] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56490 [05/Sep/2026:08:49:19.392] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56492 [05/Sep/2026:08:49:19.400] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56506 [05/Sep/2026:08:49:19.409] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56510 [05/Sep/2026:08:49:19.416] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56524 [05/Sep/2026:08:49:19.427] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56538 [05/Sep/2026:08:49:19.439] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56546 [05/Sep/2026:08:49:19.450] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56554 [05/Sep/2026:08:49:19.458] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56566 [05/Sep/2026:08:49:19.469] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56572 [05/Sep/2026:08:49:19.478] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56586 [05/Sep/2026:08:49:19.486] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56592 [05/Sep/2026:08:49:19.495] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:19 haproxy[8]: 192.168.148.3:56602 [05/Sep/2026:08:49:19.502] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56610 [05/Sep/2026:08:49:22.518] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56622 [05/Sep/2026:08:49:22.527] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56636 [05/Sep/2026:08:49:22.536] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56646 [05/Sep/2026:08:49:22.544] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56662 [05/Sep/2026:08:49:22.551] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56664 [05/Sep/2026:08:49:22.558] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56668 [05/Sep/2026:08:49:22.566] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56680 [05/Sep/2026:08:49:22.574] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56686 [05/Sep/2026:08:49:22.581] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56696 [05/Sep/2026:08:49:22.589] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:22 haproxy[8]: 192.168.148.3:56704 [05/Sep/2026:08:49:22.597] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 08:49:25 haproxy[8]: 192.168.148.3:56712 [05/Sep/2026:08:49:25.607] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 08:49:28 haproxy[8]: 192.168.148.3:38498 [05/Sep/2026:08:49:28.707] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 2/2/1/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:49:30 haproxy[8]: 192.168.148.3:56720 [05/Sep/2026:08:49:25.617] fe_http be_nginx/nginx1 0/5004/2/4/5010 200 150 - - ---- 2/2/1/0/+1 0/0 "POST /new HTTP/1.1"
+
+<129>Sep  5 08:49:32 haproxy[8]: Server be_nginx/nginx2 is DOWN, reason: Layer4 timeout, check duration: 2002ms. 1 active and 0 backup servers left. 2 sessions active, 0 requeued, 0 remaining in queue.
+
+<134>Sep  5 08:49:33 haproxy[8]: 192.168.148.3:38514 [05/Sep/2026:08:49:28.766] fe_http be_nginx/nginx1 0/5002/0/0/5002 405 289 - - ---- 2/2/1/0/+1 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:34 haproxy[8]: 192.168.148.3:38542 [05/Sep/2026:08:49:34.814] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 2/2/1/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:34 haproxy[8]: 192.168.148.3:38548 [05/Sep/2026:08:49:34.838] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 2/2/1/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:34 haproxy[8]: 192.168.148.3:38552 [05/Sep/2026:08:49:34.853] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 2/2/1/0/0 0/0 "HEAD /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<129>Sep  5 08:49:35 haproxy[8]: Server be_nginx_tls/nginx2 is DOWN, reason: Layer4 timeout, check duration: 2004ms. 1 active and 0 backup servers left. 0 sessions active, 0 requeued, 0 remaining in queue.
+
+<134>Sep  5 08:49:36 haproxy[8]: 192.168.148.3:38526 [05/Sep/2026:08:49:31.782] fe_http be_nginx/nginx1 0/5006/1/0/5007 200 144 - - ---- 2/2/0/0/+1 0/0 "DELETE /slow HTTP/1.1"
+
+<134>Sep  5 08:49:37 haproxy[8]: 192.168.148.3:46554 [05/Sep/2026:08:49:37.868] fe_http be_nginx/nginx1 0/0/0/2/2 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:37 haproxy[8]: 192.168.148.3:46568 [05/Sep/2026:08:49:37.878] fe_http be_nginx/nginx1 0/0/0/3/3 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:49:37 haproxy[8]: 192.168.148.3:46584 [05/Sep/2026:08:49:37.891] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 08:49:37 haproxy[8]: 192.168.148.3:46594 [05/Sep/2026:08:49:37.899] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:37 haproxy[8]: 192.168.148.3:46608 [05/Sep/2026:08:49:37.908] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /missing HTTP/1.1"
+
+<134>Sep  5 08:49:40 haproxy[8]: 192.168.148.3:46614 [05/Sep/2026:08:49:40.928] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:40 haproxy[8]: 192.168.148.3:46628 [05/Sep/2026:08:49:40.946] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT /slow HTTP/1.1"
+
+<134>Sep  5 08:49:40 haproxy[8]: 192.168.148.3:46638 [05/Sep/2026:08:49:40.961] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:40 haproxy[8]: 192.168.148.3:46652 [05/Sep/2026:08:49:40.977] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:40 haproxy[8]: 192.168.148.3:46654 [05/Sep/2026:08:49:40.993] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:41 haproxy[8]: 192.168.148.3:46668 [05/Sep/2026:08:49:41.002] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:41 haproxy[8]: 192.168.148.3:46678 [05/Sep/2026:08:49:41.012] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:41 haproxy[8]: 192.168.148.3:46688 [05/Sep/2026:08:49:41.021] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:41 haproxy[8]: 192.168.148.3:46702 [05/Sep/2026:08:49:41.029] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"
+
+<134>Sep  5 08:49:41 haproxy[8]: 192.168.148.3:46718 [05/Sep/2026:08:49:41.040] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 2/2/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:49:41 haproxy[8]: 192.168.148.3:46732 [05/Sep/2026:08:49:41.049] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:41 haproxy[8]: 192.168.148.3:46734 [05/Sep/2026:08:49:41.057] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46748 [05/Sep/2026:08:49:44.073] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46750 [05/Sep/2026:08:49:44.082] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46756 [05/Sep/2026:08:49:44.089] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46766 [05/Sep/2026:08:49:44.097] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46782 [05/Sep/2026:08:49:44.105] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46792 [05/Sep/2026:08:49:44.114] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46804 [05/Sep/2026:08:49:44.127] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46820 [05/Sep/2026:08:49:44.138] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:49:44 haproxy[8]: 192.168.148.3:46822 [05/Sep/2026:08:49:44.145] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49008 [05/Sep/2026:08:49:47.173] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49024 [05/Sep/2026:08:49:47.198] fe_http be_nginx/nginx1 0/0/1/2/3 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49036 [05/Sep/2026:08:49:47.221] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49046 [05/Sep/2026:08:49:47.243] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49056 [05/Sep/2026:08:49:47.258] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49060 [05/Sep/2026:08:49:47.272] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49070 [05/Sep/2026:08:49:47.288] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49080 [05/Sep/2026:08:49:47.307] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49096 [05/Sep/2026:08:49:47.330] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49100 [05/Sep/2026:08:49:47.347] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49106 [05/Sep/2026:08:49:47.361] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49112 [05/Sep/2026:08:49:47.371] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49116 [05/Sep/2026:08:49:47.382] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49128 [05/Sep/2026:08:49:47.399] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49136 [05/Sep/2026:08:49:47.409] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49138 [05/Sep/2026:08:49:47.421] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49150 [05/Sep/2026:08:49:47.437] fe_http be_nginx/nginx1 0/0/1/1/2 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49154 [05/Sep/2026:08:49:47.453] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49164 [05/Sep/2026:08:49:47.467] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "PUT /new HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49166 [05/Sep/2026:08:49:47.479] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT /slow HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49170 [05/Sep/2026:08:49:47.494] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "OPTIONS /upload HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49186 [05/Sep/2026:08:49:47.514] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "DELETE /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49198 [05/Sep/2026:08:49:47.524] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "OPTIONS /new HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49210 [05/Sep/2026:08:49:47.535] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49216 [05/Sep/2026:08:49:47.543] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49220 [05/Sep/2026:08:49:47.555] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE /slow HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49228 [05/Sep/2026:08:49:47.564] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49234 [05/Sep/2026:08:49:47.575] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49238 [05/Sep/2026:08:49:47.584] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49254 [05/Sep/2026:08:49:47.596] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:49:47 haproxy[8]: 192.168.148.3:49258 [05/Sep/2026:08:49:47.608] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:50 haproxy[8]: 192.168.148.3:49272 [05/Sep/2026:08:49:50.621] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 08:49:50 haproxy[8]: 192.168.148.3:49284 [05/Sep/2026:08:49:50.630] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:49:50 haproxy[8]: 192.168.148.3:49300 [05/Sep/2026:08:49:50.639] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:50 haproxy[8]: 192.168.148.3:49310 [05/Sep/2026:08:49:50.648] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE / HTTP/1.1"
+
+<134>Sep  5 08:49:50 haproxy[8]: 192.168.148.3:49324 [05/Sep/2026:08:49:50.658] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:49:50 haproxy[8]: 192.168.148.3:49328 [05/Sep/2026:08:49:50.666] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49334 [05/Sep/2026:08:49:53.683] fe_http be_nginx/nginx1 0/0/0/2/2 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49346 [05/Sep/2026:08:49:53.694] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49358 [05/Sep/2026:08:49:53.703] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49374 [05/Sep/2026:08:49:53.712] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49384 [05/Sep/2026:08:49:53.719] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49400 [05/Sep/2026:08:49:53.726] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49408 [05/Sep/2026:08:49:53.734] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49424 [05/Sep/2026:08:49:53.741] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49436 [05/Sep/2026:08:49:53.748] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49442 [05/Sep/2026:08:49:53.756] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49452 [05/Sep/2026:08:49:53.762] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49454 [05/Sep/2026:08:49:53.770] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49470 [05/Sep/2026:08:49:53.777] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:49:53 haproxy[8]: 192.168.148.3:49482 [05/Sep/2026:08:49:53.783] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 08:49:56 haproxy[8]: 192.168.148.3:35318 [05/Sep/2026:08:49:56.854] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE / HTTP/1.1"
+
+<134>Sep  5 08:49:56 haproxy[8]: 192.168.148.3:35332 [05/Sep/2026:08:49:56.892] fe_http be_nginx/nginx1 0/0/0/5/5 404 283 - - ---- 1/1/0/0/0 0/0 "POST /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:56 haproxy[8]: 192.168.148.3:35340 [05/Sep/2026:08:49:56.945] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "DELETE /new HTTP/1.1"
+
+<134>Sep  5 08:49:56 haproxy[8]: 192.168.148.3:35344 [05/Sep/2026:08:49:56.983] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:57 haproxy[8]: 192.168.148.3:35360 [05/Sep/2026:08:49:57.023] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:57 haproxy[8]: 192.168.148.3:35362 [05/Sep/2026:08:49:57.074] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:49:57 haproxy[8]: 192.168.148.3:35366 [05/Sep/2026:08:49:57.114] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:49:57 haproxy[8]: 192.168.148.3:35382 [05/Sep/2026:08:49:57.153] fe_http be_nginx/nginx1 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:49:57 haproxy[8]: 192.168.148.3:35390 [05/Sep/2026:08:49:57.199] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:49:57 haproxy[8]: 192.168.148.3:35406 [05/Sep/2026:08:49:57.252] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:49:57 haproxy[8]: 192.168.148.3:35418 [05/Sep/2026:08:49:57.296] fe_http be_nginx/nginx1 0/0/0/1/1 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:49:57 haproxy[8]: 192.168.148.3:35432 [05/Sep/2026:08:49:57.337] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<133>Sep  5 08:49:57 haproxy[8]: Server be_nginx/nginx2 was DOWN and now enters maintenance (DNS NX status).
+
+<133>Sep  5 08:49:57 haproxy[8]: Server be_nginx_tls/nginx2 was DOWN and now enters maintenance (DNS NX status).
+
+<133>Sep  5 08:49:59 haproxy[8]: be_nginx/nginx2 changed its IP from (none) to 192.168.148.5 by docker/dns1.
+
+<133>Sep  5 08:49:59 haproxy[8]: Server be_nginx/nginx2 ('nginx2') is UP/READY (resolves again).
+
+<133>Sep  5 08:49:59 haproxy[8]: Server be_nginx/nginx2 administratively READY thanks to valid DNS answer.
+
+<133>Sep  5 08:49:59 haproxy[8]: be_nginx_tls/nginx2 changed its IP from (none) to 192.168.148.5 by DNS cache.
+
+<133>Sep  5 08:49:59 haproxy[8]: Server be_nginx_tls/nginx2 ('nginx2') is UP/READY (resolves again).
+
+<133>Sep  5 08:49:59 haproxy[8]: Server be_nginx_tls/nginx2 administratively READY thanks to valid DNS answer.
+
+<134>Sep  5 08:50:00 haproxy[8]: 192.168.148.3:35438 [05/Sep/2026:08:50:00.366] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"
+
+<134>Sep  5 08:50:00 haproxy[8]: 192.168.148.3:35442 [05/Sep/2026:08:50:00.382] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:50:00 haproxy[8]: 192.168.148.3:35448 [05/Sep/2026:08:50:00.394] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35458 [05/Sep/2026:08:50:03.418] fe_http be_nginx/nginx2 0/0/0/1/1 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35472 [05/Sep/2026:08:50:03.431] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35486 [05/Sep/2026:08:50:03.446] fe_http be_nginx/nginx2 0/0/0/1/1 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35496 [05/Sep/2026:08:50:03.471] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35504 [05/Sep/2026:08:50:03.487] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35516 [05/Sep/2026:08:50:03.500] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /admin HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35518 [05/Sep/2026:08:50:03.513] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35520 [05/Sep/2026:08:50:03.527] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:50:03 haproxy[8]: 192.168.148.3:35530 [05/Sep/2026:08:50:03.539] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /missing HTTP/1.1"
+
+<134>Sep  5 08:50:06 haproxy[8]: 192.168.148.3:45338 [05/Sep/2026:08:50:06.558] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:50:06 haproxy[8]: 192.168.148.3:45340 [05/Sep/2026:08:50:06.570] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 08:50:09 haproxy[8]: 192.168.148.3:45356 [05/Sep/2026:08:50:09.583] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:50:09 haproxy[8]: 192.168.148.3:45360 [05/Sep/2026:08:50:09.591] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:50:09 haproxy[8]: 192.168.148.3:45366 [05/Sep/2026:08:50:09.598] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:50:09 haproxy[8]: 192.168.148.3:45376 [05/Sep/2026:08:50:09.605] fe_http be_nginx/nginx2 0/0/0/0/0 301 164 - - ---- 1/1/0/0/0 0/0 "HEAD /old HTTP/1.1"
+
+<134>Sep  5 08:50:12 haproxy[8]: 192.168.148.3:45380 [05/Sep/2026:08:50:12.613] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:50:12 haproxy[8]: 192.168.148.3:45382 [05/Sep/2026:08:50:12.621] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:50:12 haproxy[8]: 192.168.148.3:45398 [05/Sep/2026:08:50:12.628] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:50:12 haproxy[8]: 192.168.148.3:45412 [05/Sep/2026:08:50:12.634] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:50:12 haproxy[8]: 192.168.148.3:45420 [05/Sep/2026:08:50:12.641] fe_http be_nginx/nginx1 0/0/0/0/0 301 164 - - ---- 1/1/0/0/0 0/0 "HEAD /old HTTP/1.1"
+
+<134>Sep  5 08:50:15 haproxy[8]: 192.168.148.3:45430 [05/Sep/2026:08:50:15.653] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /upload HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50276 [05/Sep/2026:08:50:18.667] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50282 [05/Sep/2026:08:50:18.674] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50296 [05/Sep/2026:08:50:18.681] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "DELETE /missing HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50308 [05/Sep/2026:08:50:18.688] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50320 [05/Sep/2026:08:50:18.695] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50328 [05/Sep/2026:08:50:18.702] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50342 [05/Sep/2026:08:50:18.708] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50350 [05/Sep/2026:08:50:18.715] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50364 [05/Sep/2026:08:50:18.722] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "PUT /upload HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50370 [05/Sep/2026:08:50:18.729] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50374 [05/Sep/2026:08:50:18.737] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50376 [05/Sep/2026:08:50:18.744] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50378 [05/Sep/2026:08:50:18.751] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "OPTIONS /old HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50382 [05/Sep/2026:08:50:18.758] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50396 [05/Sep/2026:08:50:18.764] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 08:50:18 haproxy[8]: 192.168.148.3:50408 [05/Sep/2026:08:50:18.771] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:50:21 haproxy[8]: 192.168.148.3:50412 [05/Sep/2026:08:50:21.805] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "DELETE /new HTTP/1.1"
+
+<134>Sep  5 08:50:21 haproxy[8]: 192.168.148.3:50426 [05/Sep/2026:08:50:21.813] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 08:50:21 haproxy[8]: 192.168.148.3:50440 [05/Sep/2026:08:50:21.821] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 08:50:24 haproxy[8]: 192.168.148.3:50444 [05/Sep/2026:08:50:24.907] fe_http be_nginx/nginx2 0/0/0/2/2 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50454 [05/Sep/2026:08:50:25.007] fe_http be_nginx/nginx1 0/0/0/1/1 200 153 - - ---- 1/1/0/0/0 0/0 "DELETE /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50468 [05/Sep/2026:08:50:25.040] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50478 [05/Sep/2026:08:50:25.063] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50494 [05/Sep/2026:08:50:25.128] fe_http be_nginx/nginx2 0/0/0/1/1 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE /slow HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50502 [05/Sep/2026:08:50:25.187] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50510 [05/Sep/2026:08:50:25.246] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50524 [05/Sep/2026:08:50:25.278] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50538 [05/Sep/2026:08:50:25.336] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50550 [05/Sep/2026:08:50:25.377] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:25 haproxy[8]: 192.168.148.3:50562 [05/Sep/2026:08:50:25.421] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 08:50:28 haproxy[8]: 192.168.148.3:58210 [05/Sep/2026:08:50:28.479] fe_http be_nginx/nginx1 0/0/0/3/3 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:31 haproxy[8]: 192.168.148.3:58218 [05/Sep/2026:08:50:31.597] fe_http be_nginx/nginx2 0/0/3/0/3 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"
+
+<134>Sep  5 08:50:31 haproxy[8]: 192.168.148.3:58220 [05/Sep/2026:08:50:31.701] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 08:50:31 haproxy[8]: 192.168.148.3:58224 [05/Sep/2026:08:50:31.754] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 08:50:34 haproxy[8]: 192.168.148.3:58238 [05/Sep/2026:08:50:34.786] fe_http be_nginx/nginx1 0/0/0/1/1 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:50:34 haproxy[8]: 192.168.148.3:58252 [05/Sep/2026:08:50:34.836] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:34 haproxy[8]: 192.168.148.3:58266 [05/Sep/2026:08:50:34.874] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:50:34 haproxy[8]: 192.168.148.3:58278 [05/Sep/2026:08:50:34.923] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:50:34 haproxy[8]: 192.168.148.3:58288 [05/Sep/2026:08:50:34.962] fe_http be_nginx/nginx1 0/0/0/7/7 500 142 - - ---- 1/1/0/0/0 0/0 "HEAD /boom HTTP/1.1"
+
+<134>Sep  5 08:50:38 haproxy[8]: 192.168.148.3:41598 [05/Sep/2026:08:50:38.058] fe_http be_nginx/nginx2 0/0/0/0/0 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /new HTTP/1.1"
+
+<134>Sep  5 08:50:41 haproxy[8]: 192.168.148.3:41614 [05/Sep/2026:08:50:41.112] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 08:50:41 haproxy[8]: 192.168.148.3:41628 [05/Sep/2026:08:50:41.161] fe_http be_nginx/nginx2 0/0/0/1/1 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:41 haproxy[8]: 192.168.148.3:41642 [05/Sep/2026:08:50:41.236] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:41 haproxy[8]: 192.168.148.3:41654 [05/Sep/2026:08:50:41.320] fe_http be_nginx/nginx2 0/0/1/0/1 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:50:41 haproxy[8]: 192.168.148.3:41664 [05/Sep/2026:08:50:41.390] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:50:41 haproxy[8]: 192.168.148.3:41670 [05/Sep/2026:08:50:41.447] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 08:50:44 haproxy[8]: 192.168.148.3:41686 [05/Sep/2026:08:50:44.460] fe_http be_nginx/nginx1 0/0/0/1/1 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 08:50:44 haproxy[8]: 192.168.148.3:41688 [05/Sep/2026:08:50:44.475] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:44 haproxy[8]: 192.168.148.3:41704 [05/Sep/2026:08:50:44.488] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 08:50:44 haproxy[8]: 192.168.148.3:41706 [05/Sep/2026:08:50:44.498] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 08:50:47 haproxy[8]: 192.168.148.3:43090 [05/Sep/2026:08:50:47.529] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:50:47 haproxy[8]: 192.168.148.3:43096 [05/Sep/2026:08:50:47.540] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:50:47 haproxy[8]: 192.168.148.3:43108 [05/Sep/2026:08:50:47.551] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 08:50:47 haproxy[8]: 192.168.148.3:43110 [05/Sep/2026:08:50:47.568] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:50:47 haproxy[8]: 192.168.148.3:43112 [05/Sep/2026:08:50:47.579] fe_http be_nginx/nginx1 0/0/1/0/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:50:47 haproxy[8]: 192.168.148.3:43116 [05/Sep/2026:08:50:47.590] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:47 haproxy[8]: 192.168.148.3:43124 [05/Sep/2026:08:50:47.600] fe_http be_nginx/nginx1 0/0/0/0/0 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43128 [05/Sep/2026:08:50:50.631] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43138 [05/Sep/2026:08:50:50.645] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43140 [05/Sep/2026:08:50:50.661] fe_http be_nginx/nginx2 0/0/0/1/1 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43148 [05/Sep/2026:08:50:50.676] fe_http be_nginx/nginx1 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43164 [05/Sep/2026:08:50:50.690] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43166 [05/Sep/2026:08:50:50.705] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43170 [05/Sep/2026:08:50:50.721] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43176 [05/Sep/2026:08:50:50.734] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43182 [05/Sep/2026:08:50:50.752] fe_http be_nginx/nginx2 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43194 [05/Sep/2026:08:50:50.767] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43208 [05/Sep/2026:08:50:50.777] fe_http be_nginx/nginx2 0/0/0/1/1 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:50:50 haproxy[8]: 192.168.148.3:43220 [05/Sep/2026:08:50:50.789] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /missing HTTP/1.1"
+
+<134>Sep  5 08:50:53 haproxy[8]: 192.168.148.3:43226 [05/Sep/2026:08:50:53.811] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 08:50:56 haproxy[8]: 192.168.148.3:40064 [05/Sep/2026:08:50:56.824] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"
+
+<134>Sep  5 08:50:56 haproxy[8]: 192.168.148.3:40066 [05/Sep/2026:08:50:56.832] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 08:50:56 haproxy[8]: 192.168.148.3:40074 [05/Sep/2026:08:50:56.840] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:56 haproxy[8]: 192.168.148.3:40084 [05/Sep/2026:08:50:56.848] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS /slow HTTP/1.1"
+
+<134>Sep  5 08:50:56 haproxy[8]: 192.168.148.3:40096 [05/Sep/2026:08:50:56.856] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:50:56 haproxy[8]: 192.168.148.3:40112 [05/Sep/2026:08:50:56.863] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 08:50:56 haproxy[8]: 192.168.148.3:40118 [05/Sep/2026:08:50:56.872] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:56 haproxy[8]: 192.168.148.3:40130 [05/Sep/2026:08:50:56.879] fe_http be_nginx/nginx2 0/0/0/0/0 500 142 - - ---- 1/1/0/0/0 0/0 "HEAD /boom HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40132 [05/Sep/2026:08:50:59.896] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40146 [05/Sep/2026:08:50:59.903] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40148 [05/Sep/2026:08:50:59.910] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40154 [05/Sep/2026:08:50:59.918] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40170 [05/Sep/2026:08:50:59.926] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40184 [05/Sep/2026:08:50:59.936] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40192 [05/Sep/2026:08:50:59.944] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40202 [05/Sep/2026:08:50:59.954] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40218 [05/Sep/2026:08:50:59.960] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40220 [05/Sep/2026:08:50:59.970] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40222 [05/Sep/2026:08:50:59.976] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40224 [05/Sep/2026:08:50:59.985] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:50:59 haproxy[8]: 192.168.148.3:40236 [05/Sep/2026:08:50:59.992] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40242 [05/Sep/2026:08:51:00.000] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40254 [05/Sep/2026:08:51:00.009] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "DELETE /missing HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40258 [05/Sep/2026:08:51:00.019] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40262 [05/Sep/2026:08:51:00.028] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "OPTIONS /upload HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40268 [05/Sep/2026:08:51:00.040] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40280 [05/Sep/2026:08:51:00.052] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40286 [05/Sep/2026:08:51:00.061] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40294 [05/Sep/2026:08:51:00.069] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40296 [05/Sep/2026:08:51:00.077] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40310 [05/Sep/2026:08:51:00.085] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40320 [05/Sep/2026:08:51:00.093] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40322 [05/Sep/2026:08:51:00.100] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40330 [05/Sep/2026:08:51:00.108] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40342 [05/Sep/2026:08:51:00.115] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40356 [05/Sep/2026:08:51:00.122] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40372 [05/Sep/2026:08:51:00.129] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40382 [05/Sep/2026:08:51:00.137] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40392 [05/Sep/2026:08:51:00.145] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 08:51:00 haproxy[8]: 192.168.148.3:40402 [05/Sep/2026:08:51:00.155] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40412 [05/Sep/2026:08:51:03.182] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40426 [05/Sep/2026:08:51:03.194] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40442 [05/Sep/2026:08:51:03.205] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40446 [05/Sep/2026:08:51:03.213] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40458 [05/Sep/2026:08:51:03.223] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40466 [05/Sep/2026:08:51:03.232] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40482 [05/Sep/2026:08:51:03.241] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40492 [05/Sep/2026:08:51:03.252] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40496 [05/Sep/2026:08:51:03.261] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40500 [05/Sep/2026:08:51:03.271] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40502 [05/Sep/2026:08:51:03.280] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40514 [05/Sep/2026:08:51:03.290] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40524 [05/Sep/2026:08:51:03.299] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40526 [05/Sep/2026:08:51:03.308] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "OPTIONS /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40532 [05/Sep/2026:08:51:03.316] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "OPTIONS /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40542 [05/Sep/2026:08:51:03.325] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40550 [05/Sep/2026:08:51:03.334] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40554 [05/Sep/2026:08:51:03.344] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40556 [05/Sep/2026:08:51:03.353] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40560 [05/Sep/2026:08:51:03.367] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40572 [05/Sep/2026:08:51:03.384] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40580 [05/Sep/2026:08:51:03.397] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40584 [05/Sep/2026:08:51:03.406] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40600 [05/Sep/2026:08:51:03.422] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40612 [05/Sep/2026:08:51:03.430] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40624 [05/Sep/2026:08:51:03.437] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40630 [05/Sep/2026:08:51:03.444] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "DELETE /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40642 [05/Sep/2026:08:51:03.452] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:51:03 haproxy[8]: 192.168.148.3:40656 [05/Sep/2026:08:51:03.460] fe_http be_nginx/nginx1 0/0/0/0/0 500 142 - - ---- 1/1/0/0/0 0/0 "HEAD /boom HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35414 [05/Sep/2026:08:51:06.529] fe_http be_nginx/nginx2 0/0/2/0/2 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35426 [05/Sep/2026:08:51:06.559] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35440 [05/Sep/2026:08:51:06.591] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "DELETE /old HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35450 [05/Sep/2026:08:51:06.613] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35456 [05/Sep/2026:08:51:06.628] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35466 [05/Sep/2026:08:51:06.657] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35470 [05/Sep/2026:08:51:06.673] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35476 [05/Sep/2026:08:51:06.687] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35488 [05/Sep/2026:08:51:06.697] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35494 [05/Sep/2026:08:51:06.707] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35498 [05/Sep/2026:08:51:06.723] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT /slow HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35508 [05/Sep/2026:08:51:06.733] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35522 [05/Sep/2026:08:51:06.744] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35524 [05/Sep/2026:08:51:06.764] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35532 [05/Sep/2026:08:51:06.775] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:51:06 haproxy[8]: 192.168.148.3:35538 [05/Sep/2026:08:51:06.785] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 08:51:09 haproxy[8]: 192.168.148.3:35552 [05/Sep/2026:08:51:09.883] fe_http be_nginx/nginx2 0/0/7/2/9 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:51:09 haproxy[8]: 192.168.148.3:35568 [05/Sep/2026:08:51:09.934] fe_http be_nginx/nginx1 0/0/1/5/6 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:51:09 haproxy[8]: 192.168.148.3:35584 [05/Sep/2026:08:51:09.960] fe_http be_nginx/nginx2 0/0/2/0/2 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:51:09 haproxy[8]: 192.168.148.3:35586 [05/Sep/2026:08:51:09.989] fe_http be_nginx/nginx1 0/0/1/0/1 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS /slow HTTP/1.1"
+
+<134>Sep  5 08:51:10 haproxy[8]: 192.168.148.3:35598 [05/Sep/2026:08:51:10.016] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:51:10 haproxy[8]: 192.168.148.3:35610 [05/Sep/2026:08:51:10.038] fe_http be_nginx/nginx1 0/0/1/4/5 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:10 haproxy[8]: 192.168.148.3:35620 [05/Sep/2026:08:51:10.064] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "DELETE /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:10 haproxy[8]: 192.168.148.3:35636 [05/Sep/2026:08:51:10.088] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 08:51:10 haproxy[8]: 192.168.148.3:35652 [05/Sep/2026:08:51:10.109] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /upload HTTP/1.1"
+
+<134>Sep  5 08:51:13 haproxy[8]: 192.168.148.3:35668 [05/Sep/2026:08:51:13.123] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "DELETE /missing HTTP/1.1"
+
+<134>Sep  5 08:51:13 haproxy[8]: 192.168.148.3:35676 [05/Sep/2026:08:51:13.131] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:13 haproxy[8]: 192.168.148.3:35680 [05/Sep/2026:08:51:13.138] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:51:13 haproxy[8]: 192.168.148.3:35694 [05/Sep/2026:08:51:13.146] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32770 [05/Sep/2026:08:51:16.162] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "PUT /new HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32776 [05/Sep/2026:08:51:16.172] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32780 [05/Sep/2026:08:51:16.180] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32790 [05/Sep/2026:08:51:16.189] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32800 [05/Sep/2026:08:51:16.196] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "OPTIONS /new HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32802 [05/Sep/2026:08:51:16.206] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32812 [05/Sep/2026:08:51:16.213] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32826 [05/Sep/2026:08:51:16.222] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32842 [05/Sep/2026:08:51:16.230] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32846 [05/Sep/2026:08:51:16.241] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32862 [05/Sep/2026:08:51:16.249] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32876 [05/Sep/2026:08:51:16.256] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32890 [05/Sep/2026:08:51:16.263] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:16 haproxy[8]: 192.168.148.3:32904 [05/Sep/2026:08:51:16.273] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 08:51:19 haproxy[8]: 192.168.148.3:32908 [05/Sep/2026:08:51:19.287] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 08:51:22 haproxy[8]: 192.168.148.3:32912 [05/Sep/2026:08:51:22.305] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:22 haproxy[8]: 192.168.148.3:32928 [05/Sep/2026:08:51:22.313] fe_http be_nginx/nginx1 0/0/0/3/3 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:22 haproxy[8]: 192.168.148.3:32938 [05/Sep/2026:08:51:22.325] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:51:22 haproxy[8]: 192.168.148.3:32940 [05/Sep/2026:08:51:22.335] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:51:22 haproxy[8]: 192.168.148.3:32952 [05/Sep/2026:08:51:22.344] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:51:22 haproxy[8]: 192.168.148.3:32968 [05/Sep/2026:08:51:22.353] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 08:51:22 haproxy[8]: 192.168.148.3:32982 [05/Sep/2026:08:51:22.361] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /missing HTTP/1.1"
+
+<134>Sep  5 08:51:25 haproxy[8]: 192.168.148.3:32990 [05/Sep/2026:08:51:25.377] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 08:51:25 haproxy[8]: 192.168.148.3:32992 [05/Sep/2026:08:51:25.384] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:25 haproxy[8]: 192.168.148.3:33004 [05/Sep/2026:08:51:25.391] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE /slow HTTP/1.1"
+
+<134>Sep  5 08:51:25 haproxy[8]: 192.168.148.3:33006 [05/Sep/2026:08:51:25.397] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 08:51:25 haproxy[8]: 192.168.148.3:33008 [05/Sep/2026:08:51:25.404] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:51:25 haproxy[8]: 192.168.148.3:33012 [05/Sep/2026:08:51:25.415] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:51:25 haproxy[8]: 192.168.148.3:33028 [05/Sep/2026:08:51:25.423] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:25 haproxy[8]: 192.168.148.3:33036 [05/Sep/2026:08:51:25.429] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38294 [05/Sep/2026:08:51:28.444] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT /slow HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38310 [05/Sep/2026:08:51:28.451] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38314 [05/Sep/2026:08:51:28.458] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38318 [05/Sep/2026:08:51:28.464] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38324 [05/Sep/2026:08:51:28.471] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS /slow HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38328 [05/Sep/2026:08:51:28.477] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38336 [05/Sep/2026:08:51:28.484] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38340 [05/Sep/2026:08:51:28.490] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38344 [05/Sep/2026:08:51:28.496] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38358 [05/Sep/2026:08:51:28.503] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:51:28 haproxy[8]: 192.168.148.3:38368 [05/Sep/2026:08:51:28.510] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:31 haproxy[8]: 192.168.148.3:38376 [05/Sep/2026:08:51:31.528] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /missing HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38392 [05/Sep/2026:08:51:34.550] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38408 [05/Sep/2026:08:51:34.562] fe_http be_nginx/nginx2 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38418 [05/Sep/2026:08:51:34.575] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38426 [05/Sep/2026:08:51:34.588] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38434 [05/Sep/2026:08:51:34.600] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38450 [05/Sep/2026:08:51:34.610] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38456 [05/Sep/2026:08:51:34.621] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38470 [05/Sep/2026:08:51:34.629] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38486 [05/Sep/2026:08:51:34.640] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38492 [05/Sep/2026:08:51:34.650] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38500 [05/Sep/2026:08:51:34.663] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38512 [05/Sep/2026:08:51:34.673] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38528 [05/Sep/2026:08:51:34.683] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38530 [05/Sep/2026:08:51:34.694] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38540 [05/Sep/2026:08:51:34.705] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38548 [05/Sep/2026:08:51:34.714] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "DELETE /old HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38562 [05/Sep/2026:08:51:34.726] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38564 [05/Sep/2026:08:51:34.740] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38578 [05/Sep/2026:08:51:34.753] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:34 haproxy[8]: 192.168.148.3:38592 [05/Sep/2026:08:51:34.764] fe_http be_nginx/nginx2 0/0/0/0/0 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /new HTTP/1.1"
+
+<134>Sep  5 08:51:37 haproxy[8]: 192.168.148.3:40100 [05/Sep/2026:08:51:37.788] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:51:37 haproxy[8]: 192.168.148.3:40110 [05/Sep/2026:08:51:37.799] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /admin HTTP/1.1"
+
+<134>Sep  5 08:51:37 haproxy[8]: 192.168.148.3:40124 [05/Sep/2026:08:51:37.810] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /upload HTTP/1.1"
+
+<134>Sep  5 08:51:40 haproxy[8]: 192.168.148.3:40126 [05/Sep/2026:08:51:40.931] fe_http be_nginx/nginx2 0/0/2/0/2 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40140 [05/Sep/2026:08:51:41.010] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40142 [05/Sep/2026:08:51:41.046] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40158 [05/Sep/2026:08:51:41.078] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40172 [05/Sep/2026:08:51:41.103] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40186 [05/Sep/2026:08:51:41.150] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE / HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40190 [05/Sep/2026:08:51:41.169] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40204 [05/Sep/2026:08:51:41.186] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /admin HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40206 [05/Sep/2026:08:51:41.212] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40226 [05/Sep/2026:08:51:41.232] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40230 [05/Sep/2026:08:51:41.309] fe_http be_nginx/nginx2 0/0/2/1/3 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40238 [05/Sep/2026:08:51:41.637] fe_http be_nginx/nginx1 0/0/2/0/2 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:41 haproxy[8]: 192.168.148.3:40256 [05/Sep/2026:08:51:41.688] fe_http be_nginx/nginx2 0/0/1/0/1 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40264 [05/Sep/2026:08:51:44.720] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40270 [05/Sep/2026:08:51:44.741] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40282 [05/Sep/2026:08:51:44.762] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40298 [05/Sep/2026:08:51:44.782] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40302 [05/Sep/2026:08:51:44.800] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40316 [05/Sep/2026:08:51:44.820] fe_http be_nginx/nginx2 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40332 [05/Sep/2026:08:51:44.839] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40336 [05/Sep/2026:08:51:44.863] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40350 [05/Sep/2026:08:51:44.883] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40352 [05/Sep/2026:08:51:44.899] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40358 [05/Sep/2026:08:51:44.918] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40364 [05/Sep/2026:08:51:44.934] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40366 [05/Sep/2026:08:51:44.949] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40374 [05/Sep/2026:08:51:44.970] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 08:51:44 haproxy[8]: 192.168.148.3:40386 [05/Sep/2026:08:51:44.986] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 08:51:45 haproxy[8]: 192.168.148.3:40394 [05/Sep/2026:08:51:45.001] fe_http be_nginx/nginx2 0/0/0/0/0 301 164 - - ---- 1/1/0/0/0 0/0 "HEAD /old HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34014 [05/Sep/2026:08:51:48.018] fe_http be_nginx/nginx1 0/0/0/2/2 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34022 [05/Sep/2026:08:51:48.031] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34024 [05/Sep/2026:08:51:48.046] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34040 [05/Sep/2026:08:51:48.054] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34042 [05/Sep/2026:08:51:48.064] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34044 [05/Sep/2026:08:51:48.075] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34060 [05/Sep/2026:08:51:48.087] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34068 [05/Sep/2026:08:51:48.099] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34084 [05/Sep/2026:08:51:48.111] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34098 [05/Sep/2026:08:51:48.125] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34112 [05/Sep/2026:08:51:48.138] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST /slow HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34116 [05/Sep/2026:08:51:48.153] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 08:51:48 haproxy[8]: 192.168.148.3:34132 [05/Sep/2026:08:51:48.165] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 08:51:51 haproxy[8]: 192.168.148.3:34142 [05/Sep/2026:08:51:51.214] fe_http be_nginx/nginx2 0/0/1/0/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 08:51:51 haproxy[8]: 192.168.148.3:34144 [05/Sep/2026:08:51:51.226] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 08:51:51 haproxy[8]: 192.168.148.3:34154 [05/Sep/2026:08:51:51.242] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 08:51:51 haproxy[8]: 192.168.148.3:34170 [05/Sep/2026:08:51:51.264] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 08:51:51 haproxy[8]: 192.168.148.3:34178 [05/Sep/2026:08:51:51.278] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 08:51:51 haproxy[8]: 192.168.148.3:34184 [05/Sep/2026:08:51:51.291] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 08:51:51 haproxy[8]: 192.168.148.3:34192 [05/Sep/2026:08:51:51.312] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60742 [05/Sep/2026:09:31:37.531] fe_http be_nginx/nginx1 0/0/1/6/7 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60750 [05/Sep/2026:09:31:37.548] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60758 [05/Sep/2026:09:31:37.559] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60774 [05/Sep/2026:09:31:37.567] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60788 [05/Sep/2026:09:31:37.575] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60802 [05/Sep/2026:09:31:37.583] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60810 [05/Sep/2026:09:31:37.590] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST /slow HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60820 [05/Sep/2026:09:31:37.598] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60826 [05/Sep/2026:09:31:37.606] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60828 [05/Sep/2026:09:31:37.613] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60832 [05/Sep/2026:09:31:37.620] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60846 [05/Sep/2026:09:31:37.626] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60862 [05/Sep/2026:09:31:37.633] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:40 haproxy[8]: 192.168.148.3:60868 [05/Sep/2026:09:31:40.650] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:31:40 haproxy[8]: 192.168.148.3:60876 [05/Sep/2026:09:31:40.659] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 09:31:40 haproxy[8]: 192.168.148.3:60882 [05/Sep/2026:09:31:40.668] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"
+
+<134>Sep  5 09:31:40 haproxy[8]: 192.168.148.3:60898 [05/Sep/2026:09:31:40.676] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:31:43 haproxy[8]: 192.168.148.3:42970 [05/Sep/2026:09:31:43.695] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:31:43 haproxy[8]: 192.168.148.3:42974 [05/Sep/2026:09:31:43.702] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:43 haproxy[8]: 192.168.148.3:42980 [05/Sep/2026:09:31:43.710] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:31:43 haproxy[8]: 192.168.148.3:42996 [05/Sep/2026:09:31:43.715] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:31:43 haproxy[8]: 192.168.148.3:43000 [05/Sep/2026:09:31:43.722] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43008 [05/Sep/2026:09:31:46.730] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43022 [05/Sep/2026:09:31:46.736] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43038 [05/Sep/2026:09:31:46.741] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43040 [05/Sep/2026:09:31:46.747] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43050 [05/Sep/2026:09:31:46.752] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43052 [05/Sep/2026:09:31:46.758] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "OPTIONS /old HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43062 [05/Sep/2026:09:31:46.764] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43070 [05/Sep/2026:09:31:46.771] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43072 [05/Sep/2026:09:31:46.777] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43078 [05/Sep/2026:09:31:46.783] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "PUT /upload HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43086 [05/Sep/2026:09:31:46.790] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43102 [05/Sep/2026:09:31:46.796] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43106 [05/Sep/2026:09:31:46.802] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43114 [05/Sep/2026:09:31:46.808] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43118 [05/Sep/2026:09:31:46.814] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43128 [05/Sep/2026:09:31:46.820] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43140 [05/Sep/2026:09:31:46.825] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:31:46 haproxy[8]: 192.168.148.3:43146 [05/Sep/2026:09:31:46.831] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /upload HTTP/1.1"
+
+<134>Sep  5 09:31:49 haproxy[8]: 192.168.148.3:43152 [05/Sep/2026:09:31:49.843] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 09:31:49 haproxy[8]: 192.168.148.3:43158 [05/Sep/2026:09:31:49.848] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /upload HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49378 [05/Sep/2026:09:31:52.869] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49384 [05/Sep/2026:09:31:52.877] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE /slow HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49388 [05/Sep/2026:09:31:52.888] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49392 [05/Sep/2026:09:31:52.897] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49394 [05/Sep/2026:09:31:52.909] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49408 [05/Sep/2026:09:31:52.919] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49410 [05/Sep/2026:09:31:52.929] fe_http be_nginx/nginx1 0/0/1/0/1 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49422 [05/Sep/2026:09:31:52.946] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49438 [05/Sep/2026:09:31:52.956] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "OPTIONS /old HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49448 [05/Sep/2026:09:31:52.965] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49450 [05/Sep/2026:09:31:52.974] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:31:52 haproxy[8]: 192.168.148.3:49460 [05/Sep/2026:09:31:52.984] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 09:31:55 haproxy[8]: 192.168.148.3:49474 [05/Sep/2026:09:31:55.996] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:31:56 haproxy[8]: 192.168.148.3:49486 [05/Sep/2026:09:31:56.009] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:56 haproxy[8]: 192.168.148.3:49488 [05/Sep/2026:09:31:56.023] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:31:59 haproxy[8]: 192.168.148.3:49500 [05/Sep/2026:09:31:59.035] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:31:59 haproxy[8]: 192.168.148.3:49504 [05/Sep/2026:09:31:59.042] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36474 [05/Sep/2026:09:32:02.056] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "DELETE /new HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36476 [05/Sep/2026:09:32:02.062] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36486 [05/Sep/2026:09:32:02.069] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36490 [05/Sep/2026:09:32:02.075] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36492 [05/Sep/2026:09:32:02.082] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT /slow HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36500 [05/Sep/2026:09:32:02.088] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36502 [05/Sep/2026:09:32:02.094] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36510 [05/Sep/2026:09:32:02.100] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36518 [05/Sep/2026:09:32:02.106] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36530 [05/Sep/2026:09:32:02.112] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36546 [05/Sep/2026:09:32:02.119] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:02 haproxy[8]: 192.168.148.3:36554 [05/Sep/2026:09:32:02.124] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36568 [05/Sep/2026:09:32:05.139] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "PUT /upload HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36580 [05/Sep/2026:09:32:05.144] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST /slow HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36596 [05/Sep/2026:09:32:05.149] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36600 [05/Sep/2026:09:32:05.155] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36604 [05/Sep/2026:09:32:05.160] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36616 [05/Sep/2026:09:32:05.165] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE /slow HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36624 [05/Sep/2026:09:32:05.171] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36632 [05/Sep/2026:09:32:05.177] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36644 [05/Sep/2026:09:32:05.183] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:32:05 haproxy[8]: 192.168.148.3:36660 [05/Sep/2026:09:32:05.188] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36666 [05/Sep/2026:09:32:08.206] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36674 [05/Sep/2026:09:32:08.212] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36680 [05/Sep/2026:09:32:08.217] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT /slow HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36694 [05/Sep/2026:09:32:08.224] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36696 [05/Sep/2026:09:32:08.229] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36700 [05/Sep/2026:09:32:08.234] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36712 [05/Sep/2026:09:32:08.242] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36716 [05/Sep/2026:09:32:08.247] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36724 [05/Sep/2026:09:32:08.253] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36740 [05/Sep/2026:09:32:08.259] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36742 [05/Sep/2026:09:32:08.264] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:08 haproxy[8]: 192.168.148.3:36746 [05/Sep/2026:09:32:08.271] fe_http be_nginx/nginx1 0/0/0/0/0 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:11 haproxy[8]: 192.168.148.3:52136 [05/Sep/2026:09:32:11.290] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:11 haproxy[8]: 192.168.148.3:52150 [05/Sep/2026:09:32:11.299] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 09:32:11 haproxy[8]: 192.168.148.3:52166 [05/Sep/2026:09:32:11.307] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 09:32:14 haproxy[8]: 192.168.148.3:52182 [05/Sep/2026:09:32:14.328] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:14 haproxy[8]: 192.168.148.3:52186 [05/Sep/2026:09:32:14.335] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:14 haproxy[8]: 192.168.148.3:52198 [05/Sep/2026:09:32:14.342] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:32:14 haproxy[8]: 192.168.148.3:52200 [05/Sep/2026:09:32:14.349] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:14 haproxy[8]: 192.168.148.3:52208 [05/Sep/2026:09:32:14.355] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:32:14 haproxy[8]: 192.168.148.3:52222 [05/Sep/2026:09:32:14.361] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:14 haproxy[8]: 192.168.148.3:52234 [05/Sep/2026:09:32:14.367] fe_http be_nginx/nginx1 0/0/0/0/0 301 164 - - ---- 1/1/0/0/0 0/0 "HEAD /old HTTP/1.1"
+
+<134>Sep  5 09:32:17 haproxy[8]: 192.168.148.3:52246 [05/Sep/2026:09:32:17.381] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:32:17 haproxy[8]: 192.168.148.3:52254 [05/Sep/2026:09:32:17.387] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:17 haproxy[8]: 192.168.148.3:52258 [05/Sep/2026:09:32:17.394] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:32:17 haproxy[8]: 192.168.148.3:52264 [05/Sep/2026:09:32:17.399] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:32:17 haproxy[8]: 192.168.148.3:52268 [05/Sep/2026:09:32:17.405] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:32:17 haproxy[8]: 192.168.148.3:52284 [05/Sep/2026:09:32:17.411] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:17 haproxy[8]: 192.168.148.3:52286 [05/Sep/2026:09:32:17.417] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:32:20 haproxy[8]: 192.168.148.3:52300 [05/Sep/2026:09:32:20.440] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:20 haproxy[8]: 192.168.148.3:52312 [05/Sep/2026:09:32:20.452] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:20 haproxy[8]: 192.168.148.3:52328 [05/Sep/2026:09:32:20.461] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 09:32:20 haproxy[8]: 192.168.148.3:52342 [05/Sep/2026:09:32:20.470] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:20 haproxy[8]: 192.168.148.3:52346 [05/Sep/2026:09:32:20.480] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /admin HTTP/1.1"
+
+<134>Sep  5 09:32:20 haproxy[8]: 192.168.148.3:52354 [05/Sep/2026:09:32:20.492] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 09:32:23 haproxy[8]: 192.168.148.3:47386 [05/Sep/2026:09:32:23.504] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 09:32:23 haproxy[8]: 192.168.148.3:47400 [05/Sep/2026:09:32:23.512] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:26 haproxy[8]: 192.168.148.3:47404 [05/Sep/2026:09:32:26.534] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "OPTIONS /old HTTP/1.1"
+
+<134>Sep  5 09:32:26 haproxy[8]: 192.168.148.3:47414 [05/Sep/2026:09:32:26.543] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:26 haproxy[8]: 192.168.148.3:47428 [05/Sep/2026:09:32:26.558] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "DELETE /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:26 haproxy[8]: 192.168.148.3:47436 [05/Sep/2026:09:32:26.570] fe_http be_nginx/nginx2 0/0/3/0/3 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47442 [05/Sep/2026:09:32:29.588] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47448 [05/Sep/2026:09:32:29.593] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47462 [05/Sep/2026:09:32:29.599] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47478 [05/Sep/2026:09:32:29.605] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47494 [05/Sep/2026:09:32:29.612] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47504 [05/Sep/2026:09:32:29.617] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47510 [05/Sep/2026:09:32:29.623] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47522 [05/Sep/2026:09:32:29.628] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47524 [05/Sep/2026:09:32:29.633] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47538 [05/Sep/2026:09:32:29.639] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47540 [05/Sep/2026:09:32:29.644] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47552 [05/Sep/2026:09:32:29.649] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47564 [05/Sep/2026:09:32:29.656] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47576 [05/Sep/2026:09:32:29.665] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47592 [05/Sep/2026:09:32:29.674] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47596 [05/Sep/2026:09:32:29.681] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47610 [05/Sep/2026:09:32:29.686] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 09:32:29 haproxy[8]: 192.168.148.3:47626 [05/Sep/2026:09:32:29.692] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44030 [05/Sep/2026:09:32:32.702] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44042 [05/Sep/2026:09:32:32.709] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44050 [05/Sep/2026:09:32:32.716] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /admin HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44052 [05/Sep/2026:09:32:32.727] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44064 [05/Sep/2026:09:32:32.735] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44070 [05/Sep/2026:09:32:32.746] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44082 [05/Sep/2026:09:32:32.754] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44084 [05/Sep/2026:09:32:32.765] fe_http be_nginx/nginx2 0/0/0/4/4 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44096 [05/Sep/2026:09:32:32.781] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44110 [05/Sep/2026:09:32:32.793] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44124 [05/Sep/2026:09:32:32.803] fe_http be_nginx/nginx1 0/0/0/1/1 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44126 [05/Sep/2026:09:32:32.819] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44128 [05/Sep/2026:09:32:32.835] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44140 [05/Sep/2026:09:32:32.858] fe_http be_nginx/nginx2 0/0/0/2/2 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44146 [05/Sep/2026:09:32:32.884] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44148 [05/Sep/2026:09:32:32.901] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44152 [05/Sep/2026:09:32:32.914] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44168 [05/Sep/2026:09:32:32.932] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44174 [05/Sep/2026:09:32:32.943] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "OPTIONS /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44178 [05/Sep/2026:09:32:32.952] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44190 [05/Sep/2026:09:32:32.964] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44194 [05/Sep/2026:09:32:32.974] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT /slow HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44198 [05/Sep/2026:09:32:32.983] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 09:32:32 haproxy[8]: 192.168.148.3:44200 [05/Sep/2026:09:32:32.993] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "PUT /new HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44214 [05/Sep/2026:09:32:33.002] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44228 [05/Sep/2026:09:32:33.010] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44240 [05/Sep/2026:09:32:33.019] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44248 [05/Sep/2026:09:32:33.033] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44260 [05/Sep/2026:09:32:33.044] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44276 [05/Sep/2026:09:32:33.052] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44290 [05/Sep/2026:09:32:33.061] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44292 [05/Sep/2026:09:32:33.070] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44300 [05/Sep/2026:09:32:33.079] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44314 [05/Sep/2026:09:32:33.087] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44322 [05/Sep/2026:09:32:33.109] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:32:33 haproxy[8]: 192.168.148.3:44328 [05/Sep/2026:09:32:33.135] fe_http be_nginx/nginx2 0/0/0/1/1 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44334 [05/Sep/2026:09:32:36.158] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44336 [05/Sep/2026:09:32:36.165] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44346 [05/Sep/2026:09:32:36.171] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44348 [05/Sep/2026:09:32:36.177] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44358 [05/Sep/2026:09:32:36.182] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44372 [05/Sep/2026:09:32:36.188] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44374 [05/Sep/2026:09:32:36.194] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44384 [05/Sep/2026:09:32:36.199] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44392 [05/Sep/2026:09:32:36.205] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "PUT /upload HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44406 [05/Sep/2026:09:32:36.211] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44410 [05/Sep/2026:09:32:36.217] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44418 [05/Sep/2026:09:32:36.222] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44430 [05/Sep/2026:09:32:36.228] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44444 [05/Sep/2026:09:32:36.233] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44452 [05/Sep/2026:09:32:36.240] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44462 [05/Sep/2026:09:32:36.245] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44468 [05/Sep/2026:09:32:36.254] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44474 [05/Sep/2026:09:32:36.265] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44490 [05/Sep/2026:09:32:36.273] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "POST /new HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44502 [05/Sep/2026:09:32:36.281] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44510 [05/Sep/2026:09:32:36.291] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:32:36 haproxy[8]: 192.168.148.3:44524 [05/Sep/2026:09:32:36.300] fe_http be_nginx/nginx2 0/0/0/0/0 301 164 - - ---- 1/1/0/0/0 0/0 "HEAD /old HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44528 [05/Sep/2026:09:32:39.314] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44534 [05/Sep/2026:09:32:39.323] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44542 [05/Sep/2026:09:32:39.336] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44554 [05/Sep/2026:09:32:39.344] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44568 [05/Sep/2026:09:32:39.349] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44572 [05/Sep/2026:09:32:39.355] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44576 [05/Sep/2026:09:32:39.360] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44580 [05/Sep/2026:09:32:39.366] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44596 [05/Sep/2026:09:32:39.372] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44604 [05/Sep/2026:09:32:39.378] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44614 [05/Sep/2026:09:32:39.384] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44628 [05/Sep/2026:09:32:39.389] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "OPTIONS /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44640 [05/Sep/2026:09:32:39.395] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44654 [05/Sep/2026:09:32:39.399] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44656 [05/Sep/2026:09:32:39.405] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44666 [05/Sep/2026:09:32:39.411] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44678 [05/Sep/2026:09:32:39.417] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44684 [05/Sep/2026:09:32:39.423] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44690 [05/Sep/2026:09:32:39.429] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44702 [05/Sep/2026:09:32:39.435] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44716 [05/Sep/2026:09:32:39.441] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44732 [05/Sep/2026:09:32:39.446] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:32:39 haproxy[8]: 192.168.148.3:44734 [05/Sep/2026:09:32:39.452] fe_http be_nginx/nginx1 0/0/0/0/0 500 142 - - ---- 1/1/0/0/0 0/0 "HEAD /boom HTTP/1.1"
+
+<134>Sep  5 09:32:42 haproxy[8]: 192.168.148.3:33458 [05/Sep/2026:09:32:42.478] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33474 [05/Sep/2026:09:32:45.518] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "PUT /upload HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33478 [05/Sep/2026:09:32:45.531] fe_http be_nginx/nginx2 0/0/0/1/1 200 144 - - ---- 1/1/0/0/0 0/0 "POST /slow HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33480 [05/Sep/2026:09:32:45.551] fe_http be_nginx/nginx1 0/0/0/1/1 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33488 [05/Sep/2026:09:32:45.568] fe_http be_nginx/nginx2 0/0/0/1/1 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33494 [05/Sep/2026:09:32:45.587] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33498 [05/Sep/2026:09:32:45.604] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33500 [05/Sep/2026:09:32:45.617] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33514 [05/Sep/2026:09:32:45.629] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33528 [05/Sep/2026:09:32:45.642] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33532 [05/Sep/2026:09:32:45.655] fe_http be_nginx/nginx2 0/0/1/0/1 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33536 [05/Sep/2026:09:32:45.675] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33552 [05/Sep/2026:09:32:45.684] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33560 [05/Sep/2026:09:32:45.694] fe_http be_nginx/nginx1 0/0/1/1/2 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33574 [05/Sep/2026:09:32:45.707] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:32:45 haproxy[8]: 192.168.148.3:33584 [05/Sep/2026:09:32:45.717] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /missing HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33590 [05/Sep/2026:09:32:48.744] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33596 [05/Sep/2026:09:32:48.759] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33602 [05/Sep/2026:09:32:48.773] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33616 [05/Sep/2026:09:32:48.785] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33630 [05/Sep/2026:09:32:48.797] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33644 [05/Sep/2026:09:32:48.808] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33660 [05/Sep/2026:09:32:48.819] fe_http be_nginx/nginx2 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "POST /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33662 [05/Sep/2026:09:32:48.829] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33678 [05/Sep/2026:09:32:48.837] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33682 [05/Sep/2026:09:32:48.847] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33688 [05/Sep/2026:09:32:48.860] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33704 [05/Sep/2026:09:32:48.870] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT /slow HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33706 [05/Sep/2026:09:32:48.884] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33718 [05/Sep/2026:09:32:48.893] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33724 [05/Sep/2026:09:32:48.901] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33726 [05/Sep/2026:09:32:48.909] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33734 [05/Sep/2026:09:32:48.917] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33736 [05/Sep/2026:09:32:48.929] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33744 [05/Sep/2026:09:32:48.937] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33746 [05/Sep/2026:09:32:48.948] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33752 [05/Sep/2026:09:32:48.959] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33754 [05/Sep/2026:09:32:48.971] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33766 [05/Sep/2026:09:32:48.982] fe_http be_nginx/nginx2 0/0/1/1/2 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS /slow HTTP/1.1"
+
+<134>Sep  5 09:32:48 haproxy[8]: 192.168.148.3:33770 [05/Sep/2026:09:32:48.997] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:49 haproxy[8]: 192.168.148.3:33772 [05/Sep/2026:09:32:49.009] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:49 haproxy[8]: 192.168.148.3:33780 [05/Sep/2026:09:32:49.023] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 09:32:49 haproxy[8]: 192.168.148.3:33796 [05/Sep/2026:09:32:49.039] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:49 haproxy[8]: 192.168.148.3:33806 [05/Sep/2026:09:32:49.049] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE /slow HTTP/1.1"
+
+<134>Sep  5 09:32:49 haproxy[8]: 192.168.148.3:33810 [05/Sep/2026:09:32:49.058] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "OPTIONS /missing HTTP/1.1"
+
+<134>Sep  5 09:32:49 haproxy[8]: 192.168.148.3:33814 [05/Sep/2026:09:32:49.065] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "PUT /new HTTP/1.1"
+
+<134>Sep  5 09:32:49 haproxy[8]: 192.168.148.3:33822 [05/Sep/2026:09:32:49.079] fe_http be_nginx/nginx2 0/0/0/1/1 500 142 - - ---- 1/1/0/0/0 0/0 "HEAD /boom HTTP/1.1"
+
+<134>Sep  5 09:32:52 haproxy[8]: 192.168.148.3:42972 [05/Sep/2026:09:32:52.096] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /admin HTTP/1.1"
+
+<134>Sep  5 09:32:52 haproxy[8]: 192.168.148.3:42988 [05/Sep/2026:09:32:52.102] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 09:32:52 haproxy[8]: 192.168.148.3:42990 [05/Sep/2026:09:32:52.113] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:32:52 haproxy[8]: 192.168.148.3:42996 [05/Sep/2026:09:32:52.126] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:52 haproxy[8]: 192.168.148.3:43006 [05/Sep/2026:09:32:52.137] fe_http be_nginx/nginx1 0/0/1/0/1 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:32:52 haproxy[8]: 192.168.148.3:43010 [05/Sep/2026:09:32:52.151] fe_http be_nginx/nginx2 0/0/0/0/0 500 142 - - ---- 1/1/0/0/0 0/0 "HEAD /boom HTTP/1.1"
+
+<134>Sep  5 09:32:55 haproxy[8]: 192.168.148.3:43020 [05/Sep/2026:09:32:55.173] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:32:55 haproxy[8]: 192.168.148.3:43034 [05/Sep/2026:09:32:55.181] fe_http be_nginx/nginx2 0/0/0/1/1 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:32:55 haproxy[8]: 192.168.148.3:43036 [05/Sep/2026:09:32:55.191] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:55 haproxy[8]: 192.168.148.3:43048 [05/Sep/2026:09:32:55.200] fe_http be_nginx/nginx2 0/0/0/0/0 301 164 - - ---- 1/1/0/0/0 0/0 "HEAD /old HTTP/1.1"
+
+<134>Sep  5 09:32:58 haproxy[8]: 192.168.148.3:43052 [05/Sep/2026:09:32:58.226] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "OPTIONS /new HTTP/1.1"
+
+<134>Sep  5 09:32:58 haproxy[8]: 192.168.148.3:43062 [05/Sep/2026:09:32:58.246] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:32:58 haproxy[8]: 192.168.148.3:43078 [05/Sep/2026:09:32:58.270] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:32:58 haproxy[8]: 192.168.148.3:43084 [05/Sep/2026:09:32:58.295] fe_http be_nginx/nginx2 0/0/1/1/2 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60634 [05/Sep/2026:09:33:01.314] fe_http be_nginx/nginx1 0/0/0/1/1 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60648 [05/Sep/2026:09:33:01.325] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60660 [05/Sep/2026:09:33:01.337] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "DELETE /missing HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60670 [05/Sep/2026:09:33:01.345] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60674 [05/Sep/2026:09:33:01.357] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60678 [05/Sep/2026:09:33:01.367] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60690 [05/Sep/2026:09:33:01.377] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60692 [05/Sep/2026:09:33:01.386] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60700 [05/Sep/2026:09:33:01.396] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60706 [05/Sep/2026:09:33:01.406] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 09:33:01 haproxy[8]: 192.168.148.3:60722 [05/Sep/2026:09:33:01.416] fe_http be_nginx/nginx1 0/0/0/1/1 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:04 haproxy[8]: 192.168.148.3:60728 [05/Sep/2026:09:33:04.441] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:33:04 haproxy[8]: 192.168.148.3:60734 [05/Sep/2026:09:33:04.452] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:33:04 haproxy[8]: 192.168.148.3:60750 [05/Sep/2026:09:33:04.465] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:33:04 haproxy[8]: 192.168.148.3:60758 [05/Sep/2026:09:33:04.482] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:04 haproxy[8]: 192.168.148.3:60766 [05/Sep/2026:09:33:04.491] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:33:04 haproxy[8]: 192.168.148.3:60776 [05/Sep/2026:09:33:04.502] fe_http be_nginx/nginx1 0/0/0/1/1 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:04 haproxy[8]: 192.168.148.3:60782 [05/Sep/2026:09:33:04.515] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:33:07 haproxy[8]: 192.168.148.3:60798 [05/Sep/2026:09:33:07.553] fe_http be_nginx/nginx1 0/0/3/0/3 200 145 - - ---- 1/1/0/0/0 0/0 "OPTIONS /upload HTTP/1.1"
+
+<134>Sep  5 09:33:07 haproxy[8]: 192.168.148.3:60802 [05/Sep/2026:09:33:07.575] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 09:33:07 haproxy[8]: 192.168.148.3:60804 [05/Sep/2026:09:33:07.593] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:33:07 haproxy[8]: 192.168.148.3:60806 [05/Sep/2026:09:33:07.606] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:33:07 haproxy[8]: 192.168.148.3:60808 [05/Sep/2026:09:33:07.622] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:07 haproxy[8]: 192.168.148.3:60824 [05/Sep/2026:09:33:07.641] fe_http be_nginx/nginx2 0/0/0/2/2 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:33:07 haproxy[8]: 192.168.148.3:60836 [05/Sep/2026:09:33:07.658] fe_http be_nginx/nginx1 0/0/0/2/2 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /new HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60850 [05/Sep/2026:09:33:10.687] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60854 [05/Sep/2026:09:33:10.700] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60868 [05/Sep/2026:09:33:10.720] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60876 [05/Sep/2026:09:33:10.738] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60880 [05/Sep/2026:09:33:10.762] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60896 [05/Sep/2026:09:33:10.775] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60908 [05/Sep/2026:09:33:10.790] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60918 [05/Sep/2026:09:33:10.816] fe_http be_nginx/nginx1 0/0/1/0/1 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60926 [05/Sep/2026:09:33:10.830] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60934 [05/Sep/2026:09:33:10.845] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60950 [05/Sep/2026:09:33:10.871] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60962 [05/Sep/2026:09:33:10.888] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60970 [05/Sep/2026:09:33:10.903] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "PUT /upload HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60974 [05/Sep/2026:09:33:10.915] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:60986 [05/Sep/2026:09:33:10.934] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:32770 [05/Sep/2026:09:33:10.948] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:32774 [05/Sep/2026:09:33:10.968] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:32790 [05/Sep/2026:09:33:10.982] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:10 haproxy[8]: 192.168.148.3:43312 [05/Sep/2026:09:33:10.995] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43326 [05/Sep/2026:09:33:11.008] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43328 [05/Sep/2026:09:33:11.023] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43330 [05/Sep/2026:09:33:11.037] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43334 [05/Sep/2026:09:33:11.050] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43350 [05/Sep/2026:09:33:11.067] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43356 [05/Sep/2026:09:33:11.113] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43362 [05/Sep/2026:09:33:11.179] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43376 [05/Sep/2026:09:33:11.226] fe_http be_nginx/nginx2 0/0/0/1/1 200 150 - - ---- 1/1/0/0/0 0/0 "DELETE /new HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43386 [05/Sep/2026:09:33:11.282] fe_http be_nginx/nginx1 0/0/1/0/1 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43402 [05/Sep/2026:09:33:11.383] fe_http be_nginx/nginx2 0/0/0/1/1 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43406 [05/Sep/2026:09:33:11.494] fe_http be_nginx/nginx1 0/0/0/2/2 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43416 [05/Sep/2026:09:33:11.567] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:11 haproxy[8]: 192.168.148.3:43418 [05/Sep/2026:09:33:11.610] fe_http be_nginx/nginx1 0/0/0/0/0 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /new HTTP/1.1"
+
+<134>Sep  5 09:33:14 haproxy[8]: 192.168.148.3:43420 [05/Sep/2026:09:33:14.669] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 09:33:14 haproxy[8]: 192.168.148.3:43428 [05/Sep/2026:09:33:14.737] fe_http be_nginx/nginx1 0/0/0/2/2 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:33:14 haproxy[8]: 192.168.148.3:43444 [05/Sep/2026:09:33:14.794] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:33:14 haproxy[8]: 192.168.148.3:43460 [05/Sep/2026:09:33:14.834] fe_http be_nginx/nginx1 0/0/0/1/1 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /api/ HTTP/1.1"
+
+<134>Sep  5 09:33:17 haproxy[8]: 192.168.148.3:43466 [05/Sep/2026:09:33:17.889] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:33:17 haproxy[8]: 192.168.148.3:43468 [05/Sep/2026:09:33:17.927] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:33:20 haproxy[8]: 192.168.148.3:43480 [05/Sep/2026:09:33:20.962] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:33:20 haproxy[8]: 192.168.148.3:57380 [05/Sep/2026:09:33:20.996] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 09:33:24 haproxy[8]: 192.168.148.3:57386 [05/Sep/2026:09:33:24.017] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /missing HTTP/1.1"
+
+<134>Sep  5 09:33:27 haproxy[8]: 192.168.148.3:57402 [05/Sep/2026:09:33:27.035] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:27 haproxy[8]: 192.168.148.3:57416 [05/Sep/2026:09:33:27.045] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:27 haproxy[8]: 192.168.148.3:57422 [05/Sep/2026:09:33:27.055] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:33:27 haproxy[8]: 192.168.148.3:57430 [05/Sep/2026:09:33:27.066] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:33:27 haproxy[8]: 192.168.148.3:57438 [05/Sep/2026:09:33:27.078] fe_http be_nginx/nginx1 0/0/0/1/1 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:33:27 haproxy[8]: 192.168.148.3:57442 [05/Sep/2026:09:33:27.088] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:33:27 haproxy[8]: 192.168.148.3:57448 [05/Sep/2026:09:33:27.094] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 09:33:30 haproxy[8]: 192.168.148.3:57456 [05/Sep/2026:09:33:30.110] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:33:30 haproxy[8]: 192.168.148.3:57470 [05/Sep/2026:09:33:30.117] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 09:33:30 haproxy[8]: 192.168.148.3:57474 [05/Sep/2026:09:33:30.124] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "OPTIONS /new HTTP/1.1"
+
+<134>Sep  5 09:33:30 haproxy[8]: 192.168.148.3:57480 [05/Sep/2026:09:33:30.130] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52344 [05/Sep/2026:09:33:33.145] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52354 [05/Sep/2026:09:33:33.154] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52368 [05/Sep/2026:09:33:33.165] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52376 [05/Sep/2026:09:33:33.174] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52384 [05/Sep/2026:09:33:33.180] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52392 [05/Sep/2026:09:33:33.187] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52400 [05/Sep/2026:09:33:33.193] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52402 [05/Sep/2026:09:33:33.200] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /admin HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52416 [05/Sep/2026:09:33:33.206] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 09:33:33 haproxy[8]: 192.168.148.3:52430 [05/Sep/2026:09:33:33.212] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:33:36 haproxy[8]: 192.168.148.3:52442 [05/Sep/2026:09:33:36.234] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:36 haproxy[8]: 192.168.148.3:52450 [05/Sep/2026:09:33:36.246] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "OPTIONS /new HTTP/1.1"
+
+<134>Sep  5 09:33:36 haproxy[8]: 192.168.148.3:52460 [05/Sep/2026:09:33:36.259] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 09:33:36 haproxy[8]: 192.168.148.3:52472 [05/Sep/2026:09:33:36.269] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "DELETE /missing HTTP/1.1"
+
+<134>Sep  5 09:33:36 haproxy[8]: 192.168.148.3:52476 [05/Sep/2026:09:33:36.280] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:33:36 haproxy[8]: 192.168.148.3:52486 [05/Sep/2026:09:33:36.295] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 09:33:36 haproxy[8]: 192.168.148.3:52490 [05/Sep/2026:09:33:36.303] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 09:33:36 haproxy[8]: 192.168.148.3:52492 [05/Sep/2026:09:33:36.313] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 09:33:39 haproxy[8]: 192.168.148.3:52508 [05/Sep/2026:09:33:39.326] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:33:39 haproxy[8]: 192.168.148.3:52524 [05/Sep/2026:09:33:39.335] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:33:39 haproxy[8]: 192.168.148.3:52536 [05/Sep/2026:09:33:39.342] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "DELETE /slow HTTP/1.1"
+
+<134>Sep  5 09:33:39 haproxy[8]: 192.168.148.3:52552 [05/Sep/2026:09:33:39.350] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:33:39 haproxy[8]: 192.168.148.3:52564 [05/Sep/2026:09:33:39.357] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:33:39 haproxy[8]: 192.168.148.3:52566 [05/Sep/2026:09:33:39.366] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 09:33:39 haproxy[8]: 192.168.148.3:52574 [05/Sep/2026:09:33:39.375] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:33:39 haproxy[8]: 192.168.148.3:52584 [05/Sep/2026:09:33:39.385] fe_http be_nginx/nginx1 0/0/0/0/0 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /new HTTP/1.1"
+
+<134>Sep  5 09:33:42 haproxy[8]: 192.168.148.3:54044 [05/Sep/2026:09:33:42.402] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:33:42 haproxy[8]: 192.168.148.3:54052 [05/Sep/2026:09:33:42.409] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:33:45 haproxy[8]: 192.168.148.3:54062 [05/Sep/2026:09:33:45.425] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 09:33:45 haproxy[8]: 192.168.148.3:54076 [05/Sep/2026:09:33:45.432] fe_http be_nginx/nginx1 0/0/0/0/0 500 142 - - ---- 1/1/0/0/0 0/0 "HEAD /boom HTTP/1.1"
+
+<134>Sep  5 09:33:48 haproxy[8]: 192.168.148.3:54092 [05/Sep/2026:09:33:48.456] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 09:33:48 haproxy[8]: 192.168.148.3:54102 [05/Sep/2026:09:33:48.461] fe_http be_nginx/nginx1 0/0/0/2/2 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50786 [05/Sep/2026:09:33:51.479] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50796 [05/Sep/2026:09:33:51.487] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50812 [05/Sep/2026:09:33:51.493] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "PUT /new HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50818 [05/Sep/2026:09:33:51.500] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50824 [05/Sep/2026:09:33:51.506] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50832 [05/Sep/2026:09:33:51.513] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50848 [05/Sep/2026:09:33:51.519] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50852 [05/Sep/2026:09:33:51.526] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50866 [05/Sep/2026:09:33:51.531] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50872 [05/Sep/2026:09:33:51.538] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:33:51 haproxy[8]: 192.168.148.3:50888 [05/Sep/2026:09:33:51.544] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD / HTTP/1.1"
+
+<134>Sep  5 09:33:54 haproxy[8]: 192.168.148.3:50892 [05/Sep/2026:09:33:54.560] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:33:54 haproxy[8]: 192.168.148.3:50898 [05/Sep/2026:09:33:54.567] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:33:57 haproxy[8]: 192.168.148.3:50906 [05/Sep/2026:09:33:57.586] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:33:57 haproxy[8]: 192.168.148.3:50914 [05/Sep/2026:09:33:57.591] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /upload HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:50922 [05/Sep/2026:09:34:00.603] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "DELETE /upload HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:50930 [05/Sep/2026:09:34:00.609] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:50942 [05/Sep/2026:09:34:00.615] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:50950 [05/Sep/2026:09:34:00.620] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:50966 [05/Sep/2026:09:34:00.626] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:50976 [05/Sep/2026:09:34:00.631] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:50984 [05/Sep/2026:09:34:00.639] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:50998 [05/Sep/2026:09:34:00.645] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:51002 [05/Sep/2026:09:34:00.651] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:51014 [05/Sep/2026:09:34:00.657] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:00 haproxy[8]: 192.168.148.3:51018 [05/Sep/2026:09:34:00.663] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:03 haproxy[8]: 192.168.148.3:45370 [05/Sep/2026:09:34:03.679] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:34:03 haproxy[8]: 192.168.148.3:45384 [05/Sep/2026:09:34:03.686] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 09:34:03 haproxy[8]: 192.168.148.3:45392 [05/Sep/2026:09:34:03.692] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:34:03 haproxy[8]: 192.168.148.3:45402 [05/Sep/2026:09:34:03.697] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "DELETE /new HTTP/1.1"
+
+<134>Sep  5 09:34:03 haproxy[8]: 192.168.148.3:45406 [05/Sep/2026:09:34:03.703] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:03 haproxy[8]: 192.168.148.3:45412 [05/Sep/2026:09:34:03.709] fe_http be_nginx/nginx1 0/0/0/1/1 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45424 [05/Sep/2026:09:34:06.723] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45428 [05/Sep/2026:09:34:06.731] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45430 [05/Sep/2026:09:34:06.738] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45436 [05/Sep/2026:09:34:06.747] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "GET /upload HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45448 [05/Sep/2026:09:34:06.754] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45464 [05/Sep/2026:09:34:06.761] fe_http be_nginx/nginx1 0/0/2/0/2 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45472 [05/Sep/2026:09:34:06.770] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "DELETE /admin HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45478 [05/Sep/2026:09:34:06.776] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /admin HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45492 [05/Sep/2026:09:34:06.783] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45504 [05/Sep/2026:09:34:06.789] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /admin HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45518 [05/Sep/2026:09:34:06.795] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45532 [05/Sep/2026:09:34:06.800] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS / HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45542 [05/Sep/2026:09:34:06.807] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45548 [05/Sep/2026:09:34:06.812] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45550 [05/Sep/2026:09:34:06.817] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45552 [05/Sep/2026:09:34:06.824] fe_http be_nginx/nginx1 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45556 [05/Sep/2026:09:34:06.830] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45562 [05/Sep/2026:09:34:06.836] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "PUT /old HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45568 [05/Sep/2026:09:34:06.842] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "PUT /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45572 [05/Sep/2026:09:34:06.847] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST /slow HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45580 [05/Sep/2026:09:34:06.853] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45584 [05/Sep/2026:09:34:06.859] fe_http be_nginx/nginx1 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45590 [05/Sep/2026:09:34:06.865] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45596 [05/Sep/2026:09:34:06.871] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "PUT / HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45608 [05/Sep/2026:09:34:06.877] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45616 [05/Sep/2026:09:34:06.882] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "OPTIONS /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45620 [05/Sep/2026:09:34:06.888] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45626 [05/Sep/2026:09:34:06.894] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45628 [05/Sep/2026:09:34:06.899] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45630 [05/Sep/2026:09:34:06.906] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45632 [05/Sep/2026:09:34:06.911] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45646 [05/Sep/2026:09:34:06.917] fe_http be_nginx/nginx1 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45660 [05/Sep/2026:09:34:06.923] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45670 [05/Sep/2026:09:34:06.929] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45674 [05/Sep/2026:09:34:06.935] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45682 [05/Sep/2026:09:34:06.941] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45694 [05/Sep/2026:09:34:06.946] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "DELETE /boom HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45708 [05/Sep/2026:09:34:06.952] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "DELETE /missing HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45710 [05/Sep/2026:09:34:06.958] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45726 [05/Sep/2026:09:34:06.963] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "OPTIONS /upload HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45730 [05/Sep/2026:09:34:06.969] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:34:06 haproxy[8]: 192.168.148.3:45746 [05/Sep/2026:09:34:06.975] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /upload HTTP/1.1"
+
+<134>Sep  5 09:34:09 haproxy[8]: 192.168.148.3:45756 [05/Sep/2026:09:34:09.987] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "POST /old HTTP/1.1"
+
+<134>Sep  5 09:34:09 haproxy[8]: 192.168.148.3:45762 [05/Sep/2026:09:34:09.993] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "PUT /ok HTTP/1.1"
+
+<134>Sep  5 09:34:10 haproxy[8]: 192.168.148.3:45768 [05/Sep/2026:09:34:09.999] fe_http be_nginx/nginx2 0/0/0/0/0 405 289 - - ---- 1/1/0/0/0 0/0 "OPTIONS /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:34:10 haproxy[8]: 192.168.148.3:45776 [05/Sep/2026:09:34:10.005] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:34:10 haproxy[8]: 192.168.148.3:45788 [05/Sep/2026:09:34:10.011] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "PUT /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:10 haproxy[8]: 192.168.148.3:45794 [05/Sep/2026:09:34:10.017] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "OPTIONS /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:10 haproxy[8]: 192.168.148.3:45800 [05/Sep/2026:09:34:10.022] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "OPTIONS /slow HTTP/1.1"
+
+<134>Sep  5 09:34:10 haproxy[8]: 192.168.148.3:45804 [05/Sep/2026:09:34:10.028] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:10 haproxy[8]: 192.168.148.3:45812 [05/Sep/2026:09:34:10.035] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "OPTIONS /new HTTP/1.1"
+
+<134>Sep  5 09:34:10 haproxy[8]: 192.168.148.3:45828 [05/Sep/2026:09:34:10.041] fe_http be_nginx/nginx1 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /slow HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46730 [05/Sep/2026:09:34:13.059] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46744 [05/Sep/2026:09:34:13.065] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "POST /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46758 [05/Sep/2026:09:34:13.071] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "DELETE /old HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46774 [05/Sep/2026:09:34:13.077] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "POST /boom HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46778 [05/Sep/2026:09:34:13.082] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46784 [05/Sep/2026:09:34:13.087] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET / HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46790 [05/Sep/2026:09:34:13.093] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "OPTIONS /old HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46796 [05/Sep/2026:09:34:13.099] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "DELETE /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46806 [05/Sep/2026:09:34:13.105] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46812 [05/Sep/2026:09:34:13.110] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:13 haproxy[8]: 192.168.148.3:46820 [05/Sep/2026:09:34:13.116] fe_http be_nginx/nginx2 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"
+
+<134>Sep  5 09:34:16 haproxy[8]: 192.168.148.3:46830 [05/Sep/2026:09:34:16.133] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "POST /ok HTTP/1.1"
+
+<134>Sep  5 09:34:16 haproxy[8]: 192.168.148.3:46840 [05/Sep/2026:09:34:16.139] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /etc/passwd HTTP/1.1"
+
+<134>Sep  5 09:34:16 haproxy[8]: 192.168.148.3:46846 [05/Sep/2026:09:34:16.145] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "POST /missing HTTP/1.1"
+
+<134>Sep  5 09:34:16 haproxy[8]: 192.168.148.3:46860 [05/Sep/2026:09:34:16.150] fe_http be_nginx/nginx2 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:34:16 haproxy[8]: 192.168.148.3:46870 [05/Sep/2026:09:34:16.155] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "OPTIONS /boom HTTP/1.1"
+
+<134>Sep  5 09:34:16 haproxy[8]: 192.168.148.3:46884 [05/Sep/2026:09:34:16.161] fe_http be_nginx/nginx2 0/0/0/0/0 200 137 - - ---- 1/1/0/0/0 0/0 "HEAD /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:19 haproxy[8]: 192.168.148.3:46890 [05/Sep/2026:09:34:19.180] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "OPTIONS /upload HTTP/1.1"
+
+<134>Sep  5 09:34:19 haproxy[8]: 192.168.148.3:46904 [05/Sep/2026:09:34:19.190] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"
+
+<134>Sep  5 09:34:19 haproxy[8]: 192.168.148.3:46914 [05/Sep/2026:09:34:19.196] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:34:19 haproxy[8]: 192.168.148.3:46916 [05/Sep/2026:09:34:19.203] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /admin HTTP/1.1"
+
+<134>Sep  5 09:34:19 haproxy[8]: 192.168.148.3:46918 [05/Sep/2026:09:34:19.209] fe_http be_nginx/nginx1 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /missing HTTP/1.1"
+
+<134>Sep  5 09:34:19 haproxy[8]: 192.168.148.3:46922 [05/Sep/2026:09:34:19.215] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "GET /nope/deep/path?x=1&y=2 HTTP/1.1"
+
+<134>Sep  5 09:34:19 haproxy[8]: 192.168.148.3:46926 [05/Sep/2026:09:34:19.222] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"
+
+<134>Sep  5 09:34:19 haproxy[8]: 192.168.148.3:46936 [05/Sep/2026:09:34:19.227] fe_http be_nginx/nginx2 0/0/0/0/0 200 136 - - ---- 1/1/0/0/0 0/0 "HEAD /ok HTTP/1.1"
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43116 [05/Sep/2026:09:36:06.395] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43122 [05/Sep/2026:09:36:06.412] fe_tls be_nginx_tls/nginx1 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43134 [05/Sep/2026:09:36:06.428] fe_tls be_nginx_tls/nginx2 1/0/5 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43144 [05/Sep/2026:09:36:06.444] fe_tls be_nginx_tls/nginx1 1/0/5 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43150 [05/Sep/2026:09:36:06.460] fe_tls be_nginx_tls/nginx2 1/0/5 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43166 [05/Sep/2026:09:36:06.476] fe_tls be_nginx_tls/nginx1 1/0/5 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43170 [05/Sep/2026:09:36:06.493] fe_tls be_nginx_tls/nginx2 1/0/5 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43180 [05/Sep/2026:09:36:06.509] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43184 [05/Sep/2026:09:36:06.524] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43196 [05/Sep/2026:09:36:06.539] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43206 [05/Sep/2026:09:36:06.554] fe_tls be_nginx_tls/nginx2 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43214 [05/Sep/2026:09:36:06.569] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43222 [05/Sep/2026:09:36:06.583] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43232 [05/Sep/2026:09:36:06.597] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43238 [05/Sep/2026:09:36:06.613] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43250 [05/Sep/2026:09:36:06.628] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43256 [05/Sep/2026:09:36:06.644] fe_tls be_nginx_tls/nginx2 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43258 [05/Sep/2026:09:36:06.658] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43268 [05/Sep/2026:09:36:06.672] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43280 [05/Sep/2026:09:36:06.686] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43290 [05/Sep/2026:09:36:06.701] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43296 [05/Sep/2026:09:36:06.716] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43312 [05/Sep/2026:09:36:06.731] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43316 [05/Sep/2026:09:36:06.747] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43318 [05/Sep/2026:09:36:06.761] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43332 [05/Sep/2026:09:36:06.776] fe_tls be_nginx_tls/nginx1 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43334 [05/Sep/2026:09:36:06.790] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43350 [05/Sep/2026:09:36:06.805] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43356 [05/Sep/2026:09:36:06.819] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43364 [05/Sep/2026:09:36:06.834] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43366 [05/Sep/2026:09:36:06.850] fe_tls be_nginx_tls/nginx2 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43382 [05/Sep/2026:09:36:06.864] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43390 [05/Sep/2026:09:36:06.879] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43400 [05/Sep/2026:09:36:06.894] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43404 [05/Sep/2026:09:36:06.908] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43412 [05/Sep/2026:09:36:06.923] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43420 [05/Sep/2026:09:36:06.938] fe_tls be_nginx_tls/nginx2 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43430 [05/Sep/2026:09:36:06.953] fe_tls be_nginx_tls/nginx1 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43432 [05/Sep/2026:09:36:06.967] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43446 [05/Sep/2026:09:36:06.981] fe_tls be_nginx_tls/nginx1 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:06 haproxy[8]: 192.168.148.3:43458 [05/Sep/2026:09:36:06.995] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43464 [05/Sep/2026:09:36:07.010] fe_tls be_nginx_tls/nginx1 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43468 [05/Sep/2026:09:36:07.024] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43478 [05/Sep/2026:09:36:07.038] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43480 [05/Sep/2026:09:36:07.053] fe_tls be_nginx_tls/nginx2 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43492 [05/Sep/2026:09:36:07.067] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43498 [05/Sep/2026:09:36:07.081] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43510 [05/Sep/2026:09:36:07.096] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43520 [05/Sep/2026:09:36:07.110] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43534 [05/Sep/2026:09:36:07.125] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43546 [05/Sep/2026:09:36:07.140] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43554 [05/Sep/2026:09:36:07.155] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43558 [05/Sep/2026:09:36:07.171] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43570 [05/Sep/2026:09:36:07.185] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43574 [05/Sep/2026:09:36:07.200] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43576 [05/Sep/2026:09:36:07.214] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43584 [05/Sep/2026:09:36:07.229] fe_tls be_nginx_tls/nginx2 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43594 [05/Sep/2026:09:36:07.243] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43610 [05/Sep/2026:09:36:07.257] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43620 [05/Sep/2026:09:36:07.272] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43628 [05/Sep/2026:09:36:07.287] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43642 [05/Sep/2026:09:36:07.301] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43654 [05/Sep/2026:09:36:07.315] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43664 [05/Sep/2026:09:36:07.329] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43668 [05/Sep/2026:09:36:07.344] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43672 [05/Sep/2026:09:36:07.359] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43686 [05/Sep/2026:09:36:07.373] fe_tls be_nginx_tls/nginx2 1/0/5 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43700 [05/Sep/2026:09:36:07.388] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43706 [05/Sep/2026:09:36:07.403] fe_tls be_nginx_tls/nginx2 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43710 [05/Sep/2026:09:36:07.418] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43712 [05/Sep/2026:09:36:07.432] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43718 [05/Sep/2026:09:36:07.449] fe_tls be_nginx_tls/nginx1 1/0/2 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43720 [05/Sep/2026:09:36:07.462] fe_tls be_nginx_tls/nginx2 1/0/5 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43724 [05/Sep/2026:09:36:07.477] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43730 [05/Sep/2026:09:36:07.491] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43738 [05/Sep/2026:09:36:07.505] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43748 [05/Sep/2026:09:36:07.520] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43750 [05/Sep/2026:09:36:07.536] fe_tls be_nginx_tls/nginx1 1/0/3 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43762 [05/Sep/2026:09:36:07.550] fe_tls be_nginx_tls/nginx2 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:43764 [05/Sep/2026:09:36:07.565] fe_tls be_nginx_tls/nginx1 1/0/4 2138 -- 1/1/0/0/0 0/0
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:41946 [05/Sep/2026:09:36:07.583] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:41952 [05/Sep/2026:09:36:07.587] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:41956 [05/Sep/2026:09:36:07.591] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:41968 [05/Sep/2026:09:36:07.594] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:41984 [05/Sep/2026:09:36:07.597] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42000 [05/Sep/2026:09:36:07.600] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42006 [05/Sep/2026:09:36:07.604] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42008 [05/Sep/2026:09:36:07.608] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42012 [05/Sep/2026:09:36:07.611] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42026 [05/Sep/2026:09:36:07.615] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42036 [05/Sep/2026:09:36:07.618] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42040 [05/Sep/2026:09:36:07.622] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42044 [05/Sep/2026:09:36:07.626] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42052 [05/Sep/2026:09:36:07.629] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42066 [05/Sep/2026:09:36:07.633] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42068 [05/Sep/2026:09:36:07.637] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42084 [05/Sep/2026:09:36:07.640] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42100 [05/Sep/2026:09:36:07.644] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42106 [05/Sep/2026:09:36:07.649] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42122 [05/Sep/2026:09:36:07.653] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42124 [05/Sep/2026:09:36:07.657] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42132 [05/Sep/2026:09:36:07.660] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42148 [05/Sep/2026:09:36:07.664] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42156 [05/Sep/2026:09:36:07.668] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42162 [05/Sep/2026:09:36:07.673] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42174 [05/Sep/2026:09:36:07.676] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42182 [05/Sep/2026:09:36:07.679] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42194 [05/Sep/2026:09:36:07.682] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42208 [05/Sep/2026:09:36:07.686] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42220 [05/Sep/2026:09:36:07.690] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42232 [05/Sep/2026:09:36:07.693] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42242 [05/Sep/2026:09:36:07.697] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42246 [05/Sep/2026:09:36:07.700] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42248 [05/Sep/2026:09:36:07.704] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42262 [05/Sep/2026:09:36:07.708] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42272 [05/Sep/2026:09:36:07.712] fe_http be_nginx/nginx2 0/0/0/1/1 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42282 [05/Sep/2026:09:36:07.716] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42286 [05/Sep/2026:09:36:07.721] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42288 [05/Sep/2026:09:36:07.724] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42294 [05/Sep/2026:09:36:07.728] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42308 [05/Sep/2026:09:36:07.731] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42316 [05/Sep/2026:09:36:07.735] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42320 [05/Sep/2026:09:36:07.739] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42322 [05/Sep/2026:09:36:07.742] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42330 [05/Sep/2026:09:36:07.746] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42334 [05/Sep/2026:09:36:07.749] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42340 [05/Sep/2026:09:36:07.753] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42354 [05/Sep/2026:09:36:07.757] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42364 [05/Sep/2026:09:36:07.761] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42368 [05/Sep/2026:09:36:07.764] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42380 [05/Sep/2026:09:36:07.767] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42390 [05/Sep/2026:09:36:07.771] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42402 [05/Sep/2026:09:36:07.774] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42414 [05/Sep/2026:09:36:07.778] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42428 [05/Sep/2026:09:36:07.781] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42434 [05/Sep/2026:09:36:07.785] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42438 [05/Sep/2026:09:36:07.789] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42452 [05/Sep/2026:09:36:07.792] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42468 [05/Sep/2026:09:36:07.795] fe_http be_nginx/nginx1 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42478 [05/Sep/2026:09:36:07.799] fe_http be_nginx/nginx2 0/0/0/0/0 200 145 - - ---- 1/1/0/0/0 0/0 "POST /upload HTTP/1.1"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42480 [05/Sep/2026:09:36:07.854] fe_http fe_http/<NOSRV> -1/-1/-1/-1/0 400 0 - - PR-- 1/1/0/0/0 0/0 "<BADREQ>"
+
+<134>Sep  5 09:36:07 haproxy[8]: 192.168.148.3:42488 [05/Sep/2026:09:36:07.855] fe_http fe_http/<NOSRV> -1/-1/-1/-1/0 400 0 - - PR-- 1/1/0/0/0 0/0 "<BADREQ>"
+

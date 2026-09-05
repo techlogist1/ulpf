@@ -1,0 +1,1 @@
+<164>Sep 04 2026 10:15:31 asa-edge-01 : %ASA-4-106023: Deny icmp src outside:203.0.113.9 dst inside:10.0.0.7 (type 8, code 0) by access-group "outside_in" [0x8ed66b60, 0x0]

@@ -1,0 +1,8 @@
+cargo build --release
+./target/release/ulpf check
+./target/release/ulpf run samples --store /tmp/ulpf-store --output /tmp/out.jsonl
+./target/release/ulpf verify --store /tmp/ulpf-store
+./target/release/ulpf raw 3 --store /tmp/ulpf-store
+
+mkdir -p demo/watch && ./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl
+cp samples/*.log heldout/mikrotik.log demo/watch/      # then open http://127.0.0.1:7878 and Review

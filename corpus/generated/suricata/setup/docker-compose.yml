@@ -1,0 +1,19 @@
+## ULPF corpus generator — Suricata IDS, real traffic, real detections.
+## Reproduces exactly what was run for the committed corpus/generated/suricata/eve.json.
+## `docker compose up -d` brings up the sniffer, then run traffic-gen.py inside it
+## (see SETUP.md) and `docker compose logs`/`docker cp` to pull eve.json out.
+services:
+  suricata:
+    image: jasonish/suricata:latest  # pinned by digest in SETUP.md
+    container_name: suricata-gen
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_NICE
+    volumes:
+      - ./logs:/var/log/suricata
+      - ./traffic-gen.py:/root/traffic-gen.py:ro
+    entrypoint: ["sh", "-c", "sleep 3600"]
+    # Suricata itself is started with `docker compose exec` (see SETUP.md) rather than
+    # as the container's PID 1, so suricata-update can populate /var/lib/suricata/rules
+    # first and the traffic generator can run in the same netns afterwards.

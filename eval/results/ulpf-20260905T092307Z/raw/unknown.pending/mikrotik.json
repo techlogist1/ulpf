@@ -1,0 +1,1550 @@
+{
+  "id": "mikrotik",
+  "source": "mikrotik.log",
+  "created_nanos": 1788600204469067000,
+  "edited": false,
+  "evidence": {
+    "source": "mikrotik.log",
+    "lines_seen": 250,
+    "lines_used": 250,
+    "params": {
+      "similarity": 0.6,
+      "min_support": 3,
+      "enum_max": 3,
+      "rare_share": 0.05,
+      "max_templates": 40
+    },
+    "envelope": {
+      "syslog": true,
+      "example_header": "<134>Sep  4 06:00:00 gw2"
+    },
+    "templates": [
+      {
+        "id": 1,
+        "pattern": "firewall,info input: in:{in:word} out:(none), src-mac {src_mac:mac}, proto ICMP (type={type:int}, code={code:int}), {ip1:ip}->{ip2:ipv4}, len {len:int}",
+        "support": 18,
+        "verified": 18,
+        "examples": [
+          "firewall,info input: in:ether1 out:(none), src-mac 33:cb:63:eb:78:b8, proto ICMP (type=0, code=0), 6900:d7a4:5970:6811:9a82:1ee1:b479:4e5d->10.0.241.86, len 56",
+          "firewall,info input: in:ether2 out:(none), src-mac 6a:c3:8f:9b:d8:a3, proto ICMP (type=3, code=1), 217.77.47.196->10.0.210.103, len 107",
+          "firewall,info input: in:ether1 out:(none), src-mac 2d:e4:78:13:74:30, proto ICMP (type=0, code=0), 54.204.196.206->192.168.6.166, len 52"
+        ],
+        "members": [
+          5,
+          7,
+          56,
+          63,
+          65,
+          111,
+          120,
+          123,
+          131,
+          132,
+          136,
+          138,
+          154,
+          158,
+          168,
+          211,
+          219,
+          231
+        ],
+        "slots": [
+          {
+            "name": "in",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "firewall,info input: in:",
+            "distinct": 3,
+            "examples": [
+              "ether1",
+              "ether2",
+              "ether3"
+            ]
+          },
+          {
+            "name": "src_mac",
+            "kind": "mac",
+            "suggested": true,
+            "preceded_by": "out:(none), src-mac",
+            "distinct": 18,
+            "examples": [
+              "07:36:17:4d:b6:5c",
+              "1d:15:a9:26:55:a9",
+              "2a:67:1f:c6:9b:7d"
+            ]
+          },
+          {
+            "name": "type",
+            "kind": "int",
+            "suggested": true,
+            "preceded_by": ", proto ICMP (type=",
+            "distinct": 4,
+            "examples": [
+              "0",
+              "11",
+              "3"
+            ]
+          },
+          {
+            "name": "code",
+            "kind": "int",
+            "suggested": true,
+            "preceded_by": ", code=",
+            "distinct": 2,
+            "examples": [
+              "0",
+              "1"
+            ]
+          },
+          {
+            "name": "ip1",
+            "kind": "ip",
+            "suggested": false,
+            "preceded_by": "),",
+            "distinct": 18,
+            "examples": [
+              "104.244.192.2",
+              "153.22.54.5",
+              "162.89.101.219"
+            ]
+          },
+          {
+            "name": "ip2",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "->",
+            "distinct": 18,
+            "examples": [
+              "10.0.15.27",
+              "10.0.151.53",
+              "10.0.166.250"
+            ]
+          },
+          {
+            "name": "len",
+            "kind": "int",
+            "suggested": true,
+            "preceded_by": ", len",
+            "distinct": 17,
+            "examples": [
+              "113",
+              "100",
+              "107"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 1 (116 lines, seed `firewall,info input: in:ether1 out:(none`)",
+          "split on `input` (68 lines)",
+          "split on `ICMP` (18 lines)"
+        ]
+      },
+      {
+        "id": 2,
+        "pattern": "firewall,info forward: in:{in:word} out:{out:word}, src-mac {src_mac:mac}, proto UDP ({int1:int}), {ip1:ipv4}:{port1:port}->{ip2:ipv4}:{port2:port}, {?NAT ({ip3:ipv4}:{port3:port}->{ip4:ipv4}:{port4:port})->{ip5:ipv4}:{port5:port}, }len {len:int}",
+        "support": 27,
+        "verified": 27,
+        "examples": [
+          "firewall,info forward: in:ether2 out:ether3, src-mac 17:f1:57:e1:e0:97, proto UDP (2), 192.168.13.112:54551->216.248.192.210:17766, NAT (192.168.13.112:54551->197.61.52.213:44041)->216.248.192.210:17766, len 432",
+          "firewall,info forward: in:ether3 out:ether2, src-mac f2:0e:ef:35:0d:bb, proto UDP (2), 192.168.18.85:45985->90.148.152.175:53, len 1192",
+          "firewall,info forward: in:ether3 out:ether2, src-mac a2:7f:4f:63:e7:e3, proto UDP (9), 192.168.16.69:45952->208.222.200.67:38670, len 685"
+        ],
+        "members": [
+          3,
+          11,
+          26,
+          32,
+          40,
+          48,
+          53,
+          58,
+          68,
+          75,
+          77,
+          128,
+          144,
+          152,
+          160,
+          177,
+          182,
+          190,
+          198,
+          204,
+          205,
+          212,
+          218,
+          223,
+          235,
+          236,
+          248
+        ],
+        "slots": [
+          {
+            "name": "in",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "firewall,info forward: in:",
+            "distinct": 3,
+            "examples": [
+              "ether3",
+              "ether2",
+              "ether1"
+            ]
+          },
+          {
+            "name": "out",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "out:",
+            "distinct": 3,
+            "examples": [
+              "ether3",
+              "ether2",
+              "ether1"
+            ]
+          },
+          {
+            "name": "src_mac",
+            "kind": "mac",
+            "suggested": true,
+            "preceded_by": ", src-mac",
+            "distinct": 27,
+            "examples": [
+              "13:18:84:2e:05:e0",
+              "17:af:11:5e:fa:9f",
+              "17:f1:57:e1:e0:97"
+            ]
+          },
+          {
+            "name": "int1",
+            "kind": "int",
+            "suggested": false,
+            "preceded_by": ", proto UDP (",
+            "distinct": 9,
+            "examples": [
+              "2",
+              "3",
+              "1"
+            ]
+          },
+          {
+            "name": "ip1",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "),",
+            "distinct": 27,
+            "examples": [
+              "10.0.108.23",
+              "10.0.143.59",
+              "10.0.153.123"
+            ]
+          },
+          {
+            "name": "port1",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 27,
+            "examples": [
+              "1190",
+              "19721",
+              "19950"
+            ]
+          },
+          {
+            "name": "ip2",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "->",
+            "distinct": 27,
+            "examples": [
+              "102.197.209.95",
+              "119.193.150.117",
+              "124.110.137.245"
+            ]
+          },
+          {
+            "name": "port2",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 9,
+            "examples": [
+              "443",
+              "80",
+              "53"
+            ]
+          },
+          {
+            "name": "ip3",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": ", NAT (",
+            "distinct": 13,
+            "examples": [
+              "10.0.181.20",
+              "10.0.203.100",
+              "10.0.205.231"
+            ]
+          },
+          {
+            "name": "port3",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 13,
+            "examples": [
+              "1190",
+              "19950",
+              "35131"
+            ]
+          },
+          {
+            "name": "ip4",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "->",
+            "distinct": 13,
+            "examples": [
+              "11.192.3.105",
+              "147.5.242.49",
+              "167.21.137.204"
+            ]
+          },
+          {
+            "name": "port4",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 13,
+            "examples": [
+              "20694",
+              "21934",
+              "27639"
+            ]
+          },
+          {
+            "name": "ip5",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": ")->",
+            "distinct": 13,
+            "examples": [
+              "119.193.150.117",
+              "124.110.137.245",
+              "164.121.225.123"
+            ]
+          },
+          {
+            "name": "port5",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 6,
+            "examples": [
+              "443",
+              "80",
+              "17766"
+            ]
+          },
+          {
+            "name": "len",
+            "kind": "int",
+            "suggested": true,
+            "preceded_by": ", len",
+            "distinct": 27,
+            "examples": [
+              "1047",
+              "108",
+              "1158"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 1 (116 lines, seed `firewall,info input: in:ether1 out:(none`)",
+          "split on `forward` (48 lines)",
+          "split on `UDP` (27 lines)"
+        ]
+      },
+      {
+        "id": 3,
+        "pattern": "firewall,info input: in:{in:word} out:(none), src-mac {src_mac:mac}, proto UDP ({int1:int}), {ip1:ip}:{port1:port}->{ip2:ipv4}:{port2:port}{?, len {len:int}}",
+        "support": 21,
+        "verified": 21,
+        "examples": [
+          "firewall,info input: in:ether3 out:(none), src-mac ee:23:2d:17:8a:20, proto UDP (8), 886c:7f90:666a:e822:9e1:2424:2f5:aac1:25753->10.0.242.169:80, len 1056",
+          "firewall,info input: in:ether1 out:(none), src-mac 49:0d:b1:38:48:9c, proto UDP (1), 170.20.90.70:55673->10.0.79.200:80, len 755",
+          "firewall,info input: in:ether2 out:(none), src-mac f9:31:43:83:7a:24, proto UDP (7), b5bf:cf9b:606e:f223:ee6e:a39b:e216:373e:6008->192.168.14.22:443"
+        ],
+        "members": [
+          1,
+          2,
+          24,
+          30,
+          31,
+          57,
+          73,
+          85,
+          102,
+          105,
+          110,
+          112,
+          113,
+          150,
+          157,
+          163,
+          188,
+          197,
+          201,
+          220,
+          222
+        ],
+        "slots": [
+          {
+            "name": "in",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "firewall,info input: in:",
+            "distinct": 3,
+            "examples": [
+              "ether2",
+              "ether3",
+              "ether1"
+            ]
+          },
+          {
+            "name": "src_mac",
+            "kind": "mac",
+            "suggested": true,
+            "preceded_by": "out:(none), src-mac",
+            "distinct": 21,
+            "examples": [
+              "12:4d:31:da:ef:b5",
+              "1a:d8:7e:9f:ef:bf",
+              "26:e5:74:0b:a0:92"
+            ]
+          },
+          {
+            "name": "int1",
+            "kind": "int",
+            "suggested": false,
+            "preceded_by": ", proto UDP (",
+            "distinct": 8,
+            "examples": [
+              "8",
+              "9",
+              "1"
+            ]
+          },
+          {
+            "name": "ip1",
+            "kind": "ip",
+            "suggested": false,
+            "preceded_by": "),",
+            "distinct": 21,
+            "examples": [
+              "112.154.160.176",
+              "117.157.151.204",
+              "138.113.72.16"
+            ]
+          },
+          {
+            "name": "port1",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 21,
+            "examples": [
+              "11877",
+              "16379",
+              "2141"
+            ]
+          },
+          {
+            "name": "ip2",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "->",
+            "distinct": 21,
+            "examples": [
+              "10.0.103.73",
+              "10.0.13.169",
+              "10.0.242.169"
+            ]
+          },
+          {
+            "name": "port2",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 6,
+            "examples": [
+              "80",
+              "22",
+              "8080"
+            ]
+          },
+          {
+            "name": "len",
+            "kind": "int",
+            "suggested": true,
+            "preceded_by": ", len",
+            "distinct": 15,
+            "examples": [
+              "1056",
+              "1127",
+              "1295"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 1 (116 lines, seed `firewall,info input: in:ether1 out:(none`)",
+          "split on `input` (68 lines)",
+          "split on `UDP` (21 lines)"
+        ]
+      },
+      {
+        "id": 4,
+        "pattern": "firewall,info input: in:{in:word} out:(none), src-mac {src_mac:mac}, proto TCP {word1:word}, {ip1:ip}:{port1:port}->{ip2:ipv4}:{port2:port}{?, len {len:int}}",
+        "support": 29,
+        "verified": 29,
+        "examples": [
+          "firewall,info input: in:ether1 out:(none), src-mac 11:2a:32:b5:79:08, proto TCP (SYN), 160.247.237.39:1982->10.0.58.217:8080",
+          "firewall,info input: in:ether3 out:(none), src-mac 50:89:4f:a5:e4:24, proto TCP (ACK,PSH), 74.19.112.130:62958->192.168.10.79:80, len 189",
+          "firewall,info input: in:ether2 out:(none), src-mac b5:de:23:9c:85:f8, proto TCP (ACK), 168.9.169.221:33753->192.168.5.123:443"
+        ],
+        "members": [
+          0,
+          4,
+          14,
+          25,
+          34,
+          54,
+          71,
+          76,
+          78,
+          83,
+          91,
+          94,
+          101,
+          106,
+          117,
+          119,
+          130,
+          141,
+          146,
+          172,
+          173,
+          176,
+          178,
+          184,
+          186,
+          213,
+          214,
+          225,
+          238
+        ],
+        "slots": [
+          {
+            "name": "in",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "firewall,info input: in:",
+            "distinct": 3,
+            "examples": [
+              "ether3",
+              "ether1",
+              "ether2"
+            ]
+          },
+          {
+            "name": "src_mac",
+            "kind": "mac",
+            "suggested": true,
+            "preceded_by": "out:(none), src-mac",
+            "distinct": 29,
+            "examples": [
+              "09:17:d2:f6:0f:93",
+              "0c:f1:7c:b9:f4:24",
+              "11:2a:32:b5:79:08"
+            ]
+          },
+          {
+            "name": "word1",
+            "kind": "word",
+            "suggested": false,
+            "preceded_by": ", proto TCP",
+            "distinct": 6,
+            "examples": [
+              "(SYN)",
+              "(FIN,ACK)",
+              "(ACK)"
+            ]
+          },
+          {
+            "name": "ip1",
+            "kind": "ip",
+            "suggested": false,
+            "preceded_by": ",",
+            "distinct": 29,
+            "examples": [
+              "1.120.23.249",
+              "1118:ff93:350f:a3f7:3de2:6c26:84a5:b03a",
+              "112.110.158.11"
+            ]
+          },
+          {
+            "name": "port1",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 29,
+            "examples": [
+              "10109",
+              "11060",
+              "11076"
+            ]
+          },
+          {
+            "name": "ip2",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "->",
+            "distinct": 29,
+            "examples": [
+              "10.0.109.200",
+              "10.0.109.201",
+              "10.0.12.191"
+            ]
+          },
+          {
+            "name": "port2",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 4,
+            "examples": [
+              "443",
+              "80",
+              "22"
+            ]
+          },
+          {
+            "name": "len",
+            "kind": "int",
+            "suggested": true,
+            "preceded_by": ", len",
+            "distinct": 15,
+            "examples": [
+              "1071",
+              "1078",
+              "1149"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 1 (116 lines, seed `firewall,info input: in:ether1 out:(none`)",
+          "split on `input` (68 lines)",
+          "split on `TCP` (29 lines)"
+        ]
+      },
+      {
+        "id": 5,
+        "pattern": "firewall,info forward: in:{in:word} out:{out:word}, src-mac {src_mac:mac}, proto TCP {word1:word}, {ip1:ipv4}:{port1:port}->{ip2:ipv4}:{port2:port}, {?NAT ({ip3:ipv4}:{port3:port}->{ip4:ipv4}:{port4:port})->{ip5:ipv4}:{port5:port}, }len {len:int}",
+        "support": 21,
+        "verified": 21,
+        "examples": [
+          "firewall,info forward: in:ether3 out:ether2, src-mac 93:cb:d0:bc:77:92, proto TCP (ACK), 192.168.8.31:20221->147.189.94.83:443, NAT (192.168.8.31:20221->140.18.111.137:24804)->147.189.94.83:443, len 1498",
+          "firewall,info forward: in:ether2 out:ether3, src-mac 39:d3:5b:59:25:bc, proto TCP (FIN,ACK), 192.168.2.132:45250->98.16.65.69:80, len 746",
+          "firewall,info forward: in:ether2 out:ether3, src-mac b4:c6:b5:30:0f:42, proto TCP (ACK,PSH), 10.0.64.25:41561->16.136.81.9:23288, len 1265"
+        ],
+        "members": [
+          21,
+          33,
+          42,
+          46,
+          51,
+          52,
+          55,
+          61,
+          69,
+          86,
+          88,
+          90,
+          133,
+          139,
+          149,
+          167,
+          171,
+          195,
+          221,
+          229,
+          247
+        ],
+        "slots": [
+          {
+            "name": "in",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "firewall,info forward: in:",
+            "distinct": 3,
+            "examples": [
+              "ether2",
+              "ether1",
+              "ether3"
+            ]
+          },
+          {
+            "name": "out",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "out:",
+            "distinct": 3,
+            "examples": [
+              "ether3",
+              "ether1",
+              "ether2"
+            ]
+          },
+          {
+            "name": "src_mac",
+            "kind": "mac",
+            "suggested": true,
+            "preceded_by": ", src-mac",
+            "distinct": 21,
+            "examples": [
+              "0e:ef:f3:0e:6d:3e",
+              "1a:a0:4a:33:33:3d",
+              "1d:85:d6:bc:19:b2"
+            ]
+          },
+          {
+            "name": "word1",
+            "kind": "word",
+            "suggested": false,
+            "preceded_by": ", proto TCP",
+            "distinct": 6,
+            "examples": [
+              "(RST)",
+              "(ACK,PSH)",
+              "(FIN,ACK)"
+            ]
+          },
+          {
+            "name": "ip1",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": ",",
+            "distinct": 21,
+            "examples": [
+              "10.0.108.240",
+              "10.0.139.4",
+              "10.0.143.241"
+            ]
+          },
+          {
+            "name": "port1",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 21,
+            "examples": [
+              "13232",
+              "1997",
+              "20221"
+            ]
+          },
+          {
+            "name": "ip2",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "->",
+            "distinct": 21,
+            "examples": [
+              "103.71.18.145",
+              "117.37.67.200",
+              "121.189.53.225"
+            ]
+          },
+          {
+            "name": "port2",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 11,
+            "examples": [
+              "80",
+              "443",
+              "12371"
+            ]
+          },
+          {
+            "name": "ip3",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": ", NAT (",
+            "distinct": 11,
+            "examples": [
+              "10.0.139.4",
+              "10.0.143.241",
+              "10.0.154.98"
+            ]
+          },
+          {
+            "name": "port3",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 11,
+            "examples": [
+              "1997",
+              "20221",
+              "21819"
+            ]
+          },
+          {
+            "name": "ip4",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "->",
+            "distinct": 11,
+            "examples": [
+              "103.191.252.188",
+              "128.71.103.3",
+              "140.18.111.137"
+            ]
+          },
+          {
+            "name": "port4",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 11,
+            "examples": [
+              "10391",
+              "22407",
+              "2401"
+            ]
+          },
+          {
+            "name": "ip5",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": ")->",
+            "distinct": 11,
+            "examples": [
+              "121.189.53.225",
+              "146.139.254.242",
+              "147.189.94.83"
+            ]
+          },
+          {
+            "name": "port5",
+            "kind": "port",
+            "suggested": false,
+            "preceded_by": ":",
+            "distinct": 7,
+            "examples": [
+              "80",
+              "443",
+              "12371"
+            ]
+          },
+          {
+            "name": "len",
+            "kind": "int",
+            "suggested": true,
+            "preceded_by": ", len",
+            "distinct": 20,
+            "examples": [
+              "822",
+              "1080",
+              "114"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 1 (116 lines, seed `firewall,info input: in:ether1 out:(none`)",
+          "split on `forward` (48 lines)",
+          "split on `TCP` (21 lines)"
+        ]
+      },
+      {
+        "id": 6,
+        "pattern": "system,error,critical login failure for user {?{user:word} }from {from:ip} via {via:word}",
+        "support": 19,
+        "verified": 19,
+        "examples": [
+          "system,error,critical login failure for user  from 19.245.202.77 via ssh",
+          "system,error,critical login failure for user  from 41.144.189.168 via web",
+          "system,error,critical login failure for user admin from 207.41.150.110 via ssh"
+        ],
+        "members": [
+          9,
+          10,
+          18,
+          27,
+          29,
+          41,
+          79,
+          87,
+          93,
+          99,
+          104,
+          118,
+          174,
+          193,
+          200,
+          207,
+          227,
+          245,
+          249
+        ],
+        "slots": [
+          {
+            "name": "user",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "login failure for user",
+            "distinct": 8,
+            "examples": [
+              "monitor",
+              "root",
+              "admin"
+            ]
+          },
+          {
+            "name": "from",
+            "kind": "ip",
+            "suggested": true,
+            "preceded_by": "from",
+            "distinct": 19,
+            "examples": [
+              "106.80.17.60",
+              "127.156.252.41",
+              "162.220.9.101"
+            ]
+          },
+          {
+            "name": "via",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "via",
+            "distinct": 3,
+            "examples": [
+              "ssh",
+              "web",
+              "winbox"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 3 (19 lines, seed `system,error,critical login failure for `)"
+        ]
+      },
+      {
+        "id": 7,
+        "pattern": "system,info,account user {user:word} logged out from {from:ip} via {via:word}",
+        "support": 13,
+        "verified": 13,
+        "examples": [
+          "system,info,account user bob logged out from 184.203.26.90 via ssh",
+          "system,info,account user engineer logged out from a72b:4202:e486:14ef:be4f:232b:bcfb:d119 via winbox",
+          "system,info,account user admin logged out from 105.226.93.104 via winbox"
+        ],
+        "members": [
+          8,
+          16,
+          37,
+          44,
+          89,
+          97,
+          155,
+          162,
+          192,
+          203,
+          206,
+          210,
+          240
+        ],
+        "slots": [
+          {
+            "name": "user",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "system,info,account user",
+            "distinct": 7,
+            "examples": [
+              "alice",
+              "engineer",
+              "admin"
+            ]
+          },
+          {
+            "name": "from",
+            "kind": "ip",
+            "suggested": true,
+            "preceded_by": "logged out from",
+            "distinct": 13,
+            "examples": [
+              "105.226.93.104",
+              "167.34.134.244",
+              "180.255.71.98"
+            ]
+          },
+          {
+            "name": "via",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "via",
+            "distinct": 3,
+            "examples": [
+              "winbox",
+              "web",
+              "ssh"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 2 (32 lines, seed `system,info,account user alice logged in`)",
+          "split on `out` (13 lines)"
+        ]
+      },
+      {
+        "id": 8,
+        "pattern": "system,info,account user {user:word} logged in from {from:ip} via {via:word}",
+        "support": 19,
+        "verified": 19,
+        "examples": [
+          "system,info,account user alice logged in from 23b6:a68b:5790:df:1f24:2cdc:4bea:6f1f via winbox",
+          "system,info,account user alice logged in from 215.124.84.234 via web",
+          "system,info,account user bob logged in from 206.101.177.241 via web"
+        ],
+        "members": [
+          6,
+          15,
+          17,
+          20,
+          22,
+          36,
+          39,
+          72,
+          81,
+          96,
+          121,
+          127,
+          135,
+          140,
+          153,
+          169,
+          179,
+          208,
+          244
+        ],
+        "slots": [
+          {
+            "name": "user",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "system,info,account user",
+            "distinct": 6,
+            "examples": [
+              "alice",
+              "backup",
+              "engineer"
+            ]
+          },
+          {
+            "name": "from",
+            "kind": "ip",
+            "suggested": true,
+            "preceded_by": "logged in from",
+            "distinct": 19,
+            "examples": [
+              "14.151.180.57",
+              "150.196.216.216",
+              "151.133.243.230"
+            ]
+          },
+          {
+            "name": "via",
+            "kind": "word",
+            "suggested": true,
+            "preceded_by": "via",
+            "distinct": 3,
+            "examples": [
+              "winbox",
+              "ssh",
+              "web"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 2 (32 lines, seed `system,info,account user alice logged in`)",
+          "split on `in` (19 lines)"
+        ]
+      },
+      {
+        "id": 9,
+        "pattern": "script,info script {word1:word} started by scheduler",
+        "support": 13,
+        "verified": 13,
+        "examples": [
+          "script,info script ping-watchdog started by scheduler",
+          "script,info script ping-watchdog started by scheduler",
+          "script,info script backup-config started by scheduler"
+        ],
+        "members": [
+          64,
+          108,
+          114,
+          116,
+          122,
+          148,
+          165,
+          196,
+          202,
+          228,
+          232,
+          233,
+          241
+        ],
+        "slots": [
+          {
+            "name": "word1",
+            "kind": "word",
+            "suggested": false,
+            "preceded_by": "script,info script",
+            "distinct": 3,
+            "examples": [
+              "backup-config",
+              "ping-watchdog",
+              "check-uptime"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 8 (13 lines, seed `script,info script ping-watchdog started`)"
+        ]
+      },
+      {
+        "id": 10,
+        "pattern": "wireless,info {mac1:mac}@{word1:word}: disconnected, {text1:text}{? is lost}",
+        "support": 9,
+        "verified": 14,
+        "examples": [
+          "wireless,info b5:69:dc:e3:0c:cf@wlan1: disconnected, extensive data loss",
+          "wireless,info a9:61:33:ca:2d:a2@wlan1: disconnected, extensive data loss",
+          "wireless,info e4:1c:ab:83:63:a1@wlan1: disconnected, timed out"
+        ],
+        "members": [
+          28,
+          38,
+          47,
+          80,
+          115,
+          142,
+          161,
+          166,
+          242
+        ],
+        "slots": [
+          {
+            "name": "mac1",
+            "kind": "mac",
+            "suggested": false,
+            "preceded_by": "wireless,info",
+            "distinct": 9,
+            "examples": [
+              "1b:46:af:63:fc:70",
+              "34:f8:6a:9e:b2:59",
+              "55:75:fd:3e:e9:5f"
+            ]
+          },
+          {
+            "name": "word1",
+            "kind": "word",
+            "suggested": false,
+            "preceded_by": "@",
+            "distinct": 2,
+            "examples": [
+              "wlan1",
+              "wlan2"
+            ]
+          },
+          {
+            "name": "text1",
+            "kind": "text",
+            "suggested": false,
+            "preceded_by": ": disconnected,",
+            "distinct": 4,
+            "examples": [
+              "extensive data loss",
+              "reset by peer",
+              "connection with AP"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 6 (15 lines, seed `wireless,info b5:69:dc:e3:0c:cf@wlan1: d`)",
+          "split on `disconnected` (9 lines)"
+        ]
+      },
+      {
+        "id": 11,
+        "pattern": "wireless,info {mac1:mac}@{word1:word}: disconnected, {rest1:rest}",
+        "support": 5,
+        "verified": 0,
+        "examples": [
+          "wireless,info 69:5e:10:9d:ff:09@wlan2: disconnected, received disassociation",
+          "wireless,info 86:5c:c1:b5:8d:f3@wlan2: disconnected, reset by peer",
+          "wireless,info ca:9d:f4:f7:04:58@wlan1: disconnected, received disassociation"
+        ],
+        "members": [
+          35,
+          129,
+          159,
+          185,
+          191
+        ],
+        "slots": [
+          {
+            "name": "mac1",
+            "kind": "mac",
+            "suggested": false,
+            "preceded_by": "wireless,info",
+            "distinct": 5,
+            "examples": [
+              "2f:a3:7c:a9:ff:1d",
+              "69:5e:10:9d:ff:09",
+              "86:5c:c1:b5:8d:f3"
+            ]
+          },
+          {
+            "name": "word1",
+            "kind": "word",
+            "suggested": false,
+            "preceded_by": "@",
+            "distinct": 2,
+            "examples": [
+              "wlan2",
+              "wlan1"
+            ]
+          },
+          {
+            "name": "rest1",
+            "kind": "rest",
+            "suggested": false,
+            "preceded_by": ": disconnected,",
+            "distinct": 3,
+            "examples": [
+              "received disassociation",
+              "connection with AP",
+              "reset by peer"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 7 (10 lines, seed `wireless,info 69:5e:10:9d:ff:09@wlan2: d`)",
+          "split on `disconnected` (5 lines)",
+          "not in the definition: every line it covers matched an earlier template"
+        ]
+      },
+      {
+        "id": 12,
+        "pattern": "wireless,info {mac1:mac}@{word1:word}: connected",
+        "support": 11,
+        "verified": 11,
+        "examples": [
+          "wireless,info e9:89:8b:2d:17:f4@wlan2: connected",
+          "wireless,info fc:44:a2:56:46:fc@wlan2: connected",
+          "wireless,info d0:65:aa:14:06:57@wlan1: connected"
+        ],
+        "members": [
+          59,
+          67,
+          124,
+          126,
+          137,
+          145,
+          187,
+          189,
+          199,
+          239,
+          243
+        ],
+        "slots": [
+          {
+            "name": "mac1",
+            "kind": "mac",
+            "suggested": false,
+            "preceded_by": "wireless,info",
+            "distinct": 11,
+            "examples": [
+              "4b:b0:10:54:cd:e8",
+              "65:dc:48:d0:17:13",
+              "6d:be:b2:d1:e5:19"
+            ]
+          },
+          {
+            "name": "word1",
+            "kind": "word",
+            "suggested": false,
+            "preceded_by": "@",
+            "distinct": 2,
+            "examples": [
+              "wlan1",
+              "wlan2"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 6 (15 lines, seed `wireless,info b5:69:dc:e3:0c:cf@wlan1: d`)",
+          "split on `connected` (4 lines)",
+          "merged with a template built from `split on `` (2 lines)`: identical pattern from another cluster",
+          "merged with a template built from `split on `connected` (5 lines)`: pattern differing in one constant word from another cluster"
+        ]
+      },
+      {
+        "id": 13,
+        "pattern": "dhcp,info {word1:word} deassigned {ip1:ipv4} from {from:mac}",
+        "support": 22,
+        "verified": 22,
+        "examples": [
+          "dhcp,info dhcp-guest deassigned 10.0.43.195 from 8e:25:68:ad:ab:a4",
+          "dhcp,info dhcp1 deassigned 10.0.22.250 from 3d:7d:83:be:46:0e",
+          "dhcp,info dhcp-lan deassigned 192.168.16.218 from d1:f8:f6:f5:e3:be"
+        ],
+        "members": [
+          12,
+          13,
+          23,
+          49,
+          60,
+          70,
+          82,
+          100,
+          103,
+          107,
+          109,
+          134,
+          151,
+          156,
+          170,
+          175,
+          181,
+          183,
+          209,
+          217,
+          226,
+          234
+        ],
+        "slots": [
+          {
+            "name": "word1",
+            "kind": "word",
+            "suggested": false,
+            "preceded_by": "dhcp,info",
+            "distinct": 3,
+            "examples": [
+              "dhcp-guest",
+              "dhcp-lan",
+              "dhcp1"
+            ]
+          },
+          {
+            "name": "ip1",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "deassigned",
+            "distinct": 22,
+            "examples": [
+              "10.0.141.116",
+              "10.0.184.31",
+              "10.0.203.198"
+            ]
+          },
+          {
+            "name": "from",
+            "kind": "mac",
+            "suggested": true,
+            "preceded_by": "from",
+            "distinct": 22,
+            "examples": [
+              "09:25:7e:db:08:a2",
+              "0a:a0:23:45:0c:2e",
+              "33:1c:7e:10:6a:2e"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 4 (22 lines, seed `dhcp,info dhcp-guest deassigned 10.0.43.`)"
+        ]
+      },
+      {
+        "id": 14,
+        "pattern": "dhcp,info {word1:word} assigned {ip1:ipv4} to {to:mac}",
+        "support": 23,
+        "verified": 23,
+        "examples": [
+          "dhcp,info dhcp1 assigned 10.0.9.55 to 7b:0f:b6:be:d4:59",
+          "dhcp,info dhcp-guest assigned 192.168.19.220 to de:b8:09:d7:a1:62",
+          "dhcp,info dhcp-lan assigned 10.0.133.158 to c5:9c:8d:84:49:b7"
+        ],
+        "members": [
+          19,
+          43,
+          45,
+          50,
+          62,
+          66,
+          74,
+          84,
+          92,
+          95,
+          98,
+          125,
+          143,
+          147,
+          164,
+          180,
+          194,
+          215,
+          216,
+          224,
+          230,
+          237,
+          246
+        ],
+        "slots": [
+          {
+            "name": "word1",
+            "kind": "word",
+            "suggested": false,
+            "preceded_by": "dhcp,info",
+            "distinct": 3,
+            "examples": [
+              "dhcp1",
+              "dhcp-guest",
+              "dhcp-lan"
+            ]
+          },
+          {
+            "name": "ip1",
+            "kind": "ipv4",
+            "suggested": false,
+            "preceded_by": "assigned",
+            "distinct": 23,
+            "examples": [
+              "10.0.116.9",
+              "10.0.124.220",
+              "10.0.133.158"
+            ]
+          },
+          {
+            "name": "to",
+            "kind": "mac",
+            "suggested": true,
+            "preceded_by": "to",
+            "distinct": 23,
+            "examples": [
+              "04:0c:b9:f2:87:90",
+              "09:73:06:f1:02:e5",
+              "0d:be:21:16:0a:ed"
+            ]
+          }
+        ],
+        "history": [
+          "cluster 5 (23 lines, seed `dhcp,info dhcp1 assigned 10.0.9.55 to 7b`)"
+        ]
+      }
+    ],
+    "unmatched": {
+      "count": 0,
+      "examples": [],
+      "by_reason": {}
+    },
+    "decisions": [
+      "envelope: syslog header on 250 of 250 lines -> syslog = true (a fifth is enough)",
+      "clustering: 250 lines into 8 clusters at similarity 0.6",
+      "cluster 1 (116 lines, seed `firewall,info input: in:ether1 out:(none`): slot after `info` has 2 distinct keyword values `input` (68), `forward` (48): split so the words stay constant",
+      "split on `input` (68 lines): slot after `proto` has 3 distinct keyword values `TCP` (29), `UDP` (21), `ICMP` (18): split so the words stay constant",
+      "split on `TCP` (29 lines): `,` optional: present in 15/29 lines",
+      "split on `TCP` (29 lines): ` ` optional: present in 15/29 lines",
+      "split on `TCP` (29 lines): `len` optional: present in 15/29 lines",
+      "split on `TCP` (29 lines): ` ` optional: present in 15/29 lines",
+      "split on `TCP` (29 lines): `189` optional: present in 15/29 lines",
+      "split on `UDP` (21 lines): `,` optional: present in 15/21 lines",
+      "split on `UDP` (21 lines): ` ` optional: present in 15/21 lines",
+      "split on `UDP` (21 lines): `len` optional: present in 15/21 lines",
+      "split on `UDP` (21 lines): ` ` optional: present in 15/21 lines",
+      "split on `UDP` (21 lines): `1056` optional: present in 15/21 lines",
+      "split on `forward` (48 lines): slot after `proto` has 2 distinct keyword values `UDP` (27), `TCP` (21): split so the words stay constant",
+      "split on `UDP` (27 lines): `NAT` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): ` ` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `(` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `192.168.13.112` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `:` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `54551` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `-` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `>` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `197.61.52.213` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `:` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `44041` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `)` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `-` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `>` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `216.248.192.210` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `:` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `17766` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): `,` optional: present in 13/27 lines",
+      "split on `UDP` (27 lines): ` ` optional: present in 13/27 lines",
+      "split on `TCP` (21 lines): `NAT` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): ` ` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `(` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `192.168.8.31` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `:` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `20221` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `-` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `>` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `140.18.111.137` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `:` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `24804` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `)` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `-` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `>` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `147.189.94.83` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `:` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `443` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): `,` optional: present in 11/21 lines",
+      "split on `TCP` (21 lines): ` ` optional: present in 11/21 lines",
+      "cluster 2 (32 lines, seed `system,info,account user alice logged in`): slot after `logged` has 2 distinct keyword values `in` (19), `out` (13): split so the words stay constant",
+      "cluster 3 (19 lines, seed `system,error,critical login failure for `): `admin` optional: present in 10/19 lines",
+      "cluster 3 (19 lines, seed `system,error,critical login failure for `): ` ` optional: present in 10/19 lines",
+      "cluster 6 (15 lines, seed `wireless,info b5:69:dc:e3:0c:cf@wlan1: d`): slot after `` has 3 distinct keyword values `disconnected` (9), `connected` (4), `` (2): split so the words stay constant",
+      "split on `disconnected` (9 lines): ` ` required although absent in 1/9 lines (rare absence, damaged lines fail)",
+      "split on `disconnected` (9 lines): `loss` required although absent in 1/9 lines (rare absence, damaged lines fail)",
+      "split on `disconnected` (9 lines): ` ` optional: present in 2/9 lines",
+      "split on `disconnected` (9 lines): `is` optional: present in 2/9 lines",
+      "split on `disconnected` (9 lines): ` ` optional: present in 2/9 lines",
+      "split on `disconnected` (9 lines): `lost` optional: present in 2/9 lines",
+      "split on `disconnected` (9 lines): 3 adjacent word slots collapsed into one text slot",
+      "cluster 7 (10 lines, seed `wireless,info 69:5e:10:9d:ff:09@wlan2: d`): slot after `` has 2 distinct keyword values `connected` (5), `disconnected` (5): split so the words stay constant",
+      "split on `disconnected` (5 lines): ` ` optional: present in 2/5 lines",
+      "split on `disconnected` (5 lines): `peer` optional: present in 2/5 lines",
+      "split on `disconnected` (5 lines): dropped ` `: present in 1/5 lines (junk below 2)",
+      "split on `disconnected` (5 lines): dropped `is`: present in 1/5 lines (junk below 2)",
+      "split on `disconnected` (5 lines): dropped ` `: present in 1/5 lines (junk below 2)",
+      "split on `disconnected` (5 lines): dropped `lost`: present in 1/5 lines (junk below 2)",
+      "split on `disconnected` (5 lines): 3 adjacent word slots collapsed into one text slot",
+      "merged templates: identical pattern from another cluster (4 + 2 lines)",
+      "merged templates: pattern differing in one constant word from another cluster (6 + 5 lines)",
+      "template 10 took 14 lines first, 5 more than its own cluster (it is more general than a later template)",
+      "template 11 verified 0/5 of its own lines (the rest matched an earlier template or are in unmatched)",
+      "1 templates left out of the definition (no compile, matched no line first, or below min_support after a split); they stay in the evidence",
+      "signature: no word in 98% of lines; regex over 7 template leads"
+    ],
+    "fingerprint": "17ae940820e6cfce"
+  }
+}

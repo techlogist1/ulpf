@@ -1,0 +1,59 @@
+name: ulpf-corpus-gen
+
+services:
+  nginx1:
+    image: nginx:1.27-alpine
+    hostname: nginx1
+    volumes:
+      - ./nginx-conf/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx-certs:/etc/nginx/certs:ro
+      - ./logs/nginx/nginx1:/var/log/nginx
+    networks: [corpusnet]
+
+  nginx2:
+    image: nginx:1.27-alpine
+    hostname: nginx2
+    volumes:
+      - ./nginx-conf/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx-certs:/etc/nginx/certs:ro
+      - ./logs/nginx/nginx2:/var/log/nginx
+    networks: [corpusnet]
+
+  sysloglistener:
+    image: python:3.12-alpine
+    hostname: sysloglistener
+    volumes:
+      - ./logs/haproxy:/out
+      - ./syslog_listener.py:/syslog_listener.py:ro
+    command: ["python3", "/syslog_listener.py"]
+    networks: [corpusnet]
+
+  haproxy:
+    image: haproxy:2.9-alpine
+    hostname: haproxy
+    depends_on: [nginx1, nginx2, sysloglistener]
+    volumes:
+      - ./haproxy-conf/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    networks: [corpusnet]
+
+  client:
+    image: nicolaka/netshoot:latest
+    hostname: client
+    depends_on: [nginx1, nginx2, haproxy]
+    entrypoint: ["sleep", "infinity"]
+    volumes:
+      - ./traffic.sh:/traffic.sh:ro
+    networks: [corpusnet]
+
+  sniffer:
+    image: nicolaka/netshoot:latest
+    network_mode: "service:client"
+    cap_add: [NET_ADMIN, NET_RAW]
+    depends_on: [client]
+    volumes:
+      - ./pcap:/pcap
+    entrypoint: ["sleep", "infinity"]
+
+networks:
+  corpusnet:
+    driver: bridge

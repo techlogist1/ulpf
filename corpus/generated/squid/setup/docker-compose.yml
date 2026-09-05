@@ -1,0 +1,29 @@
+name: ulpf-corpus-squid
+
+services:
+  origin:
+    image: nginx:alpine
+    container_name: ulpf-squid-origin
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/html:/usr/share/nginx/html:ro
+    networks:
+      squidnet:
+        aliases:
+          - origin
+          - www.example.test
+          - static.example.test
+          - api.example.test
+
+  proxy:
+    build: ./squid
+    container_name: ulpf-squid-proxy
+    ports:
+      - "3128:3128"
+    networks:
+      - squidnet
+    depends_on:
+      - origin
+
+networks:
+  squidnet: {}

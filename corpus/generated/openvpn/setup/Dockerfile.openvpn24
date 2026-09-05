@@ -1,0 +1,10 @@
+# Third image, for the ctime-prefix capture: OpenVPN 2.4.12 (Ubuntu 20.04),
+# the last series that prefixes log lines with ctime() ("Sat Sep  5 10:14:21
+# 2026 ..."). 2.5 replaced that with "YYYY-MM-DD HH:MM:SS" (measured, see
+# server-2.5.log). The shipped
+# parsers/openvpn.toml matcher targets the ctime form, so only this capture
+# exercises it -- see PROVENANCE.md.
+FROM ubuntu:20.04
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    openvpn iproute2 procps ca-certificates \
+    && rm -rf /var/lib/apt/lists/*

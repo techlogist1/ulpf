@@ -1,0 +1,565 @@
+2026-09-05 10:10:10 WARNING: file '/etc/openvpn/certs/server.key' is group or others accessible
+2026-09-05 10:10:10 OpenVPN 2.5.1 aarch64-unknown-linux-gnu [SSL (OpenSSL)] [LZO] [LZ4] [EPOLL] [PKCS11] [MH/PKTINFO] [AEAD] built on Jul  3 2026
+2026-09-05 10:10:10 library versions: OpenSSL 1.1.1w  11 Sep 2023, LZO 2.10
+2026-09-05 10:10:10 net_route_v4_best_gw query: dst 0.0.0.0
+2026-09-05 10:10:10 net_route_v4_best_gw result: via 192.168.117.1 dev eth0
+2026-09-05 10:10:10 Diffie-Hellman initialized with 2048 bit key
+2026-09-05 10:10:10 CRL: loaded 1 CRLs from file /etc/openvpn/certs/crl.pem
+2026-09-05 10:10:10 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:10 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:10 TUN/TAP device tun0 opened
+2026-09-05 10:10:10 net_iface_mtu_set: mtu 1500 for tun0
+2026-09-05 10:10:10 net_iface_up: set tun0 up
+2026-09-05 10:10:10 net_addr_v4_add: 10.8.0.1/24 dev tun0
+2026-09-05 10:10:10 Could not determine IPv4/IPv6 protocol. Using AF_INET
+2026-09-05 10:10:10 Socket Buffers: R=[229376->229376] S=[229376->229376]
+2026-09-05 10:10:10 UDPv4 link local (bound): [AF_INET][undef]:1194
+2026-09-05 10:10:10 UDPv4 link remote: [AF_UNSPEC]
+2026-09-05 10:10:10 MULTI: multi_init called, r=256 v=256
+2026-09-05 10:10:10 IFCONFIG POOL IPv4: base=10.8.0.2 size=252
+2026-09-05 10:10:10 IFCONFIG POOL LIST
+2026-09-05 10:10:10 Initialization Sequence Completed
+2026-09-05 10:10:12 192.168.117.3:53560 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:12 192.168.117.3:53560 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:12 192.168.117.3:53560 TLS: Initial packet from [AF_INET]192.168.117.3:53560, sid=7a00bb5e 7f09dbb3
+2026-09-05 10:10:12 192.168.117.3:53560 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:10:12 192.168.117.3:53560 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:10:12 192.168.117.3:53560 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:10:12 192.168.117.3:53560 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:10:12 192.168.117.3:53560 TLS Error: TLS handshake failed
+2026-09-05 10:10:12 192.168.117.3:53560 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:10:12 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:12 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:33094
+2026-09-05 10:10:13 192.168.117.6:55765 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:13 192.168.117.6:55765 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:13 192.168.117.6:55765 TLS: Initial packet from [AF_INET]192.168.117.6:55765, sid=4608a582 e38d9713
+2026-09-05 10:10:13 192.168.117.6:55765 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:13 192.168.117.6:55765 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_VER=2.5.1
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_PLAT=linux
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_PROTO=6
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_NCP=2
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_LZ4=1
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_LZ4v2=1
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_LZO=1
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:13 192.168.117.6:55765 peer info: IV_TCPNL=1
+2026-09-05 10:10:13 192.168.117.6:55765 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:13 192.168.117.6:55765 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:55765
+2026-09-05 10:10:13 jdoe/192.168.117.6:55765 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:13 jdoe/192.168.117.6:55765 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:55765
+2026-09-05 10:10:13 jdoe/192.168.117.6:55765 MULTI: primary virtual IP for jdoe/192.168.117.6:55765: 10.8.0.2
+2026-09-05 10:10:13 jdoe/192.168.117.6:55765 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:13 jdoe/192.168.117.6:55765 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:13 jdoe/192.168.117.6:55765 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:16 192.168.117.6:38714 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:16 192.168.117.6:38714 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:16 192.168.117.6:38714 TLS: Initial packet from [AF_INET]192.168.117.6:38714, sid=a16d12ed 409309a1
+2026-09-05 10:10:17 192.168.117.6:38714 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:17 192.168.117.6:38714 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_VER=2.5.1
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_PLAT=linux
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_PROTO=6
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_NCP=2
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_LZ4=1
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_LZ4v2=1
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_LZO=1
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:17 192.168.117.6:38714 peer info: IV_TCPNL=1
+2026-09-05 10:10:17 192.168.117.6:38714 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:17 192.168.117.6:38714 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:38714
+2026-09-05 10:10:17 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:17 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:17 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:38714
+2026-09-05 10:10:17 MULTI: primary virtual IP for jdoe/192.168.117.6:38714: 10.8.0.2
+2026-09-05 10:10:17 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:17 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:17 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:17 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:17 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:49195
+2026-09-05 10:10:20 192.168.117.6:50209 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:20 192.168.117.6:50209 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:20 192.168.117.6:50209 TLS: Initial packet from [AF_INET]192.168.117.6:50209, sid=b4883062 6768a2cb
+2026-09-05 10:10:20 192.168.117.6:50209 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:20 192.168.117.6:50209 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_VER=2.5.1
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_PLAT=linux
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_PROTO=6
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_NCP=2
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_LZ4=1
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_LZ4v2=1
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_LZO=1
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:20 192.168.117.6:50209 peer info: IV_TCPNL=1
+2026-09-05 10:10:20 192.168.117.6:50209 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:20 192.168.117.6:50209 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:50209
+2026-09-05 10:10:20 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:20 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:20 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:50209
+2026-09-05 10:10:20 MULTI: primary virtual IP for jdoe/192.168.117.6:50209: 10.8.0.2
+2026-09-05 10:10:20 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:20 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:20 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:21 192.168.117.3:45543 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:21 192.168.117.3:45543 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:21 192.168.117.3:45543 TLS: Initial packet from [AF_INET]192.168.117.3:45543, sid=b84edb5b d5c84dbe
+2026-09-05 10:10:21 192.168.117.3:45543 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:10:21 192.168.117.3:45543 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:10:21 192.168.117.3:45543 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:10:21 192.168.117.3:45543 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:10:21 192.168.117.3:45543 TLS Error: TLS handshake failed
+2026-09-05 10:10:21 192.168.117.3:45543 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:10:22 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:22 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:37327
+2026-09-05 10:10:23 192.168.117.6:59187 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:23 192.168.117.6:59187 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:23 192.168.117.6:59187 TLS: Initial packet from [AF_INET]192.168.117.6:59187, sid=a22abaf0 5c7a4288
+2026-09-05 10:10:23 192.168.117.6:59187 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:23 192.168.117.6:59187 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_VER=2.5.1
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_PLAT=linux
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_PROTO=6
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_NCP=2
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_LZ4=1
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_LZ4v2=1
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_LZO=1
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:23 192.168.117.6:59187 peer info: IV_TCPNL=1
+2026-09-05 10:10:23 192.168.117.6:59187 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:23 192.168.117.6:59187 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:59187
+2026-09-05 10:10:23 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:23 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:23 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:59187
+2026-09-05 10:10:23 MULTI: primary virtual IP for jdoe/192.168.117.6:59187: 10.8.0.2
+2026-09-05 10:10:23 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:23 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:23 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:24 jdoe/192.168.117.6:59187 SIGTERM[soft,remote-exit] received, client-instance exiting
+2026-09-05 10:10:26 192.168.117.6:58487 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:26 192.168.117.6:58487 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:26 192.168.117.6:58487 TLS: Initial packet from [AF_INET]192.168.117.6:58487, sid=83a54445 abcda0c9
+2026-09-05 10:10:26 192.168.117.6:58487 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:26 192.168.117.6:58487 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_VER=2.5.1
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_PLAT=linux
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_PROTO=6
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_NCP=2
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_LZ4=1
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_LZ4v2=1
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_LZO=1
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:26 192.168.117.6:58487 peer info: IV_TCPNL=1
+2026-09-05 10:10:26 192.168.117.6:58487 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:26 192.168.117.6:58487 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:58487
+2026-09-05 10:10:26 jdoe/192.168.117.6:58487 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:26 jdoe/192.168.117.6:58487 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:58487
+2026-09-05 10:10:26 jdoe/192.168.117.6:58487 MULTI: primary virtual IP for jdoe/192.168.117.6:58487: 10.8.0.2
+2026-09-05 10:10:26 jdoe/192.168.117.6:58487 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:26 jdoe/192.168.117.6:58487 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:26 jdoe/192.168.117.6:58487 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:27 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:27 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:50033
+2026-09-05 10:10:29 192.168.117.6:46105 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:29 192.168.117.6:46105 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:29 192.168.117.6:46105 TLS: Initial packet from [AF_INET]192.168.117.6:46105, sid=684c6410 26d28819
+2026-09-05 10:10:29 192.168.117.6:46105 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:29 192.168.117.6:46105 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_VER=2.5.1
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_PLAT=linux
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_PROTO=6
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_NCP=2
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_LZ4=1
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_LZ4v2=1
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_LZO=1
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:29 192.168.117.6:46105 peer info: IV_TCPNL=1
+2026-09-05 10:10:29 192.168.117.6:46105 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:29 192.168.117.6:46105 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:46105
+2026-09-05 10:10:29 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:29 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:29 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:46105
+2026-09-05 10:10:29 MULTI: primary virtual IP for jdoe/192.168.117.6:46105: 10.8.0.2
+2026-09-05 10:10:29 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:29 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:29 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:30 192.168.117.3:51321 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:30 192.168.117.3:51321 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:30 192.168.117.3:51321 TLS: Initial packet from [AF_INET]192.168.117.3:51321, sid=08cdf746 f347c8a2
+2026-09-05 10:10:30 192.168.117.3:51321 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:10:30 192.168.117.3:51321 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:10:30 192.168.117.3:51321 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:10:30 192.168.117.3:51321 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:10:30 192.168.117.3:51321 TLS Error: TLS handshake failed
+2026-09-05 10:10:30 192.168.117.3:51321 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:10:32 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:32 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:44683
+2026-09-05 10:10:33 192.168.117.6:42545 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:33 192.168.117.6:42545 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:33 192.168.117.6:42545 TLS: Initial packet from [AF_INET]192.168.117.6:42545, sid=39993a84 b4bf7f6f
+2026-09-05 10:10:33 192.168.117.6:42545 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:33 192.168.117.6:42545 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_VER=2.5.1
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_PLAT=linux
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_PROTO=6
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_NCP=2
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_LZ4=1
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_LZ4v2=1
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_LZO=1
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:33 192.168.117.6:42545 peer info: IV_TCPNL=1
+2026-09-05 10:10:33 192.168.117.6:42545 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:33 192.168.117.6:42545 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:42545
+2026-09-05 10:10:33 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:33 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:33 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:42545
+2026-09-05 10:10:33 MULTI: primary virtual IP for jdoe/192.168.117.6:42545: 10.8.0.2
+2026-09-05 10:10:33 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:33 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:33 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:36 192.168.117.6:55286 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:36 192.168.117.6:55286 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:36 192.168.117.6:55286 TLS: Initial packet from [AF_INET]192.168.117.6:55286, sid=5e20edcd 1a8d03b3
+2026-09-05 10:10:36 192.168.117.6:55286 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:36 192.168.117.6:55286 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_VER=2.5.1
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_PLAT=linux
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_PROTO=6
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_NCP=2
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_LZ4=1
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_LZ4v2=1
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_LZO=1
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:36 192.168.117.6:55286 peer info: IV_TCPNL=1
+2026-09-05 10:10:36 192.168.117.6:55286 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:36 192.168.117.6:55286 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:55286
+2026-09-05 10:10:36 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:36 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:36 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:55286
+2026-09-05 10:10:36 MULTI: primary virtual IP for jdoe/192.168.117.6:55286: 10.8.0.2
+2026-09-05 10:10:36 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:36 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:36 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:37 jdoe/192.168.117.6:55286 SIGTERM[soft,remote-exit] received, client-instance exiting
+2026-09-05 10:10:37 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:37 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:39163
+2026-09-05 10:10:39 192.168.117.6:51516 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:39 192.168.117.6:51516 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:39 192.168.117.6:51516 TLS: Initial packet from [AF_INET]192.168.117.6:51516, sid=53f91eea 0c5ba67e
+2026-09-05 10:10:39 192.168.117.6:51516 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:39 192.168.117.6:51516 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_VER=2.5.1
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_PLAT=linux
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_PROTO=6
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_NCP=2
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_LZ4=1
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_LZ4v2=1
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_LZO=1
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:39 192.168.117.6:51516 peer info: IV_TCPNL=1
+2026-09-05 10:10:39 192.168.117.6:51516 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:39 192.168.117.6:51516 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:51516
+2026-09-05 10:10:39 jdoe/192.168.117.6:51516 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:39 jdoe/192.168.117.6:51516 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:51516
+2026-09-05 10:10:39 jdoe/192.168.117.6:51516 MULTI: primary virtual IP for jdoe/192.168.117.6:51516: 10.8.0.2
+2026-09-05 10:10:39 jdoe/192.168.117.6:51516 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:39 jdoe/192.168.117.6:51516 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:39 jdoe/192.168.117.6:51516 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:39 192.168.117.3:46896 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:39 192.168.117.3:46896 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:39 192.168.117.3:46896 TLS: Initial packet from [AF_INET]192.168.117.3:46896, sid=a3ccc9a7 9b1467b5
+2026-09-05 10:10:39 192.168.117.3:46896 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:10:39 192.168.117.3:46896 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:10:39 192.168.117.3:46896 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:10:39 192.168.117.3:46896 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:10:39 192.168.117.3:46896 TLS Error: TLS handshake failed
+2026-09-05 10:10:39 192.168.117.3:46896 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:10:42 192.168.117.6:46996 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:42 192.168.117.6:46996 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:42 192.168.117.6:46996 TLS: Initial packet from [AF_INET]192.168.117.6:46996, sid=ca38672f 8835a5b6
+2026-09-05 10:10:42 192.168.117.6:46996 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:42 192.168.117.6:46996 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_VER=2.5.1
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_PLAT=linux
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_PROTO=6
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_NCP=2
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_LZ4=1
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_LZ4v2=1
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_LZO=1
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:42 192.168.117.6:46996 peer info: IV_TCPNL=1
+2026-09-05 10:10:42 192.168.117.6:46996 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:42 192.168.117.6:46996 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:46996
+2026-09-05 10:10:42 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:42 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:42 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:46996
+2026-09-05 10:10:42 MULTI: primary virtual IP for jdoe/192.168.117.6:46996: 10.8.0.2
+2026-09-05 10:10:42 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:42 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:42 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:42 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:42 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:59195
+2026-09-05 10:10:45 192.168.117.6:55507 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:45 192.168.117.6:55507 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:45 192.168.117.6:55507 TLS: Initial packet from [AF_INET]192.168.117.6:55507, sid=d1a7c7cc ca4a91ca
+2026-09-05 10:10:45 192.168.117.6:55507 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:45 192.168.117.6:55507 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_VER=2.5.1
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_PLAT=linux
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_PROTO=6
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_NCP=2
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_LZ4=1
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_LZ4v2=1
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_LZO=1
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:45 192.168.117.6:55507 peer info: IV_TCPNL=1
+2026-09-05 10:10:45 192.168.117.6:55507 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:45 192.168.117.6:55507 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:55507
+2026-09-05 10:10:45 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:45 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:45 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:55507
+2026-09-05 10:10:45 MULTI: primary virtual IP for jdoe/192.168.117.6:55507: 10.8.0.2
+2026-09-05 10:10:45 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:45 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:45 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:47 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:47 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:53014
+2026-09-05 10:10:48 192.168.117.3:55997 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:48 192.168.117.3:55997 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:48 192.168.117.3:55997 TLS: Initial packet from [AF_INET]192.168.117.3:55997, sid=ffddb923 7b7a28e3
+2026-09-05 10:10:48 192.168.117.3:55997 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:10:48 192.168.117.3:55997 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:10:48 192.168.117.3:55997 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:10:48 192.168.117.3:55997 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:10:48 192.168.117.3:55997 TLS Error: TLS handshake failed
+2026-09-05 10:10:48 192.168.117.3:55997 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:10:49 192.168.117.6:45774 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:49 192.168.117.6:45774 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:49 192.168.117.6:45774 TLS: Initial packet from [AF_INET]192.168.117.6:45774, sid=9ecdff5d c6a54d6e
+2026-09-05 10:10:49 192.168.117.6:45774 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:49 192.168.117.6:45774 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_VER=2.5.1
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_PLAT=linux
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_PROTO=6
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_NCP=2
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_LZ4=1
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_LZ4v2=1
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_LZO=1
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:49 192.168.117.6:45774 peer info: IV_TCPNL=1
+2026-09-05 10:10:49 192.168.117.6:45774 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:49 192.168.117.6:45774 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:45774
+2026-09-05 10:10:49 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:49 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:49 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:45774
+2026-09-05 10:10:49 MULTI: primary virtual IP for jdoe/192.168.117.6:45774: 10.8.0.2
+2026-09-05 10:10:49 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:49 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:49 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:50 jdoe/192.168.117.6:45774 SIGTERM[soft,remote-exit] received, client-instance exiting
+2026-09-05 10:10:51 192.168.117.6:54678 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:51 192.168.117.6:54678 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:51 192.168.117.6:54678 TLS: Initial packet from [AF_INET]192.168.117.6:54678, sid=7631c143 e91983a1
+2026-09-05 10:10:51 192.168.117.6:54678 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:51 192.168.117.6:54678 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_VER=2.5.1
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_PLAT=linux
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_PROTO=6
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_NCP=2
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_LZ4=1
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_LZ4v2=1
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_LZO=1
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:51 192.168.117.6:54678 peer info: IV_TCPNL=1
+2026-09-05 10:10:51 192.168.117.6:54678 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:51 192.168.117.6:54678 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:54678
+2026-09-05 10:10:51 jdoe/192.168.117.6:54678 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:51 jdoe/192.168.117.6:54678 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:54678
+2026-09-05 10:10:51 jdoe/192.168.117.6:54678 MULTI: primary virtual IP for jdoe/192.168.117.6:54678: 10.8.0.2
+2026-09-05 10:10:51 jdoe/192.168.117.6:54678 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:51 jdoe/192.168.117.6:54678 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:51 jdoe/192.168.117.6:54678 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:52 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:52 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:42321
+2026-09-05 10:10:55 192.168.117.6:45743 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:55 192.168.117.6:45743 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:55 192.168.117.6:45743 TLS: Initial packet from [AF_INET]192.168.117.6:45743, sid=e838b387 cf461cf1
+2026-09-05 10:10:55 192.168.117.6:45743 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:55 192.168.117.6:45743 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_VER=2.5.1
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_PLAT=linux
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_PROTO=6
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_NCP=2
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_LZ4=1
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_LZ4v2=1
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_LZO=1
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:55 192.168.117.6:45743 peer info: IV_TCPNL=1
+2026-09-05 10:10:55 192.168.117.6:45743 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:55 192.168.117.6:45743 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:45743
+2026-09-05 10:10:55 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:55 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:55 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:45743
+2026-09-05 10:10:55 MULTI: primary virtual IP for jdoe/192.168.117.6:45743: 10.8.0.2
+2026-09-05 10:10:55 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:55 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:55 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:58 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:10:58 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:55920
+2026-09-05 10:10:58 192.168.117.6:58985 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:58 192.168.117.6:58985 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:58 192.168.117.6:58985 TLS: Initial packet from [AF_INET]192.168.117.6:58985, sid=98a909d1 0fffbc87
+2026-09-05 10:10:58 192.168.117.6:58985 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:10:58 192.168.117.6:58985 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_VER=2.5.1
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_PLAT=linux
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_PROTO=6
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_NCP=2
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_LZ4=1
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_LZ4v2=1
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_LZO=1
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_COMP_STUB=1
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:10:58 192.168.117.6:58985 peer info: IV_TCPNL=1
+2026-09-05 10:10:58 192.168.117.6:58985 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:10:58 192.168.117.6:58985 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:58985
+2026-09-05 10:10:58 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:10:58 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:10:58 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:58985
+2026-09-05 10:10:58 MULTI: primary virtual IP for jdoe/192.168.117.6:58985: 10.8.0.2
+2026-09-05 10:10:58 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:58 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:10:58 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:10:58 192.168.117.3:53485 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:58 192.168.117.3:53485 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:10:58 192.168.117.3:53485 TLS: Initial packet from [AF_INET]192.168.117.3:53485, sid=9098ef75 53ac026a
+2026-09-05 10:10:58 192.168.117.3:53485 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:10:58 192.168.117.3:53485 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:10:58 192.168.117.3:53485 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:10:58 192.168.117.3:53485 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:10:58 192.168.117.3:53485 TLS Error: TLS handshake failed
+2026-09-05 10:10:58 192.168.117.3:53485 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:11:01 192.168.117.6:54591 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:01 192.168.117.6:54591 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:01 192.168.117.6:54591 TLS: Initial packet from [AF_INET]192.168.117.6:54591, sid=6d942ae2 b009a1ec
+2026-09-05 10:11:01 192.168.117.6:54591 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:11:01 192.168.117.6:54591 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_VER=2.5.1
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_PLAT=linux
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_PROTO=6
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_NCP=2
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_LZ4=1
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_LZ4v2=1
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_LZO=1
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_COMP_STUB=1
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:11:01 192.168.117.6:54591 peer info: IV_TCPNL=1
+2026-09-05 10:11:01 192.168.117.6:54591 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:11:01 192.168.117.6:54591 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:54591
+2026-09-05 10:11:01 MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+2026-09-05 10:11:01 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:11:01 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:54591
+2026-09-05 10:11:01 MULTI: primary virtual IP for jdoe/192.168.117.6:54591: 10.8.0.2
+2026-09-05 10:11:01 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:11:01 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:11:01 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM' (status=1)
+2026-09-05 10:11:02 jdoe/192.168.117.6:54591 SIGTERM[soft,remote-exit] received, client-instance exiting
+2026-09-05 10:11:04 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:11:04 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:39809
+2026-09-05 10:11:04 192.168.117.6:51467 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:04 192.168.117.6:51467 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:04 192.168.117.6:51467 TLS: Initial packet from [AF_INET]192.168.117.6:51467, sid=b780dedf 00948922
+2026-09-05 10:11:04 192.168.117.6:51467 VERIFY OK: depth=1, CN=ULPF Test CA
+2026-09-05 10:11:04 192.168.117.6:51467 VERIFY OK: depth=0, CN=jdoe
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_VER=2.5.1
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_PLAT=linux
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_PROTO=6
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_NCP=2
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_LZ4=1
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_LZ4v2=1
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_LZO=1
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_COMP_STUB=1
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_COMP_STUBv2=1
+2026-09-05 10:11:04 192.168.117.6:51467 peer info: IV_TCPNL=1
+2026-09-05 10:11:04 192.168.117.6:51467 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, 2048 bit RSA
+2026-09-05 10:11:04 192.168.117.6:51467 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:51467
+2026-09-05 10:11:04 jdoe/192.168.117.6:51467 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+2026-09-05 10:11:04 jdoe/192.168.117.6:51467 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:51467
+2026-09-05 10:11:04 jdoe/192.168.117.6:51467 MULTI: primary virtual IP for jdoe/192.168.117.6:51467: 10.8.0.2
+2026-09-05 10:11:04 jdoe/192.168.117.6:51467 Outgoing Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:11:04 jdoe/192.168.117.6:51467 Incoming Data Channel: Cipher 'AES-256-GCM' initialized with 256 bit key
+2026-09-05 10:11:04 jdoe/192.168.117.6:51467 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM' (status=1)
+2026-09-05 10:11:08 192.168.117.3:51999 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:08 192.168.117.3:51999 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:08 192.168.117.3:51999 TLS: Initial packet from [AF_INET]192.168.117.3:51999, sid=81bc8dc3 b2630619
+2026-09-05 10:11:08 192.168.117.3:51999 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:11:08 192.168.117.3:51999 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:11:08 192.168.117.3:51999 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:11:08 192.168.117.3:51999 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:11:08 192.168.117.3:51999 TLS Error: TLS handshake failed
+2026-09-05 10:11:08 192.168.117.3:51999 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:11:09 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:11:09 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:58474
+2026-09-05 10:11:14 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:11:14 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:59661
+2026-09-05 10:11:18 192.168.117.3:50516 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:18 192.168.117.3:50516 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:18 192.168.117.3:50516 TLS: Initial packet from [AF_INET]192.168.117.3:50516, sid=9c88b02c 97d6d13a
+2026-09-05 10:11:18 192.168.117.3:50516 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:11:18 192.168.117.3:50516 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:11:18 192.168.117.3:50516 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:11:18 192.168.117.3:50516 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:11:18 192.168.117.3:50516 TLS Error: TLS handshake failed
+2026-09-05 10:11:18 192.168.117.3:50516 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:11:19 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:11:19 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:51346
+2026-09-05 10:11:25 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:11:25 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:45233
+2026-09-05 10:11:28 192.168.117.3:38981 Outgoing Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:28 192.168.117.3:38981 Incoming Control Channel Authentication: Using 256 bit message hash 'SHA256' for HMAC authentication
+2026-09-05 10:11:28 192.168.117.3:38981 TLS: Initial packet from [AF_INET]192.168.117.3:38981, sid=2f0fdf6e e8d40191
+2026-09-05 10:11:28 192.168.117.3:38981 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+2026-09-05 10:11:28 192.168.117.3:38981 OpenSSL: error:1417C086:SSL routines:tls_process_client_certificate:certificate verify failed
+2026-09-05 10:11:28 192.168.117.3:38981 TLS_ERROR: BIO read tls_read_plaintext error
+2026-09-05 10:11:28 192.168.117.3:38981 TLS Error: TLS object -> incoming plaintext read error
+2026-09-05 10:11:28 192.168.117.3:38981 TLS Error: TLS handshake failed
+2026-09-05 10:11:28 192.168.117.3:38981 SIGUSR1[soft,tls-error] received, client-instance restarting
+2026-09-05 10:11:30 Authenticate/Decrypt packet error: packet HMAC authentication failed
+2026-09-05 10:11:30 TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:46084
+2026-09-05 10:11:34 event_wait : Interrupted system call (code=4)
+2026-09-05 10:11:34 SENT CONTROL [jdoe]: 'RESTART' (status=1)
+2026-09-05 10:11:34 jdoe/192.168.117.6:51467 [jdoe] Inactivity timeout (--ping-restart), restarting
+2026-09-05 10:11:34 jdoe/192.168.117.6:51467 SIGUSR1[soft,ping-restart] received, client-instance restarting
+2026-09-05 10:11:36 Closing TUN/TAP interface
+2026-09-05 10:11:36 net_addr_v4_del: 10.8.0.1 dev tun0
+2026-09-05 10:11:36 SIGTERM[hard,] received, process exiting

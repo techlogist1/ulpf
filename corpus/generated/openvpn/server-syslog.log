@@ -1,0 +1,1044 @@
+Sep  5 10:01:48 253acea0e8fa rsyslogd: [origin software="rsyslogd" swVersion="8.2302.0" x-pid="7" x-info="https://www.rsyslog.com"] start
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: Note: Kernel support for ovpn-dco missing, disabling data channel offload.
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: WARNING: file '/etc/openvpn/certs/server.key' is group or others accessible
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: OpenVPN 2.6.14 aarch64-unknown-linux-gnu [SSL (OpenSSL)] [LZO] [LZ4] [EPOLL] [PKCS11] [MH/PKTINFO] [AEAD] [DCO]
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: library versions: OpenSSL 3.0.20 7 Apr 2026, LZO 2.10
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: DCO version: N/A
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: net_route_v4_best_gw query: dst 0.0.0.0
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: net_route_v4_best_gw result: via 192.168.117.1 dev eth0
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: Diffie-Hellman initialized with 2048 bit key
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: CRL: loaded 1 CRLs from file /etc/openvpn/certs/crl.pem
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: TUN/TAP device tun0 opened
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: net_iface_mtu_set: mtu 1500 for tun0
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: net_iface_up: set tun0 up
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: net_addr_v4_add: 10.8.0.1/24 dev tun0
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: Could not determine IPv4/IPv6 protocol. Using AF_INET
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: Socket Buffers: R=[229376->229376] S=[229376->229376]
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: UDPv4 link local (bound): [AF_INET][undef]:1194
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: UDPv4 link remote: [AF_UNSPEC]
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: MULTI: multi_init called, r=256 v=256
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: IFCONFIG POOL IPv4: base=10.8.0.2 size=253
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: IFCONFIG POOL LIST
+Sep  5 10:01:49 253acea0e8fa openvpn[1]: Initialization Sequence Completed
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: 192.168.117.3:41487 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: 192.168.117.3:41487 Sent fatal SSL alert: unknown CA
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: 192.168.117.3:41487 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: 192.168.117.3:41487 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: 192.168.117.3:41487 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: 192.168.117.3:41487 TLS Error: TLS handshake failed
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: 192.168.117.3:41487 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:01:51 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:57096
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_VER=2.6.14
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_PLAT=linux
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_TCPNL=1
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_MTU=1600
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_NCP=2
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_PROTO=990
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_LZO_STUB=1
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_COMP_STUB=1
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 peer info: IV_COMP_STUBv2=1
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: 192.168.117.6:57382 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:57382
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:57382 MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:57382 MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:57382
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:57382 MULTI: primary virtual IP for jdoe/192.168.117.6:57382: 10.8.0.2
+Sep  5 10:01:52 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:57382 SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:01:53 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:57382 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:01:53 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:57382 Timers: ping 5, ping-restart 30
+Sep  5 10:01:53 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:57382 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_VER=2.6.14
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_PLAT=linux
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_TCPNL=1
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_MTU=1600
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_NCP=2
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_PROTO=990
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_LZO_STUB=1
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_COMP_STUB=1
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 peer info: IV_COMP_STUBv2=1
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: 192.168.117.6:33955 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:33955
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:33955
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:33955: 10.8.0.2
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:01:56 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:36479
+Sep  5 10:01:57 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33955 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:01:57 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33955 Timers: ping 5, ping-restart 30
+Sep  5 10:01:57 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33955 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_VER=2.6.14
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_PLAT=linux
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_TCPNL=1
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_MTU=1600
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_NCP=2
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_PROTO=990
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_LZO_STUB=1
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_COMP_STUB=1
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 peer info: IV_COMP_STUBv2=1
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: 192.168.117.6:37184 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:37184
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:37184
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:37184: 10.8.0.2
+Sep  5 10:01:59 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:37184 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:37184 Timers: ping 5, ping-restart 30
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:37184 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: 192.168.117.3:42569 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: 192.168.117.3:42569 Sent fatal SSL alert: unknown CA
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: 192.168.117.3:42569 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: 192.168.117.3:42569 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: 192.168.117.3:42569 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: 192.168.117.3:42569 TLS Error: TLS handshake failed
+Sep  5 10:02:00 253acea0e8fa openvpn[1]: 192.168.117.3:42569 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:02:01 253acea0e8fa openvpn[1]: read UDPv4 [ECONNREFUSED]: Connection refused (fd=7,code=111)
+Sep  5 10:02:01 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:01 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:59370
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_VER=2.6.14
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_PLAT=linux
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_TCPNL=1
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_MTU=1600
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_NCP=2
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_PROTO=990
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_LZO_STUB=1
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_COMP_STUB=1
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: 192.168.117.6:41777 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:41777
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:41777
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:41777: 10.8.0.2
+Sep  5 10:02:02 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:03 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:41777 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:03 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:41777 Timers: ping 5, ping-restart 30
+Sep  5 10:02:03 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:41777 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:03 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:41777 CC-EEN exit message received by peer
+Sep  5 10:02:03 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:41777 Delayed exit in 5 seconds
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_VER=2.6.14
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_PLAT=linux
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_TCPNL=1
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_MTU=1600
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_NCP=2
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_PROTO=990
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_LZO_STUB=1
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_COMP_STUB=1
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: 192.168.117.6:38109 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:38109
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:38109
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:38109: 10.8.0.2
+Sep  5 10:02:05 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:06 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38109 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:06 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38109 Timers: ping 5, ping-restart 30
+Sep  5 10:02:06 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38109 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:06 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:06 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:58295
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_VER=2.6.14
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_PLAT=linux
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_TCPNL=1
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_MTU=1600
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_NCP=2
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_PROTO=990
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_LZO_STUB=1
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_COMP_STUB=1
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.6:42586 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:42586
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:42586
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:42586: 10.8.0.2
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.3:43502 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.3:43502 Sent fatal SSL alert: unknown CA
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.3:43502 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.3:43502 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.3:43502 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.3:43502 TLS Error: TLS handshake failed
+Sep  5 10:02:09 253acea0e8fa openvpn[1]: 192.168.117.3:43502 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:02:10 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:42586 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:10 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:42586 Timers: ping 5, ping-restart 30
+Sep  5 10:02:10 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:42586 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:11 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:11 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:36622
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_VER=2.6.14
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_PLAT=linux
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_TCPNL=1
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_MTU=1600
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_NCP=2
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_PROTO=990
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_LZO_STUB=1
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_COMP_STUB=1
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: 192.168.117.6:38842 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:38842
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:38842
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:38842: 10.8.0.2
+Sep  5 10:02:12 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:13 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38842 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:13 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38842 Timers: ping 5, ping-restart 30
+Sep  5 10:02:13 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38842 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_VER=2.6.14
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_PLAT=linux
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_TCPNL=1
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_MTU=1600
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_NCP=2
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_PROTO=990
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_LZO_STUB=1
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_COMP_STUB=1
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: 192.168.117.6:33051 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:33051
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:33051
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:33051: 10.8.0.2
+Sep  5 10:02:15 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:16 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33051 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:16 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33051 Timers: ping 5, ping-restart 30
+Sep  5 10:02:16 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33051 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:16 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33051 CC-EEN exit message received by peer
+Sep  5 10:02:16 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33051 Delayed exit in 5 seconds
+Sep  5 10:02:16 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:16 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:35366
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_VER=2.6.14
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_PLAT=linux
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_TCPNL=1
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_MTU=1600
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_NCP=2
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_PROTO=990
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_LZO_STUB=1
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_COMP_STUB=1
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: 192.168.117.6:32815 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:32815
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:32815
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:32815: 10.8.0.2
+Sep  5 10:02:17 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:32815 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:32815 Timers: ping 5, ping-restart 30
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:32815 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: 192.168.117.3:47130 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: 192.168.117.3:47130 Sent fatal SSL alert: unknown CA
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: 192.168.117.3:47130 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: 192.168.117.3:47130 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: 192.168.117.3:47130 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: 192.168.117.3:47130 TLS Error: TLS handshake failed
+Sep  5 10:02:19 253acea0e8fa openvpn[1]: 192.168.117.3:47130 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_VER=2.6.14
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_PLAT=linux
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_TCPNL=1
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_MTU=1600
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_NCP=2
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_PROTO=990
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_LZO_STUB=1
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_COMP_STUB=1
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: 192.168.117.6:39108 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:39108
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:39108
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:39108: 10.8.0.2
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:21 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:49508
+Sep  5 10:02:22 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:39108 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:22 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:39108 Timers: ping 5, ping-restart 30
+Sep  5 10:02:22 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:39108 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_VER=2.6.14
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_PLAT=linux
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_TCPNL=1
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_MTU=1600
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_NCP=2
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_PROTO=990
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_LZO_STUB=1
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_COMP_STUB=1
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: 192.168.117.6:43807 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:43807
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:43807
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:43807: 10.8.0.2
+Sep  5 10:02:24 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:25 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:43807 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:25 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:43807 Timers: ping 5, ping-restart 30
+Sep  5 10:02:25 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:43807 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:26 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:26 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:38860
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_VER=2.6.14
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_PLAT=linux
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_TCPNL=1
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_MTU=1600
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_NCP=2
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_PROTO=990
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_LZO_STUB=1
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_COMP_STUB=1
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: 192.168.117.6:33924 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:33924
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:33924
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:33924: 10.8.0.2
+Sep  5 10:02:27 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: 192.168.117.3:48043 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: 192.168.117.3:48043 Sent fatal SSL alert: unknown CA
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: 192.168.117.3:48043 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: 192.168.117.3:48043 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: 192.168.117.3:48043 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: 192.168.117.3:48043 TLS Error: TLS handshake failed
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: 192.168.117.3:48043 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33924 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33924 Timers: ping 5, ping-restart 30
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33924 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33924 CC-EEN exit message received by peer
+Sep  5 10:02:28 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33924 Delayed exit in 5 seconds
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_VER=2.6.14
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_PLAT=linux
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_TCPNL=1
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_MTU=1600
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_NCP=2
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_PROTO=990
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_LZO_STUB=1
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_COMP_STUB=1
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: 192.168.117.6:59605 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:59605
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:59605
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:59605: 10.8.0.2
+Sep  5 10:02:30 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:31 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:31 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:37216
+Sep  5 10:02:31 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:59605 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:31 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:59605 Timers: ping 5, ping-restart 30
+Sep  5 10:02:31 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:59605 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_VER=2.6.14
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_PLAT=linux
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_TCPNL=1
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_MTU=1600
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_NCP=2
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_PROTO=990
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_LZO_STUB=1
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_COMP_STUB=1
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: 192.168.117.6:33065 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:33065
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:33065
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:33065: 10.8.0.2
+Sep  5 10:02:34 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:35 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33065 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:35 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33065 Timers: ping 5, ping-restart 30
+Sep  5 10:02:35 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:33065 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:36 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:36 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:56401
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_VER=2.6.14
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_PLAT=linux
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_TCPNL=1
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_MTU=1600
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_NCP=2
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_PROTO=990
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_LZO_STUB=1
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_COMP_STUB=1
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: 192.168.117.6:49538 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:49538
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:49538
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:49538: 10.8.0.2
+Sep  5 10:02:37 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:49538 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:49538 Timers: ping 5, ping-restart 30
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:49538 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: 192.168.117.3:39007 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: 192.168.117.3:39007 Sent fatal SSL alert: unknown CA
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: 192.168.117.3:39007 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: 192.168.117.3:39007 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: 192.168.117.3:39007 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: 192.168.117.3:39007 TLS Error: TLS handshake failed
+Sep  5 10:02:38 253acea0e8fa openvpn[1]: 192.168.117.3:39007 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_VER=2.6.14
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_PLAT=linux
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_TCPNL=1
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_MTU=1600
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_NCP=2
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_PROTO=990
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_LZO_STUB=1
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_COMP_STUB=1
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: 192.168.117.6:36477 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:36477
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:36477
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:36477: 10.8.0.2
+Sep  5 10:02:40 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:41 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36477 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:41 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36477 Timers: ping 5, ping-restart 30
+Sep  5 10:02:41 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36477 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:41 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:41 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:59779
+Sep  5 10:02:41 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36477 CC-EEN exit message received by peer
+Sep  5 10:02:41 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36477 Delayed exit in 5 seconds
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_VER=2.6.14
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_PLAT=linux
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_TCPNL=1
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_MTU=1600
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_NCP=2
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_PROTO=990
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_LZO_STUB=1
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_COMP_STUB=1
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: 192.168.117.6:36716 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:36716
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:36716
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:36716: 10.8.0.2
+Sep  5 10:02:43 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:45 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36716 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:45 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36716 Timers: ping 5, ping-restart 30
+Sep  5 10:02:45 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36716 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:46 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:46 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:46053
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: read UDPv4 [ECONNREFUSED]: Connection refused (fd=7,code=111)
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_VER=2.6.14
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_PLAT=linux
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_TCPNL=1
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_MTU=1600
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_NCP=2
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_PROTO=990
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_LZO_STUB=1
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_COMP_STUB=1
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: 192.168.117.6:42181 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:42181
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:42181
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:42181: 10.8.0.2
+Sep  5 10:02:47 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: 192.168.117.3:56471 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: 192.168.117.3:56471 Sent fatal SSL alert: unknown CA
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: 192.168.117.3:56471 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: 192.168.117.3:56471 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: 192.168.117.3:56471 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: 192.168.117.3:56471 TLS Error: TLS handshake failed
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: 192.168.117.3:56471 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:42181 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:42181 Timers: ping 5, ping-restart 30
+Sep  5 10:02:48 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:42181 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_VER=2.6.14
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_PLAT=linux
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_TCPNL=1
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_MTU=1600
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_NCP=2
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_PROTO=990
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_LZO_STUB=1
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_COMP_STUB=1
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: 192.168.117.6:45869 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:45869
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:45869
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:45869: 10.8.0.2
+Sep  5 10:02:50 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:51 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:51 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:37926
+Sep  5 10:02:51 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:45869 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:51 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:45869 Timers: ping 5, ping-restart 30
+Sep  5 10:02:51 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:45869 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_VER=2.6.14
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_PLAT=linux
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_TCPNL=1
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_MTU=1600
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_NCP=2
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_PROTO=990
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_LZO_STUB=1
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_COMP_STUB=1
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: 192.168.117.6:38947 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:38947
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:38947
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:38947: 10.8.0.2
+Sep  5 10:02:53 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:54 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38947 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:54 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38947 Timers: ping 5, ping-restart 30
+Sep  5 10:02:54 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38947 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:54 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38947 CC-EEN exit message received by peer
+Sep  5 10:02:54 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:38947 Delayed exit in 5 seconds
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_VER=2.6.14
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_PLAT=linux
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_TCPNL=1
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_MTU=1600
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_NCP=2
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_PROTO=990
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_LZO_STUB=1
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_COMP_STUB=1
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 peer info: IV_COMP_STUBv2=1
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: 192.168.117.6:52701 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:52701
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:52701
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:52701: 10.8.0.2
+Sep  5 10:02:56 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:02:57 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:02:57 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:48261
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:52701 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:52701 Timers: ping 5, ping-restart 30
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:52701 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: 192.168.117.3:53406 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: 192.168.117.3:53406 Sent fatal SSL alert: unknown CA
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: 192.168.117.3:53406 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: 192.168.117.3:53406 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: 192.168.117.3:53406 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: 192.168.117.3:53406 TLS Error: TLS handshake failed
+Sep  5 10:02:58 253acea0e8fa openvpn[1]: 192.168.117.3:53406 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_VER=2.6.14
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_PLAT=linux
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_TCPNL=1
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_MTU=1600
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_NCP=2
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_PROTO=990
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_LZO_STUB=1
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_COMP_STUB=1
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: 192.168.117.6:45699 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:45699
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:45699
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:45699: 10.8.0.2
+Sep  5 10:03:00 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:01 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:45699 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:01 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:45699 Timers: ping 5, ping-restart 30
+Sep  5 10:03:01 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:45699 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:02 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:02 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:45078
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_VER=2.6.14
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_PLAT=linux
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_TCPNL=1
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_MTU=1600
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_NCP=2
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_PROTO=990
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_LZO_STUB=1
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_COMP_STUB=1
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: 192.168.117.6:40240 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:40240
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:40240
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:40240: 10.8.0.2
+Sep  5 10:03:03 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:04 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:40240 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:04 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:40240 Timers: ping 5, ping-restart 30
+Sep  5 10:03:04 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:40240 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_VER=2.6.14
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_PLAT=linux
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_TCPNL=1
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_MTU=1600
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_NCP=2
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_PROTO=990
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_LZO_STUB=1
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_COMP_STUB=1
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: 192.168.117.6:53082 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:53082
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:53082
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:53082: 10.8.0.2
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:07 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:38504
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: 192.168.117.3:57656 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: 192.168.117.3:57656 Sent fatal SSL alert: unknown CA
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: 192.168.117.3:57656 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: 192.168.117.3:57656 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: 192.168.117.3:57656 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: 192.168.117.3:57656 TLS Error: TLS handshake failed
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: 192.168.117.3:57656 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53082 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53082 Timers: ping 5, ping-restart 30
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53082 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53082 CC-EEN exit message received by peer
+Sep  5 10:03:08 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53082 Delayed exit in 5 seconds
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_VER=2.6.14
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_PLAT=linux
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_TCPNL=1
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_MTU=1600
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_NCP=2
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_PROTO=990
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_LZO_STUB=1
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_COMP_STUB=1
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: 192.168.117.6:41945 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:41945
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:41945
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:41945: 10.8.0.2
+Sep  5 10:03:11 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:12 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:12 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:51418
+Sep  5 10:03:12 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:41945 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:12 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:41945 Timers: ping 5, ping-restart 30
+Sep  5 10:03:12 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:41945 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_VER=2.6.14
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_PLAT=linux
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_TCPNL=1
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_MTU=1600
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_NCP=2
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_PROTO=990
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_LZO_STUB=1
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_COMP_STUB=1
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: 192.168.117.6:54897 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:54897
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:54897
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:54897: 10.8.0.2
+Sep  5 10:03:14 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:15 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:54897 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:15 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:54897 Timers: ping 5, ping-restart 30
+Sep  5 10:03:15 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:54897 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:17 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:17 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:40802
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_VER=2.6.14
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_PLAT=linux
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_TCPNL=1
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_MTU=1600
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_NCP=2
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_PROTO=990
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_LZO_STUB=1
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_COMP_STUB=1
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.6:58330 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:58330
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:58330
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:58330: 10.8.0.2
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.3:39582 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.3:39582 Sent fatal SSL alert: unknown CA
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.3:39582 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.3:39582 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.3:39582 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.3:39582 TLS Error: TLS handshake failed
+Sep  5 10:03:18 253acea0e8fa openvpn[1]: 192.168.117.3:39582 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:03:19 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:58330 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:19 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:58330 Timers: ping 5, ping-restart 30
+Sep  5 10:03:19 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:58330 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_VER=2.6.14
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_PLAT=linux
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_TCPNL=1
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_MTU=1600
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_NCP=2
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_PROTO=990
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_LZO_STUB=1
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_COMP_STUB=1
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: 192.168.117.6:46549 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:46549
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:46549
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:46549: 10.8.0.2
+Sep  5 10:03:21 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:22 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:22 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:43273
+Sep  5 10:03:23 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:46549 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:23 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:46549 Timers: ping 5, ping-restart 30
+Sep  5 10:03:23 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:46549 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:23 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:46549 CC-EEN exit message received by peer
+Sep  5 10:03:23 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:46549 Delayed exit in 5 seconds
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_VER=2.6.14
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_PLAT=linux
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_TCPNL=1
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_MTU=1600
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_NCP=2
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_PROTO=990
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_LZO_STUB=1
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_COMP_STUB=1
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: 192.168.117.6:48054 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:48054
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:48054
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:48054: 10.8.0.2
+Sep  5 10:03:26 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:27 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:48054 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:27 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:48054 Timers: ping 5, ping-restart 30
+Sep  5 10:03:27 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:48054 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:27 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:27 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:58672
+Sep  5 10:03:28 253acea0e8fa openvpn[1]: 192.168.117.3:32859 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:03:28 253acea0e8fa openvpn[1]: 192.168.117.3:32859 Sent fatal SSL alert: unknown CA
+Sep  5 10:03:28 253acea0e8fa openvpn[1]: 192.168.117.3:32859 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:03:28 253acea0e8fa openvpn[1]: 192.168.117.3:32859 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:03:28 253acea0e8fa openvpn[1]: 192.168.117.3:32859 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:03:28 253acea0e8fa openvpn[1]: 192.168.117.3:32859 TLS Error: TLS handshake failed
+Sep  5 10:03:28 253acea0e8fa openvpn[1]: 192.168.117.3:32859 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_VER=2.6.14
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_PLAT=linux
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_TCPNL=1
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_MTU=1600
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_NCP=2
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_PROTO=990
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_LZO_STUB=1
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_COMP_STUB=1
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: 192.168.117.6:55616 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:55616
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:55616
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:55616: 10.8.0.2
+Sep  5 10:03:29 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:30 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:55616 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:30 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:55616 Timers: ping 5, ping-restart 30
+Sep  5 10:03:30 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:55616 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:32 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:32 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:36681
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_VER=2.6.14
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_PLAT=linux
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_TCPNL=1
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_MTU=1600
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_NCP=2
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_PROTO=990
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_LZO_STUB=1
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_COMP_STUB=1
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: 192.168.117.6:36262 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:36262
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:36262
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:36262: 10.8.0.2
+Sep  5 10:03:33 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:34 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36262 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:34 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36262 Timers: ping 5, ping-restart 30
+Sep  5 10:03:34 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:36262 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_VER=2.6.14
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_PLAT=linux
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_TCPNL=1
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_MTU=1600
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_NCP=2
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_PROTO=990
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_LZO_STUB=1
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_COMP_STUB=1
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: 192.168.117.6:53943 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:53943
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:53943
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:53943: 10.8.0.2
+Sep  5 10:03:36 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:37 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53943 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:37 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53943 Timers: ping 5, ping-restart 30
+Sep  5 10:03:37 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53943 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:51494
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53943 CC-EEN exit message received by peer
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:53943 Delayed exit in 5 seconds
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: 192.168.117.3:59166 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: 192.168.117.3:59166 Sent fatal SSL alert: unknown CA
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: 192.168.117.3:59166 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: 192.168.117.3:59166 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: 192.168.117.3:59166 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: 192.168.117.3:59166 TLS Error: TLS handshake failed
+Sep  5 10:03:38 253acea0e8fa openvpn[1]: 192.168.117.3:59166 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_VER=2.6.14
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_PLAT=linux
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_TCPNL=1
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_MTU=1600
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_NCP=2
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_PROTO=990
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_LZO_STUB=1
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_COMP_STUB=1
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: 192.168.117.6:59881 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:59881
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:59881
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:59881: 10.8.0.2
+Sep  5 10:03:40 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 0,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:41 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:59881 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:41 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:59881 Timers: ping 5, ping-restart 30
+Sep  5 10:03:41 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:59881 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:48571
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 VERIFY OK: depth=1, CN=ULPF Test CA
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 VERIFY OK: depth=0, CN=jdoe
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_VER=2.6.14
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_PLAT=linux
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_TCPNL=1
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_MTU=1600
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_NCP=2
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_PROTO=990
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_LZO_STUB=1
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_COMP_STUB=1
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 peer info: IV_COMP_STUBv2=1
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 TLS: move_session: dest=TM_ACTIVE src=TM_INITIAL reinit_src=1
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 TLS: tls_multi_process: initial untrusted session promoted to trusted
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 Control Channel: TLSv1.3, cipher TLSv1.3 TLS_AES_256_GCM_SHA384, peer certificate: 2048 bits RSA, signature: RSA-SHA256, peer temporary key: 253 bits X25519
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: 192.168.117.6:52785 [jdoe] Peer Connection Initiated with [AF_INET]192.168.117.6:52785
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: MULTI: new connection by client 'jdoe' will cause previous active sessions by this client to be dropped.  Remember to use the --duplicate-cn option if you want multiple clients using the same certificate or username to concurrently connect.
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: MULTI_sva: pool returned IPv4=10.8.0.2, IPv6=(Not enabled)
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: MULTI: Learn: 10.8.0.2 -> jdoe/192.168.117.6:52785
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: MULTI: primary virtual IP for jdoe/192.168.117.6:52785: 10.8.0.2
+Sep  5 10:03:43 253acea0e8fa openvpn[1]: SENT CONTROL [jdoe]: 'PUSH_REPLY,route-gateway 10.8.0.1,topology subnet,ping 5,ping-restart 15,ifconfig 10.8.0.2 255.255.255.0,peer-id 1,cipher AES-256-GCM,protocol-flags cc-exit tls-ekm dyn-tls-crypt,tun-mtu 1500' (status=1)
+Sep  5 10:03:44 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:52785 Data Channel: cipher 'AES-256-GCM', peer-id: 0
+Sep  5 10:03:44 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:52785 Timers: ping 5, ping-restart 30
+Sep  5 10:03:44 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:52785 Protocol options: explicit-exit-notify 1, protocol-flags cc-exit tls-ekm dyn-tls-crypt
+Sep  5 10:03:48 253acea0e8fa openvpn[1]: 192.168.117.3:48909 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:03:48 253acea0e8fa openvpn[1]: 192.168.117.3:48909 Sent fatal SSL alert: unknown CA
+Sep  5 10:03:48 253acea0e8fa openvpn[1]: 192.168.117.3:48909 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:03:48 253acea0e8fa openvpn[1]: 192.168.117.3:48909 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:03:48 253acea0e8fa openvpn[1]: 192.168.117.3:48909 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:03:48 253acea0e8fa openvpn[1]: 192.168.117.3:48909 TLS Error: TLS handshake failed
+Sep  5 10:03:48 253acea0e8fa openvpn[1]: 192.168.117.3:48909 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:03:49 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:49 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:56261
+Sep  5 10:03:54 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:54 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:44418
+Sep  5 10:03:58 253acea0e8fa openvpn[1]: 192.168.117.3:52182 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:03:58 253acea0e8fa openvpn[1]: 192.168.117.3:52182 Sent fatal SSL alert: unknown CA
+Sep  5 10:03:58 253acea0e8fa openvpn[1]: 192.168.117.3:52182 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:03:58 253acea0e8fa openvpn[1]: 192.168.117.3:52182 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:03:58 253acea0e8fa openvpn[1]: 192.168.117.3:52182 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:03:58 253acea0e8fa openvpn[1]: 192.168.117.3:52182 TLS Error: TLS handshake failed
+Sep  5 10:03:58 253acea0e8fa openvpn[1]: 192.168.117.3:52182 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:03:59 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:03:59 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:38423
+Sep  5 10:04:04 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:04:04 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:40694
+Sep  5 10:04:08 253acea0e8fa openvpn[1]: 192.168.117.3:45110 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:04:08 253acea0e8fa openvpn[1]: 192.168.117.3:45110 Sent fatal SSL alert: unknown CA
+Sep  5 10:04:08 253acea0e8fa openvpn[1]: 192.168.117.3:45110 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:04:08 253acea0e8fa openvpn[1]: 192.168.117.3:45110 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:04:08 253acea0e8fa openvpn[1]: 192.168.117.3:45110 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:04:08 253acea0e8fa openvpn[1]: 192.168.117.3:45110 TLS Error: TLS handshake failed
+Sep  5 10:04:08 253acea0e8fa openvpn[1]: 192.168.117.3:45110 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:04:09 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:04:09 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:43639
+Sep  5 10:04:14 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:52785 [jdoe] Inactivity timeout (--ping-restart), restarting
+Sep  5 10:04:14 253acea0e8fa openvpn[1]: jdoe/192.168.117.6:52785 SIGUSR1[soft,ping-restart] received, client-instance restarting
+Sep  5 10:04:14 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:04:14 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:60377
+Sep  5 10:04:18 253acea0e8fa openvpn[1]: 192.168.117.3:46985 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:04:18 253acea0e8fa openvpn[1]: 192.168.117.3:46985 Sent fatal SSL alert: unknown CA
+Sep  5 10:04:18 253acea0e8fa openvpn[1]: 192.168.117.3:46985 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:04:18 253acea0e8fa openvpn[1]: 192.168.117.3:46985 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:04:18 253acea0e8fa openvpn[1]: 192.168.117.3:46985 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:04:18 253acea0e8fa openvpn[1]: 192.168.117.3:46985 TLS Error: TLS handshake failed
+Sep  5 10:04:18 253acea0e8fa openvpn[1]: 192.168.117.3:46985 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:04:20 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:04:20 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:48961
+Sep  5 10:04:25 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:04:25 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:39651
+Sep  5 10:04:28 253acea0e8fa openvpn[1]: 192.168.117.3:44118 VERIFY ERROR: depth=0, error=unable to get local issuer certificate: CN=mallory, serial=281049576072582239589831090355892606239
+Sep  5 10:04:28 253acea0e8fa openvpn[1]: 192.168.117.3:44118 Sent fatal SSL alert: unknown CA
+Sep  5 10:04:28 253acea0e8fa openvpn[1]: 192.168.117.3:44118 OpenSSL: error:0A000086:SSL routines::certificate verify failed:
+Sep  5 10:04:28 253acea0e8fa openvpn[1]: 192.168.117.3:44118 TLS_ERROR: BIO read tls_read_plaintext error
+Sep  5 10:04:28 253acea0e8fa openvpn[1]: 192.168.117.3:44118 TLS Error: TLS object -> incoming plaintext read error
+Sep  5 10:04:28 253acea0e8fa openvpn[1]: 192.168.117.3:44118 TLS Error: TLS handshake failed
+Sep  5 10:04:28 253acea0e8fa openvpn[1]: 192.168.117.3:44118 SIGUSR1[soft,tls-error] received, client-instance restarting
+Sep  5 10:04:30 253acea0e8fa openvpn[1]: Authenticate/Decrypt packet error: packet HMAC authentication failed
+Sep  5 10:04:30 253acea0e8fa openvpn[1]: TLS Error: incoming packet authentication failed from [AF_INET]192.168.117.4:52871
+Sep  5 10:04:33 253acea0e8fa openvpn[1]: event_wait : Interrupted system call (fd=-1,code=4)
+Sep  5 10:04:35 253acea0e8fa openvpn[1]: Closing TUN/TAP interface
+Sep  5 10:04:35 253acea0e8fa openvpn[1]: net_addr_v4_del: 10.8.0.1 dev tun0
+Sep  5 10:04:35 253acea0e8fa openvpn[1]: SIGTERM[hard,] received, process exiting

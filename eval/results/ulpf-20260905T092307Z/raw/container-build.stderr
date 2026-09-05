@@ -1,0 +1,275 @@
+#0 building with "orbstack" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.13kB done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/rust:1.95-alpine
+#2 DONE 1.4s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 112B done
+#3 DONE 0.0s
+
+#4 [internal] load build context
+#4 transferring context: 132.10kB 0.0s done
+#4 DONE 0.0s
+
+#5 [build 1/7] FROM docker.io/library/rust:1.95-alpine@sha256:606fd313a0f49743ee2a7bd49a0914bab7deedb12791f3a846a34a4711db7ed2
+#5 resolve docker.io/library/rust:1.95-alpine@sha256:606fd313a0f49743ee2a7bd49a0914bab7deedb12791f3a846a34a4711db7ed2 0.0s done
+#5 DONE 0.0s
+
+#6 [build 2/7] RUN apk add --no-cache build-base file
+#6 CACHED
+
+#7 [build 3/7] WORKDIR /src
+#7 CACHED
+
+#8 [build 4/7] COPY Cargo.toml Cargo.lock ./
+#8 CACHED
+
+#9 [build 5/7] COPY crates ./crates
+#9 DONE 0.1s
+
+#10 [build 6/7] COPY ui/dist ./ui/dist
+#10 DONE 0.1s
+
+#11 [build 7/7] RUN cargo build --release -p ulpf --locked  && file target/release/ulpf  && file target/release/ulpf | grep -Eq 'static(-pie)? linked|statically linked'  && strip target/release/ulpf
+#11 0.834     Updating crates.io index
+#11 4.828  Downloading crates ...
+#11 4.911   Downloaded equivalent v1.0.2
+#11 4.913   Downloaded zmij v1.0.23
+#11 4.916   Downloaded anstream v1.0.0
+#11 4.921   Downloaded bitflags v2.13.1
+#11 4.933   Downloaded colorchoice v1.0.5
+#11 4.935   Downloaded errno v0.3.14
+#11 4.937   Downloaded cfg-if v1.0.4
+#11 4.939   Downloaded cpufeatures v0.2.17
+#11 4.941   Downloaded block-buffer v0.10.4
+#11 4.943   Downloaded clap_lex v1.1.0
+#11 4.944   Downloaded anstyle-query v1.1.5
+#11 4.946   Downloaded futures-task v0.3.34
+#11 4.948   Downloaded atomic-waker v1.1.2
+#11 4.955   Downloaded crypto-common v0.1.7
+#11 4.962   Downloaded httpdate v1.0.3
+#11 4.964   Downloaded generic-array v0.14.7
+#11 4.973   Downloaded fallible-streaming-iterator v0.1.9
+#11 4.975   Downloaded anstyle v1.0.14
+#11 4.984   Downloaded http-body v1.1.0
+#11 4.988   Downloaded futures-core v0.3.34
+#11 4.995   Downloaded tokio-macros v2.7.2
+#11 4.997   Downloaded percent-encoding v2.3.2
+#11 4.998   Downloaded itoa v1.0.18
+#11 5.000   Downloaded serde_urlencoded v0.7.1
+#11 5.012   Downloaded strsim v0.11.1
+#11 5.020   Downloaded mime v0.3.17
+#11 5.031   Downloaded tower-service v0.3.3
+#11 5.033   Downloaded heck v0.5.0
+#11 5.041   Downloaded sync_wrapper v1.0.2
+#11 5.044   Downloaded tower-layer v0.3.3
+#11 5.050   Downloaded version_check v0.9.5
+#11 5.060   Downloaded form_urlencoded v1.2.2
+#11 5.065   Downloaded is_terminal_polyfill v1.70.2
+#11 5.074   Downloaded futures-macro v0.3.34
+#11 5.090   Downloaded utf8parse v0.2.2
+#11 5.098   Downloaded axum-core v0.5.6
+#11 5.101   Downloaded find-msvc-tools v0.1.12
+#11 5.103   Downloaded digest v0.10.7
+#11 5.106   Downloaded anstyle-parse v1.0.0
+#11 5.110   Downloaded http-body-util v0.1.5
+#11 5.111   Downloaded toml_datetime v1.1.1+spec-1.1.0
+#11 5.113   Downloaded pin-project-lite v0.2.17
+#11 5.119   Downloaded quote v1.0.47
+#11 5.122   Downloaded serde_spanned v1.1.1
+#11 5.124   Downloaded pkg-config v0.3.34
+#11 5.126   Downloaded shlex v2.0.1
+#11 5.133   Downloaded fallible-iterator v0.3.0
+#11 5.135   Downloaded serde_path_to_error v0.1.20
+#11 5.137   Downloaded smallvec v1.16.0
+#11 5.139   Downloaded slab v0.4.12
+#11 5.153   Downloaded toml_writer v1.1.2+spec-1.1.0
+#11 5.155   Downloaded sha2 v0.10.9
+#11 5.159   Downloaded signal-hook-registry v1.4.8
+#11 5.170   Downloaded clap_derive v4.6.4
+#11 5.173   Downloaded httparse v1.10.1
+#11 5.176   Downloaded hashlink v0.12.1
+#11 5.178   Downloaded foldhash v0.2.0
+#11 5.180   Downloaded anyhow v1.0.104
+#11 5.184   Downloaded toml_parser v1.1.3+spec-1.1.0
+#11 5.189   Downloaded once_cell v1.21.4
+#11 5.204   Downloaded matchit v0.8.4
+#11 5.234   Downloaded clap v4.6.6
+#11 5.249   Downloaded memmap2 v0.9.11
+#11 5.251   Downloaded serde_derive v1.0.229
+#11 5.255   Downloaded tracing-core v0.1.36
+#11 5.259   Downloaded socket2 v0.6.5
+#11 5.262   Downloaded proc-macro2 v1.0.107
+#11 5.265   Downloaded unicode-ident v1.0.24
+#11 5.269   Downloaded toml v1.1.5+spec-1.1.0
+#11 5.274   Downloaded futures-channel v0.3.34
+#11 5.277   Downloaded bytes v1.12.1
+#11 5.282   Downloaded serde_core v1.0.229
+#11 5.285   Downloaded ryu v1.0.23
+#11 5.289   Downloaded log v0.4.34
+#11 5.315   Downloaded serde v1.0.229
+#11 5.321   Downloaded indexmap v2.14.1
+#11 5.326   Downloaded tower v0.5.3
+#11 5.336   Downloaded cc v1.4.5
+#11 5.343   Downloaded hyper-util v0.1.20
+#11 5.350   Downloaded memchr v2.8.3
+#11 5.357   Downloaded typenum v1.20.1
+#11 5.362   Downloaded mio v1.2.3
+#11 5.368   Downloaded axum v0.8.9
+#11 5.378   Downloaded hashbrown v0.17.1
+#11 5.385   Downloaded serde_json v1.0.151
+#11 5.396   Downloaded winnow v1.0.4
+#11 5.408   Downloaded rusqlite v0.40.2
+#11 5.416   Downloaded hyper v1.11.1
+#11 5.424   Downloaded vcpkg v0.2.15
+#11 5.467   Downloaded futures-util v0.3.34
+#11 5.480   Downloaded clap_builder v4.6.6
+#11 5.488   Downloaded syn v3.0.4
+#11 5.500   Downloaded regex v1.13.1
+#11 5.506   Downloaded aho-corasick v1.1.5
+#11 5.512   Downloaded http v1.5.0
+#11 5.517   Downloaded regex-syntax v0.8.11
+#11 5.527   Downloaded tracing v0.1.44
+#11 5.550   Downloaded regex-automata v0.4.18
+#11 5.570   Downloaded libc v0.2.189
+#11 5.616   Downloaded tokio v1.53.1
+#11 5.675   Downloaded libsqlite3-sys v0.38.2
+#11 5.827    Compiling proc-macro2 v1.0.107
+#11 5.827    Compiling quote v1.0.47
+#11 5.827    Compiling unicode-ident v1.0.24
+#11 5.827    Compiling libc v0.2.189
+#11 5.827    Compiling serde_core v1.0.229
+#11 5.827    Compiling itoa v1.0.18
+#11 5.827    Compiling pin-project-lite v0.2.17
+#11 5.827    Compiling memchr v2.8.3
+#11 6.177    Compiling futures-core v0.3.34
+#11 6.334    Compiling version_check v0.9.5
+#11 6.345    Compiling zmij v1.0.23
+#11 6.444    Compiling serde v1.0.229
+#11 6.817    Compiling bytes v1.12.1
+#11 6.892    Compiling serde_json v1.0.151
+#11 6.943    Compiling find-msvc-tools v0.1.12
+#11 7.030    Compiling generic-array v0.14.7
+#11 7.254    Compiling shlex v2.0.1
+#11 7.325    Compiling typenum v1.20.1
+#11 7.434    Compiling aho-corasick v1.1.5
+#11 7.445    Compiling cc v1.4.5
+#11 8.095    Compiling http v1.5.0
+#11 8.133    Compiling regex-syntax v0.8.11
+#11 8.361    Compiling syn v3.0.4
+#11 8.601    Compiling errno v0.3.14
+#11 8.742    Compiling signal-hook-registry v1.4.8
+#11 9.374    Compiling mio v1.2.3
+#11 9.549    Compiling socket2 v0.6.5
+#11 10.01    Compiling http-body v1.1.0
+#11 10.14    Compiling once_cell v1.21.4
+#11 10.25    Compiling pkg-config v0.3.34
+#11 10.36    Compiling httparse v1.10.1
+#11 10.81    Compiling winnow v1.0.4
+#11 11.00    Compiling smallvec v1.16.0
+#11 11.12    Compiling vcpkg v0.2.15
+#11 11.61    Compiling tracing-core v0.1.36
+#11 11.66    Compiling foldhash v0.2.0
+#11 11.96    Compiling toml_parser v1.1.3+spec-1.1.0
+#11 12.27    Compiling regex-automata v0.4.18
+#11 12.58    Compiling libsqlite3-sys v0.38.2
+#11 13.83    Compiling toml_datetime v1.1.1+spec-1.1.0
+#11 13.94    Compiling serde_spanned v1.1.1
+#11 14.64    Compiling toml_writer v1.1.2+spec-1.1.0
+#11 14.68    Compiling utf8parse v0.2.2
+#11 14.91    Compiling tower-service v0.3.3
+#11 15.07    Compiling log v0.4.34
+#11 15.48    Compiling toml v1.1.5+spec-1.1.0
+#11 15.71    Compiling tracing v0.1.44
+#11 15.78    Compiling anstyle-parse v1.0.0
+#11 16.06    Compiling hashbrown v0.17.1
+#11 17.46    Compiling crypto-common v0.1.7
+#11 17.65    Compiling block-buffer v0.10.4
+#11 17.91    Compiling futures-channel v0.3.34
+#11 18.95    Compiling percent-encoding v2.3.2
+#11 19.59    Compiling tower-layer v0.3.3
+#11 19.59    Compiling sync_wrapper v1.0.2
+#11 19.70    Compiling httpdate v1.0.3
+#11 20.03    Compiling is_terminal_polyfill v1.70.2
+#11 20.13    Compiling atomic-waker v1.1.2
+#11 20.27    Compiling anstyle v1.0.14
+#11 20.28    Compiling futures-task v0.3.34
+#11 20.39    Compiling serde_derive v1.0.229
+#11 20.58    Compiling tokio-macros v2.7.2
+#11 20.87    Compiling futures-macro v0.3.34
+#11 21.16    Compiling ulpf-time v0.1.0 (/src/crates/ulpf-time)
+#11 23.19    Compiling tokio v1.53.1
+#11 24.16    Compiling slab v0.4.12
+#11 24.52    Compiling regex v1.13.1
+#11 24.87    Compiling anstyle-query v1.1.5
+#11 25.02    Compiling colorchoice v1.0.5
+#11 25.19    Compiling anstream v1.0.0
+#11 25.42    Compiling futures-util v0.3.34
+#11 26.16    Compiling hashlink v0.12.1
+#11 27.02    Compiling form_urlencoded v1.2.2
+#11 27.20    Compiling digest v0.10.7
+#11 27.24    Compiling http-body-util v0.1.5
+#11 27.34    Compiling cpufeatures v0.2.17
+#11 27.46    Compiling cfg-if v1.0.4
+#11 27.69    Compiling strsim v0.11.1
+#11 27.70    Compiling ryu v1.0.23
+#11 28.00    Compiling bitflags v2.13.1
+#11 28.21    Compiling mime v0.3.17
+#11 28.51    Compiling fallible-iterator v0.3.0
+#11 28.84    Compiling heck v0.5.0
+#11 29.05    Compiling clap_lex v1.1.0
+#11 29.27    Compiling fallible-streaming-iterator v0.1.9
+#11 29.34    Compiling anyhow v1.0.104
+#11 29.49    Compiling clap_builder v4.6.6
+#11 29.61    Compiling clap_derive v4.6.4
+#11 29.96    Compiling axum-core v0.5.6
+#11 30.52    Compiling sha2 v0.10.9
+#11 31.37    Compiling ulpf-parse v0.1.0 (/src/crates/ulpf-parse)
+#11 31.60    Compiling serde_urlencoded v0.7.1
+#11 32.38    Compiling serde_path_to_error v0.1.20
+#11 34.40    Compiling hyper v1.11.1
+#11 34.44    Compiling tower v0.5.3
+#11 35.46    Compiling memmap2 v0.9.11
+#11 35.48    Compiling matchit v0.8.4
+#11 36.01    Compiling ulpf-normalize v0.1.0 (/src/crates/ulpf-normalize)
+#11 36.68    Compiling clap v4.6.6
+#11 36.75    Compiling ulpf-infer v0.1.0 (/src/crates/ulpf-infer)
+#11 38.39    Compiling hyper-util v0.1.20
+#11 39.04    Compiling axum v0.8.9
+#11 148.2    Compiling rusqlite v0.40.2
+#11 149.6    Compiling ulpf-store v0.1.0 (/src/crates/ulpf-store)
+#11 149.9    Compiling ulpf v0.1.0 (/src/crates/ulpf)
+#11 ...
+
+#7 [build 3/7] WORKDIR /src
+#7 CACHED
+
+#11 [build 7/7] RUN cargo build --release -p ulpf --locked  && file target/release/ulpf  && file target/release/ulpf | grep -Eq 'static(-pie)? linked|statically linked'  && strip target/release/ulpf
+#11 253.3     Finished `release` profile [optimized + debuginfo] target(s) in 4m 12s
+#11 253.4 target/release/ulpf: ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically linked, BuildID[sha1]=8ace8c4924f88f1461bcb8d5167485745b99ec20, with debug_info, not stripped
+#11 DONE 253.5s
+
+#12 [stage-1 1/4] COPY --from=build /src/target/release/ulpf /ulpf
+#12 DONE 0.0s
+
+#13 [stage-1 2/4] COPY parsers /parsers
+#13 DONE 0.1s
+
+#14 [stage-1 3/4] COPY mappings /mappings
+#14 DONE 0.1s
+
+#15 exporting to image
+#15 exporting layers
+#15 exporting layers 0.3s done
+#15 exporting manifest sha256:f93da6b5ab635aa40f115e2682365707d5cdfcb00efd349a31f1233d9dc7f819
+#15 exporting manifest sha256:f93da6b5ab635aa40f115e2682365707d5cdfcb00efd349a31f1233d9dc7f819 0.0s done
+#15 exporting config sha256:310b0e6e21d13af075cdc31b3a36a5ed54a6f0e1ce3014c41ae3b5dd794bef31 0.0s done
+#15 exporting attestation manifest sha256:3fea4c1b5c6da4f5f82c37d7249c9d802bf31697045ca5271c67dc0e3c1f3143 0.0s done
+#15 exporting manifest list sha256:1a7e914821eb0a6a8b629461dbd4a831319220c0d27572395cbc7c458a60636a 0.0s done
+#15 naming to docker.io/library/ulpf:static done
+#15 unpacking to docker.io/library/ulpf:static 0.1s done
+#15 DONE 0.6s

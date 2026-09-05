@@ -1,0 +1,18 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	weird
+#open	2026-09-05-09-37-23
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	name	addl	notice	peer	source
+#types	time	string	addr	port	addr	port	string	string	bool	string	string
+1788600967.848429	CBSSvx3Rr85aj735Rl	192.168.148.3	60364	192.168.148.2	80	invalid_http_09_request_method	NOTAMETHOD	F	zeek	HTTP
+1788600967.848429	CBSSvx3Rr85aj735Rl	192.168.148.3	60364	192.168.148.2	80	unknown_HTTP_method	NOTAMETHOD	F	zeek	-
+1788600967.849585	Cpudb71lBAzZpsiPR9	192.168.148.3	60372	192.168.148.2	80	bad_HTTP_request	-	F	zeek	HTTP
+1788600967.851095	CUxl8g2LUphZB3t5Ml	192.168.148.3	56196	192.168.148.5	80	invalid_http_09_request_method	NOTAMETHOD	F	zeek	HTTP
+1788600967.851095	CUxl8g2LUphZB3t5Ml	192.168.148.3	56196	192.168.148.5	80	unknown_HTTP_method	NOTAMETHOD	F	zeek	-
+1788600967.852432	CNQ4lU1fyNQVRTSQra	192.168.148.3	56210	192.168.148.5	80	bad_HTTP_request	-	F	zeek	HTTP
+1788600967.854100	COmbqj2CnbWwe2dG04	192.168.148.3	42480	192.168.148.6	80	invalid_http_09_request_method	NOTAMETHOD	F	zeek	HTTP
+1788600967.854100	COmbqj2CnbWwe2dG04	192.168.148.3	42480	192.168.148.6	80	unknown_HTTP_method	NOTAMETHOD	F	zeek	-
+1788600967.855466	CeAzMW2woe3Qs1cUh3	192.168.148.3	42488	192.168.148.6	80	bad_HTTP_request	-	F	zeek	HTTP
+#close	2026-09-05-09-37-23

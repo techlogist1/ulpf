@@ -1,0 +1,8 @@
+definitions: 12 parsers loaded, 0 file problems
+ulpf: 1 files (0 failed), 0.01 MB, 13 events in 0.001 s -> 8888 events/s, 6.6 MB/s, 7 worker threads
+stages: framed 13  stored 13  detected 13  no_parser 0  parsed 13  parse_failed 0  normalized 13  emitted 13 (31408 bytes)
+parse_failed by reason: none
+signals: sub_matched 13  sub_no_match 0  sub_uncovered 0  time_from_receipt 0  time_error [none]  class_unknown 0  enum_other 0  unmapped_fields 241  utf8_lossy 1
+queue: 1 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
+inference: buffered 0 (buffer full 0)  runs 0  lines templated 0 unmatched 0  proposals written 0 replaced 0 skipped [none]  approved 0  rejected 0  reloads 0
+pending: 0 proposals awaiting review (final inference pass 0.000 s)

@@ -1,0 +1,26 @@
+#separator \x09
+#set_separator	,
+#empty_field	(empty)
+#unset_field	-
+#path	syslog
+#open	2026-09-05-09-37-23
+#fields	ts	uid	id.orig_h	id.orig_p	id.resp_h	id.resp_p	proto	facility	severity	message
+#types	time	string	addr	port	addr	port	enum	string	string	string
+1788600697.539778	CWMPXSAvacFr9QKV9	192.168.148.6	43861	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60742 [05/Sep/2026:09:31:37.531] fe_http be_nginx/nginx1 0/0/1/6/7 404 283 - - ---- 1/1/0/0/0 0/0 "POST /nope/deep/path?x=1&y=2 HTTP/1.1"\x0a
+1788600697.549302	CKvZK41xYoE1pmpz9h	192.168.148.6	33374	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60750 [05/Sep/2026:09:31:37.548] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"\x0a
+1788600697.559530	CEj37mNyTXHpxxlkb	192.168.148.6	51614	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60758 [05/Sep/2026:09:31:37.559] fe_http be_nginx/nginx1 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"\x0a
+1788600697.568348	CCeYItMFwjnBRBTdj	192.168.148.6	42415	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60774 [05/Sep/2026:09:31:37.567] fe_http be_nginx/nginx2 0/0/0/0/0 301 333 - - ---- 1/1/0/0/0 0/0 "GET /old HTTP/1.1"\x0a
+1788600697.575890	CZYTkN2J9eqapEIgja	192.168.148.6	39874	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60788 [05/Sep/2026:09:31:37.575] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "GET /ok HTTP/1.1"\x0a
+1788600697.583651	CbhL661r6hCSoSJxoi	192.168.148.6	55816	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60802 [05/Sep/2026:09:31:37.583] fe_http be_nginx/nginx2 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "GET /slow HTTP/1.1"\x0a
+1788600697.590808	C3QBKf2yWVU31hfKHd	192.168.148.6	60220	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60810 [05/Sep/2026:09:31:37.590] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST /slow HTTP/1.1"\x0a
+1788600697.599243	ClHlbo2dtQzWqauyf7	192.168.148.6	53955	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60820 [05/Sep/2026:09:31:37.598] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"\x0a
+1788600697.606627	CWMPXSAvacFr9QKV9	192.168.148.6	43861	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60826 [05/Sep/2026:09:31:37.606] fe_http be_nginx/nginx1 0/0/0/0/0 200 139 - - ---- 1/1/0/0/0 0/0 "DELETE /ok HTTP/1.1"\x0a
+1788600697.613996	CKvZK41xYoE1pmpz9h	192.168.148.6	33374	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60828 [05/Sep/2026:09:31:37.613] fe_http be_nginx/nginx2 0/0/0/0/0 200 150 - - ---- 1/1/0/0/0 0/0 "GET /new HTTP/1.1"\x0a
+1788600697.620551	CEj37mNyTXHpxxlkb	192.168.148.6	51614	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60832 [05/Sep/2026:09:31:37.620] fe_http be_nginx/nginx1 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "PUT /boom HTTP/1.1"\x0a
+1788600697.627153	CCeYItMFwjnBRBTdj	192.168.148.6	42415	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60846 [05/Sep/2026:09:31:37.626] fe_http be_nginx/nginx2 0/0/0/0/0 500 319 - - ---- 1/1/0/0/0 0/0 "GET /boom HTTP/1.1"\x0a
+1788600697.634122	CZYTkN2J9eqapEIgja	192.168.148.6	39874	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:37 haproxy[8]: 192.168.148.3:60862 [05/Sep/2026:09:31:37.633] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /etc/passwd HTTP/1.1"\x0a
+1788600700.650582	CbhL661r6hCSoSJxoi	192.168.148.6	55816	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:40 haproxy[8]: 192.168.148.3:60868 [05/Sep/2026:09:31:40.650] fe_http be_nginx/nginx2 0/0/0/0/0 200 153 - - ---- 1/1/0/0/0 0/0 "GET /api/ HTTP/1.1"\x0a
+1788600700.660016	C3QBKf2yWVU31hfKHd	192.168.148.6	60220	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:40 haproxy[8]: 192.168.148.3:60876 [05/Sep/2026:09:31:40.659] fe_http be_nginx/nginx1 0/0/0/0/0 200 144 - - ---- 1/1/0/0/0 0/0 "POST / HTTP/1.1"\x0a
+1788600700.669145	ClHlbo2dtQzWqauyf7	192.168.148.6	53955	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:40 haproxy[8]: 192.168.148.3:60882 [05/Sep/2026:09:31:40.668] fe_http be_nginx/nginx2 0/0/0/0/0 404 283 - - ---- 1/1/0/0/0 0/0 "PUT /missing HTTP/1.1"\x0a
+1788600700.676967	CWMPXSAvacFr9QKV9	192.168.148.6	43861	192.168.148.4	514	udp	LOCAL0	INFO	Sep  5 09:31:40 haproxy[8]: 192.168.148.3:60898 [05/Sep/2026:09:31:40.676] fe_http be_nginx/nginx1 0/0/0/0/0 404 130 - - ---- 1/1/0/0/0 0/0 "HEAD /admin HTTP/1.1"\x0a
+#close	2026-09-05-09-37-23

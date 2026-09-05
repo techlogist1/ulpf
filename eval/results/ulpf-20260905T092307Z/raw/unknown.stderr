@@ -1,0 +1,9 @@
+definitions: 12 parsers loaded, 0 file problems
+ulpf: 1 files (0 failed), 0.03 MB, 250 events in 0.003 s -> 90083 events/s, 11.5 MB/s, 7 worker threads
+stages: framed 250  stored 250  detected 0  no_parser 250  parsed 0  parse_failed 0  normalized 250  emitted 250 (159592 bytes)
+parse_failed by reason: none
+signals: sub_matched 0  sub_no_match 0  sub_uncovered 0  time_from_receipt 250  time_error [none]  class_unknown 250  enum_other 0  unmapped_fields 0  utf8_lossy 0
+queue: 1 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
+inference: buffered 250 (buffer full 0)  runs 1  lines templated 250 unmatched 0  proposals written 1 replaced 0 skipped [none]  approved 0  rejected 0  reloads 0
+pending: 1 proposals awaiting review (final inference pass 0.037 s)
+  mikrotik  source mikrotik.log  250 lines  14 templates  0 unmatched

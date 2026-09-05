@@ -1,0 +1,5 @@
+<166>Sep 04 2026 10:15:23 asa-edge-01 : %ASA-6-302013: Built outbound TCP connection 12345 for outside:142.250.72.14/443 (142.250.72.14/443) to inside:10.0.0.5/51234 (203.0.113.5/51234)
+<164>Sep  4 10:15:24 asa-edge-01 %ASA-4-106023: Deny tcp src outside:203.0.113.9/44321 dst inside:10.0.0.7/22 by access-group "outside_in" [0x8ed66b60, 0x0]
+<166>Sep 04 2026 10:15:25 asa-edge-01 : %ASA-6-302014: Teardown TCP connection 12345 for outside:142.250.72.14/443 to inside:10.0.0.5/51234 duration 0:00:30 bytes 6912 TCP FINs
+<166>Sep 04 2026 10:15:26 asa-edge-01 : %ASA-6-106100: access-list inside_out permitted tcp inside/10.0.0.5(51235) -> outside/142.250.72.14(443) hit-cnt 1 first hit [0x1234abcd, 0x0]
+<166>Sep 04 2026 10:15:27 asa-edge-01 : %ASA-6-305011: Built dynamic T

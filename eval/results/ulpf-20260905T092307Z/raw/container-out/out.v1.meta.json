@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "created": "2026-09-05T09:27:47.045Z",
+  "schema": "ocsf",
+  "parsers_generation": 0,
+  "files": [
+    {
+      "path": "parsers/check_point.toml",
+      "sha256": "0be7b4feb1ff07dd766ef43fe71d644aefa96c08ca60912db5cf646a0b984f0b"
+    },
+    {
+      "path": "parsers/cisco_asa.toml",
+      "sha256": "e1cdab03e652bf4616d2ac3f6ce29fc04175562b454c57867a205e713d847f14"
+    },
+    {
+      "path": "parsers/cisco_ios.toml",
+      "sha256": "fbe5d327e1d63c2d2a2b9eb5f14e7ead0026c92044f36b7ce577af204e063ca2"
+    },
+    {
+      "path": "parsers/fortinet_fortigate.toml",
+      "sha256": "1da5b0b643ed077170bb757a118c7aa54de87e40d9f8b8e5fad0763891a88774"
+    },
+    {
+      "path": "parsers/juniper_srx.toml",
+      "sha256": "f52b6687b0ed69fd26493c8abcaff422e700fe4683c1f445f292616edddd6217"
+    },
+    {
+      "path": "parsers/openvpn.toml",
+      "sha256": "6719f330234e9962e2e342bc5d65ac90f44521b1a08323a59e2fdd064f76de60"
+    },
+    {
+      "path": "parsers/palo_alto_panos.toml",
+      "sha256": "b05a1d212a3d53e0c8932a7095d0264d3dd11522e29288e20a69d289fda56b3d"
+    },
+    {
+      "path": "parsers/pfsense_filterlog.toml",
+      "sha256": "e3d02e8ceb0d8ffc2763ead8afe311e0da3980016e9436f2ee8089098e4b5875"
+    },
+    {
+      "path": "parsers/sonicwall.toml",
+      "sha256": "b0968d3afd340ced0dcbbf51f3df8af9184b9547e38a4425a21b23da6d81034b"
+    },
+    {
+      "path": "parsers/sophos_xg.toml",
+      "sha256": "31658e68a2c0fce625a57e5f213ca55ed82086837e7d021e289af6e05eb9d272"
+    },
+    {
+      "path": "parsers/squid_access.toml",
+      "sha256": "f2f34d88229ebb7652e2d888d2db642ba21500723d9ea9b50d931e0f067b8712"
+    },
+    {
+      "path": "parsers/suricata_eve.toml",
+      "sha256": "fc7d9899870961c4802ada1b00765cef0fd764fdc6c0ef7ecd0315d39ecd6c11"
+    },
+    {
+      "path": "mappings/ocsf.toml",
+      "sha256": "c5b8dca69a9f82183b0d4894f90127773e3e7eaf633e43d8d36d29d75d2e82a9"
+    }
+  ],
+  "history": [],
+  "complete": true,
+  "events": 0,
+  "report": null
+}

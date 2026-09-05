@@ -1,0 +1,9 @@
+definitions: 12 parsers loaded, 0 file problems
+ulpf: 1 files (0 failed), 152.21 MB, 497607 events in 3.128 s -> 159063 events/s, 48.7 MB/s, 7 worker threads
+stages: framed 497607  stored 497607  detected 492784  no_parser 4823  parsed 490469  parse_failed 2315  normalized 497607  emitted 497607 (685724049 bytes)
+parse_failed by reason: pattern_no_match 2301, invalid_json 14
+signals: sub_matched 364531  sub_no_match 8965  sub_uncovered 14259  time_from_receipt 16425  time_error [empty 1, no_match 1]  class_unknown 89268  enum_other 4552  unmapped_fields 5326748  utf8_lossy 0
+queue: 486 batches, high-water 64/64, backpressure blocks 119 (engaged: yes)
+inference: buffered 4096 (buffer full 727)  runs 1  lines templated 4082 unmatched 14  proposals written 1 replaced 0 skipped [none]  approved 0  rejected 0  reloads 0
+pending: 1 proposals awaiting review (final inference pass 0.075 s)
+  bench_500k  source bench-500k.log  4096 lines  11 templates  14 unmatched

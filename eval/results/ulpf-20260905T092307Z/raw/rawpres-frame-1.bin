@@ -1,0 +1,1 @@
+<164>Sep  4 10:15:24 asa-edge-01 %ASA-4-106023: Deny tcp src outside:203.0.113.9/44321 dst inside:10.0.0.7/22 by access-group "outside_in" [0x8ed66b60, 0x0]

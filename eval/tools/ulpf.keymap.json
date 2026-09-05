@@ -1,0 +1,9 @@
+{
+  "_comment": "fixture key -> ulpf output's dotted JSON key. A key not listed here defaults to itself with any leading 'normalized.' stripped, which is already correct for ULPF since its emitted JSON nests OCSF fields the same way the fixtures do.",
+  "map": {
+    "parser": "ulpf.parser",
+    "status": "ulpf.parse_status",
+    "sub": "ulpf.sub_status",
+    "time_policies": "ulpf.time_policies"
+  }
+}
