@@ -728,3 +728,47 @@ anywhere: every name has a reason a reviewer can read and a source a judge can c
 naming the second address pair (RouterOS logs the NAT pair after the first; which is
 pre-translation is the reviewer's call); value-inspection rules beyond TCP flags (no
 held-out grade justified them).
+
+## D54. Drift is a per-source window judged against a frozen baseline, healed through the same pending queue
+**Decision.** Every source folds each batch into a 512-event window of misses (no parser
+claimed the event, or a hand parser claimed it and failed). A completed window is judged
+against the source's baseline (the miss rate over its earlier completed windows, which
+stops accumulating once the source trips, so a format that changed and stayed changed
+cannot drag the baseline up to meet it). The source is *established* after 1,024
+baseline events with a baseline rate under 0.2; it *trips* when a window has at least 32
+misses and a rate at least 0.25 above the baseline. The batch that completed the tripping
+window is judged, not routed; from the next batch on, every miss of the source (unknown
+lines and failures under the established parser alike) is offered to the inference buffer,
+which was emptied and given the established parser's definition as its prior. The next
+inference run composes an update: the prior's own parser is run over the lines first and
+what it covers is excluded; a pattern prior gets the new patterns appended after its own
+(first match wins, so old lines parse as before); a prior whose strategy still parses at
+least 90% of the lines with the signature bypassed gets only its `[match]` widened to the
+union; anything else stands alone and the decisions say why. The proposal keeps the
+parser's name, bumps `[parser] version`, and is written under the source's pending id
+with `updates`; approval writes over `parsers/<name>.toml` atomically after keeping the
+replaced text as `pending/approved/<name>.v<N>.toml`, and clears the source's drift state
+and baseline. A source that mixed two formats from the start has a baseline over 0.2,
+never establishes, and never trips; its unknown half still reaches ordinary inference.
+Four counters (`drift_tripped`, `drift_lines_routed`, `drift_proposals`, `drift_cleared`),
+`GET /api/drift`, the `drift` SSE event and the unified diff on the review screen make
+every step visible. **Anchor.** `SourceStats::observe`, `DriftState`, the `DRIFT_*`
+constants, `Live::drift_alerts`, `clear_drift` in `crates/ulpf/src/engine.rs`;
+`Inference::set_prior` in `crates/ulpf/src/inference.rs`; `infer_with_prior`,
+`union_matcher`, `Update` in `crates/ulpf-infer/src/lib.rs`; `Pending::approve` (update
+branch), `current_and_diff`, `unified_diff` in `crates/ulpf/src/pending.rs`;
+`Meta::version` in `crates/ulpf-parse/src/def.rs`; `crates/ulpf/tests/drift.rs`.
+**Principle.** Structural prevention over documentation: an update can only replace the
+parser it was composed on (`updates.name` must equal the definition's name, checked at
+approval), and it passes through the same validate-then-atomic-write path as a fresh
+proposal, so drift-healing cannot bypass review or cross the parser/mapping wall (the
+inference crate still cannot name a schema field). Define errors out of existence: a
+tumbling window needs no timers and no per-event state beyond two counters; the baseline
+freezing on trip means a permanent change is one alert, not a flapping one. Observability
+as a design input: the window and baseline rates are on every source row. **Ruled out.**
+Routing the tripping window's own lines (they were already offered to inference as
+unknown lines and would shape the update twice); a rolling window with a ring of
+outcomes (512 bytes per source for a number the tumbling window gives within one window
+of latency); comparing against a fixed absolute miss rate (a device that always had 15%
+unmodelled messages would alert forever); `sub_uncovered` as a miss (a new message id
+under an existing family is the existing "write the next sub" workflow, not drift).

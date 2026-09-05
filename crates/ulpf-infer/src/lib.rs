@@ -13,7 +13,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 use ulpf_parse::def::{Envelope, Matcher, Meta, ParserDefinition, Strategy, StrategyKind, TimestampSpec};
-use ulpf_parse::{Parsed, Parser, Scratch, SlotKind, Template};
+use ulpf_parse::{Context, Parsed, Parser, Registry, Scratch, SlotKind, Template};
 
 pub use cluster::Params;
 
@@ -28,6 +28,17 @@ pub struct Proposal {
     pub source: String,
     pub definition: ParserDefinition,
     pub evidence: Evidence,
+    /// Set when the definition is a new version of an existing parser (drift).
+    #[serde(default)]
+    pub updates: Option<Update>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Update {
+    pub name: String,
+    pub current_version: u64,
+    /// `patterns_added`, `matcher_widened`.
+    pub kind: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -276,7 +287,7 @@ fn slot_evidence(s: &cluster::Slot, cols: &[Col]) -> SlotEvidence {
 /// envelope is already stripped from the bodies it is tested on).
 fn compile_pattern(pattern: &str) -> Result<Parser, String> {
     let def = ParserDefinition {
-        parser: Meta { name: "candidate".into(), vendor: "x".into(), product: "x".into(), description: None },
+        parser: Meta { name: "candidate".into(), vendor: "x".into(), product: "x".into(), description: None, version: 1 },
         matcher: Matcher { contains: vec![], starts_with: None, regex: Some(".".into()), priority: 0 },
         envelope: Envelope { syslog: false },
         strategy: Strategy::pattern(pattern),
@@ -528,6 +539,7 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
             vendor: "unknown".into(),
             product: source.to_string(),
             description: Some(format!("Inferred from {} unknown lines of {source}; review every slot name before trusting.", lines.len())),
+            version: 1,
         },
         matcher,
         envelope: Envelope { syslog },
@@ -547,7 +559,109 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
         decisions,
         fingerprint,
     };
-    Proposal { source: source.to_string(), definition, evidence }
+    Proposal { source: source.to_string(), definition, evidence, updates: None }
+}
+
+/// Drift: the source had an established parser and its lines stopped matching. The
+/// prior's own parser is run over the lines first; what it covers is not drift. The rest
+/// is clustered as usual, and the result is composed onto the prior: a pattern prior gets
+/// the new patterns appended (prior patterns first, so its behaviour on old lines cannot
+/// change); any prior whose strategy still parses at least 90% of the lines when the
+/// signature is bypassed gets its matcher widened; otherwise the proposal stands alone
+/// and says why. Every step is a decision line.
+pub fn infer_with_prior(source: &str, lines: &[&[u8]], prior: &ParserDefinition, params: &Params) -> Proposal {
+    let mut decisions = vec![format!("prior: `{}` v{} ({} strategy, priority {}) is this source's established parser", prior.parser.name, prior.parser.version, prior.strategy.kind.name(), prior.matcher.priority)];
+    let (mut detected, mut parsed_ok, mut covered) = (0usize, 0usize, 0usize);
+    let mut remaining: Vec<&[u8]> = Vec::new();
+    match Parser::from_definition(prior.clone()) {
+        Ok(p) => {
+            let reg = Registry::new(vec![p]);
+            let p = reg.get(0);
+            let ctx = Context { receipt_epoch_nanos: 0, default_offset_secs: 0 };
+            let mut scratch = reg.scratch();
+            let mut parsed = Parsed::default();
+            for l in lines {
+                let det = reg.detect(l, None).is_some();
+                let ok = p.parse(l, &ctx, &mut scratch, &mut parsed).is_ok();
+                detected += det as usize;
+                parsed_ok += ok as usize;
+                if det && ok {
+                    covered += 1;
+                } else {
+                    remaining.push(l);
+                }
+            }
+        }
+        Err(e) => {
+            decisions.push(format!("prior does not compile ({e}); treated as absent"));
+            remaining = lines.to_vec();
+        }
+    }
+    decisions.push(format!("prior covers {covered} of {} lines (signature matched {detected}, strategy parsed {parsed_ok}); {} lines are drift", lines.len(), remaining.len()));
+    let mut p = infer(source, &remaining, params);
+    let mut tail = std::mem::take(&mut p.evidence.decisions);
+    decisions.append(&mut tail);
+    p.evidence.decisions = decisions;
+    p.evidence.lines_seen = lines.len() as u64;
+    let parse_rate = if lines.is_empty() { 0.0 } else { parsed_ok as f64 / lines.len() as f64 };
+    let kind = if prior.strategy.kind == StrategyKind::Pattern {
+        "patterns_added"
+    } else if parse_rate >= 0.9 {
+        "matcher_widened"
+    } else {
+        p.evidence.decisions.push(format!("prior strategy `{}` parses only {:.0}% of the lines with the signature bypassed; this is a new format, so the proposal stands alone", prior.strategy.kind.name(), parse_rate * 100.0));
+        return p;
+    };
+    if p.definition.strategy.patterns.is_empty() && kind == "patterns_added" {
+        p.evidence.decisions.push("no new template reached the definition; nothing to add to the prior".into());
+        return p;
+    }
+    let mut def = prior.clone();
+    def.parser.version = prior.parser.version + 1;
+    def.parser.description = Some(format!("v{}: updated from {} drifted lines of {source} on top of v{}; review the added patterns and the signature.", def.parser.version, lines.len(), prior.parser.version));
+    if kind == "patterns_added" {
+        let mut pats = prior.strategy.patterns.clone();
+        if let Some(single) = &prior.strategy.pattern {
+            pats.insert(0, single.clone());
+        }
+        let added = p.definition.strategy.patterns.len();
+        pats.extend(p.definition.strategy.patterns.iter().cloned());
+        def.strategy.patterns = pats;
+        def.strategy.pattern = None;
+        p.evidence.decisions.push(format!("update: {added} pattern(s) appended after the prior's {}; the prior's patterns are tried first so old lines parse as before", def.strategy.patterns.len() - added));
+    } else {
+        p.evidence.decisions.push(format!("update: the prior's strategy parses {:.0}% of the lines; only the signature changed", parse_rate * 100.0));
+    }
+    if detected < lines.len() {
+        def.matcher = union_matcher(&prior.matcher, &p.definition.matcher);
+        p.evidence.decisions.push(format!("signature: the prior's [match] rejected {} of {} lines; widened to the union of the prior's signature and the generated one (priority kept at {})", lines.len() - detected, lines.len(), def.matcher.priority));
+    }
+    if p.evidence.envelope.syslog && !prior.envelope.syslog {
+        def.envelope.syslog = true;
+        p.evidence.decisions.push("envelope: the drifted lines carry a syslog header the prior did not strip; syslog = true (every header part is optional, so old lines are unaffected)".into());
+    }
+    p.evidence.fingerprint = fnv(&def.strategy.patterns);
+    p.definition = def;
+    p.updates = Some(Update { name: prior.parser.name.clone(), current_version: prior.parser.version, kind: kind.to_string() });
+    p
+}
+
+/// A regex that accepts what either matcher accepts (a superset of each: a `contains`
+/// list is ANDed, its first word alone is looser, which is what a union needs).
+fn union_matcher(a: &Matcher, b: &Matcher) -> Matcher {
+    fn side(m: &Matcher) -> String {
+        if let Some(r) = &m.regex {
+            return format!("(?:{r})");
+        }
+        if let Some(w) = m.contains.first() {
+            return regex::escape(w);
+        }
+        if let Some(s) = &m.starts_with {
+            return format!("^{}", regex::escape(s));
+        }
+        ".".into()
+    }
+    Matcher { contains: vec![], starts_with: None, regex: Some(format!("{}|{}", side(a), side(b))), priority: a.priority }
 }
 
 /// One template from a chosen set of lines, with keyword splitting off: the review

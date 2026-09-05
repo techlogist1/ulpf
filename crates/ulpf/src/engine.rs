@@ -72,7 +72,113 @@ pub struct SourceStats {
     pub events: u64,
     pub detected: u64,
     pub no_parser: u64,
+    pub parse_failed: u64,
     pub last_seen_nanos: i64,
+    /// Events routed to each parser, so the established parser is the one with most.
+    pub by_parser: BTreeMap<String, u64>,
+    pub window_events: u64,
+    pub window_misses: u64,
+    /// Completed windows while not tripped: the long-run miss rate the window is judged against.
+    pub baseline_events: u64,
+    pub baseline_misses: u64,
+    pub window_rate: f64,
+    pub drift: DriftState,
+    pub drift_since_nanos: i64,
+    pub drift_lines_routed: u64,
+    pub drift_clean_windows: u32,
+}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum DriftState {
+    #[default]
+    None,
+    Watching,
+    Tripped,
+    Proposed,
+    Cleared,
+}
+
+/// Drift thresholds (D54): a window of events per source, judged once it fills.
+pub const DRIFT_WINDOW: u64 = 512;
+pub const DRIFT_ESTABLISHED: u64 = 1024;
+pub const DRIFT_MIN_MISSES: u64 = 32;
+pub const DRIFT_DELTA: f64 = 0.25;
+pub const DRIFT_BASELINE_MAX: f64 = 0.2;
+
+impl SourceStats {
+    pub fn established_parser(&self) -> Option<&str> {
+        self.by_parser.iter().max_by_key(|(_, n)| **n).map(|(k, _)| k.as_str())
+    }
+
+    pub fn baseline_rate(&self) -> f64 {
+        if self.baseline_events == 0 { 0.0 } else { self.baseline_misses as f64 / self.baseline_events as f64 }
+    }
+
+    /// Folds one batch into the window; returns the established parser's name when this
+    /// batch completed a window that trips.
+    fn observe(&mut self, events: u64, misses: u64) -> Option<String> {
+        self.window_events += events;
+        self.window_misses += misses;
+        if self.window_events < DRIFT_WINDOW {
+            return None;
+        }
+        let rate = self.window_misses as f64 / self.window_events as f64;
+        self.window_rate = rate;
+        let baseline = self.baseline_rate();
+        let established = self.baseline_events >= DRIFT_ESTABLISHED && baseline < DRIFT_BASELINE_MAX && self.established_parser().is_some();
+        let mut tripped = None;
+        match self.drift {
+            DriftState::None | DriftState::Watching | DriftState::Cleared => {
+                if established && self.window_misses >= DRIFT_MIN_MISSES && rate >= baseline + DRIFT_DELTA {
+                    self.drift = DriftState::Tripped;
+                    self.drift_since_nanos = now_nanos();
+                    self.drift_clean_windows = 0;
+                    tripped = self.established_parser().map(str::to_string);
+                } else {
+                    if established {
+                        self.drift = DriftState::Watching;
+                    }
+                    self.baseline_events += self.window_events;
+                    self.baseline_misses += self.window_misses;
+                }
+            }
+            DriftState::Tripped | DriftState::Proposed => {
+                if rate < baseline + DRIFT_DELTA {
+                    self.drift_clean_windows += 1;
+                } else {
+                    self.drift_clean_windows = 0;
+                }
+            }
+        }
+        self.window_events = 0;
+        self.window_misses = 0;
+        tripped
+    }
+
+    fn routing(&self) -> bool {
+        matches!(self.drift, DriftState::Tripped | DriftState::Proposed)
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DriftAlert {
+    pub source: String,
+    pub parser: String,
+    pub state: DriftState,
+    pub since: String,
+    pub window: DriftWindow,
+    pub baseline_rate: f64,
+    pub lines_routed: u64,
+    pub pending_id: Option<String>,
+    pub proposed_version: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct DriftWindow {
+    pub events: u64,
+    pub misses: u64,
+    pub rate: f64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -89,6 +195,7 @@ pub struct ApproveReport {
     pub parsers_loaded: usize,
     pub problems: Vec<String>,
     pub now_detected: NowDetected,
+    pub replaced_version: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -156,6 +263,8 @@ pub struct Live {
     pub replay: Mutex<ReplayState>,
     /// Bumped whenever the replay state changes (start, progress, done), for the SSE feed.
     pub replay_generation: AtomicU64,
+    /// Bumped whenever a source's drift state changes, for the SSE feed.
+    pub drift_generation: AtomicU64,
     parsers_signature: Mutex<Option<(usize, Option<SystemTime>, u64)>>,
     stop: AtomicBool,
 }
@@ -246,7 +355,7 @@ pub(crate) struct Emitted {
 /// hits and the unknown lines (for inference) collected for the caller. The live worker
 /// and the replay worker both call this; neither has its own per-event path.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratch: &mut ulpf_parse::Scratch, hint: &mut Option<usize>, parsed: &mut Parsed<'a>, out: &mut Vec<u8>, counts: &mut LocalCounts, hits: &mut [u64], unknown: &mut Vec<(u64, &'a [u8])>) {
+pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratch: &mut ulpf_parse::Scratch, hint: &mut Option<usize>, parsed: &mut Parsed<'a>, out: &mut Vec<u8>, counts: &mut LocalCounts, hits: &mut [u64], unknown: &mut Vec<(u64, &'a [u8])>, failed: &mut Vec<(u64, &'a [u8])>) {
     let bytes = batch.file.bytes();
     for (i, range) in batch.ranges.iter().enumerate() {
         let event = &bytes[range.clone()];
@@ -273,6 +382,8 @@ pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratc
                     // line it claims but cannot parse is still an unknown line for inference
                     if pipeline.registry.get(p).definition().matcher.priority < 0 {
                         unknown.push((raw_id, event));
+                    } else {
+                        failed.push((raw_id, event));
                     }
                 }
             }
@@ -390,6 +501,7 @@ impl Live {
             load_problems: Mutex::new(load_problems),
             replay: Mutex::new(ReplayState::default()),
             replay_generation: AtomicU64::new(0),
+            drift_generation: AtomicU64::new(0),
             parsers_signature: Mutex::new(parsers_signature(&cfg.parsers)),
             stop: AtomicBool::new(false),
         }))
@@ -552,16 +664,81 @@ impl Live {
         let idx = pipeline.registry.index_of(&approved.name);
         let detected = lines.iter().filter(|l| idx.is_some() && pipeline.registry.detect(l, idx) == idx).count() as u64;
         self.inference.clear(&approved.source);
+        self.clear_drift(&approved.source);
         self.metrics.approved.fetch_add(1, Relaxed);
         self.pending_generation.fetch_add(1, Relaxed);
-        Ok(ApproveReport { name: approved.name, path: approved.path, parsers_loaded: reload.parsers_loaded, problems: reload.problems, now_detected: NowDetected { tested: lines.len() as u64, detected } })
+        Ok(ApproveReport { name: approved.name, path: approved.path, parsers_loaded: reload.parsers_loaded, problems: reload.problems, now_detected: NowDetected { tested: lines.len() as u64, detected }, replaced_version: approved.replaced_version })
     }
 
     pub fn reject(&self, id: &str) -> Result<PathBuf, ReviewError> {
-        let moved = self.pending_or_err()?.reject(id)?;
+        let pending = self.pending_or_err()?;
+        let source = pending.get(id).ok().map(|d| d.source);
+        let moved = pending.reject(id)?;
+        if let Some(s) = source {
+            self.inference.clear(&s);
+            self.clear_drift(&s);
+        }
         self.metrics.rejected.fetch_add(1, Relaxed);
         self.pending_generation.fetch_add(1, Relaxed);
         Ok(moved)
+    }
+
+    /// A tripped source whose update was approved or rejected starts a fresh baseline.
+    fn clear_drift(&self, source: &str) {
+        let mut sources = self.sources.lock().unwrap_or_else(|e| e.into_inner());
+        if let Some(s) = sources.get_mut(source)
+            && s.routing()
+        {
+            s.drift = DriftState::Cleared;
+            s.baseline_events = 0;
+            s.baseline_misses = 0;
+            s.window_events = 0;
+            s.window_misses = 0;
+            s.drift_since_nanos = now_nanos();
+            self.metrics.drift_cleared.fetch_add(1, Relaxed);
+            self.drift_generation.fetch_add(1, Relaxed);
+        }
+    }
+
+    /// Every established source's drift state, tripped and proposed first.
+    pub fn drift_alerts(&self) -> Vec<DriftAlert> {
+        let sources = self.sources.lock().unwrap_or_else(|e| e.into_inner());
+        let mut out: Vec<DriftAlert> = sources
+            .iter()
+            .filter(|(_, s)| s.drift != DriftState::None)
+            .map(|(name, s)| {
+                let id = Pending::id_for(name);
+                let (pending_id, proposed_version, state) = match (&self.pending, s.drift) {
+                    (Some(p), DriftState::Tripped | DriftState::Proposed) => match p.get(&id) {
+                        Ok(d) if d.record.updates.is_some() => (Some(id), toml::from_str::<ulpf_parse::def::ParserDefinition>(&d.definition).ok().map(|d| d.parser.version), DriftState::Proposed),
+                        _ => (None, None, DriftState::Tripped),
+                    },
+                    _ => (None, None, s.drift),
+                };
+                let mut since = String::new();
+                if s.drift_since_nanos > 0 {
+                    ulpf_time::format_rfc3339(s.drift_since_nanos, &mut since);
+                }
+                DriftAlert {
+                    source: name.clone(),
+                    parser: s.established_parser().unwrap_or("").to_string(),
+                    state,
+                    since,
+                    window: DriftWindow { events: s.window_events, misses: s.window_misses, rate: s.window_rate },
+                    baseline_rate: s.baseline_rate(),
+                    lines_routed: s.drift_lines_routed,
+                    pending_id,
+                    proposed_version,
+                }
+            })
+            .collect();
+        out.sort_by_key(|a| match a.state {
+            DriftState::Tripped => 0,
+            DriftState::Proposed => 1,
+            DriftState::Cleared => 2,
+            _ => 3,
+        });
+        out
     }
 
     pub fn regenerate(&self, id: &str, keep: &[u64], merge: &[Vec<u64>]) -> Result<(String, Vec<String>), ReviewError> {
@@ -652,7 +829,7 @@ fn start<'scope, 'env: 'scope>(scope: &'scope std::thread::Scope<'scope, 'env>, 
     let writer = scope.spawn(move || output_thread(live, out_rx));
     let inference = scope.spawn(move || {
         if let Some(p) = &live.pending {
-            live.inference.run_thread(p, &live.metrics, &live.pending_generation);
+            live.inference.run_thread(p, &live.metrics, &live.pending_generation, &live.drift_generation);
         }
     });
     let mut workers = Vec::new();
@@ -976,19 +1153,49 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Em
         // `Parsed` borrows the batch's bytes and the current registry, so it lives per batch
         let mut parsed = Parsed::default();
         let mut unknown: Vec<(u64, &[u8])> = Vec::new();
+        let mut failed: Vec<(u64, &[u8])> = Vec::new();
         let pipeline = &*pipeline;
-        process_batch(pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown);
+        process_batch(pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown, &mut failed);
         live.metrics.add(&counts);
         if !unknown.is_empty() {
             live.inference.offer_batch(&batch.file.name, &unknown, &live.metrics);
         }
-        {
+        let parse_failed: u64 = counts.parse_failed.iter().sum();
+        let (tripped, routing) = {
             let mut sources = live.sources.lock().unwrap_or_else(|e| e.into_inner());
             let s = sources.entry(batch.file.name.clone()).or_default();
             s.events += batch.ranges.len() as u64;
             s.detected += counts.detected;
             s.no_parser += counts.no_parser;
+            s.parse_failed += parse_failed;
             s.last_seen_nanos = batch.receipt_nanos;
+            for (i, h) in hits.iter().enumerate() {
+                if *h > 0 {
+                    *s.by_parser.entry(pipeline.registry.get(i).name().to_string()).or_default() += h;
+                }
+            }
+            let tripped = s.observe(batch.ranges.len() as u64, counts.no_parser + parse_failed);
+            // the batch that completed the tripping window is judged, not routed
+            let routing = s.routing() && tripped.is_none();
+            if routing {
+                s.drift_lines_routed += (unknown.len() + failed.len()) as u64;
+            }
+            (tripped, routing)
+        };
+        if let Some(parser) = tripped {
+            // the window that tripped is judged, not clustered: from here on the source's
+            // misses (unknown and failed alike) go to inference with the parser as prior
+            if let Some(def) = pipeline.registry.index_of(&parser).map(|i| pipeline.registry.get(i).definition().clone()) {
+                live.inference.set_prior(&batch.file.name, def);
+            }
+            live.metrics.drift_tripped.fetch_add(1, Relaxed);
+            live.drift_generation.fetch_add(1, Relaxed);
+        }
+        if routing {
+            if !failed.is_empty() {
+                live.inference.offer_batch(&batch.file.name, &failed, &live.metrics);
+            }
+            live.metrics.drift_lines_routed.fetch_add((unknown.len() + failed.len()) as u64, Relaxed);
         }
         if hits.iter().any(|h| *h > 0) {
             let mut ph = live.parser_hits.lock().unwrap_or_else(|e| e.into_inner());

@@ -13,6 +13,7 @@ use std::sync::{Condvar, Mutex};
 use std::time::{Duration, Instant};
 
 use ulpf_infer::Params;
+use ulpf_parse::def::ParserDefinition;
 
 use crate::metrics::Metrics;
 use crate::pending::{Pending, WriteOutcome};
@@ -41,6 +42,9 @@ struct Buffer {
     last_added: Instant,
     next_run: usize,
     ran_at: usize,
+    /// The source's established parser when the buffer holds drifted lines: the next
+    /// run composes an update onto it instead of proposing a new parser.
+    prior: Option<ParserDefinition>,
 }
 
 fn ordered(lines: &[(u64, Vec<u8>)]) -> Vec<Vec<u8>> {
@@ -73,7 +77,7 @@ impl Inference {
         let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
         let threshold = self.threshold;
         if !st.sources.contains_key(source) {
-            st.sources.insert(source.to_string(), Buffer { lines: Vec::new(), last_added: Instant::now(), next_run: threshold, ran_at: 0 });
+            st.sources.insert(source.to_string(), Buffer { lines: Vec::new(), last_added: Instant::now(), next_run: threshold, ran_at: 0, prior: None });
         }
         let buf = st.sources.get_mut(source).expect("inserted above");
         let mut added = 0u64;
@@ -98,6 +102,23 @@ impl Inference {
         }
     }
 
+    /// Marks a source as drifted: its buffered lines are composed onto `prior` at the
+    /// next run. The buffer is emptied first so lines from before the trip (unknown for
+    /// unrelated reasons) do not shape the update. The prior stays until `clear`.
+    pub fn set_prior(&self, source: &str, prior: ParserDefinition) {
+        let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
+        let threshold = self.threshold;
+        let buf = st.sources.entry(source.to_string()).or_insert_with(|| Buffer { lines: Vec::new(), last_added: Instant::now(), next_run: threshold, ran_at: 0, prior: None });
+        buf.lines.clear();
+        buf.ran_at = 0;
+        buf.next_run = threshold;
+        buf.prior = Some(prior);
+    }
+
+    pub fn prior_of(&self, source: &str) -> Option<String> {
+        self.state.lock().unwrap_or_else(|e| e.into_inner()).sources.get(source).and_then(|b| b.prior.as_ref().map(|p| p.parser.name.clone()))
+    }
+
     pub fn buffered(&self) -> BTreeMap<String, usize> {
         self.state.lock().unwrap_or_else(|e| e.into_inner()).sources.iter().map(|(k, v)| (k.clone(), v.lines.len())).collect()
     }
@@ -120,7 +141,7 @@ impl Inference {
     /// Sources due for a run: over their next threshold, or quiet for `idle` with at least
     /// `min_support` lines the last run did not see (so a burst that stops short of the
     /// next doubling is still clustered in full). `final_flush` takes every such source.
-    fn take_due(&self, st: &mut State, final_flush: bool) -> Vec<(String, Vec<Vec<u8>>)> {
+    fn take_due(&self, st: &mut State, final_flush: bool) -> Vec<(String, Vec<Vec<u8>>, Option<ParserDefinition>)> {
         let mut due = Vec::new();
         for (name, buf) in st.sources.iter_mut() {
             let n = buf.lines.len();
@@ -131,14 +152,14 @@ impl Inference {
             if over || idle || flush {
                 buf.ran_at = n;
                 buf.next_run = (n * 2).max(n + self.threshold);
-                due.push((name.clone(), ordered(&buf.lines)));
+                due.push((name.clone(), ordered(&buf.lines), buf.prior.clone()));
             }
         }
         due
     }
 
     /// The inference thread body. Returns after `stop` and the final flush.
-    pub fn run_thread(&self, pending: &Pending, metrics: &Metrics, pending_generation: &AtomicU64) {
+    pub fn run_thread(&self, pending: &Pending, metrics: &Metrics, pending_generation: &AtomicU64, drift_generation: &AtomicU64) {
         if !self.enabled() {
             return;
         }
@@ -153,21 +174,29 @@ impl Inference {
                 continue;
             }
             drop(st);
-            for (source, lines) in due {
-                self.run_one(&source, &lines, pending, metrics, pending_generation);
+            for (source, lines, prior) in due {
+                self.run_one(&source, &lines, prior.as_ref(), pending, metrics, pending_generation, drift_generation);
             }
             st = self.state.lock().unwrap_or_else(|e| e.into_inner());
         }
         let due = self.take_due(&mut st, true);
         drop(st);
-        for (source, lines) in due {
-            self.run_one(&source, &lines, pending, metrics, pending_generation);
+        for (source, lines, prior) in due {
+            self.run_one(&source, &lines, prior.as_ref(), pending, metrics, pending_generation, drift_generation);
         }
     }
 
-    fn run_one(&self, source: &str, lines: &[Vec<u8>], pending: &Pending, metrics: &Metrics, pending_generation: &AtomicU64) {
+    #[allow(clippy::too_many_arguments)]
+    fn run_one(&self, source: &str, lines: &[Vec<u8>], prior: Option<&ParserDefinition>, pending: &Pending, metrics: &Metrics, pending_generation: &AtomicU64, drift_generation: &AtomicU64) {
         let refs: Vec<&[u8]> = lines.iter().map(Vec::as_slice).collect();
-        let proposal = ulpf_infer::infer(source, &refs, &self.params);
+        let proposal = match prior {
+            Some(p) => ulpf_infer::infer_with_prior(source, &refs, p, &self.params),
+            None => ulpf_infer::infer(source, &refs, &self.params),
+        };
+        if proposal.updates.is_some() {
+            metrics.drift_proposals.fetch_add(1, Relaxed);
+            drift_generation.fetch_add(1, Relaxed);
+        }
         metrics.infer_runs.fetch_add(1, Relaxed);
         metrics.infer_lines_templated.fetch_add(proposal.evidence.lines_used, Relaxed);
         metrics.infer_lines_unmatched.fetch_add(proposal.evidence.unmatched.count, Relaxed);

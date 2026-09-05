@@ -325,9 +325,10 @@ pub fn run(job: Job, progress: &AtomicU64, cancel: &AtomicBool) -> Result<Replay
                     let mut counts = LocalCounts::default();
                     let mut parsed = Parsed::default();
                     let mut unknown = Vec::new();
+                    let mut failed = Vec::new();
                     hits.clear();
                     hits.resize(pipeline.registry.len(), 0);
-                    process_batch(&pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown);
+                    process_batch(&pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown, &mut failed);
                     metrics.add(&counts);
                     if tx.send(Emitted { seq: batch.seq, buf: out, count: batch.ranges.len() as u64, first_raw_id: batch.first_raw_id }).is_err() {
                         break;

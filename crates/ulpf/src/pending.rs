@@ -12,7 +12,7 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
-use ulpf_infer::{Evidence, Params, Proposal, TemplateEvidence};
+use ulpf_infer::{Evidence, Params, Proposal, TemplateEvidence, Update};
 use ulpf_parse::def::ParserDefinition;
 
 pub struct Pending {
@@ -30,6 +30,9 @@ pub struct PendingRecord {
     pub created_nanos: i64,
     pub edited: bool,
     pub evidence: Evidence,
+    /// Present when the proposal is a new version of an active parser (drift).
+    #[serde(default)]
+    pub updates: Option<Update>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -43,6 +46,9 @@ pub struct PendingSummary {
     pub unmatched: u64,
     pub edited: bool,
     pub problems: u64,
+    pub updates: Option<String>,
+    pub version: u64,
+    pub current_version: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -105,6 +111,8 @@ pub struct Approved {
     pub name: String,
     pub path: PathBuf,
     pub source: String,
+    /// The version the approval replaced, for an update.
+    pub replaced_version: Option<u64>,
 }
 
 fn now_nanos() -> i64 {
@@ -190,17 +198,20 @@ impl Pending {
         let mut out = Vec::new();
         for id in self.ids() {
             if let Ok(detail) = self.get(&id) {
-                let name = toml::from_str::<ParserDefinition>(&detail.definition).ok().map(|d| d.parser.name);
+                let def = toml::from_str::<ParserDefinition>(&detail.definition).ok();
                 out.push(PendingSummary {
                     id: detail.id,
                     source: detail.source,
-                    name,
+                    name: def.as_ref().map(|d| d.parser.name.clone()),
                     created_nanos: detail.record.created_nanos,
                     lines: detail.record.evidence.lines_seen,
                     templates: detail.record.evidence.templates.len() as u64,
                     unmatched: detail.record.evidence.unmatched.count,
                     edited: detail.record.edited,
                     problems: detail.problems.len() as u64,
+                    updates: detail.record.updates.as_ref().map(|u| u.name.clone()),
+                    version: def.as_ref().map(|d| d.parser.version).unwrap_or(1),
+                    current_version: detail.record.updates.as_ref().map(|u| u.current_version),
                 });
             }
         }
@@ -214,6 +225,17 @@ impl Pending {
         let definition = fs::read_to_string(&path).map_err(|e| ReviewError::Io(format!("proposal `{id}` is damaged: {}: {e}", path.display())))?;
         let problems = problems_of(&path, &definition);
         Ok(PendingDetail { id: id.to_string(), source: record.source.clone(), definition, problems, record })
+    }
+
+    /// For an update: the active parser's current text and a unified diff against the
+    /// proposal, for the review screen. `(None, None)` for a fresh proposal.
+    pub fn current_and_diff(&self, id: &str, parsers_dir: &Path) -> (Option<String>, Option<String>) {
+        let Ok(detail) = self.get(id) else { return (None, None) };
+        let Some(u) = &detail.record.updates else { return (None, None) };
+        let path = parsers_dir.join(format!("{}.toml", u.name));
+        let Ok(current) = fs::read_to_string(&path) else { return (None, None) };
+        let diff = unified_diff(&format!("parsers/{}.toml (v{})", u.name, u.current_version), &format!("pending/{id}.toml (proposed)"), &current, &detail.definition);
+        (Some(current), Some(diff))
     }
 
     /// The unknown events the proposal was built from, terminators included, framed the
@@ -265,7 +287,7 @@ impl Pending {
         }
         atomic_write(&self.lines_path(&id), &joined)?;
         atomic_write(&self.toml_path(&id), text.as_bytes())?;
-        self.save_record(&PendingRecord { id, source: proposal.source.clone(), created_nanos: now_nanos(), edited: false, evidence: proposal.evidence.clone() })?;
+        self.save_record(&PendingRecord { id, source: proposal.source.clone(), created_nanos: now_nanos(), edited: false, evidence: proposal.evidence.clone(), updates: proposal.updates.clone() })?;
         Ok(outcome)
     }
 
@@ -327,16 +349,23 @@ impl Pending {
         if name.is_empty() || !name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-') {
             return Err(ReviewError::Invalid(vec![format!("[parser] name `{name}` must be [A-Za-z0-9_-]+ (it names the file under parsers/)")]));
         }
-        if active_names.contains(&name) {
-            return Err(ReviewError::Conflict(name));
-        }
         let path = parsers_dir.join(format!("{name}.toml"));
-        if path.exists() {
+        let stamp = now_nanos();
+        let approved = self.dir.join("approved");
+        // an update may only replace the parser it was composed on; the replaced text is
+        // kept beside the evidence, so no version is ever lost
+        let is_update = rec.updates.as_ref().is_some_and(|u| u.name == name);
+        let mut replaced_version = None;
+        if is_update {
+            if let Ok(current) = fs::read_to_string(&path) {
+                let v = toml::from_str::<ParserDefinition>(&current).map(|d| d.parser.version).unwrap_or(1);
+                atomic_write(&approved.join(format!("{name}.v{v}.toml")), current.as_bytes())?;
+                replaced_version = Some(v);
+            }
+        } else if active_names.contains(&name) || path.exists() {
             return Err(ReviewError::Conflict(name));
         }
         atomic_write(&path, text.as_bytes())?;
-        let stamp = now_nanos();
-        let approved = self.dir.join("approved");
         // the record is the proposal's identity: it moves first; if that fails the parser
         // file is taken back so the two directories never disagree
         if let Err(e) = fs::rename(self.json_path(id), approved.join(format!("{id}-{stamp}.json"))) {
@@ -345,7 +374,7 @@ impl Pending {
         }
         let _ = fs::remove_file(self.toml_path(id));
         let _ = fs::rename(self.lines_path(id), approved.join(format!("{id}-{stamp}.lines")));
-        Ok(Approved { name, path, source: rec.source })
+        Ok(Approved { name, path, source: rec.source, replaced_version })
     }
 
     /// Moves the proposal under `rejected/` and remembers its fingerprint.
@@ -363,6 +392,69 @@ impl Pending {
         self.rejected.lock().unwrap_or_else(|e| e.into_inner()).insert(rejected_key(&rec.source, &rec.evidence.fingerprint));
         Ok(target)
     }
+}
+
+/// A unified diff of two texts (LCS over lines, three lines of context). Enough for a
+/// review screen; no dependency.
+pub fn unified_diff(a_name: &str, b_name: &str, a: &str, b: &str) -> String {
+    let al: Vec<&str> = a.lines().collect();
+    let bl: Vec<&str> = b.lines().collect();
+    let (n, m) = (al.len(), bl.len());
+    let mut lcs = vec![vec![0u32; m + 1]; n + 1];
+    for i in (0..n).rev() {
+        for j in (0..m).rev() {
+            lcs[i][j] = if al[i] == bl[j] { lcs[i + 1][j + 1] + 1 } else { lcs[i + 1][j].max(lcs[i][j + 1]) };
+        }
+    }
+    // ops: (' ', a-line) | ('-', a-line) | ('+', b-line)
+    let mut ops: Vec<(char, &str)> = Vec::new();
+    let (mut i, mut j) = (0, 0);
+    while i < n || j < m {
+        if i < n && j < m && al[i] == bl[j] {
+            ops.push((' ', al[i]));
+            i += 1;
+            j += 1;
+        } else if j < m && (i == n || lcs[i][j + 1] >= lcs[i + 1][j]) {
+            ops.push(('+', bl[j]));
+            j += 1;
+        } else {
+            ops.push(('-', al[i]));
+            i += 1;
+        }
+    }
+    let mut out = format!("--- {a_name}\n+++ {b_name}\n");
+    let changed: Vec<usize> = ops.iter().enumerate().filter(|(_, (c, _))| *c != ' ').map(|(k, _)| k).collect();
+    if changed.is_empty() {
+        return out;
+    }
+    let mut k = 0;
+    while k < changed.len() {
+        let start = changed[k].saturating_sub(3);
+        let mut end = changed[k] + 3;
+        while k + 1 < changed.len() && changed[k + 1] <= end + 3 {
+            k += 1;
+            end = changed[k] + 3;
+        }
+        let end = end.min(ops.len() - 1);
+        let (mut a_start, mut b_start, mut a_len, mut b_len) = (0usize, 0usize, 0usize, 0usize);
+        for (idx, (c, _)) in ops.iter().enumerate() {
+            if idx < start {
+                a_start += (*c != '+') as usize;
+                b_start += (*c != '-') as usize;
+            } else if idx <= end {
+                a_len += (*c != '+') as usize;
+                b_len += (*c != '-') as usize;
+            }
+        }
+        out.push_str(&format!("@@ -{},{} +{},{} @@\n", a_start + 1, a_len, b_start + 1, b_len));
+        for (c, line) in &ops[start..=end] {
+            out.push(*c);
+            out.push_str(line);
+            out.push('\n');
+        }
+        k += 1;
+    }
+    out
 }
 
 /// Write to a sibling temp file, sync it, and rename, so a reader never sees a
