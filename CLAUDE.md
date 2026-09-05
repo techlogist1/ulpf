@@ -34,6 +34,8 @@ plain-text folders (`parsers/`, `mappings/`, `samples/`, `fixtures/`, `pending/`
 | Directory watching | polling, stdlib (D40) | `notify` 9.0.0-rc is a release candidate and misses events across Docker bind mounts |
 | HTTP + SSE | `axum` 0.8 + `tokio` 1 (2 worker threads) + `futures-util` | verified against docs.rs 2026-09-05: `/{id}` routes, `Sse::new(stream).keep_alive(..)`, `axum::serve` |
 | UI | Svelte 5 + Vite, prebuilt to three fixed files in `ui/dist`, `include_str!` | no node at Rust build or in the container; `--ui-dir` serves edits from disk |
+| Sockets | `libc` 0.2 for `SO_RCVBUF` only | std has no receive-buffer setter; the kernel's grant is reported in `/api/status` |
+| Parquet | `parquet` 59.3.0, default features off, `snap` | 27 deps, no thrift or arrow crate, static build unchanged, +320 KiB; an additional sink (D64) |
 
 ## The three shapes (data model)
 Every event exists in exactly three forms:
@@ -48,8 +50,10 @@ Every event exists in exactly three forms:
    Crate: `ulpf-normalize`.
 
 Supporting entities: `ParserDefinition` (matcher + strategy + fields; one per device
-family; identical format hand-written or generated), `FieldMapping` (source field →
-schema field + value canonicalisation; one per output schema, shared by all parsers),
+family; identical format hand-written or generated; `[parser] version` and
+`origin = "inferred"` when the engine wrote it), `FieldMapping` (source field →
+schema field + value canonicalisation; one per output schema, shared by all parsers;
+`[entities]` names the five pivot kinds in schema paths),
 `Template` (constant tokens + typed slots + optional groups `{? ...}`; the inference
 engine's product; converts to a `ParserDefinition` losslessly), `Proposal` (a
 `ParserDefinition` plus `Evidence`: templates with support/verified counts, slots with
@@ -77,6 +81,15 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
   no handle to an existing record. Immutability is a property of the interface, and one
   writer at a time is enforced (a second `ulpf run` on the same store is refused). The
   server reads records through the writer's own handle (D42); it never opens the store.
+  Every record carries a chain value in the index (`chain_i = sha256(chain_{i-1} ||
+  digest_i)`, genesis from a random store id); `ulpf verify` names the first record a
+  rewrite touched and `ulpf attest` exports checkpoints a stranger re-verifies offline
+  (D56). Replay and verify read a bounded snapshot the writer flushed (`RawStore::reader`);
+  the store is never written by them (D52).
+- **One sequencer.** Files, UDP and TCP are three producers on one bounded queue; the
+  batch sequence is taken inside the store lock where the ids are issued, so the output
+  thread's order is the id order whatever the producer mix (D60). A restart completes an
+  interrupted output from the store before ingesting anything new (D59).
 - **Nothing is parsed on a proposal.** The registry loads `parsers/` only. A proposal is
   three files in `pending/`; `Pending::approve` is the only code that writes to
   `parsers/`, and it validates, refuses name collisions, writes atomically and reloads.
@@ -122,6 +135,16 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
   hand into `parsers/`). `ulpf check --pending pending` validates them. Not committed.
 - `heldout/*.log` + `.truth.tsv` — inference test inputs with ground truth; never loaded
   by `run`. Grade a change with `cargo run -p ulpf-infer --example infer -- heldout/X.log`.
+- `corpus/real/<vendor>/`, `corpus/generated/<tool>/` — real captures (public sources,
+  licence read and named in PROVENANCE.md) and captures generated locally from real
+  tools in Docker (SETUP.md re-runs them in under five minutes); `corpus/README.md` is
+  the index. nginx, HAProxy, Zeek and OpenVPN 2.6 are the unseen formats for the live
+  inference demo.
+- `eval/` + `docs/evaluation.md` — the neutral harness any tool runs through
+  (`eval/run.sh eval/tools/<tool>.toml`); ULPF's generated scorecard is committed under
+  `eval/results/`, raw result trees are not.
+- `mappings/ecs.toml` — the second output schema (`--schema ecs`); it exists to prove the
+  wall: the branch that added it touched mappings and one test file.
 - `ui/src/app.css` — every colour and spacing token at the top; `ulpf serve --ui-dir
   ui/dist` after `pnpm build` in `ui/`, no Rust rebuild.
 - Validate without a rebuild: `cargo run -- check` (or the built binary `ulpf check`).
@@ -141,6 +164,15 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
   only where the reason is non-obvious.
 - Commit messages say what now works. Every commit builds and passes `cargo test`.
 - `pnpm` is irrelevant here; this is pure Rust. No Python at runtime.
+
+## Drift, replay, pivot (what v2 added around the engine)
+A source with an established parser (1,024 baseline events, under 20% misses) trips when
+a 512-event window, or a partial window after 5 s of quiet, misses 0.25 above its baseline
+with at least 32 misses; its misses then feed inference with the parser as prior and the
+update lands in `pending/` as a versioned proposal with a diff (D54). Replay re-runs the
+store through the current parsers into `out.vN.jsonl` and diffs against the previous
+version, naming every parser or mapping file whose digest changed (D52). The pivot index
+beside the output (`out.jsonl.pivot`) answers one entity across every device (D55).
 
 ## Inference (how the engine proposes a parser)
 Unknown events are copied into a per-source buffer (bounded at 4096, ordered by raw id).
@@ -204,3 +236,7 @@ input for any output line (`ulpf.raw_id`).
 - `docs/parser-format.md` — the definition format reference for teammates.
 - `docs/timestamps.md` — timestamp survey, auto-detection order, zone table, policies.
 - `docs/inference-prototype-report.md` — the prefix-tree trial, and the v1 engine's graded results on `heldout/`.
+- `docs/slot-vocabulary.md` — the curated naming vocabulary the inference engine compiles in (D53).
+- `docs/retention.md` — how segment rotation and retention would work without weakening
+  append-only, the single writer, permanent ids or the chain; a design note, not built.
+- `docs/evaluation.md` — the scorecard and the 04:00 procedure.
