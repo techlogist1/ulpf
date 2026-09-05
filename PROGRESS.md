@@ -471,6 +471,17 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 05:11 IST: the 05:07 gate's release build had not finished (its last line was a `Compiling`
+  line and the binary kept its 04:24 timestamp), so its `check` and `demo --check` ran on the
+  binary from before lanes 2U and P; the gate script now prints `Finished` or `error` and the
+  rc. Rebuilt: `cargo build --release` 52.7 s, 12,092,632 bytes (the no-LTO release profile,
+  D88; the 2U overlay strings embedded). On that binary: `ulpf check --pending pending` 15
+  parsers, 2 mappings, 0 problems; `ulpf demo --check` no drift; `scripts/isolation.sh run
+  samples/cisco_asa.log` ISOLATION PASS; `ulpf demo --auto` end to end, exit 0: 15 parsers
+  loaded, the mikrotik proposal 0.3 s after the drop, approve `now_detected 250/250,
+  parsers_loaded 16`, replay v2 over 1,089 events, verify clean, the drift update proposal 5.9 s
+  after the new lines, attestation over 2,739 records, the tamper named raw id 0 with exit 1,
+  reset clean, no server left.
 - 05:07 IST: gate at the merge of lanes 4, P, 2U and 7 (main 1a7f05e, 6752d02, eb4540e and the
   lane 7 merge): 122 tests 0 failed, clippy rc 0, release binary 9,019,000 bytes
   (Sep 6 04:24), `ulpf check --pending pending` 15 parsers, 2 mappings loaded; 0 problems, `ulpf demo --check`
