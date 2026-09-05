@@ -1,0 +1,41 @@
+# AWS CloudTrail records, one JSON record per line: the shape a CloudWatch Logs
+# subscription, a Kinesis/Firehose delivery or an EventBridge rule hands on. The S3 log
+# file form `{"Records":[...]}` is a container of many records and is out of scope (split
+# it before ingest); so are CloudTrail Insights records (`eventType` AwsCloudTrailInsight,
+# whose eventSource sits inside `insightDetails`).
+# Source: AWS CloudTrail User Guide, "CloudTrail record contents for management, data,
+# and network activity events" (eventVersion 1.11 current), "CloudTrail userIdentity
+# element", "CloudTrail log file examples", "AWS Management Console sign-in events";
+# IAM User Guide, "Logging IAM and AWS STS API calls with AWS CloudTrail";
+# docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-event-reference-record-contents.html,
+# fetched 2026-09-06.
+# Fields the reference marks Optional: False are the signature: eventVersion,
+# userIdentity, eventTime, eventSource, eventName, awsRegion, sourceIPAddress,
+# requestParameters, responseElements, eventID, eventType, eventCategory (1.07+). The
+# matcher asks for the five that are never null (requestParameters and responseElements
+# are null on many records and the json strategy drops nulls). Optional: userAgent,
+# errorCode, errorMessage, requestID, readOnly, managementEvent, recipientAccountId,
+# resources, additionalEventData, tlsDetails, sharedEventID, vpcEndpointId, ...
+# The json strategy flattens nested objects with dots and arrays by index, so the names
+# the mapping sees are userIdentity.type, userIdentity.userName, userIdentity.arn,
+# userIdentity.accountId, userIdentity.sessionContext.sessionIssuer.userName,
+# requestParameters.instancesSet.items.0.instanceId, responseElements.ConsoleLogin,
+# resources.0.ARN, tlsDetails.tlsVersion; booleans become the text true/false.
+# Time: eventTime, "in coordinated universal time (UTC)", RFC 3339 (`2023-07-19T21:17:28Z`).
+
+[parser]
+name = "cloudtrail"
+vendor = "Amazon Web Services"
+product = "CloudTrail"
+description = "One CloudTrail management or data event record per line"
+
+[match]
+starts_with = "{"
+contains = ["\"eventVersion\"", "\"eventTime\"", "\"eventSource\"", "\"eventName\"", "\"awsRegion\""]
+
+[strategy]
+kind = "json"
+
+[[timestamp]]
+field = "eventTime"
+format = "rfc3339"
