@@ -8,6 +8,9 @@
   let data = $state(null)
   let err = $state(null)
   let busy = $state(false)
+  const EMPTY = new Uint8Array(0)
+  let bytes = $state(EMPTY)
+  let byteErr = $state(null)
   // What is lit is one byte range, not one field name: two fields can carry the same key.
   let over = $state(null) // { id, key } under the pointer or focus
   let pin = $state(null)  // click locks a range lit so both sides can be read at once
@@ -23,13 +26,35 @@
   let legendMore = $state(false)
   $effect(() => { width; colourOf; legendAll; if (legendEl) legendMore = legendAll || legendEl.scrollHeight > legendEl.clientHeight + 1 })
 
+  // The JSON without the bytes and with long values cut, then the bytes as bytes: a 4 MB
+  // record costs one 4 MB body and kilobytes of JSON instead of a 28 MB one (the same
+  // megabytes are the message value four times over). The ruler below is always the whole
+  // record. A server that still sends `hex` (before the bytes route existed) answers
+  // `?bytes=0` with it, and that is decoded here as before.
+  const VALUE_MAX = 4096
   async function load(rid) {
     if (rid === '' || rid == null) return
-    busy = true; err = null; data = null; over = null; pin = null; sel = -1
-    const r = await api('GET', `/api/events/${encodeURIComponent(rid)}`)
+    busy = true; err = null; byteErr = null; data = null; bytes = EMPTY; over = null; pin = null; sel = -1
+    const r = await api('GET', `/api/events/${encodeURIComponent(rid)}?bytes=0&values=${VALUE_MAX}`)
+    if (!r.ok) { busy = false; err = r.data; return }
+    data = r.data
+    bytes = r.data.hex != null ? fromHex(r.data.hex) : await fetchBytes(rid)
     busy = false
-    if (r.ok) data = r.data
-    else err = r.data
+  }
+  function fromHex(h) {
+    const a = new Uint8Array(h.length / 2)
+    for (let i = 0; i < a.length; i++) a[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16)
+    return a
+  }
+  async function fetchBytes(rid) {
+    try {
+      const res = await fetch(`/api/events/${encodeURIComponent(rid)}/bytes`)
+      if (!res.ok) { byteErr = `the bytes route answered ${res.status}`; return EMPTY }
+      return new Uint8Array(await res.arrayBuffer())
+    } catch (e) {
+      byteErr = String(e)
+      return EMPTY
+    }
   }
   $effect(() => { input = id; load(id) })
   $effect(() => {
@@ -47,12 +72,6 @@
   }
 
   const hot = $derived(pin ?? over)
-  const bytes = $derived.by(() => {
-    const h = data?.hex ?? ''
-    const a = new Uint8Array(h.length / 2)
-    for (let i = 0; i < a.length; i++) a[i] = parseInt(h.slice(i * 2, i * 2 + 2), 16)
-    return a
-  })
   const fields = $derived(data?.now?.fields ?? null)
   const prov = $derived(data?.now?.provenance ?? null)
   const timeSpan = $derived(data?.now?.time?.text_span ?? null)
@@ -179,6 +198,13 @@
       else if (String(a.get(p)) !== String(v)) out.push([p, String(a.get(p)), String(v)])
     return out
   })
+  // Where the emitted line was read from; a server that does not report it leaves a gap here.
+  const emittedFrom = $derived(
+    data?.emitted_from === 'tail' ? 'from the tail'
+      : data?.emitted_from === 'output' ? 'from the output file'
+        : data?.emitted_from === null ? 'not yet emitted'
+          : '–',
+  )
   const timeText = $derived(timeSpan ? decoder.decode(bytes.subarray(timeSpan[0], timeSpan[1])) : null)
   const policies = $derived(data?.now?.time?.policies ?? data?.emitted?.ulpf?.time_policies ?? [])
 </script>
@@ -217,7 +243,14 @@
       <div><span>bytes</span><b>{fmt.n(data.bytes_len)}</b></div>
       <div><span>parser now</span><b class:is-warn={!data.now?.parser}>{data.now?.parser ?? 'none'}</b></div>
       <div><span>status</span><b class:is-warn={data.now?.parse_status !== 'parsed'}>{data.now?.parse_status}</b></div>
+      <div><span>emitted line</span><b class:is-dim={data.emitted_from === undefined} class:is-warn={data.emitted_from === null}>{emittedFrom}</b></div>
     </div>
+    {#if data.values_cut > 0}
+      <p class="notice sm">{fmt.n(data.values_cut)} value{data.values_cut === 1 ? '' : 's'} longer than {fmt.n(VALUE_MAX)} bytes {data.values_cut === 1 ? 'is' : 'are'} shown cut, in the lists and in the two JSON panes. The raw record below is the whole record, byte for byte.</p>
+    {/if}
+    {#if byteErr}
+      <div class="notice bad"><b>The record's bytes did not load.</b><span class="muted">{byteErr}</span><span>The facts above come from the JSON route; the ruler below is empty until the bytes arrive. Reload the page to ask again.</span></div>
+    {/if}
 
     <div class="verdicts">
       <div class="verdict" class:ok={data.digest_match} class:bad={!data.digest_match}>
@@ -297,7 +330,7 @@
               <div class="vr" class:hot={fid && hot?.id === fid} class:pin={fid && pin?.id === fid} style="--c:{tint(f.key)}"
                    onmouseenter={() => lightRow(f)} onmouseleave={() => (over = null)} onclick={() => pinRow(f)} role="button" tabindex="-1">
                 <span class="k"><i class="sw"></i>{f.key}</span>
-                <span class="v" title={f.value}>{f.value}</span>
+                <span class="v" title={f.value}>{f.value}{#if f.value_len} <span class="tag warn" title="cut at {fmt.n(VALUE_MAX)} of {fmt.n(f.value_len)} bytes; the bytes above are whole">cut</span>{/if}</span>
                 <span class="num from">{#if f.span}{f.span[0]}–{f.span[1]}{:else}derived{/if}</span>
               </div>
             {/snippet}
@@ -318,7 +351,7 @@
               <div class="vr" class:hot={pid && hot?.id === pid} class:pin={pid && pin?.id === pid} class:sel={sel === i} style="--c:{tint(p.source_key)}"
                    onmouseenter={() => lightRow(p)} onmouseleave={() => (over = null)} onclick={() => { sel = i; pinRow(p) }} role="button" tabindex="-1">
                 <span class="k"><i class="sw"></i>{p.path}</span>
-                <span class="v" title={p.value}>{p.value}{#if p.canonical} <span class="tag" title="the mapping rewrote this value">canonical</span>{/if}</span>
+                <span class="v" title={p.value}>{p.value}{#if p.canonical} <span class="tag" title="the mapping rewrote this value">canonical</span>{/if}{#if p.value_len} <span class="tag warn" title="cut at {fmt.n(VALUE_MAX)} of {fmt.n(p.value_len)} bytes; the bytes above are whole">cut</span>{/if}</span>
                 <span class="from">{p.source_key}{#if !p.span} · derived{/if}</span>
               </div>
             {/snippet}
@@ -336,7 +369,10 @@
         {#if data.emitted}
           <pre class="json">{fmt.json(data.emitted)}</pre>
         {:else}
-          <div class="empty"><b>Not in the tail any more.</b><span>The output file holds the emitted line; the result of parsing the bytes now is on the right.</span></div>
+          <div class="empty">
+            <b>{data.emitted_from === null ? 'Not emitted yet.' : 'Not in the tail any more.'}</b>
+            <span>{data.emitted_from === null ? 'The bytes are stored; the output thread has not written this line (or the output is a device that cannot be read back).' : 'The output file holds the emitted line; the result of parsing the bytes now is on the right.'}</span>
+          </div>
         {/if}
       </div>
       <div>

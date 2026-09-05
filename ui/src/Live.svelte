@@ -3,6 +3,7 @@
   import { fmt } from './api.js'
   import { keys, nav } from './keys.js'
   import VList from './VList.svelte'
+  import Flags from './Flags.svelte'
 
   const m = $derived(live.metrics)
   const e = $derived(live.metrics?.engine ?? {})
@@ -32,23 +33,79 @@
     { k: 'normalized', n: e.normalized, lost: 0, label: '', why: '' },
     { k: 'emitted', n: e.emitted, lost: 0, label: '', why: '' },
   ])
-  // The queue is reported as its high-water mark against capacity, and how often the
-  // producer found it full. The instantaneous depth is not in the metrics frame.
-  const qcap = $derived(e.queue_capacity ?? live.status?.queue_capacity ?? 0)
+  // The queue: the depth right now (v4 frame) filled against capacity, with the high-water
+  // mark since start as a rule across it. An older frame has no depth and shows the mark alone.
+  const qcap = $derived(m?.queue?.capacity ?? e.queue_capacity ?? live.status?.queue_capacity ?? 0)
   const qhw = $derived(e.queue_high_water ?? 0)
+  const qnow = $derived(m?.queue?.depth ?? null)
+  const pct = (n) => (qcap ? Math.min(100, (100 * n) / qcap) : 0)
+
+  // The two large rates are the windowed ones the server computes over the frames of the last
+  // ten seconds, with the run average since start beside them. Without `rate` in the frame
+  // (an older server) the run average stands alone, labelled as it was.
+  const rate = $derived(m?.rate ?? null)
+  const emittedAvg = $derived(e.elapsed_secs ? e.emitted / e.elapsed_secs : null)
+  const over = $derived(rate ? `last ${fmt.f(rate.over_secs, 1)} s` : '')
 
   let sel = $state(-1)
   let filter = $state('')
   let box = $state(null)
   let innerHeight = $state(800)
-  const match = (r) => {
-    const q = filter.trim().toLowerCase()
-    return !q || `${r.raw_id} ${r.parser ?? r.status} ${r.cls} ${r.action} ${r.device} ${r.sum}`.toLowerCase().includes(q)
-  }
-  const rows = $derived(filter.trim() ? live.tail.filter(match) : live.tail)
-  $effect(() => { filter; sel = -1 })
+  let flaggedOnly = $state(false)
+  // Space-separated terms, every one a case-insensitive substring of the whole line: the rule
+  // docs/api.md gives the export route, so the export of a filtered view is the view.
+  const terms = $derived(filter.trim().toLowerCase().split(/\s+/).filter(Boolean))
+  const rows = $derived.by(() => {
+    let r = live.tail
+    if (flaggedOnly) r = r.filter((x) => x.flags.length)
+    if (terms.length) r = r.filter((x) => terms.every((t) => x.text.includes(t)))
+    return r
+  })
+  const flagged = $derived(live.tail.reduce((a, r) => a + (r.flags.length ? 1 : 0), 0))
+  const countNote = $derived(
+    terms.length && flaggedOnly
+      ? `${fmt.n(rows.length)} of ${fmt.n(live.tail.length)} flagged and matching`
+      : terms.length
+        ? `${fmt.n(rows.length)} of ${fmt.n(live.tail.length)}`
+        : flaggedOnly
+          ? `${fmt.n(rows.length)} flagged of ${fmt.n(live.tail.length)}`
+          : `${fmt.n(rows.length)}`,
+  )
+  $effect(() => { filter; flaggedOnly; sel = -1 })
+
+  // Export: the output file as the sink wrote it, over this view's raw id range or all of it,
+  // with the filter's terms so the file is the rows on screen. It writes nothing, so no
+  // confirmation; the anchor carries download, the server names the file.
+  let exportOpen = $state(false)
+  let format = $state('jsonl')
+  let whole = $state(false)
+  let dl = $state(null)
+  const span = $derived.by(() => {
+    if (whole || !rows.length) return null
+    let from = rows[0].raw_id, to = rows[0].raw_id
+    for (const r of rows) { if (r.raw_id < from) from = r.raw_id; if (r.raw_id > to) to = r.raw_id }
+    return { from, to }
+  })
+  const exportUrl = $derived.by(() => {
+    const p = new URLSearchParams({ format })
+    if (span) { p.set('from', span.from); p.set('to', span.to) }
+    if (terms.length) p.set('q', terms.join(' '))
+    return `/api/export?${p}`
+  })
+  const exportNote = $derived(
+    [
+      span ? `raw ids ${fmt.n(span.from)} to ${fmt.n(span.to)}` : 'every line in the output file',
+      terms.length ? `lines carrying ${terms.join(' and ')}` : null,
+      flaggedOnly ? 'flagged-only is a filter of this screen; the export route filters on terms, not flags' : null,
+    ].filter(Boolean).join(', '),
+  )
+
   $effect(() => keys((ev) => {
     if (ev.key === '/') { box?.focus(); box?.select(); return true }
+    if (ev.key === 'f') { flaggedOnly = !flaggedOnly; return true }
+    if (ev.key === 'e') { exportOpen = !exportOpen; return true }
+    if (exportOpen && ev.key === 'Enter') { dl?.click(); exportOpen = false; return true }
+    if (exportOpen && ev.key === 'Escape') { exportOpen = false; return true }
     if (ev.key === ' ') { live.paused ? resume() : (live.paused = true); return true }
     const was = sel
     const hit = nav(ev, rows.length, sel, (n) => (sel = n), (n) => (location.hash = `#/trace/${rows[n].raw_id}`))
@@ -62,8 +119,13 @@
 
 <section class="hero">
   <div class="rates">
-    <div class="rate"><b class="num">{fmt.f(e.events_per_sec, 0)}</b><span>events per second</span></div>
-    <div class="rate"><b class="num">{fmt.f(e.mb_per_sec, 1)}</b><span>MB per second</span></div>
+    {#if rate}
+      <div class="rate"><b class="num">{fmt.f(rate.framed_per_sec, 0)}<i class="avg">{fmt.f(e.events_per_sec, 0)} since start</i></b><span>events framed per second, {over}</span></div>
+      <div class="rate"><b class="num">{fmt.f(rate.emitted_per_sec, 0)}<i class="avg">{fmt.f(emittedAvg, 0)} since start</i></b><span>events emitted per second, {over}</span></div>
+    {:else}
+      <div class="rate"><b class="num">{fmt.f(e.events_per_sec, 0)}</b><span>events per second</span></div>
+      <div class="rate"><b class="num">{fmt.f(e.mb_per_sec, 1)}</b><span>MB per second</span></div>
+    {/if}
   </div>
   <div class="funnel">
     {#each funnel as f}
@@ -76,8 +138,11 @@
     {/each}
   </div>
   <div class="queue">
-    <span class="lab"><span>queue</span><span>{fmt.n(qhw)} / {fmt.n(qcap)} high-water</span></span>
-    <span class="track"><i style="width:{qcap ? Math.min(100, (100 * qhw) / qcap) : 0}%"></i></span>
+    <span class="lab"><span>queue</span><span>{#if qnow != null}{fmt.n(qnow)} / {fmt.n(qcap)} now, high-water {fmt.n(qhw)}{:else}{fmt.n(qhw)} / {fmt.n(qcap)} high-water{/if}</span></span>
+    <span class="track">
+      <i style="width:{pct(qnow ?? qhw)}%"></i>
+      {#if qnow != null}<i class="hw" style="width:{pct(qhw)}%" title="high-water mark since start"></i>{/if}
+    </span>
     <span class="n" class:is-warn={e.backpressure_blocks > 0}>{e.backpressure_blocks > 0 ? `producer blocked ${fmt.n(e.backpressure_blocks)} times` : idle ? 'idle, waiting for input' : `${fmt.n(e.batches)} batches, never full`}</span>
   </div>
 </section>
@@ -93,23 +158,39 @@
 <section>
   <div class="head">
     <h2>Tail</h2>
-    <span class="note">newest first, {filter.trim() ? `${fmt.n(rows.length)} of ${fmt.n(live.tail.length)}` : `${fmt.n(rows.length)}`} rows, click or Enter traces the event</span>
+    <span class="note">newest first, {countNote} rows, click or Enter traces the event</span>
     <span class="push bar">
-      <input type="search" bind:value={filter} bind:this={box} onkeydown={(ev) => { if (ev.key === 'Escape') { filter = ''; ev.currentTarget.blur() } }} placeholder="filter the tail  /" size="24" aria-label="Filter the tail" />
+      <input type="search" bind:value={filter} bind:this={box} onkeydown={(ev) => { if (ev.key === 'Escape') { filter = ''; ev.currentTarget.blur() } }} placeholder="filter every field  /" size="24" aria-label="Filter the tail" />
+      <button class="btn" class:on={flaggedOnly} onclick={() => (flaggedOnly = !flaggedOnly)} aria-pressed={flaggedOnly} title="only the events with at least one flag">Flagged<kbd>f</kbd></button>
+      <button class="btn" class:on={exportOpen} onclick={() => (exportOpen = !exportOpen)} aria-expanded={exportOpen}>Export<kbd>e</kbd></button>
       {#if live.paused}<span class="tag warn">held, {fmt.n(live.held)} arrived</span>{/if}
       <button class="btn" class:on={live.paused} onclick={() => (live.paused ? resume() : (live.paused = true))}>{live.paused ? 'Release' : 'Hold'}<kbd>space</kbd></button>
     </span>
   </div>
+  {#if exportOpen}
+    <div class="export">
+      <span class="kinds">
+        <button class:on={format === 'jsonl'} onclick={() => (format = 'jsonl')} aria-pressed={format === 'jsonl'}>jsonl</button>
+        <button class:on={format === 'csv'} onclick={() => (format = 'csv')} aria-pressed={format === 'csv'}>csv</button>
+      </span>
+      <span class="kinds">
+        <button class:on={!whole} onclick={() => (whole = false)} aria-pressed={!whole}>this view</button>
+        <button class:on={whole} onclick={() => (whole = true)} aria-pressed={whole}>everything</button>
+      </span>
+      <span class="muted sm">{exportNote}</span>
+      <a class="btn primary push" href={exportUrl} bind:this={dl} download target="_blank" rel="noopener" onclick={() => (exportOpen = false)}>Download<kbd>Enter</kbd></a>
+    </div>
+  {/if}
   {#if !rows.length}
     <div class="empty">
-      <b>{filter.trim() ? `Nothing in the tail matches ${filter.trim()}.` : 'No events yet.'}</b>
-      <span>{filter.trim() ? 'Esc clears the filter.' : 'The tail fills the moment the engine emits: drop a file into a watched directory or send syslog to the listener in the status line.'}</span>
+      <b>{terms.length ? `Nothing in the tail matches ${terms.join(' ')}.` : flaggedOnly ? `Nothing in the tail is flagged: all ${fmt.n(live.tail.length)} events reached every stage.` : 'No events yet.'}</b>
+      <span>{terms.length ? 'Esc clears the filter.' : flaggedOnly ? 'f shows every event again.' : 'The tail fills the moment the engine emits: drop a file into a watched directory or send syslog to the listener in the status line.'}</span>
     </div>
   {:else}
-    <div class="tail" style="--cols:6em 11em 13em 12em 6em 14em minmax(0,1fr)">
+    <div class="tail" style="--cols:6em 11em 13em 12em 6em 14em 7em minmax(0,1fr)">
       <VList items={rows} max={Math.max(330, innerHeight - 420)} {sel}>
         {#snippet header()}
-          <div class="vh"><span class="num">raw</span><span>time</span><span>parser</span><span>class</span><span>action</span><span>device</span><span>summary</span></div>
+          <div class="vh"><span class="num">raw</span><span>time</span><span>parser</span><span>class</span><span>action</span><span>device</span><span title="the stages that did not reach their outcome; hover a mark for the flag">flags</span><span>summary</span></div>
         {/snippet}
         {#snippet row(r, i)}
           <div class="vr" class:sel={i === sel} onclick={() => (location.hash = `#/trace/${r.raw_id}`)} role="button" tabindex="-1">
@@ -119,6 +200,7 @@
             <span>{r.cls}</span>
             <span class:is-warn={deny(r.action)}>{r.action}</span>
             <span class="mono is-dim">{r.device}</span>
+            <Flags flags={r.flags} />
             <span class="mono" title={r.sum}>{r.sum}</span>
           </div>
         {/snippet}
@@ -198,6 +280,7 @@
       <span class="kv"><span>files</span><span class="num">{fmt.n(e.files)}</span></span>
       <span class="kv" class:bad={e.files_failed > 0}><span>failed</span><span class="num">{fmt.n(e.files_failed)}</span></span>
       <span class="kv"><span>MB in</span><span class="num">{fmt.mb(e.bytes)}</span></span>
+      <span class="kv"><span>MB per second</span><span class="num">{fmt.f(e.mb_per_sec, 1)}</span></span>
       <span class="kv"><span>output bytes</span><span class="num">{fmt.n(e.output_bytes)}</span></span>
       <span class="kv"><span>elapsed</span><span class="num">{fmt.f(e.elapsed_secs, 1)}s</span></span>
       <span class="kv"><span>threads</span><span class="num">{fmt.n(e.threads)}</span></span>

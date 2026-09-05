@@ -75,6 +75,25 @@ The `*-1280.png` / `*-2560.png` rows in the first table without a tool-driven ma
 | tool-pivot-1512.png | pivot | 1512 | the jdoe pivot at 1512: timeline and seen-with lists side by side, no empty band; tool-driven (Chrome MCP) |
 | tool-flow-reconnecting-1512.png | flow | 1512 | error state: the server behind this tab was stopped; Flow says the stream dropped and when it retries, keeps the last frame's numbers with their time, and the pulses stop; tool-driven (Chrome MCP) |
 
+## v4: trust flags, the filter, export and the bytes route (lane 2U)
+
+Taken through CDP (puppeteer-core, the pattern in `ui/capture.mjs`) against a `ulpf serve`
+on 127.0.0.1:7898 built from the merged binary and serving the current `ui/dist`: the
+400k-event slice of `bench/mixed-5000000.log`, the samples one per second, `heldout/mikrotik.log`,
+and one 4,000,001-byte line dropped in as `big.log`.
+
+| file | screen | width | what it shows |
+|---|---|---|---|
+| v4-live-flags-1280.png | live | 1280 | the flags column of the tail, mixed rows: one mark (`um11`), two (`um8` `u8`), three (`su` `cu` `um5`); the count on `um` is the number of source fields no mapping rule consumed, and the full flag is in each mark's title. The two rates are the server's window (`last 9.9 s`) with the run average beside them, and the queue reads `0 / 64 now, high-water 1` |
+| v4-live-flagged-1280.png | live | 1280 | after `f`: the Flagged button on and the head counting `500 flagged of 500 rows` — on this input every event carries at least an `um` |
+| v4-live-filter-1280.png | live | 1280 | the filter `denied 192.168`: the head reads `15 of 500 rows` and every row on screen carries both terms, in any field (action, device, summary) |
+| v4-live-export-1280.png | live | 1280 | the export choice open under the head: jsonl or csv, this view or everything, the sentence naming what will be written (`raw ids 2,183 to 2,602, lines carrying denied and 192.168`) and the download link with its Enter key |
+| v4-trace-bytes-1280.png | trace | 1280 | the traceback of raw id 300 with the record's 157 bytes read from `/api/events/300/bytes`, not from a hex string in the JSON; the facts line ends `emitted line from the output file`, the id having scrolled out of the tail |
+| v4-trace-big-1280.png | trace | 1280 | the 4,000,001-byte record (`big.log`, raw id 3840, `parser now none`, `status no_parser`): the JSON carries the values cut at 4 KiB and says so, while the ruler below is the whole record byte for byte, fetched once as an ArrayBuffer |
+| v4-pivot-seenwith-1280.png | pivot | 1280 | the seen-with lists of src_ip 203.0.113.9, each value read as `in N of the 425 newest events` with the bar as that share; `related_over` is the 425, not the entity's total |
+| v4-live-light-1280.png | live | 1280 | the same tail in the light theme: the flags column's outlined marks, the filter box and both buttons on the light ground, no new colour |
+| v4-keys-1280.png | any | 1280 | the keyboard overlay (`?`) after the fix-round addition: the Live block lists `f` and `e` beside space and Enter, so the map that calls itself `this map` is complete again |
+
 ## The desktop app (lane C, `app/`)
 
 Captured with `screencapture -x` of the real ULPF.app window built from the branch (`pnpm tauri build`). The add-files, drag, review and approve steps were driven with the computer-use tools; the `app-tool-*` rows at the end are the second, end-to-end pass on the final bundle (01:19-01:31 IST, 06 Sep), every step driven with the computer-use tools (native open panel by Cmd+O, Cmd+Shift+G and a typed path; a real mouse drag from a Finder window; clicks inside the webview), so these are tool-driven captures, not headless ones.

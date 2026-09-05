@@ -298,6 +298,9 @@ Every class is in `ui/src/app.css` under a section comment; no component adds it
 | inputs | `input[type=search]`, `textarea.editor` | search boxes are mono; the definition editor is mono with a 56vh minimum |
 | confirmation | `Confirm.svelte` + `.confirm` | see below |
 | keyboard map | `.overlay` + `.keymap` | the full key map in two columns; `?` opens, Esc or a click outside closes |
+| trust flags | `.flags` + `Flags.svelte` | the stages one event did not reach, as outlined `--warn` mono marks in a 7em column of the tail (`np` `pf` `su` `sn` `tr` `te` `cu` `um`N `u8`), each carrying the full flag and what it means in its title; a list of facts, never a score, so every mark is the same colour and there is no scale |
+| export choice | `.export` | under the tail's head when `e` opens it: jsonl or csv, this view or everything, a sentence naming the raw id range and the filter terms that will be written, and the download link; it writes nothing here, so it is not a confirmation |
+| run average | `.rate .avg` | beside each of Live's two windowed rates: the same mono one step down in `--fg-2`, so the big number is the window the server measured and the small one is the average it is judged against |
 | funnel | `.funnel` + `.fst` | the six pipeline stages as numbers with a proportional track and the loss between stages |
 | queue | `.queue` | high-water against capacity with the producer's block count |
 | byte ruler | `.bytes` | offset column, text (n bytes per row, never splitting a UTF-8 sequence) or hex (16 per row with ASCII); owned ranges lit by tint, control bytes as `\xNN` |
@@ -341,6 +344,8 @@ sees the same box; there is no single-click path to any of the four.
 | any list | Enter | open the selected row |
 | Live | space | hold the tail still (arrivals are counted, not stacked) and release it; moving in the tail holds it |
 | Live | Enter | trace the selected event |
+| Live | `f` | only the rows carrying a flag, and every row again; the head counts `N flagged of M` |
+| Live | `e` | the export choice; Enter takes the file, Esc closes it |
 | Traceback | `j` / `k` | walk the normalized fields, lighting each field's bytes |
 | Traceback | Enter, click | keep the selected range lit; Esc releases |
 | Traceback | `h` | hex or text |

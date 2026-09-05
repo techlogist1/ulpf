@@ -254,7 +254,7 @@
         </div>
 
         <div class="related">
-          <div class="head"><h2>Seen with</h2><span class="note">the ten most frequent per kind over the newest {fmt.n(data.related_over ?? data.total)} events; the bar is that share; click to pivot</span></div>
+          <div class="head"><h2>Seen with</h2><span class="note">the ten most frequent per kind, each in N of the {fmt.n(data.related_over ?? data.total)} newest events; the bar is that share; click to pivot</span></div>
           {#each KINDS as k}
             {@const items = data.related?.[k] ?? []}
             {#if items.length}
@@ -265,7 +265,7 @@
                   {#each items as r}
                     <li>
                       <a href="#/pivot/{encodeURIComponent(k)}/{encodeURIComponent(r.value)}" class:dev={k === 'device'} style={k === 'device' ? `--c:${tint(r.value)}` : ''}>{r.value}</a>
-                      <span class="share" title="{fmt.pct(r.events / top)} of those events"><i style="width:{Math.min(100, (100 * r.events) / top)}%"></i></span>
+                      <span class="share" title="in {fmt.n(r.events)} of the {fmt.n(top)} newest events ({fmt.pct(r.events / top)})"><i style="width:{Math.min(100, (100 * r.events) / top)}%"></i></span>
                       <span class="n">{fmt.n(r.events)}</span>
                     </li>
                   {/each}
