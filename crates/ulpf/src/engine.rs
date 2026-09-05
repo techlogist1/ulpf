@@ -1484,11 +1484,9 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
                 let finalize = entry.stable_ticks >= 2;
                 let stream = entry.growing_ticks >= 4;
                 if finalize || stream {
-                    let before = entry.consumed;
                     match ingest_file(live, &path, &name, entry.consumed, finalize, false, tx, in_flight, problems)? {
                         Some(consumed) => {
                             entry.consumed = consumed;
-                            live.metrics.bytes.fetch_add(consumed.saturating_sub(before), Relaxed);
                             if finalize {
                                 entry.growing_ticks = 0;
                                 entry.stable_ticks = 0;
@@ -1559,6 +1557,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
     let mut ranges: Vec<std::ops::Range<usize>> = Vec::with_capacity(live.batch_events);
     let mut receipt = live.receipt_nanos.unwrap_or_else(now_nanos);
     let mut consumed = start;
+    let mut credited = start;
     let bytes = ctx.bytes();
     let mut framer = Framer::new(&bytes[start..], eof);
     loop {
@@ -1599,7 +1598,14 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
         let ranges = std::mem::replace(&mut ranges, Vec::with_capacity(live.batch_events));
         send_batch(tx, &live.metrics, in_flight, live.queue_cap, seq, &ctx, receipt, batch_first, ranges, Vec::new())?;
         receipt = live.receipt_nanos.unwrap_or_else(now_nanos);
-        if done {
+        if !count_file {
+            live.metrics.bytes.fetch_add((consumed - credited) as u64, Relaxed);
+            credited = consumed;
+        }
+        // A stop request ends the file at this batch boundary: everything stored is still
+        // emitted, and the next start resumes from the ingest record, so ctrl-c during a
+        // large drop returns in seconds instead of draining the whole file.
+        if done || live.stopped() {
             break;
         }
     }

@@ -208,7 +208,8 @@ ulpf fixture samples/x.log      # fixture skeleton for review (never commit blin
 `run` and `serve` take `--receipt <RFC3339>` to pin the receipt time (reproducible output),
 `--schema ocsf|ecs`, `--pivot on|off` (the entity index: on by default in `serve`, off in `run`,
 D66) and `--parquet FILE` (an additional sink, D64). A restart over the same input and store resumes where the store ends
-and completes the output from the store first (D59); a store written before the integrity
+and completes the output from the store first, and ctrl-c during a large drop returns at
+the next batch boundary rather than draining the file (D59); a store written before the integrity
 chain is refused by name (delete it). Every `run`/`replay` output has `FILE.vN.meta.json`
 beside it and an entity index `FILE.pivot`.
 Every `run` ends with the counter block: files, bytes, events/s, MB/s; per-stage counts

@@ -871,7 +871,14 @@ start. The store stays the single truth and the output is derived from it, never
 other way round. **Ruled out.** A per-batch ingest row in the catalogue (a SQLite write
 per 1024 events for a fact the records already carry); refusing to start on a torn output
 (operator intervention for a routine crash); an output cursor file (a third thing to keep
-consistent after a crash).
+consistent after a crash). **Amended (19:30 IST).** The serve isolation proof fed the 5M-event
+bench file and sent ctrl-c after 20 s; the server printed "stopping" and kept ingesting for
+minutes, because the stop flag was read only between directory polls and a file was framed
+and stored to its end once started. A stop request now ends the file at the next batch
+boundary (`ingest_file` checks `Live::stopped` after each send); everything stored is
+still emitted, the ingest record holds the partial byte count, and the next start resumes
+from it through this same path. The tailer credits `bytes` per batch for the same reason:
+the live MB/s stood at zero until a large file finished.
 
 ## D60. Syslog listeners are producers on the same queue, sequenced under the store lock
 **Decision.** `serve --syslog-udp ADDR --syslog-tcp ADDR` adds a UDP thread and a TCP
