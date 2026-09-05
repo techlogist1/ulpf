@@ -49,9 +49,10 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
 - [ ] C-CI. GitHub Actions workflow: macOS and Windows runners build the sidecar and the shell,
       bundle an installer each, attach both to a tagged release; run URL and artifact names here;
       Windows not run on a Windows machine tonight, the five owner checks listed.
-- [ ] D. Demo runner: one command that plays the demo script step by step (fresh demo directory,
-      parsers copy, paced known-format drops, one unseen-format drop on cue, what-to-click
-      prompts, clean reset), existing subcommands and watch only. After C lands or is killed.
+- [x] D. (D67; `scripts/demo.sh`; two `--auto` passes 21:53 and 21:55 IST; `--check` PASS) Demo
+      runner: one command plays the demo script step by step (fresh `demo/`, parsers copy, paced
+      known-format drops, one unseen-format drop on cue, what-to-click prompts, clean reset),
+      existing subcommands and watch only; written while C was in flight, verified before C landed.
 - [ ] Final: full suite, clippy, `scripts/isolation.sh` on the final binary (UI checked for
       external asset references first), the cold-start commands from `docs/evaluation.md`, one
       complete pass of the demo runner, PROGRESS and DECISIONS current, pushed.
@@ -98,10 +99,6 @@ which. New kill timers: A1 22:25, C shell 22:25 (features and CI to about 23:40)
 - A2 quiet re-run owed (run 4 above was the loaded data point). Host sleep found by the soak
   report: `caffeinate -i -t 21600` started 21:56 IST.
 - A3 waits for a quiet machine (load recorded with every run; `scratch` bench script ready).
-- D: `scripts/demo.sh` drafted (interactive, `--auto`, `--check`, `--reset`); its `--check`
-  proves every command is verbatim in this file's demo script (the demo commands here now use
-  `demo/pending` and paced sample drops so the runner and the script are one text); committed
-  only after one complete `--auto` pass, which needs the soak's ports back.
 
 ### Tried and abandoned (v3)
 - (none yet)
@@ -359,6 +356,18 @@ Everything below was run on 2026-09-05 on the M1 Pro from a clean checkout. Term
 the server, terminal 2 everything else; paths are relative to the repo root. A store
 written before tonight is refused by name (the integrity chain changed the index): delete
 it and start over.
+
+### Runner (D67): `scripts/demo.sh`
+`scripts/demo.sh` plays steps 0-9 below from the repo root: it prints each command before
+running it and what to click next, Enter advances, and the server stays up for questions at
+the end (Enter again stops it and resets `demo/`). `scripts/demo.sh --auto` is the unattended
+rehearsal (fixed 3 s pauses, then stop and reset); `--check` proves every command in the
+runner appears verbatim in this section (run it after editing either); `--reset` stops a
+leftover server and removes `demo/`. Verified 2026-09-05 21:53 and 21:55 IST with `--auto`
+on the release build at 9d39679: the proposal for mikrotik appeared 0.9 s after the drop, approve returned
+`now_detected 250/250, parsers_loaded 13`, replay started v2 over 1,044 events, verify clean, the drift update proposal appeared 5.7 s after the new lines,
+attestation 2 of 2 checkpoints, the tamper named raw id 0 (digest) with exit 1, reset clean;
+the whole pass takes about two and a half minutes. Ports 7878 and 5514 must be free.
 
 ```
 cargo build --release                                      # ~1 min; binary target/release/ulpf

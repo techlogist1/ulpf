@@ -1084,3 +1084,25 @@ on. **Ruled out.** Tuning the commit group (the writer already merges queued bat
 cost is cardinality, not commits); building the index in `run` on a second thread pool
 (the SQLite writer is single-threaded by nature); dropping the index (the pivot is the
 payoff of normalisation and serve keeps it).
+
+## D67. The demo runner plays the demo script's own commands, and a check proves they are the same text
+**Decision.** `scripts/demo.sh` plays steps 0-9 of the PROGRESS.md demo (Enter advances;
+`--auto` rehearses unattended with fixed pauses and resets at the end; `--reset` stops a
+leftover server and removes `demo/`). Every command it runs is held as one string and printed
+before it is evaluated, and `scripts/demo.sh --check` greps each string verbatim in
+PROGRESS.md, so the runner and the script cannot drift without the check failing. The
+runner uses only existing subcommands and the watch directory, waits for the proposal and the
+drift update through `GET /api/pending` and says how long each took (or that it is not there
+yet), and its server takes `--parsers demo/parsers --pending demo/pending`, so nothing lands in
+the repo's `parsers/` or `pending/`; the demo script's own commands were moved to the same
+directories and the reset line became `rm -rf demo`. Steps 10-13 (ECS run, throughput, kill
+recovery, isolation) are terminal-two material and are named, not played. **Anchor.**
+`scripts/demo.sh`, the "Demo" section of `PROGRESS.md`. **Principle.** One source of truth:
+the text a presenter reads and the text the machine runs are the same bytes, checked, not
+promised. **Ruled out.** Generating the PROGRESS section from the runner (the section carries
+expected output and what to say, which the owner edits by hand; a generated block would be
+overwritten); a runner with its own simplified commands (the first draft's UDP one-liner
+already differed in quoting from the script's, which is exactly the drift the check exists
+for); adding engine behaviour for the demo (a `--demo` mode would be code nobody runs in
+production).
+
