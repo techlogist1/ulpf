@@ -1,0 +1,181 @@
+# OCSF fragment for Windows Event Log XML (Security auditing, Sysmon). Merged into
+# ocsf.toml by schema name: aliases append, the Authentication and Network Activity rules
+# gain alternatives, three classes are new. Source-field vocabulary only: the XML's own
+# dotted paths (`EventData.<Data Name>`, `System.<element>`) and the constants the
+# windows_event subs add (`event_name`, `audit_subcategory`, `audit_result`, `task_name`).
+#
+# OCSF 1.3.0 pages read 2026-09-06 (schema.ocsf.io/1.3.0/classes/...):
+#  * authentication (3002, category 3 Identity & Access Management): `user` is "the
+#    subject (user/role or account) to authenticate", `actor` "the actor that requested
+#    the authentication"; so TargetUserName is user.name and SubjectUserName is
+#    actor.user.name. `logon_type` / `logon_type_id`: 0 Unknown, 1 System, 2 Interactive,
+#    3 Network, 4 Batch, 5 OS Service, 7 Unlock, 8 Network Cleartext, 9 New Credentials,
+#    10 Remote Interactive, 11 Cached Interactive, 12 Cached Remote Interactive,
+#    13 Cached Unlock, 99 Other; `auth_protocol`, `src_endpoint`, `dst_endpoint` exist.
+#  * account_change (3001, category 3): `user` is the account changed, `actor` who
+#    changed it; activity 1 Create.
+#  * process_activity (1007, category 1 System Activity): activity 1 Launch; process
+#    (pid, cmd_line, file.path, parent_process, user).
+#  * file_activity (1001, category 1 System Activity, "File System Activity"):
+#    activity 1 Create.
+# `status` is not enumerated here: the base file feeds it from a dozen vendor fields as
+# text, and an enum would reclassify those; the Windows constant already carries the
+# OCSF spelling (Success / Failure).
+
+[schema]
+name = "ocsf"
+
+[fields]
+"src_endpoint.ip" = ["EventData.IpAddress", "EventData.SourceIp"]
+"src_endpoint.port" = ["EventData.IpPort", "EventData.SourcePort"]
+"src_endpoint.hostname" = ["EventData.WorkstationName", "EventData.SourceHostname"]
+"dst_endpoint.ip" = ["EventData.DestinationIp"]
+"dst_endpoint.port" = ["EventData.DestinationPort"]
+"dst_endpoint.hostname" = ["EventData.DestinationHostname"]
+"connection_info.protocol_name" = ["EventData.Protocol"]
+"user.name" = ["EventData.TargetUserName", "EventData.User"]
+"user.domain" = ["EventData.TargetDomainName"]
+"user.uid" = ["EventData.TargetUserSid", "EventData.TargetSid"]
+"actor.user.name" = ["EventData.SubjectUserName"]
+"actor.user.domain" = ["EventData.SubjectDomainName"]
+"actor.user.uid" = ["EventData.SubjectUserSid"]
+"logon_type" = ["EventData.LogonType"]
+"auth_protocol" = ["EventData.AuthenticationPackageName"]
+"process.pid" = ["EventData.ProcessId"]
+"process.cmd_line" = ["EventData.CommandLine"]
+"process.file.path" = ["EventData.Image", "EventData.ProcessName"]
+"process.parent_process.pid" = ["EventData.ParentProcessId"]
+"process.parent_process.cmd_line" = ["EventData.ParentCommandLine"]
+"process.parent_process.file.path" = ["EventData.ParentImage"]
+"file.path" = ["EventData.TargetFilename"]
+"device.hostname" = ["System.Computer"]
+"metadata.event_code" = ["System.EventID"]
+"metadata.uid" = ["System.EventRecordID"]
+"message" = ["event_name"]
+"status" = ["audit_result"]
+"status_code" = ["EventData.Status"]
+"status_detail" = ["EventData.SubStatus"]
+
+# Sysmon writes decimal pids; Security auditing writes hex (`0x44c`), which stays text.
+[types]
+int = ["process.pid", "process.parent_process.pid"]
+
+[[enum]]
+field = "logon_type"
+id_field = "logon_type_id"
+other = { value = "Other", id = 99 }
+
+[[enum.values]]
+value = "System"
+id = 1
+raw = ["0", "system"]
+
+[[enum.values]]
+value = "Interactive"
+id = 2
+raw = ["2", "interactive"]
+
+[[enum.values]]
+value = "Network"
+id = 3
+raw = ["3", "network"]
+
+[[enum.values]]
+value = "Batch"
+id = 4
+raw = ["4", "batch"]
+
+[[enum.values]]
+value = "OS Service"
+id = 5
+raw = ["5", "service"]
+
+[[enum.values]]
+value = "Unlock"
+id = 7
+raw = ["7", "unlock"]
+
+[[enum.values]]
+value = "Network Cleartext"
+id = 8
+raw = ["8", "networkcleartext"]
+
+[[enum.values]]
+value = "New Credentials"
+id = 9
+raw = ["9", "newcredentials"]
+
+[[enum.values]]
+value = "Remote Interactive"
+id = 10
+raw = ["10", "remoteinteractive"]
+
+[[enum.values]]
+value = "Cached Interactive"
+id = 11
+raw = ["11", "cachedinteractive"]
+
+[[enum.values]]
+value = "Cached Remote Interactive"
+id = 12
+raw = ["12", "cachedremoteinteractive"]
+
+[[enum.values]]
+value = "Cached Unlock"
+id = 13
+raw = ["13", "cachedunlock"]
+
+# Authentication: a logon type or an NTSTATUS sub-status is only ever on a logon event;
+# the sub's subcategory covers a logon event whose EventData a forwarder trimmed.
+[[class]]
+uid = 3002
+name = "Authentication"
+category_uid = 3
+category_name = "Identity & Access Management"
+when = [
+  { "EventData.LogonType" = ["*"] },
+  { "EventData.SubStatus" = ["*"] },
+  { audit_subcategory = ["Audit Logon", "Audit Account Lockout"] },
+]
+
+[[class]]
+uid = 4001
+name = "Network Activity"
+category_uid = 4
+category_name = "Network Activity"
+when = [
+  { task_name = ["NetworkConnect"] },
+  { "EventData.SourceIp" = ["*"], "EventData.DestinationIp" = ["*"] },
+]
+
+[[class]]
+uid = 3001
+name = "Account Change"
+category_uid = 3
+category_name = "Identity & Access Management"
+constants = { activity_id = 1, activity_name = "Create" }
+when = [
+  { event_name = ["A user account was created"] },
+]
+
+[[class]]
+uid = 1007
+name = "Process Activity"
+category_uid = 1
+category_name = "System Activity"
+constants = { activity_id = 1, activity_name = "Launch" }
+when = [
+  { task_name = ["ProcessCreate"] },
+  { "EventData.CommandLine" = ["*"], "EventData.Image" = ["*"] },
+]
+
+[[class]]
+uid = 1001
+name = "File System Activity"
+category_uid = 1
+category_name = "System Activity"
+constants = { activity_id = 1, activity_name = "Create" }
+when = [
+  { task_name = ["FileCreate"] },
+  { "EventData.TargetFilename" = ["*"], "EventData.CreationUtcTime" = ["*"] },
+]

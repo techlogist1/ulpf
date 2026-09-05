@@ -1,0 +1,97 @@
+# ECS fragment for Windows Event Log XML (Security auditing, Sysmon). Merged into
+# ecs.toml by schema name: aliases append, the authentication and network rules gain
+# alternatives, three classes are new. Source-field vocabulary only (see
+# ocsf.windows.toml for the names). ECS 9.5.0 reference read 2026-09-06
+# (elastic.co/guide/en/ecs/current): ecs-allowed-values-event-category lists
+# `authentication` (types start/end/info), `process` (start/end/...), `file`
+# (creation/...), `iam` (user, creation, ...), `network` (connection/...); ecs-user,
+# ecs-process, ecs-file, ecs-host, ecs-event (event.code, event.provider, event.outcome).
+#
+# Honest, not tidy: `host.hostname`, not `observer.hostname`, because an endpoint's own
+# events are about the host, so the pivot's device falls back to the ingest source name
+# for this family. TargetUserName feeds user.name for logons; for 4720 ECS would want it
+# under user.target.name and SubjectUserName under user.name, but a source field feeds
+# one path, so the account-management form stays under `unmapped` rather than wrong.
+
+[schema]
+name = "ecs"
+
+[fields]
+"source.ip" = ["EventData.IpAddress", "EventData.SourceIp"]
+"source.port" = ["EventData.IpPort", "EventData.SourcePort"]
+"source.domain" = ["EventData.WorkstationName", "EventData.SourceHostname"]
+"destination.ip" = ["EventData.DestinationIp"]
+"destination.port" = ["EventData.DestinationPort"]
+"destination.domain" = ["EventData.DestinationHostname"]
+"network.transport" = ["EventData.Protocol"]
+"user.name" = ["EventData.TargetUserName", "EventData.User"]
+"user.domain" = ["EventData.TargetDomainName"]
+"user.id" = ["EventData.TargetUserSid", "EventData.TargetSid"]
+"process.pid" = ["EventData.ProcessId"]
+"process.command_line" = ["EventData.CommandLine"]
+"process.executable" = ["EventData.Image", "EventData.ProcessName"]
+"process.parent.pid" = ["EventData.ParentProcessId"]
+"process.parent.command_line" = ["EventData.ParentCommandLine"]
+"process.parent.executable" = ["EventData.ParentImage"]
+"file.path" = ["EventData.TargetFilename"]
+"host.hostname" = ["System.Computer"]
+"event.code" = ["System.EventID"]
+"event.provider" = ["System.Provider.Name"]
+"event.outcome" = ["audit_result"]
+"message" = ["event_name"]
+
+[types]
+int = ["process.pid", "process.parent.pid"]
+
+[[class]]
+uid = 1
+name = "authentication"
+category_uid = 1
+category_name = "authentication"
+when = [
+  { "EventData.LogonType" = ["*"] },
+  { "EventData.SubStatus" = ["*"] },
+  { audit_subcategory = ["Audit Logon", "Audit Account Lockout"] },
+]
+
+[[class]]
+uid = 7
+name = "network"
+category_uid = 7
+category_name = "network"
+when = [
+  { task_name = ["NetworkConnect"] },
+  { "EventData.SourceIp" = ["*"], "EventData.DestinationIp" = ["*"] },
+]
+
+[[class]]
+uid = 8
+name = "iam"
+category_uid = 8
+category_name = "iam"
+constants = { "event.kind" = "event", "event.category" = ["iam"], "event.type" = ["user", "creation"] }
+when = [
+  { event_name = ["A user account was created"] },
+]
+
+[[class]]
+uid = 9
+name = "process"
+category_uid = 9
+category_name = "process"
+constants = { "event.kind" = "event", "event.category" = ["process"], "event.type" = ["start"] }
+when = [
+  { task_name = ["ProcessCreate"] },
+  { "EventData.CommandLine" = ["*"], "EventData.Image" = ["*"] },
+]
+
+[[class]]
+uid = 10
+name = "file"
+category_uid = 10
+category_name = "file"
+constants = { "event.kind" = "event", "event.category" = ["file"], "event.type" = ["creation"] }
+when = [
+  { task_name = ["FileCreate"] },
+  { "EventData.TargetFilename" = ["*"], "EventData.CreationUtcTime" = ["*"] },
+]
