@@ -255,7 +255,43 @@ mkdir -p demo/watch && ./target/release/ulpf serve demo/watch --store demo/store
 cp samples/*.log heldout/mikrotik.log demo/watch/      # then open http://127.0.0.1:7878: Live, Review, Traceback, Pivot, Replay, Drift, Integrity
 ```
 Those nine commands are re-run from this file, in a fresh clone, by the harness's
-cold-start criterion (`docs/evaluation.md`); they are the install path, not an example of one.
+cold-start criterion (`docs/evaluation.md`); they are the install path, not an example of
+one — `eval/lib/extract_fence.py` reads the fenced block above out of this README, so it
+is the only copy of that list and everything below here is prose the harness ignores.
+
+### On Windows
+
+`cargo build --release` is the same command. The rest, in PowerShell — the executable
+takes `.exe`, paths take backslashes and `$env:TEMP`, and the glob has to be expanded by
+the shell because the engine takes file arguments, not patterns:
+
+```
+cargo build --release
+.\target\release\ulpf.exe check
+.\target\release\ulpf.exe run (Get-ChildItem samples\*.log).FullName --store $env:TEMP\ulpf-store --output $env:TEMP\out.jsonl --pivot on
+.\target\release\ulpf.exe verify --store $env:TEMP\ulpf-store
+.\target\release\ulpf.exe attest --store $env:TEMP\ulpf-store --out $env:TEMP\attest.json
+.\target\release\ulpf.exe raw 3 --store $env:TEMP\ulpf-store
+.\target\release\ulpf.exe replay --store $env:TEMP\ulpf-store --output $env:TEMP\out.jsonl
+.\target\release\ulpf.exe pivot src_ip 203.0.113.9 --output $env:TEMP\out.jsonl --limit 5
+.\target\release\ulpf.exe run (Get-ChildItem samples\*.log).FullName --store $env:TEMP\ulpf-ecs --output $env:TEMP\ecs.jsonl --schema ecs --parquet $env:TEMP\ecs.parquet
+
+New-Item -ItemType Directory -Force demo\watch | Out-Null
+.\target\release\ulpf.exe serve demo\watch --store demo\store --output demo\out.jsonl --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514
+Copy-Item samples\*.log,heldout\mikrotik.log demo\watch\
+```
+
+**Write the output to a real file, not `NUL`.** On the current release a run whose
+`--output` is the null device still writes a `NUL.v1.meta.json` beside it, with an
+`events` count of 0. Give it a path under `$env:TEMP` instead. The fix (NUL, `\\.\NUL`
+and `\\?\NUL` recognised as sinks, and the count written from what the run emitted) is
+on branch `lane-8-windows` and lands after the demo.
+
+**The shell scripts need Git Bash.** `scripts/isolation.sh` and `scripts/coverage.sh` are
+bash; run them from a Git Bash prompt (they ship with Git for Windows). `scripts/demo.sh`
+is only a wrapper that finds the binary — the runner itself is a subcommand, so on Windows
+skip the script and run `.\target\release\ulpf.exe demo` (or `demo --check`, `--auto`,
+`--reset`) from PowerShell, no shell required (D67).
 
 ## Where things are
 
