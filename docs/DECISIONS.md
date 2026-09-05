@@ -1435,3 +1435,41 @@ could not fix in a definition are on branch `lane-3b-cef-leef` (CEF's header sev
 named `severity`, the syslog scale's name, so its 0-10 scale is canonicalised backwards; a
 LEEF 2.0 delimiter written `0xHH` splits on the literal `0` with no counted failure); they
 are named in the two headers and merge after the demo.
+
+## D79. Motion shows the truth of the system or it does not exist
+**Decision.** Motion is allowed exactly where it reports a state change or the movement of
+data through the machine, and forbidden as decoration. Flow (`ui/src/Flow.svelte`, `#/` and
+`#/flow`, key `0`, Esc from any top-level screen) draws the six stations on one line with
+the inference branch and the pending tray under detect and the chain under preserve; every
+number is a value the API returned and every motion is driven by one. The pulse on a link is
+one element (a repeating 6 px dash every 32 px) moved by one Web Animations translate, looped;
+each 500 ms frame sets its playback rate from that link's own rate as `px/s = 16·log10(1 +
+events/s)` (1/s crawls at 5 px/s, 100/s at 32, 10,000/s at 64, 400,000/s at 90), so six moving
+elements cover any rate and a speed change never jumps; at rate 0 the dashes fade over `--d2`
+and the track stays. The rate is that stage's counter delta between the last two frames over
+their interval, or the server's `rate`/`queue` window when the frame carries one, and the
+label under the number says which. Tokens: `--d1` 120 ms (a value or badge changed), `--d2`
+240 ms (a screen arrived, a result replaced a confirmation, the queue bar, a chain mark, the
+branch lighting), `--ease cubic-bezier(.2,0,0,1)`, `--pulse` 6 px, `--pitch` 32 px. A
+screen fades in over `--d2` only after the first hash change; a count badge pops over `--d1`
+by a keyed re-mount, gated so the first frame's counts and a screen's opening state appear
+still; the approve result, a verify verdict that lands after the screen opened and a drift
+state that changes get the same one change. A selection moving (h/l on Flow, j/k on a list)
+is the reader's own action and reports nothing, so it snaps everywhere. `prefers-reduced-motion`
+turns every transition and animation off in one stylesheet rule and stops the script
+animations from being created: the diagram stands with the same numbers. Station to screen:
+ingest opens Live, preserve opens Integrity, detect opens Drift (detection is per source),
+the branch and the tray open Review (nothing is parsed until a human approves), parse opens
+the newest record's Traceback, normalize opens Pivot (the entity index is built from
+normalized paths), emit opens Replay (emit writes v1, Replay the next version). **Anchor.**
+`ui/src/Flow.svelte`, `ui/src/keys.js` (`stations()`, `reduced()`), the `/* ---- flow ---- */`
+section of `ui/src/app.css`, `docs/design.md` Motion section, `docs/screens/flow-*`.
+**Principle.** The counters are the product; a screen that moves when nothing changed is
+lying about the machine (D69: no decoration). **Ruled out.** One DOM element per event
+(400,000 events in 25 s is 16,000 nodes a second; a visible tab drops frames and a hidden one
+queues them); a canvas particle system (a second rendering model beside the DOM, script per
+frame on the main thread, no tokens, invisible to reduced-motion and the theme); motion on
+hover (reports nothing that changed; the station's border-colour transition was removed for
+this reason); a selection ease (the same property as hover, and every other selection in the
+app snaps); a hero animation on load (decoration by definition, and the first frame's counts
+would move without having changed).
