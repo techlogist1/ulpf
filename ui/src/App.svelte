@@ -102,6 +102,7 @@
   {/if}
   <span>up <b>{fmt.ago(server?.uptime_secs)}</b></span>
   <span>clients <b>{fmt.n(server?.sse_clients ?? 0)}</b></span>
+  {#if live.metrics?.queue}<span title="batches in flight between the ingest threads and the output thread, against the queue's capacity">queue <b>{fmt.n(live.metrics.queue.depth)}/{fmt.n(live.metrics.queue.capacity)}</b></span>{/if}
   <span class="push" class:is-warn={live.dropped > 0} title="a frame that arrived before the previous one painted replaced it; nothing queues">frames skipped <b>{fmt.n(live.dropped)}</b></span>
   <span class:is-warn={live.skipped > 0} title="events the server's tail ring evicted before this client read them">events skipped <b>{fmt.n(live.skipped)}</b></span>
 </footer>

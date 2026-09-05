@@ -33,10 +33,19 @@
     { k: 'normalized', n: e.normalized, lost: 0, label: '', why: '' },
     { k: 'emitted', n: e.emitted, lost: 0, label: '', why: '' },
   ])
-  // The queue is reported as its high-water mark against capacity, and how often the
-  // producer found it full. The instantaneous depth is not in the metrics frame.
-  const qcap = $derived(e.queue_capacity ?? live.status?.queue_capacity ?? 0)
+  // The queue: the depth right now (v4 frame) filled against capacity, with the high-water
+  // mark since start as a rule across it. An older frame has no depth and shows the mark alone.
+  const qcap = $derived(m?.queue?.capacity ?? e.queue_capacity ?? live.status?.queue_capacity ?? 0)
   const qhw = $derived(e.queue_high_water ?? 0)
+  const qnow = $derived(m?.queue?.depth ?? null)
+  const pct = (n) => (qcap ? Math.min(100, (100 * n) / qcap) : 0)
+
+  // The two large rates are the windowed ones the server computes over the frames of the last
+  // ten seconds, with the run average since start beside them. Without `rate` in the frame
+  // (an older server) the run average stands alone, labelled as it was.
+  const rate = $derived(m?.rate ?? null)
+  const emittedAvg = $derived(e.elapsed_secs ? e.emitted / e.elapsed_secs : null)
+  const over = $derived(rate ? `last ${fmt.f(rate.over_secs, 1)} s` : '')
 
   let sel = $state(-1)
   let filter = $state('')
@@ -110,8 +119,13 @@
 
 <section class="hero">
   <div class="rates">
-    <div class="rate"><b class="num">{fmt.f(e.events_per_sec, 0)}</b><span>events per second</span></div>
-    <div class="rate"><b class="num">{fmt.f(e.mb_per_sec, 1)}</b><span>MB per second</span></div>
+    {#if rate}
+      <div class="rate"><b class="num">{fmt.f(rate.framed_per_sec, 0)}<i class="avg">{fmt.f(e.events_per_sec, 0)} since start</i></b><span>events framed per second, {over}</span></div>
+      <div class="rate"><b class="num">{fmt.f(rate.emitted_per_sec, 0)}<i class="avg">{fmt.f(emittedAvg, 0)} since start</i></b><span>events emitted per second, {over}</span></div>
+    {:else}
+      <div class="rate"><b class="num">{fmt.f(e.events_per_sec, 0)}</b><span>events per second</span></div>
+      <div class="rate"><b class="num">{fmt.f(e.mb_per_sec, 1)}</b><span>MB per second</span></div>
+    {/if}
   </div>
   <div class="funnel">
     {#each funnel as f}
@@ -124,8 +138,11 @@
     {/each}
   </div>
   <div class="queue">
-    <span class="lab"><span>queue</span><span>{fmt.n(qhw)} / {fmt.n(qcap)} high-water</span></span>
-    <span class="track"><i style="width:{qcap ? Math.min(100, (100 * qhw) / qcap) : 0}%"></i></span>
+    <span class="lab"><span>queue</span><span>{#if qnow != null}{fmt.n(qnow)} / {fmt.n(qcap)} now, high-water {fmt.n(qhw)}{:else}{fmt.n(qhw)} / {fmt.n(qcap)} high-water{/if}</span></span>
+    <span class="track">
+      <i style="width:{pct(qnow ?? qhw)}%"></i>
+      {#if qnow != null}<i class="hw" style="width:{pct(qhw)}%" title="high-water mark since start"></i>{/if}
+    </span>
     <span class="n" class:is-warn={e.backpressure_blocks > 0}>{e.backpressure_blocks > 0 ? `producer blocked ${fmt.n(e.backpressure_blocks)} times` : idle ? 'idle, waiting for input' : `${fmt.n(e.batches)} batches, never full`}</span>
   </div>
 </section>
@@ -263,6 +280,7 @@
       <span class="kv"><span>files</span><span class="num">{fmt.n(e.files)}</span></span>
       <span class="kv" class:bad={e.files_failed > 0}><span>failed</span><span class="num">{fmt.n(e.files_failed)}</span></span>
       <span class="kv"><span>MB in</span><span class="num">{fmt.mb(e.bytes)}</span></span>
+      <span class="kv"><span>MB per second</span><span class="num">{fmt.f(e.mb_per_sec, 1)}</span></span>
       <span class="kv"><span>output bytes</span><span class="num">{fmt.n(e.output_bytes)}</span></span>
       <span class="kv"><span>elapsed</span><span class="num">{fmt.f(e.elapsed_secs, 1)}s</span></span>
       <span class="kv"><span>threads</span><span class="num">{fmt.n(e.threads)}</span></span>
