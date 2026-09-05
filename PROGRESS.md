@@ -215,15 +215,25 @@ round; same return format. It is a separate lane because it edits `lib.rs infer(
 A1 verifier reads A1's tree, and it merges only after A1 does.
 
 ### In flight
-- Lane P since 23:35 IST (own worktree of main): the twelve minor findings from lane V's
+- Lane P since 23:27 IST (own worktree of main): the twelve minor findings from lane V's
   Chrome-driven pass (scroll to the approve result, the written-to path overflow, repeated
   axis ticks, uninformative seen-with bars, an unformatted number, negative zero, the tail
   header wording, the sources table at 1512, the seven-row legend) fixed in the UI only, each
   verified over CDP and re-captured under the existing file names; 45-minute stop; Opus
   verifier. One worker because the findings are one screen family each and the fix is small.
-- After P merges: the app is rebuilt from the final tree (`pnpm tauri build` in `app/`) and
-  driven with the computer-use tools (launch, drop, approve, quit, relaunch); then the final
-  checks. A1, A1b, B, C and V are merged; the soak run 5 and the A3 bench are recorded.
+- 23:32 IST, the owner lifted the parallelism cap (limits are not the constraint, waste is;
+  Opus at default reasoning for drives, captures and checks, Fable for design, merges and
+  anything touching the store, hot path or API). Started at once: the app bundled from the
+  current main (`pnpm tauri build`, warmed cache) then lane V2 (Opus, computer-use: launch,
+  drop, approve, quit without orphan, relaunch; captures `docs/screens/app-tool-*.png`) and
+  lane K (Opus, read-only completeness critic over this section, D67-D74, the screens index
+  and the run records; returns every claim it could not reproduce).
+- Sequential by a named dependency, the final binary (P changes `ui/dist`, which the binary
+  embeds): after P merges, `cargo build --release`, the app re-bundled and its launch and
+  approve re-checked, `scripts/isolation.sh` on that binary, the cold-start criterion
+  (`docs/evaluation.md`: a fresh clone runs README's Quick start), one `scripts/demo.sh --auto`
+  pass, then the push. Sequential by a quiet machine: the soak run with nothing else on the
+  host, last. A1, A1b, B, C and V are merged; soak run 5 and the A3 bench are recorded.
 - A2 and A3 run from a detached watcher started 22:21 IST (`quiet-measure.sh` in the session
   scratchpad, `pgrep -fl quiet-measure`): before each bench width and before the soak it waits
   for a quiet machine (1-min load under 4, no rustc/cargo/ld), samples the load every 2 s
