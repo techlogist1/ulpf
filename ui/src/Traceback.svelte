@@ -254,7 +254,7 @@
           {#if timeSpan}<span style="--c:var(--fg-2)"><i class="sw" style="background:none;box-shadow:inset 0 -2px 0 var(--fg-2)"></i>timestamp</span>{/if}
         </div>
       {/if}
-      <div class="bytes" class:hexmode={showHex} bind:this={wrapEl} style="--cols:7ch minmax(0,1fr){showHex ? ' 16ch' : ''}">
+      <div class="bytes" class:hexmode={showHex} bind:this={wrapEl} style="--cols:7ch minmax(0,1fr){showHex ? ' auto' : ''}">
         <VList items={starts} max={showHex ? 528 : 396} rowH={22}>
           {#snippet header()}
             <div class="vh"><span class="off">offset</span><span>{showHex ? 'bytes, sixteen per row' : `${cols} bytes per row`}</span>{#if showHex}<span>ascii</span>{/if}</div>

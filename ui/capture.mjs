@@ -1,7 +1,8 @@
 // Captures every screen of a running `ulpf serve` headlessly, at 1280x800 and 2560x1440,
 // plus the stateful shots (hover, hex, overlay, empty, error, the keyboard-only approve
 // flow). Re-run: node capture.mjs --base http://127.0.0.1:7881 --out ../docs/screens
-//   [--big <raw id of the multi-megabyte record>] [--approve <pending id>] [--update <pending id>] [--pivot kind=value]
+//   [--trace <raw id>] [--big <raw id of the multi-megabyte record>] [--approve <pending id>] [--update <pending id>] [--pivot kind=value]
+//   [--empty <base of a second server with zero events>]
 // Writes README.md beside the PNGs, one line per capture. Needs Chrome on this machine.
 import puppeteer from 'puppeteer-core'
 import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
@@ -19,7 +20,7 @@ const tail = await j('/api/tail?limit=500')
 const events = tail.events ?? []
 const pick = (pred) => events.find(pred)?.raw_id
 // A record every parser field lights: the Check Point sample has the most pairs.
-const traceId = pick((e) => e.line?.ulpf?.parser === 'check_point') ?? pick((e) => e.line?.ulpf?.parser) ?? events[0]?.raw_id ?? 0
+const traceId = arg('trace', null) ?? pick((e) => e.line?.ulpf?.parser === 'check_point') ?? pick((e) => e.line?.ulpf?.parser) ?? events[0]?.raw_id ?? 0
 const bigId = arg('big', null)
 let pivotArg = arg('pivot', null)
 if (!pivotArg) { const ent = (await j('/api/entities?limit=1')).entities?.[0]; if (ent) pivotArg = `${ent.kind}=${ent.value}` }
@@ -94,6 +95,22 @@ if (approveId) {
   await key(page, 'Enter', 1500)
   await step(5, 'keyboard approve 5: Enter confirms; the result names the file, the parsers loaded and how many buffered lines the new parser now claims')
   await page.close()
+}
+// A second, fresh server with zero events (--empty <base>): every screen's empty state.
+const empty = arg('empty', null)
+if (empty) {
+  for (const [route, what] of [['live', 'a fresh server with zero events: rates, funnel, queue and the tail say what will fill them'], ['review', 'nothing to review: what makes a proposal appear'], ['pivot', 'no entities indexed yet'], ['replay', 'no output versions yet'], ['drift', 'no source established yet: the thresholds in words'], ['integrity', 'an empty store: the genesis is fixed, the head appears with the first record']]) {
+    const page = await browser.newPage()
+    await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 })
+    await page.goto(`${empty}/#/${route}`, { waitUntil: 'domcontentloaded' })
+    await page.waitForFunction(() => document.querySelector('main')?.children.length > 0)
+    await new Promise((r) => setTimeout(r, 1400))
+    const file = `empty-${route}-1280.png`
+    await page.screenshot({ path: join(out, file) })
+    index.push({ file, screen: route, width: 1280, what: `empty state: ${what}` })
+    await page.close()
+    console.log(file)
+  }
 }
 await browser.close()
 
