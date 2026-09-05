@@ -94,11 +94,29 @@ return format and the same verifier stage, each builder told to resume in its ex
 worktree: read every changed file first, keep what is coherent, revert what is not, say
 which. New kill timers: A1 22:25, C shell 22:25 (features and CI to about 23:40), B 23:55.
 
+### Fan-out 3 (22:15 IST): the limit is lifted; the same lanes, resumed a second time
+The limit cut B and C again at about 22:00 IST, after 54 and 59 tool uses (about an hour in).
+A1's builder landed on its branch (b637781, d3274dd; 110 tests, clippy clean; its measurements
+are in the run record) and its verifier died before running anything. Each worktree kept more
+work than after cut one: B has commit 273d2d9 (tokens, IBM Plex Sans and Mono as data URIs,
+the traceback on a virtual byte ruler) plus six screens edited but uncommitted; C has commit
+acd42c7 (the shell launches the sidecar on a free port and shows the served UI) plus the
+Windows cfg shims, the CI workflow, ingest/menu/title sources and captures uncommitted. The
+owner moved to a larger plan and asked for the agents to be relaunched with no quality cut.
+Relaunched 22:15 IST: A1 resumed from its run record so the cached build report goes straight
+to a fresh Opus verifier; B and C resumed in their worktrees with the resume notice rewritten
+to name exactly what each commit and dirty file holds, told to judge the uncommitted work
+first, commit each coherent piece, then finish. Same split, same return format, same reason
+fewer workers would not do (the three lanes touch disjoint trees: ulpf-infer, ui/, app/).
+New kill timers: B 01:15 IST (fix round 01:50); C CI pushed by 23:30, features and the five
+verifications by 00:45, report by 01:15.
+
 ### In flight
-- A1, B, C running since 21:00 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`.
+- A1 verify, B, C running since 22:15 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`.
 - A2 quiet re-run owed (run 4 above was the loaded data point). Host sleep found by the soak
   report: `caffeinate -i -t 21600` started 21:56 IST.
-- A3 waits for a quiet machine (load recorded with every run; `scratch` bench script ready).
+- A3 waits for a quiet machine (load recorded with every run; the bench script is ready); it
+  runs after the lanes stop building.
 
 ### Tried and abandoned (v3)
 - (none yet)
