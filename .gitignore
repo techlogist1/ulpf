@@ -16,3 +16,4 @@
 ui/node_modules/
 /.claude/worktrees/
 eval/results/*/raw/
+/eval/results/*/.cargo-target/

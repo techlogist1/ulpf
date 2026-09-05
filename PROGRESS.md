@@ -53,9 +53,9 @@ source document in hand; Haiku banned (D30). Baseline at a9d0dd8: 71 tests, clip
 - [x] 12. (D61; seven screens verified by the worker against a 400k-event live server and reviewed by the lead from captures) UI: live feed, review (merge/discard, naming reasons), traceback with provenance,
       pivot timeline, replay diff, drift alerts, integrity status; batched SSE; keyboard.
 - [x] 13. (D64; `--parquet` on run and serve, rolled files, static image verified; 0.46x on the output thread when enabled, off by default) Parquet output, only after 1-12 are green; crate and static build verified first.
-- [ ] 14. Regression: full suite, clippy, alloc test, round-trip, isolation; bench within variance.
+- [x] 14. (after f267496: 107 tests pass, 2 ignored, `clippy --all-targets -D warnings` clean; the alloc test and the store round-trip are in that suite; isolation run, serve and docker PASS on the final binary and image; harness throughput median 258,411 events/s over three runs on the final build against 251k at the multi-core measurement, inside the ±10% variance) Regression: full suite, clippy, alloc test, round-trip, isolation; bench within variance.
 - [x] 15. (D65) `aposd-critique` pass: seven graders, every critical/high/medium finding fixed in two commits (37e41d6 and its predecessor), two closed with evidence, four deferred with triggers.
-- [ ] 16. This file's demo script rewritten (commands, expected output, reset, 04:00
+- [x] 16. (demo script and 04:00 procedure below; CLAUDE.md, DECISIONS D52-D66 with the D59 amendment, docs/api.md, README throughput paragraph current; final commit pushed to origin/main) This file's demo script rewritten (commands, expected output, reset, 04:00
       procedure); CLAUDE.md, DECISIONS.md, docs current; committed and pushed.
 - Out of scope by the brief: segment rotation and retention (design note only, `docs/retention.md`).
 
@@ -121,8 +121,20 @@ finds what one that reads 12,000 skims past. The lead merges, ranks by what hurt
 04:00, fixes each real finding in its own commit with a DECISIONS entry, closes wrong ones
 with evidence, and defers only with a written revisit trigger.
 
-### Verified state (16:05 IST; every line was run, not read)
-- main b0f4117: 102 tests, clippy clean, release build current. Replay (D52), naming (D53),
+### Verified state (19:50 IST; every line was run, not read)
+- Final build f267496: 107 tests (2 ignored), clippy clean, release binary and `ulpf:static`
+  image (11.7 MB, built by the harness from this tree) current. Harness scorecard on it:
+  `eval/results/ulpf-20260905T140426Z-33371/scorecard.md`: throughput 263,588 / 258,411 /
+  258,398 events/s (median 258,411, about 79 MB/s, 19.0-19.4 s per 5M events), correctness
+  264/264, raw preservation and chain ok, unknown format 1 proposal, 12 damaged inputs no
+  crash no hang, isolation PASS, container build and run PASS, cold start PASS, kill recovery
+  consistent (5,000,000 = 5,000,000); the memory criterion's peak RSS of 1.5 GB is the
+  memory-mapped 1.6 GB input counted as resident (serve RSS under soak: 11-103 MB, D62).
+  Isolation proofs re-run on this binary and image: run PASS (29 samples, 0 sockets), serve
+  PASS (2 sockets, both the listener and its loopback client), docker `--network none` PASS;
+  in-container `serve` on port 7879 lists the MikroTik proposal, approves it (13 parsers
+  loaded, 250/250 detected) and reports the chain head.
+- main b0f4117 (16:05): 102 tests, clippy clean, release build current. Replay (D52), naming (D53),
   drift (D54), integrity chain (D56, store worker), pivot index (D55, pivot worker), provenance
   spans (D57), ECS (D58), kill recovery + `--receipt` (D59), syslog listeners (D60) are on main,
   each with its test; every new route smoke-tested with curl against a real `serve`.
@@ -164,8 +176,12 @@ with evidence, and defers only with a written revisit trigger.
   fixed from the review: the "approved" badge came from a negative priority (OpenVPN and
   IOS are hand-written at -1); the engine now stamps `origin = "inferred"` (0aaca31).
   The Chrome extension was unreachable from this session, hence headless captures.
-- Not yet: multi-core measurement (needs a quiet machine), review pass, demo script
-  rewrite, container rebuild, push.
+- Stop semantics (f267496, found by the serve isolation proof on the final binary): ctrl-c
+  during a 5M-event drop had drained the whole file through the entity index before
+  exiting (minutes on a loaded machine). A stop now ends the file at the next batch
+  boundary; measured on the 5M file with the index on: ctrl-c to exit 13.0 s (the 64-batch
+  queue draining), restart output contiguous 0..994303, no duplicate; tailer bytes credited
+  per batch so MB/s moves during a large ingest. Serve isolation PASS on that binary, 41 s wall.
 
 ### Tried and abandoned (v2)
 - Recovering the output whenever it is empty: a fresh output beside an existing store
