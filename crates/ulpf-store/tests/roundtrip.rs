@@ -4,6 +4,10 @@ use std::ops::Range;
 
 use ulpf_store::{Framer, RawId, RawReader, RawStore};
 
+// raw.idx layout (crates/ulpf-store/src/store.rs): magic + store id, then 40 bytes per record.
+const IDX_HEADER: u64 = 24;
+const IDX_ENTRY: u64 = 40;
+
 const CORPUS: &[u8] = b"<134>Sep  4 10:15:23 fw01 %ASA-6-302013: Built outbound TCP connection 1 for outside:1.1.1.1/443 to inside:10.0.0.5/51234\n\
 date=2026-09-04 time=10:15:23 devname=\"FGT\" msg=\"caf\xc3\xa9 and raw \xff\xfe bytes\" action=\"deny\"\r\n\
 Sep  4 10:15:24 host java[123]: Exception in thread main\n\
@@ -170,7 +174,8 @@ fn fill(dir: &std::path::Path, n: usize) {
 
 fn offset_of(dir: &std::path::Path, id: u64) -> u64 {
     let idx = std::fs::read(dir.join("raw.idx")).unwrap();
-    u64::from_le_bytes(idx[(id * 8) as usize..(id * 8 + 8) as usize].try_into().unwrap())
+    let p = (IDX_HEADER + id * IDX_ENTRY) as usize;
+    u64::from_le_bytes(idx[p..p + 8].try_into().unwrap())
 }
 
 #[test]
@@ -212,7 +217,7 @@ fn segment_ahead_of_index_reindexes_complete_records_and_drops_a_torn_tail() {
     fill(&dir, 50);
     // the segment buffer drained, the index buffer did not (30 entries), and a record
     // was torn at the very end
-    OpenOptions::new().write(true).open(dir.join("raw.idx")).unwrap().set_len(30 * 8).unwrap();
+    OpenOptions::new().write(true).open(dir.join("raw.idx")).unwrap().set_len(IDX_HEADER + 30 * IDX_ENTRY).unwrap();
     let mut seg = OpenOptions::new().append(true).open(dir.join("raw.seg")).unwrap();
     seg.write_all(b"ULPF\x32\x00\x00\x00\x00\x00\x00\x00torn").unwrap();
     drop(seg);

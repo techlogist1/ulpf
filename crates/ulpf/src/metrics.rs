@@ -50,6 +50,10 @@ pub struct Metrics {
     pub approved: AtomicU64,
     pub rejected: AtomicU64,
     pub reloads: AtomicU64,
+    pub drift_tripped: AtomicU64,
+    pub drift_lines_routed: AtomicU64,
+    pub drift_proposals: AtomicU64,
+    pub drift_cleared: AtomicU64,
 }
 
 /// One worker's counts for one batch.
@@ -156,6 +160,10 @@ impl Metrics {
             approved: g(&self.approved),
             rejected: g(&self.rejected),
             reloads: g(&self.reloads),
+            drift_tripped: g(&self.drift_tripped),
+            drift_lines_routed: g(&self.drift_lines_routed),
+            drift_proposals: g(&self.drift_proposals),
+            drift_cleared: g(&self.drift_cleared),
         }
     }
 }
@@ -202,6 +210,10 @@ pub struct Snapshot {
     pub approved: u64,
     pub rejected: u64,
     pub reloads: u64,
+    pub drift_tripped: u64,
+    pub drift_lines_routed: u64,
+    pub drift_proposals: u64,
+    pub drift_cleared: u64,
 }
 
 fn by_reason(list: &[(&str, u64)]) -> String {
@@ -236,11 +248,12 @@ impl std::fmt::Display for Snapshot {
             self.batches, self.queue_high_water, self.queue_capacity, self.backpressure_blocks,
             if self.backpressure_blocks > 0 { "yes" } else { "no" }
         )?;
-        write!(
+        writeln!(
             f,
             "inference: buffered {} (buffer full {})  runs {}  lines templated {} unmatched {}  proposals written {} replaced {} skipped [{}]  approved {}  rejected {}  reloads {}",
             self.infer_buffered, self.infer_buffer_full, self.infer_runs, self.infer_lines_templated, self.infer_lines_unmatched,
             self.proposals_written, self.proposals_replaced, by_reason(&self.proposals_skipped), self.approved, self.rejected, self.reloads
-        )
+        )?;
+        write!(f, "drift: tripped {}  lines routed {}  update proposals {}  cleared {}", self.drift_tripped, self.drift_lines_routed, self.drift_proposals, self.drift_cleared)
     }
 }

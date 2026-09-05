@@ -678,3 +678,97 @@ state from outside) already holds because the mutable pieces are private or behi
 methods. Revisit when a second consumer of `Live` appears. **Anchor.** the commit named
 "review fixes" and this entry; `PROGRESS.md` "Review pass". **Principle.** A finding is
 closed by a fix or by written evidence, never by a known-issues list.
+
+## D52. Replay is a second engine over a store snapshot, not a mode of the live one
+**Decision.** `ulpf replay` and `POST /api/replay` read every record below the store's
+length at start through a `RawReader` the writer flushed first (in `serve`, through the
+same files the writer holds; the reader is bounded to that length so appends after the
+snapshot are invisible), and drive the shared `process_batch` with their own workers,
+counters and output thread. Batches carry per-event receipts and source ids (empty
+vectors on the live path, so the hot path pays one branch), so a replayed event sees the
+receipt it was stored with and `processed_time` and every no-year timestamp resolve as
+they did. Outputs are versioned beside the base path (`out.v2.jsonl`, `.meta.json`,
+`.diff.jsonl`); the diff is a streaming merge by raw id with a byte-identical fast path;
+`why` compares the SHA-256 of every parser and mapping file against the set the previous
+version's first events were written with (the live meta keeps every earlier set in
+`history`, so a reload or a reopen after a fix is visible, not hidden). A replay holds the
+`Arc<Pipeline>` it started with: a parser approved mid-replay changes the live stream and
+the next replay, and the report names the generation it used. **Anchor.**
+`crates/ulpf/src/replay.rs`; `process_batch`, `Batch::receipt/source`, `Live::start_replay`
+in `crates/ulpf/src/engine.rs`; `RawReader::segment`; `crates/ulpf/tests/replay.rs`.
+**Principle.** Deep module: one per-batch path for live and replay (a second copy would
+drift); information hiding: the diff and the versions know nothing of the engine; the
+store's append-only interface is untouched (the replay never holds a writer).
+**Ruled out.** Replaying through the live worker pool with a flag (every counter, the tail,
+inference and per-source stats would need a "not this one" branch per event); a separate
+process for the server's replay (cannot read source names while the writer holds the
+catalogue, and no progress); comparing against the previous version's *final* file set
+(the demo's own reopen-after-fix made v1 look unchanged; found by the test).
+
+## D53. Slot names come from stated rules, each with its reason in the evidence
+**Decision.** `SlotEvidence.reason` says which rule named a slot: (a) a `key=`/`key:` or
+compound key before the value; (b) a plain constant word before the slot, gated by a
+27-word stopword list (connectives, syslog severities in RouterOS topic lists, tcp/udp/icmp)
+and by "`:` then space is a syslog tag, not a key"; (c) a curated vocabulary
+(`docs/slot-vocabulary.md`, compiled in): keyed rows (`SRC=`/`from`/`saddr` -> `src_ip`,
+`SPT=` -> `src_port`, `IN=` -> `in_interface`, ...), the first `{ip}:{port}->{ip}:{port}`
+pair on a line, `from {ip} port {port}`, `for {word} from`, `{word}[{int}]:` -> `pid`,
+ICMP `type=`/`code=`, a bracketed rule label, a TCP-flag run, the NCSA combined layout;
+(d) the timestamp kind; (e) otherwise `kind+n`, `suggested = false`, with the reason it
+stayed generic. Names are device-side words (`src_ip`, `user`, `proto`), never schema
+paths; where two spellings are conventional the one already an alias in `mappings/ocsf.toml`
+wins, so an approved proposal normalizes without a mapping edit. The old `in`/`out` names
+were aliases of `traffic.bytes_in/out`; the vocabulary fixes that. Held-out grades are
+unchanged (14/250, 9/250, 1/250, 19/285) with, for example, nginx going from one named
+slot of eight to eight. **Anchor.** `name_slot`, `VOCAB`, `STOPWORDS` in
+`crates/ulpf-infer/src/cluster.rs`; `SlotEvidence` in `crates/ulpf-infer/src/lib.rs`;
+`docs/slot-vocabulary.md`; the naming tests in `cluster.rs`. **Principle.** No model
+anywhere: every name has a reason a reviewer can read and a source a judge can check.
+**Ruled out.** Naming from any preceding word (`info`, `on`, `for`, `tcp` became names);
+naming the second address pair (RouterOS logs the NAT pair after the first; which is
+pre-translation is the reviewer's call); value-inspection rules beyond TCP flags (no
+held-out grade justified them).
+
+## D54. Drift is a per-source window judged against a frozen baseline, healed through the same pending queue
+**Decision.** Every source folds each batch into a 512-event window of misses (no parser
+claimed the event, or a hand parser claimed it and failed). A completed window is judged
+against the source's baseline (the miss rate over its earlier completed windows, which
+stops accumulating once the source trips, so a format that changed and stayed changed
+cannot drag the baseline up to meet it). The source is *established* after 1,024
+baseline events with a baseline rate under 0.2; it *trips* when a window has at least 32
+misses and a rate at least 0.25 above the baseline. The batch that completed the tripping
+window is judged, not routed; from the next batch on, every miss of the source (unknown
+lines and failures under the established parser alike) is offered to the inference buffer,
+which was emptied and given the established parser's definition as its prior. The next
+inference run composes an update: the prior's own parser is run over the lines first and
+what it covers is excluded; a pattern prior gets the new patterns appended after its own
+(first match wins, so old lines parse as before); a prior whose strategy still parses at
+least 90% of the lines with the signature bypassed gets only its `[match]` widened to the
+union; anything else stands alone and the decisions say why. The proposal keeps the
+parser's name, bumps `[parser] version`, and is written under the source's pending id
+with `updates`; approval writes over `parsers/<name>.toml` atomically after keeping the
+replaced text as `pending/approved/<name>.v<N>.toml`, and clears the source's drift state
+and baseline. A source that mixed two formats from the start has a baseline over 0.2,
+never establishes, and never trips; its unknown half still reaches ordinary inference.
+Four counters (`drift_tripped`, `drift_lines_routed`, `drift_proposals`, `drift_cleared`),
+`GET /api/drift`, the `drift` SSE event and the unified diff on the review screen make
+every step visible. **Anchor.** `SourceStats::observe`, `DriftState`, the `DRIFT_*`
+constants, `Live::drift_alerts`, `clear_drift` in `crates/ulpf/src/engine.rs`;
+`Inference::set_prior` in `crates/ulpf/src/inference.rs`; `infer_with_prior`,
+`union_matcher`, `Update` in `crates/ulpf-infer/src/lib.rs`; `Pending::approve` (update
+branch), `current_and_diff`, `unified_diff` in `crates/ulpf/src/pending.rs`;
+`Meta::version` in `crates/ulpf-parse/src/def.rs`; `crates/ulpf/tests/drift.rs`.
+**Principle.** Structural prevention over documentation: an update can only replace the
+parser it was composed on (`updates.name` must equal the definition's name, checked at
+approval), and it passes through the same validate-then-atomic-write path as a fresh
+proposal, so drift-healing cannot bypass review or cross the parser/mapping wall (the
+inference crate still cannot name a schema field). Define errors out of existence: a
+tumbling window needs no timers and no per-event state beyond two counters; the baseline
+freezing on trip means a permanent change is one alert, not a flapping one. Observability
+as a design input: the window and baseline rates are on every source row. **Ruled out.**
+Routing the tripping window's own lines (they were already offered to inference as
+unknown lines and would shape the update twice); a rolling window with a ring of
+outcomes (512 bytes per source for a number the tumbling window gives within one window
+of latency); comparing against a fixed absolute miss rate (a device that always had 15%
+unmodelled messages would alert forever); `sub_uncovered` as a miss (a new message id
+under an existing family is the existing "write the next sub" workflow, not drift).

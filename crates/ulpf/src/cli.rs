@@ -28,7 +28,7 @@ struct EngineArgs {
     parsers: PathBuf,
     #[arg(long, default_value = "mappings")]
     mappings: PathBuf,
-    /// Mapping schema name (default: the first loaded).
+    /// Mapping schema name (default: `ocsf` when present, else the first loaded).
     #[arg(long)]
     schema: Option<String>,
     /// Worker threads (default: available cores minus one).
@@ -104,16 +104,54 @@ enum Cmd {
         #[arg(long)]
         pending: Option<PathBuf>,
     },
-    /// Recompute every digest in a raw store.
+    /// Re-run every stored record through the current parsers and mappings into a new
+    /// output version, and diff it against the previous version.
+    Replay {
+        #[command(flatten)]
+        engine: EngineArgs,
+        /// Also write the replay report as JSON to this path.
+        #[arg(long)]
+        report_json: Option<PathBuf>,
+    },
+    /// Recompute every digest and chain value in a raw store.
     Verify {
         #[arg(long, default_value = "ulpf.ulpf-store")]
         store: PathBuf,
+        /// Also check every checkpoint of an attestation taken earlier (`ulpf attest`).
+        #[arg(long)]
+        attestation: Option<PathBuf>,
+    },
+    /// Write the store's attestation document: store id, genesis, head and checkpoints.
+    Attest {
+        #[arg(long, default_value = "ulpf.ulpf-store")]
+        store: PathBuf,
+        /// Write the JSON here instead of stdout.
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     /// Print one raw record's exact bytes to stdout (header on stderr).
     Raw {
         id: u64,
         #[arg(long, default_value = "ulpf.ulpf-store")]
         store: PathBuf,
+    },
+    /// Print one entity's timeline from the index beside the output, or rebuild that index.
+    Pivot {
+        /// src_ip, dst_ip, user, dst_port or device.
+        kind: Option<String>,
+        value: Option<String>,
+        #[arg(long, short, default_value = "out.jsonl")]
+        output: PathBuf,
+        #[arg(long, default_value_t = 50)]
+        limit: usize,
+        /// Re-derive the whole index from the output file.
+        #[arg(long)]
+        rebuild: bool,
+        #[arg(long, default_value = "mappings")]
+        mappings: PathBuf,
+        /// Mapping schema name (default: the first loaded).
+        #[arg(long)]
+        schema: Option<String>,
     },
     /// Emit fixture skeleton lines for a sample file (review each line before committing).
     Fixture {
@@ -190,6 +228,30 @@ fn print_report(report: &engine::Report) -> Result<()> {
     Ok(())
 }
 
+fn print_replay(r: &crate::replay::ReplayReport) -> Result<()> {
+    let mut err = std::io::stderr().lock();
+    let against = r.previous_version.map(|v| format!(" against v{v}")).unwrap_or_default();
+    writeln!(err, "replay v{}{}: {} events in {:.3} s ({:.0} events/s), schema {}, parsers generation {}", r.version, against, r.events, r.elapsed_secs, r.events_per_sec, r.schema, r.parsers_generation)?;
+    writeln!(err, "  counts: detected {}  no_parser {}  parsed {}  parse_failed {}  class_unknown {}", r.counts.detected, r.counts.no_parser, r.counts.parsed, r.counts.parse_failed, r.counts.class_unknown)?;
+    let s = &r.summary;
+    writeln!(err, "  events: unchanged {}  changed {}  only_in_new {}  only_in_old {}", s.unchanged, s.changed, s.only_in_new, s.only_in_old)?;
+    writeln!(err, "  fields: added {}  lost {}  changed {}", s.fields_added, s.fields_lost, s.fields_changed)?;
+    for p in s.parser_changes.iter().take(10) {
+        writeln!(err, "  parser: {} -> {}  ({} events)", p.from.as_deref().unwrap_or("none"), p.to.as_deref().unwrap_or("none"), p.events)?;
+    }
+    for f in s.by_field.iter().take(15) {
+        writeln!(err, "  field {:<40} added {:<6} lost {:<6} changed {}", f.path, f.added, f.lost, f.changed)?;
+    }
+    for w in &r.why {
+        writeln!(err, "  why: {w}")?;
+    }
+    writeln!(err, "  output: {}", r.output.display())?;
+    if let Some(d) = &r.diff {
+        writeln!(err, "  diff:   {}", d.display())?;
+    }
+    Ok(())
+}
+
 pub fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
@@ -214,6 +276,34 @@ pub fn main() -> Result<()> {
             let report = engine::serve(&live, Duration::from_millis(poll_ms.max(50)));
             server.shutdown();
             print_report(&report?)
+        }
+        Cmd::Replay { engine: args, report_json } => {
+            anyhow::ensure!(args.output.as_os_str() != "-", "replay needs a file output (--output), not stdout");
+            let reader = ulpf_store::RawReader::open(&args.store).with_context(|| format!("opening store {}", args.store.display()))?;
+            let names = match reader.source_names() {
+                Ok(n) => n,
+                Err(e) => {
+                    eprintln!("ulpf: replay: {e} (a `serve` holds this store; replay it from the server with POST /api/replay)");
+                    std::process::exit(2);
+                }
+            };
+            let (pipeline, problems) = crate::pipeline::Pipeline::load(&args.parsers, &args.mappings, args.schema.as_deref(), parse_tz(&args.tz)?)?;
+            for p in problems {
+                eprintln!("load problem: {p}");
+            }
+            let versions = crate::replay::Versions::new(&args.output);
+            let version = versions.next();
+            let total = reader.len();
+            let threads = args.threads.unwrap_or_else(|| std::thread::available_parallelism().map(|n| n.get().saturating_sub(1).max(1)).unwrap_or(1));
+            let job = crate::replay::Job { versions, version, pipeline: std::sync::Arc::new(pipeline), threads, batch: args.batch, parsers_generation: 0, names, reader, total };
+            let progress = std::sync::atomic::AtomicU64::new(0);
+            let cancel = std::sync::atomic::AtomicBool::new(false);
+            let report = crate::replay::run(job, &progress, &cancel)?;
+            print_replay(&report)?;
+            if let Some(path) = report_json {
+                std::fs::write(&path, serde_json::to_string_pretty(&report)?).with_context(|| format!("writing {}", path.display()))?;
+            }
+            Ok(())
         }
         Cmd::Infer { file, pending, parsers, decisions } => {
             let bytes = std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;
@@ -289,15 +379,51 @@ pub fn main() -> Result<()> {
             }
             Ok(())
         }
-        Cmd::Verify { store } => {
+        Cmd::Verify { store, attestation } => {
             let reader = ulpf_store::RawReader::open(&store).with_context(|| format!("opening store {}", store.display()))?;
-            let report = reader.verify();
+            let attestation = match &attestation {
+                Some(path) => {
+                    let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+                    Some(serde_json::from_str::<ulpf_store::Attestation>(&text).with_context(|| format!("{} is not an attestation document", path.display()))?)
+                }
+                None => None,
+            };
+            let report = match &attestation {
+                Some(att) => reader.verify_against(att),
+                None => reader.verify(),
+            };
+            println!("store {} genesis {}", ulpf_store::hex(&reader.store_id()), ulpf_store::hex(&reader.genesis()));
             println!("verified {} records, {} corrupt", report.checked, report.corrupt.len());
             for id in report.corrupt.iter().take(20) {
                 println!("corrupt: raw id {}", id.0);
             }
-            if !report.corrupt.is_empty() {
+            match report.first_bad {
+                None => println!("chain ok (head {})", reader.head().map(|h| ulpf_store::hex(&h)).unwrap_or_else(|| "-".into())),
+                Some((id, reason)) => println!("chain broken at id {} ({})", id.0, reason.as_str()),
+            }
+            if let Some(att) = &attestation {
+                if let Some(problem) = &report.attestation_problem {
+                    println!("attestation: {problem}");
+                }
+                match report.bad_checkpoint {
+                    Some(id) => println!("attestation: checkpoint at id {} disagrees with the store (generated {})", id.0, att.generated),
+                    None => println!("attestation: {} of {} checkpoints agree ({} records attested, generated {})", report.checkpoints, att.checkpoints.len(), att.records, att.generated),
+                }
+            }
+            if !report.ok() {
                 std::process::exit(1);
+            }
+            Ok(())
+        }
+        Cmd::Attest { store, out } => {
+            let reader = ulpf_store::RawReader::open(&store).with_context(|| format!("opening store {}", store.display()))?;
+            let json = serde_json::to_string_pretty(&reader.attest())?;
+            match out {
+                Some(path) => {
+                    std::fs::write(&path, format!("{json}\n")).with_context(|| format!("writing {}", path.display()))?;
+                    eprintln!("attested {} records to {}", reader.len(), path.display());
+                }
+                None => println!("{json}"),
             }
             Ok(())
         }
@@ -316,6 +442,58 @@ pub fn main() -> Result<()> {
                 rec.sha256.iter().map(|b| format!("{b:02x}")).collect::<String>()
             );
             std::io::stdout().lock().write_all(rec.bytes)?;
+            Ok(())
+        }
+        Cmd::Pivot { kind, value, output, limit, rebuild, mappings, schema } => {
+            if rebuild {
+                let mut maps = ulpf_normalize::load_dir(&mappings).with_context(|| format!("mappings directory {}", mappings.display()))?;
+                for e in &maps.errors {
+                    eprintln!("mapping problem: {e}");
+                }
+                let idx = match &schema {
+                    Some(name) => maps.mappings.iter().position(|m| m.schema_name() == *name).with_context(|| format!("no mapping named `{name}`"))?,
+                    None => {
+                        anyhow::ensure!(!maps.mappings.is_empty(), "no usable mapping in {}", mappings.display());
+                        0
+                    }
+                };
+                let mapping = maps.mappings.swap_remove(idx);
+                let report = crate::pivot::rebuild(&output, &mapping, 1024)?;
+                eprintln!(
+                    "rebuilt {} from {} events, {} postings, {} unreadable lines in {:.3} s",
+                    crate::pivot::index_path(&output).display(),
+                    report.events,
+                    report.postings,
+                    report.unreadable_lines,
+                    report.elapsed_secs
+                );
+                return Ok(());
+            }
+            let (Some(kind), Some(value)) = (kind, value) else { bail!("usage: ulpf pivot KIND VALUE --output out.jsonl, or ulpf pivot --rebuild --output out.jsonl") };
+            let kind = ulpf_normalize::EntityKind::from_name(&kind)
+                .with_context(|| format!("unknown entity kind `{kind}`; one of src_ip, dst_ip, user, dst_port, device"))?;
+            let index = crate::pivot::PivotIndex::open(&output)?;
+            let page = index.query(&crate::pivot::PivotQuery {
+                kind,
+                value: value.as_bytes(),
+                limit,
+                before: None,
+                after: None,
+                order: crate::pivot::Order::Desc,
+            })?;
+            eprintln!(
+                "{} {}: {} events on {} device(s), {} .. {}",
+                kind.name(),
+                value,
+                page.total,
+                page.devices.len(),
+                page.first_time.unwrap_or(0),
+                page.last_time.unwrap_or(0)
+            );
+            let mut out = std::io::stdout().lock();
+            for e in &page.events {
+                writeln!(out, "{}", serde_json::to_string(&e.line)?)?;
+            }
             Ok(())
         }
         Cmd::Fixture { sample, parsers, mappings, tz } => {

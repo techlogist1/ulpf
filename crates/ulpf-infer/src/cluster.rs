@@ -483,6 +483,8 @@ pub struct Slot {
     pub kind: SlotKind,
     pub suggested: bool,
     pub preceded_by: String,
+    /// Why this name, in one line: the rule that fired, or why none did.
+    pub reason: String,
 }
 
 /// Families a value can belong to; the dominant family decides the type when the
@@ -557,15 +559,320 @@ fn port_or(k: SlotKind, c: &Col, cols: &[Col], idx: usize) -> SlotKind {
     if after_ip_colon || keyed { SlotKind::Port } else { k }
 }
 
-const NAMING_KEYS: [&str; 30] = [
-    "user", "port", "proto", "protocol", "len", "length", "ttl", "id", "from", "to", "via", "interface", "in", "out",
-    "src", "dst", "host", "rule", "reason", "code", "status", "method", "uri", "url", "path", "bytes", "size",
-    "duration", "time", "action",
+/// Value families a vocabulary row accepts. Coarser than `SlotKind` so one row covers
+/// `ipv4`/`ipv6`/`ip` and `int`/`port`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Fam {
+    Ip,
+    Mac,
+    Num,
+    Word,
+}
+
+fn fam_of(k: SlotKind) -> Fam {
+    match k {
+        SlotKind::Ip | SlotKind::Ipv4 | SlotKind::Ipv6 => Fam::Ip,
+        SlotKind::Mac => Fam::Mac,
+        SlotKind::Int | SlotKind::Float | SlotKind::Port => Fam::Num,
+        _ => Fam::Word,
+    }
+}
+
+/// One row of the curated vocabulary: a key a real vendor format writes before a value,
+/// and the device-side name that value carries. `docs/slot-vocabulary.md` is the same
+/// table with an example line per row. Names here are always the device's vocabulary,
+/// never an output-schema field: this crate cannot see `ulpf-normalize` (D38), and each
+/// name below is already an alias in `mappings/ocsf.toml` where one exists, so an
+/// approved proposal normalizes without a mapping edit.
+struct Convention {
+    key: &'static str,
+    ctx: &'static str,
+    fam: Fam,
+    name: &'static str,
+    source: &'static str,
+}
+
+const VOCAB: [Convention; 25] = [
+    Convention { key: "from", ctx: "from {ip}", fam: Fam::Ip, name: "src_ip", source: "BSD syslog, OpenSSH sshd" },
+    Convention { key: "src", ctx: "SRC={ip}", fam: Fam::Ip, name: "src_ip", source: "netfilter LOG target" },
+    Convention { key: "saddr", ctx: "saddr={ip}", fam: Fam::Ip, name: "src_ip", source: "netfilter conntrack, nftables" },
+    Convention { key: "source-address", ctx: "source-address={ip}", fam: Fam::Ip, name: "src_ip", source: "Juniper SRX RT_FLOW" },
+    Convention { key: "to", ctx: "to {ip}", fam: Fam::Ip, name: "dst_ip", source: "BSD syslog, ISC dhcpd" },
+    Convention { key: "dst", ctx: "DST={ip}", fam: Fam::Ip, name: "dst_ip", source: "netfilter LOG target" },
+    Convention { key: "daddr", ctx: "daddr={ip}", fam: Fam::Ip, name: "dst_ip", source: "netfilter conntrack, nftables" },
+    Convention { key: "destination-address", ctx: "destination-address={ip}", fam: Fam::Ip, name: "dst_ip", source: "Juniper SRX RT_FLOW" },
+    Convention { key: "from", ctx: "from {mac}", fam: Fam::Mac, name: "src_mac", source: "ISC dhcpd" },
+    Convention { key: "to", ctx: "to {mac}", fam: Fam::Mac, name: "dst_mac", source: "ISC dhcpd" },
+    Convention { key: "spt", ctx: "SPT={port}", fam: Fam::Num, name: "src_port", source: "netfilter LOG target" },
+    Convention { key: "sport", ctx: "sport={port}", fam: Fam::Num, name: "src_port", source: "OpenBSD pf, Suricata EVE" },
+    Convention { key: "dpt", ctx: "DPT={port}", fam: Fam::Num, name: "dst_port", source: "netfilter LOG target" },
+    Convention { key: "dport", ctx: "dport={port}", fam: Fam::Num, name: "dst_port", source: "OpenBSD pf, Suricata EVE" },
+    Convention { key: "in", ctx: "in:{word} / IN={word}", fam: Fam::Word, name: "in_interface", source: "MikroTik RouterOS, netfilter LOG" },
+    Convention { key: "out", ctx: "out:{word} / OUT={word}", fam: Fam::Word, name: "out_interface", source: "MikroTik RouterOS, netfilter LOG" },
+    Convention { key: "proto", ctx: "proto {word}", fam: Fam::Word, name: "proto", source: "MikroTik RouterOS, netfilter PROTO=" },
+    Convention { key: "protocol", ctx: "protocol {word}", fam: Fam::Word, name: "proto", source: "Cisco ASA, pfSense filterlog" },
+    Convention { key: "len", ctx: "len {int}", fam: Fam::Num, name: "len", source: "MikroTik RouterOS, netfilter LEN=" },
+    Convention { key: "length", ctx: "length {int}", fam: Fam::Num, name: "len", source: "Cisco ASA, Squid" },
+    Convention { key: "ttl", ctx: "TTL={int}", fam: Fam::Num, name: "ttl", source: "netfilter LOG target" },
+    Convention { key: "via", ctx: "via {word}", fam: Fam::Word, name: "via", source: "ISC dhcpd, MikroTik login log" },
+    Convention { key: "user", ctx: "user {word}", fam: Fam::Word, name: "user", source: "MikroTik RouterOS account log, OpenSSH sshd" },
+    Convention { key: "username", ctx: "username={word}", fam: Fam::Word, name: "user", source: "Cisco ASA, FortiGate" },
+    Convention { key: "login", ctx: "login={word}", fam: Fam::Word, name: "user", source: "Check Point, SonicWall" },
 ];
 
-/// Columns to a `Template` plus the slot descriptions. Names are the preceding key when
-/// the format has one (`IN=`, `src-mac X`, `user X`), marked suggested; otherwise
-/// `kind+n`, unsuggested, for the reviewer to name. `rare` is `rare_count` for the cluster.
+/// Words that precede a value without naming it: English connectives, syslog severity
+/// words that sit in a topic list (`wireless,info <mac>`), and protocol keywords.
+const STOPWORDS: [&str; 27] = [
+    "for", "by", "of", "the", "a", "an", "and", "or", "is", "was", "are", "were", "at", "on", "with", "this", "that",
+    "not", "info", "warn", "warning", "error", "debug", "notice", "tcp", "udp", "icmp",
+];
+
+/// TCP flag mnemonics as netfilter's LOG target and RouterOS print them.
+const TCP_FLAGS: [&str; 9] = ["SYN", "ACK", "FIN", "RST", "PSH", "URG", "ECE", "CWR", "NS"];
+
+fn vocab(key: &str, kind: SlotKind) -> Option<&'static Convention> {
+    VOCAB.iter().find(|c| c.key == key && c.fam == fam_of(kind))
+}
+
+fn vocab_reason(ctx: &str, name: &str, source: &str) -> String {
+    format!("vocabulary: `{ctx}` names {name} ({source})")
+}
+
+fn a_kind(k: SlotKind) -> String {
+    let n = k.name();
+    if matches!(n.as_bytes()[0], b'a' | b'e' | b'i' | b'o' | b'u') { format!("an {n}") } else { format!("a {n}") }
+}
+
+/// The name for one slot, with the reason a reviewer reads. `None` means no rule fired
+/// and the caller falls back to `kind+n`; the reason then says why it stayed generic.
+fn name_slot(cols: &[Col], idx: usize, kind: SlotKind, placed: &Placed) -> (Option<String>, String) {
+    if let Some((name, reason)) = placed.get(&idx) {
+        return (name.clone(), reason.clone());
+    }
+    if kind == SlotKind::Timestamp {
+        return (Some("timestamp".to_string()), "the slot's own type is a timestamp".to_string());
+    }
+    let Some(key) = key_before(cols, idx) else {
+        return (None, format!("no key or known constant before {} slot", a_kind(kind)));
+    };
+    // `tag: value` is a syslog tag, not a key: a real key attaches to its value
+    if idx >= 2 && cols[idx - 1].kind == Kind::Space && cols[idx - 2].kind == Kind::Punct && cols[idx - 2].text == b":" {
+        return (None, format!("`{key}:` is a syslog tag, not a key"));
+    }
+    if let Some(c) = vocab(&key, kind) {
+        return (Some(c.name.to_string()), vocab_reason(c.ctx, c.name, c.source));
+    }
+    if is_keyed(cols, idx) || key.contains(['-', '_']) {
+        return (Some(sanitize(&key)), format!("key `{key}` before the value"));
+    }
+    if STOPWORDS.contains(&key.as_str()) {
+        return (None, format!("`{key}` before the slot is a connective, not a field name"));
+    }
+    if key.bytes().any(|b| b.is_ascii_alphabetic()) && key.bytes().all(|b| b.is_ascii_alphanumeric()) {
+        return (Some(sanitize(&key)), format!("constant `{key}` before {} slot", a_kind(kind)));
+    }
+    (None, format!("no key or known constant before {} slot", a_kind(kind)))
+}
+
+/// Names that come from the shape of the line rather than from a key. Runs before the key
+/// rules, so `kernel: [{rule}]` is not named after the syslog tag and an address pair
+/// beats the `from`/`to` rows. Earlier rules win: entries are inserted, never replaced.
+fn positional(cols: &[Col], kinds: &[Option<SlotKind>]) -> Placed {
+    let slots: Vec<usize> = (0..cols.len()).filter(|i| kinds[*i].is_some()).collect();
+    let mut out: Placed = BTreeMap::new();
+    ncsa_combined(cols, &slots, kinds, &mut out);
+    address_pair(cols, &slots, kinds, &mut out);
+    by_column(cols, kinds, &mut out);
+    port_after_address(cols, kinds, &mut out);
+    out
+}
+
+/// Column index to `(name, reason)`; a `None` name is a rule that explains why the slot
+/// stays `kind+n` without proposing one.
+type Placed = BTreeMap<usize, (Option<String>, String)>;
+
+fn place(out: &mut Placed, idx: usize, name: &str, reason: &str) {
+    out.entry(idx).or_insert_with(|| (Some(name.to_string()), reason.to_string()));
+}
+
+fn leave_generic(out: &mut Placed, idx: usize, reason: &str) {
+    out.entry(idx).or_insert_with(|| (None, reason.to_string()));
+}
+
+/// `%h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-Agent}i"`: the field order is the
+/// format, so position names every slot. The request line stays one quoted slot.
+fn ncsa_combined(cols: &[Col], slots: &[usize], kinds: &[Option<SlotKind>], out: &mut Placed) {
+    const NAMES: [&str; 8] = ["src_ip", "user", "timestamp", "request", "status_code", "bytes", "referer", "user_agent"];
+    const KINDS: [SlotKind; 8] = [
+        SlotKind::Ip, SlotKind::Word, SlotKind::Timestamp, SlotKind::Quoted, SlotKind::Int, SlotKind::Int, SlotKind::Quoted, SlotKind::Quoted,
+    ];
+    let fits = |i: usize| {
+        slots.get(i).and_then(|s| kinds[*s]).is_some_and(|k| match KINDS[i] {
+            SlotKind::Ip => ip_like(k),
+            want => want == k,
+        })
+    };
+    if slots.first() != Some(&0) || !(0..4).all(fits) || const_between(cols, slots[0], slots[1]).trim() != "-" {
+        return;
+    }
+    let reason = vocab_reason(
+        r#"{ip} - {user} [{timestamp}] "{request}" {status} {bytes}"#,
+        "the NCSA fields",
+        "Apache LogFormat combined, nginx log_format combined",
+    );
+    for (i, name) in NAMES.iter().enumerate().take_while(|(i, _)| fits(*i)) {
+        place(out, slots[i], name, &reason);
+    }
+}
+
+/// `{ip}:{port}->{ip}:{port}`, `{ip} -> {ip}`, `{ip}/{port} -> {ip}/{port}`: the arrow
+/// points from source to destination. Only the first pair on a line is named; a second
+/// pair (RouterOS logs the translated addresses after `NAT`) is left for the reviewer.
+fn address_pair(cols: &[Col], slots: &[usize], kinds: &[Option<SlotKind>], out: &mut Placed) {
+    let addrs: Vec<usize> = slots.iter().copied().filter(|i| ip_like(kinds[*i].expect("slot kind"))).collect();
+    for w in addrs.windows(2) {
+        let (a, b) = (w[0], w[1]);
+        let src_port = attached_port(cols, kinds, a).filter(|p| *p < b);
+        // only the source port may sit between the two addresses
+        if slots.iter().any(|s| *s > a && *s < b && Some(*s) != src_port) {
+            continue;
+        }
+        let sep = const_between(cols, a, b);
+        if !(sep.contains("->") || sep.contains("=>") || sep.contains(" > ")) {
+            continue;
+        }
+        let reason = vocab_reason("{ip}:{port}->{ip}:{port}", "the pair src/dst", "MikroTik RouterOS firewall log, Cisco ASA");
+        place(out, a, "src_ip", &reason);
+        place(out, b, "dst_ip", &reason);
+        if let Some(p) = src_port {
+            place(out, p, "src_port", &reason);
+        }
+        if let Some(p) = attached_port(cols, kinds, b) {
+            place(out, p, "dst_port", &reason);
+        }
+        let rest = "a second address pair on the line (RouterOS logs the translated addresses); the first pair took src/dst";
+        for later in addrs.iter().copied().filter(|i| *i > b) {
+            leave_generic(out, later, rest);
+            if let Some(p) = attached_port(cols, kinds, later) {
+                leave_generic(out, p, rest);
+            }
+        }
+        return;
+    }
+}
+
+/// The rules that need only one column and its neighbours.
+fn by_column(cols: &[Col], kinds: &[Option<SlotKind>], out: &mut Placed) {
+    let icmp = cols.iter().any(|c| !c.is_slot() && c.kind == Kind::Word && lossy(&c.text).to_ascii_uppercase().starts_with("ICMP"));
+    for (idx, c) in cols.iter().enumerate() {
+        let Some(kind) = kinds[idx] else { continue };
+        if fam_of(kind) == Fam::Num && is_pid(cols, idx) {
+            place(out, idx, "pid", &vocab_reason("{word}[{int}]:", "pid", "RFC 3164 syslog TAG, RFC 5424 PROCID"));
+            continue;
+        }
+        if icmp && fam_of(kind) == Fam::Num {
+            match key_before(cols, idx).as_deref() {
+                Some("type") => {
+                    place(out, idx, "icmp_type", &vocab_reason("type={int} in an ICMP line", "icmp_type", "RFC 792, netfilter LOG TYPE="));
+                    continue;
+                }
+                Some("code") => {
+                    place(out, idx, "icmp_code", &vocab_reason("code={int} in an ICMP line", "icmp_code", "RFC 792, netfilter LOG CODE="));
+                    continue;
+                }
+                _ => {}
+            }
+        }
+        if fam_of(kind) == Fam::Word && all_bracketed(c) {
+            place(out, idx, "rule", &vocab_reason("[{word}] bracketed label", "rule", "iptables --log-prefix, EdgeRouter/ufw rule names"));
+            continue;
+        }
+        if fam_of(kind) == Fam::Word && all_tcp_flags(c) {
+            place(out, idx, "tcp_flags", &vocab_reason("a run of TCP flag mnemonics", "tcp_flags", "netfilter LOG target, MikroTik `proto TCP (SYN,ACK)`"));
+            continue;
+        }
+        if fam_of(kind) == Fam::Word
+            && key_before(cols, idx).as_deref() == Some("for")
+            && word_after(cols, idx).as_deref() == Some("from")
+        {
+            place(out, idx, "user", &vocab_reason("for {word} from", "user", "OpenSSH sshd auth log"));
+        }
+    }
+}
+
+/// `from {ip} port {port}`: the port belongs to the address the same clause named.
+fn port_after_address(cols: &[Col], kinds: &[Option<SlotKind>], out: &mut Placed) {
+    for idx in 0..cols.len() {
+        let Some(kind) = kinds[idx] else { continue };
+        if fam_of(kind) != Fam::Num || key_before(cols, idx).as_deref() != Some("port") {
+            continue;
+        }
+        let Some(addr) = (0..idx).rev().find(|i| kinds[*i].is_some_and(ip_like)) else { continue };
+        let named = out.get(&addr).and_then(|(n, _)| n.clone()).or_else(|| {
+            let key = key_before(cols, addr)?;
+            vocab(&key, kinds[addr].expect("slot kind")).map(|c| c.name.to_string())
+        });
+        let name = match named.as_deref() {
+            Some("src_ip") => "src_port",
+            Some("dst_ip") => "dst_port",
+            _ => continue,
+        };
+        place(out, idx, name, &vocab_reason("from {ip} port {port}", name, "OpenSSH sshd auth log"));
+    }
+}
+
+/// True when the slot is the `[1234]` of a `tag[1234]:` syslog header.
+fn is_pid(cols: &[Col], idx: usize) -> bool {
+    let punct = |i: usize, t: &[u8]| cols.get(i).is_some_and(|c| !c.is_slot() && c.kind == Kind::Punct && c.text == t);
+    idx >= 2 && punct(idx - 1, b"[") && cols[idx - 2].kind == Kind::Word && !cols[idx - 2].is_slot() && punct(idx + 1, b"]") && punct(idx + 2, b":")
+}
+
+fn all_bracketed(c: &Col) -> bool {
+    let d = c.distinct();
+    !d.is_empty() && d.iter().all(|(v, _)| v.len() > 2 && v[0] == b'[' && v[v.len() - 1] == b']')
+}
+
+fn all_tcp_flags(c: &Col) -> bool {
+    let d = c.distinct();
+    !d.is_empty()
+        && d.iter().all(|(v, _)| {
+            let text = lossy(v);
+            let mut parts = text.split(|ch: char| !ch.is_ascii_alphabetic()).filter(|p| !p.is_empty()).peekable();
+            parts.peek().is_some() && parts.all(|p| TCP_FLAGS.contains(&p.to_ascii_uppercase().as_str()))
+        })
+}
+
+/// The `{port}` slot right after an address, separated only by `:` or `/`.
+fn attached_port(cols: &[Col], kinds: &[Option<SlotKind>], addr: usize) -> Option<usize> {
+    let mut sep = false;
+    for i in addr + 1..cols.len() {
+        if let Some(k) = kinds[i] {
+            return (sep && fam_of(k) == Fam::Num).then_some(i);
+        }
+        if cols[i].kind == Kind::Punct && matches!(cols[i].text.as_slice(), b":" | b"/") && !sep {
+            sep = true;
+        } else {
+            return None;
+        }
+    }
+    None
+}
+
+/// Constant text strictly between two columns, slots skipped.
+fn const_between(cols: &[Col], a: usize, b: usize) -> String {
+    cols[a + 1..b].iter().filter(|c| !c.is_slot()).map(|c| if c.kind == Kind::Space { " ".to_string() } else { lossy(&c.text) }).collect()
+}
+
+/// The next constant word after a slot, lowercase, spaces skipped.
+fn word_after(cols: &[Col], idx: usize) -> Option<String> {
+    let c = cols.get(idx + 1..)?.iter().find(|c| c.kind != Kind::Space)?;
+    (!c.is_slot() && c.kind == Kind::Word).then(|| lossy(&c.text).to_lowercase())
+}
+
+/// Columns to a `Template` plus the slot descriptions. Every name comes from a printed
+/// rule — a key, a preceding constant, the vocabulary or the slot's own type — and every
+/// slot carries the reason, including the reason it stayed `kind+n`. `rare` is
+/// `rare_count` for the cluster.
 pub fn shape(cols: &[Col], rare: usize) -> (Template, Vec<Slot>) {
     let mut slots = Vec::new();
     let mut used: BTreeMap<String, usize> = BTreeMap::new();
@@ -574,6 +881,21 @@ pub fn shape(cols: &[Col], rare: usize) -> (Template, Vec<Slot>) {
     let mut group: Vec<Token> = Vec::new();
     let mut group_presence: Option<&Vec<bool>> = None;
     let last_slot = cols.iter().rposition(Col::is_slot);
+    let kinds: Vec<Option<SlotKind>> = cols
+        .iter()
+        .enumerate()
+        .map(|(idx, c)| {
+            if !c.is_slot() {
+                return None;
+            }
+            let kind = slot_kind(c, cols, idx, rare);
+            if kind == SlotKind::Text && Some(idx) == last_slot && idx + 1 == cols.len() && c.region {
+                return Some(SlotKind::Rest);
+            }
+            Some(kind)
+        })
+        .collect();
+    let placed = positional(cols, &kinds);
 
     let flush_group = |tokens: &mut Vec<Token>, group: &mut Vec<Token>| {
         if !group.is_empty() {
@@ -593,21 +915,15 @@ pub fn shape(cols: &[Col], rare: usize) -> (Template, Vec<Slot>) {
             group_presence = None;
         }
         let target = if c.optional { &mut group } else { &mut tokens };
-        if !c.is_slot() {
+        let Some(kind) = kinds[idx] else {
             let text = if c.kind == Kind::Space { " ".to_string() } else { lossy(&c.text) };
             push_const(target, &text);
             continue;
-        }
-        let mut kind = slot_kind(c, cols, idx, rare);
-        if kind == SlotKind::Text && Some(idx) == last_slot && idx + 1 == cols.len() && c.region {
-            kind = SlotKind::Rest;
-        }
-        let preceded_by = preceding_text(cols, idx);
-        let key = key_before(cols, idx);
-        let (mut name, suggested) = match (&key, kind) {
-            (_, SlotKind::Timestamp) => ("timestamp".to_string(), true),
-            (Some(k), _) if is_keyed(cols, idx) || NAMING_KEYS.contains(&k.as_str()) || k.contains(['-', '_']) => (sanitize(k), true),
-            _ => {
+        };
+        let (found, reason) = name_slot(cols, idx, kind, &placed);
+        let (mut name, suggested) = match found {
+            Some(n) => (n, true),
+            None => {
                 let base = match kind {
                     SlotKind::Ipv4 | SlotKind::Ip => "ip",
                     SlotKind::Ipv6 => "ip6",
@@ -625,7 +941,7 @@ pub fn shape(cols: &[Col], rare: usize) -> (Template, Vec<Slot>) {
             name = format!("{name}_{count}");
         }
         target.push(Token::Slot { name: name.clone(), kind });
-        slots.push(Slot { col: idx, name, kind, suggested, preceded_by });
+        slots.push(Slot { col: idx, name, kind, suggested, preceded_by: preceding_text(cols, idx), reason });
     }
     flush_group(&mut tokens, &mut group);
     (Template { tokens }, slots)

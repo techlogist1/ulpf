@@ -984,7 +984,9 @@ dependencies = [
  "axum",
  "clap",
  "futures-util",
+ "memchr",
  "memmap2",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",
@@ -1039,7 +1041,10 @@ dependencies = [
  "memchr",
  "memmap2",
  "rusqlite",
+ "serde",
+ "serde_json",
  "sha2",
+ "ulpf-time",
 ]
 
 [[package]]

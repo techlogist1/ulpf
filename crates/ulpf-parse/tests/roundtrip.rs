@@ -55,7 +55,7 @@ fn every_repo_definition_survives_serialize_deserialize() {
 
 #[test]
 fn all_strategies_are_machine_emittable() {
-    let meta = |n: &str| Meta { name: n.into(), vendor: "v".into(), product: "p".into(), description: Some("d".into()) };
+    let meta = |n: &str| Meta { name: n.into(), vendor: "v".into(), product: "p".into(), description: Some("d".into()), version: 1 };
     let matcher = Matcher { contains: vec!["a".into()], starts_with: Some("<".into()), regex: Some("x".into()), priority: 5 };
     let strategies = vec![
         Strategy { kind: StrategyKind::Kv, key_value_separator: Some(":".into()), pair_separator: Some("; ".into()), ..Default::default() },

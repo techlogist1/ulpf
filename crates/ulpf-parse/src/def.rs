@@ -30,6 +30,17 @@ pub struct Meta {
     pub product: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    /// Bumped by an approved drift update; a hand-written file may set it.
+    #[serde(default = "one", skip_serializing_if = "is_one")]
+    pub version: u64,
+}
+
+fn one() -> u64 {
+    1
+}
+
+fn is_one(v: &u64) -> bool {
+    *v == 1
 }
 
 /// Signature detection. Every `contains` substring must be present; `starts_with` and

@@ -123,7 +123,7 @@ guesses are listed in `heldout/README.md`).
 | mikrotik.log | 250 | 14 | 14 (+1 dead, kept in evidence) | 250 | 0 | input/forward and ICMP/UDP/TCP split; NAT block optional; `logged in`/`out` separate; empty user optional |
 | edgerouter.log | 250 | 10 | 9 | 250 | 0 | TCP/UDP/ICMP/IPv6 split; `DF` optional; `MAC=` chain one slot; NAT-masq lines a template; sshd Accepted/Failed separate |
 | nginx_access.log | 250 | 3 (by request content) | 1 | 250 | 0 | `{ip} - {user} [{timestamp}] {quoted} {int} {int} {quoted} {quoted}` with a `[[timestamp]]` candidate |
-| messy.log | 300 | 14 + cron, systemd, truncated, empty | 19 | 289 | 11: 4 empty, 4 below_support (truncated), 3 no_template | cron and systemd got their own templates; truncated lines never became a template |
+| messy.log | 300 | 14 + cron, systemd, truncated, empty | 19 | 285 | 15: 4 empty, 4 below_support (truncated), 7 no_template (re-measured 2026-09-05 at a9d0dd8; the 289/11 quoted earlier predated the review fixes) | cron and systemd got their own templates; truncated lines never became a template |
 
 Reading: the prototype's 4-10 clusters per true type became 1 per type on the three
 clean files (one over on MikroTik: a `disconnected, {text}{? is lost}` tail a human

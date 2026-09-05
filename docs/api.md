@@ -163,3 +163,252 @@ puts it back. `generated` is the time the pending record was written.
 `GET /` → `ui/dist/index.html`; `GET /app.js`, `GET /app.css` → the built assets. Fixed
 names so the binary embeds them with `include_str!`. `--ui-dir DIR` serves the three
 files from disk on every request instead (restyle without a rebuild).
+
+---
+
+# v2 additions (2026-09-05 evening): provenance, integrity, replay, pivot, drift, syslog
+
+Everything above stays as written. Below is what the v2 server adds; the UI is built
+against this text, so a change here is a change to both. Every new error follows the
+same `{"error", "reason"}` shape and status set. New reasons: `409 conflict` for an
+operation already running (replay, verify), `422 invalid` for an unknown pivot kind or
+replay version. Every route below is backed by `Live` (D41); the server still owns
+nothing.
+
+## Provenance (traceback, item 1)
+
+`GET /api/events/{raw_id}` gains, inside `now`:
+```
+"fields":     [ { "key": string, "value": string, "span": [u64, u64]|null } ],
+"provenance": [ { "path": string, "source_key": string, "span": [u64, u64]|null,
+                  "canonical": bool, "value": string } ],
+"time":       { "text_span": [u64, u64]|null, "policies": [string] }
+```
+`fields` are the parser's own key/value pairs in parser order; `span` is the half-open
+byte range `[start, end)` into the raw record's bytes (the same bytes `hex` shows) when
+the value is a borrowed slice of the event (D15), `null` when it was materialised (a JSON
+value, an unescaped quoted value, a joined multi-field timestamp, a `column_N` name) or
+came from the definition (a constant). `provenance` has one entry per normalized schema
+field that came from a source field: `path` is the dotted schema path in `normalized`
+(`src_endpoint.ip`), `source_key` the parser field that fed it, `span` that field's span,
+`canonical` true when the mapping rewrote the value (an enum: `deny` -> `Denied`),
+`value` the normalized value as text. Fields the mapping synthesised (`class_uid`,
+`metadata.*`, an enum `unknown`) have no entry. Offsets are computed only on this route,
+never on the hot path.
+
+Also added at the top level: `"chain": hex64, "prev_chain": hex64, "chain_match": bool`
+(the record's stored chain value, the previous record's, and whether
+`sha256(prev_chain || stored_sha256)` equals `chain`).
+
+## Integrity chain (item 5)
+
+Every raw record `i` has a chain value `chain_i = SHA-256(chain_{i-1} || sha256_i)` with
+`chain_{-1} = genesis = SHA-256("ULPF chain genesis" || store id)`. The store id is a
+random 16-byte value written when the store is created. Tampering with any byte of any
+record, its header digest included, changes every chain value from that record on. The
+chain is stored beside the offsets index, appended with the record, and cut with it on
+recovery (D7, D33).
+
+`GET /api/integrity` →
+```
+{ "records": u64, "store_id": hex32, "genesis": hex64, "head": hex64|null,
+  "checkpoint_every": 4096,
+  "last_verify": null | { "at": rfc3339, "records": u64, "ok": bool,
+                          "corrupt": u64, "first_bad": u64|null, "reason": string|null,
+                          "elapsed_secs": f64, "against_attestation": bool },
+  "running": bool }
+```
+`first_bad` is the lowest raw id whose bytes do not hash to the stored digest or whose
+chain value does not follow from its predecessor; `reason` is `digest` or `chain`.
+
+`POST /api/integrity/verify` → `{ "started": true, "records": u64 }`; `409 conflict`
+while one runs. Runs on its own thread over a snapshot of the store (ids below the
+length at start), reading through the writer's files; the result lands in
+`GET /api/integrity` and is pushed as an `integrity` SSE event.
+
+`GET /api/integrity/attestation` → the attestation document, also written by
+`ulpf attest --store DIR --out FILE`:
+```
+{ "format": "ulpf-attestation/1", "generated": rfc3339, "store_id": hex32,
+  "records": u64, "genesis": hex64, "head": hex64,
+  "checkpoints": [ { "id": u64, "chain": hex64 } ],      // every 4096th record and the last
+  "record_digest": "sha256(bytes)",
+  "chain": "sha256(prev_chain || record_digest)",
+  "verify": "ulpf verify --store DIR --attestation FILE" }
+```
+A stranger with the store directory and this file runs the verify command offline; the
+report names the first record whose recomputed chain disagrees with the store, or the
+first checkpoint whose recorded chain disagrees with the recomputation (a store rewritten
+consistently from record N onward passes the store-only check and fails the attestation
+check at the first checkpoint at or after N).
+
+## Replay (item 2)
+
+Outputs are versioned. The path given as `--output out.jsonl` is version 1 (the live
+output); a replay writes `out.v2.jsonl`, `out.v3.jsonl`, ... beside it, each with
+`out.vN.meta.json` (when, parsers generation, the SHA-256 of every parser and mapping
+file used, schema, events) and, when a previous version exists, `out.vN.diff.jsonl`.
+The raw store is opened read-only by the replay (through the writer's snapshot in
+`serve`, D42); it is never written.
+
+`GET /api/replay` →
+```
+{ "versions": [ { "version": u64, "path": string, "created": rfc3339, "events": u64,
+                  "schema": string, "parsers_generation": u64 } ],
+  "running": null | { "version": u64, "done": u64, "total": u64, "started": rfc3339 },
+  "last": null | ReplayReport }
+```
+`POST /api/replay` body `{}` or `{ "schema": string }` → `{ "version": u64, "started": true,
+"total": u64 }`; `409 conflict` while a replay runs. The replay uses the parser pipeline
+as it is at the start (the `Arc` it read); a parser approved mid-replay takes effect for
+the live stream and the next replay, and the report says which generation it used.
+
+```
+ReplayReport = {
+  "version": u64, "previous_version": u64|null, "output": string, "diff": string|null,
+  "events": u64, "elapsed_secs": f64, "events_per_sec": f64, "parsers_generation": u64,
+  "summary": { "unchanged": u64, "changed": u64, "only_in_new": u64, "only_in_old": u64,
+               "fields_added": u64, "fields_lost": u64, "fields_changed": u64,
+               "parser_changes": [ { "from": string|null, "to": string|null, "events": u64 } ],
+               "by_field": [ { "path": string, "added": u64, "lost": u64, "changed": u64 } ] },
+  "why": [ string ]     // "parsers/cisco_asa.toml changed since v1 (sha 3f2a.. -> 9c01..)", "mappings unchanged", "12 events only in v2: appended after v1 was written"
+}
+```
+`why` is the 4am answer: the report compares the file digests recorded in the previous
+version's meta with the ones it used, and states every difference it can see. A diff
+with an empty `why` and a non-empty `changed` count says so explicitly
+(`"no parser or mapping file changed; the difference comes from receipt time or engine
+version"`).
+
+`GET /api/replay/{version}/diff?after=<raw_id>&limit=N&kind=changed|only_in_new|only_in_old`
+→ `{ "entries": [ DiffEntry ], "next_after": u64|null }`, `limit` max 500, ordered by raw id.
+```
+DiffEntry = { "raw_id": u64, "kind": "changed|only_in_new|only_in_old",
+              "parser_before": string|null, "parser_after": string|null,
+              "added": { path: value }, "lost": { path: value }, "changed": { path: [before, after] } }
+```
+`404 not_found` for a version that does not exist or has no diff.
+
+SSE `replay` event: `{ "version": u64, "state": "started|progress|done|failed",
+"done": u64, "total": u64, "report": ReplayReport|null, "error": string|null }`; a
+progress frame at most every 500 ms.
+
+CLI: `ulpf replay --store DIR --output out.jsonl [--schema ..] [--parsers ..] [--mappings ..]`
+prints the same report and exits 0; exit 2 when the store is in use by a `serve`.
+
+## Pivot (item 3)
+
+The mapping file declares which schema paths are entities; the index and the routes
+know only entity kinds, never vendor fields (the wall holds: `[entities]` lives in the
+mapping, beside `[fields]`):
+```
+[entities]                       # mappings/ocsf.toml
+src_ip   = "src_endpoint.ip"
+dst_ip   = "dst_endpoint.ip"
+user     = "actor.user.name"
+dst_port = "dst_endpoint.port"
+device   = "device.hostname"
+```
+The five kinds are fixed: `src_ip`, `dst_ip`, `user`, `dst_port`, `device`. `device`
+falls back to the ingest source name when the schema field is absent, so every event has
+a device. The index lives beside the output (`out.jsonl.pivot`), is derived data (rebuilt
+by `ulpf pivot --rebuild --output out.jsonl`), and is written by its own thread from the
+entity spans the normalizer reports per event; the hot path gains no allocation.
+
+`GET /api/pivot?kind=K&value=V&limit=N&before=<time_ms>&order=desc|asc` →
+```
+{ "kind": K, "value": V, "total": u64, "first_time": ms|null, "last_time": ms|null,
+  "devices": [ { "device": string, "events": u64, "parsers": [string] } ],
+  "related": { "src_ip": [ {"value", "events"} ], "dst_ip": [..], "user": [..], "dst_port": [..], "device": [..] },
+  "events": [ { "raw_id": u64, "time": ms, "device": string, "parser": string|null, "line": object } ],
+  "next_before": ms|null }
+```
+`events` is the timeline (default newest first, `limit` max 500, `before` pages older;
+`order=asc` with `after` pages forward); `related` lists the ten most frequent
+co-occurring values per other kind, computed over at most the newest 10,000 events of
+the entity (`related_over: u64` says how many). `total` is exact. An entity with a
+million events answers in bounded time: the posting list is read by range, never whole.
+`422 invalid` for an unknown kind.
+
+`GET /api/entities?kind=K&q=prefix&limit=N` → `{ "entities": [ { "kind", "value",
+"events": u64, "devices": u64, "first_time": ms, "last_time": ms } ] }`, most events
+first, `limit` max 100. Omit `kind` for all kinds.
+
+CLI: `ulpf pivot KIND VALUE --output out.jsonl [--limit N]` prints the timeline as JSON Lines.
+
+## Drift (item 4)
+
+Per source, the engine keeps a rolling window (512 events) of misses (no parser claimed
+the event, or the source's established parser claimed it and failed) beside the
+long-run miss rate. A source is *established* after 1,024 events with a long-run miss
+rate under 20%; it *trips* when the window's miss rate exceeds the long-run rate by
+0.25 or more with at least 32 misses in the window. A source that has always mixed two
+formats has a high long-run rate and never trips (its unknown half still feeds ordinary
+inference). On a trip the window's misses are routed to inference with the established
+parser as the prior: the proposal is that parser's definition plus the new templates,
+`version` incremented, written to `pending/` as an *update*.
+
+`GET /api/drift` → `[ DriftAlert ]`
+```
+DriftAlert = { "source": string, "parser": string, "state": "watching|tripped|proposed|cleared",
+               "since": rfc3339, "window": { "events": u64, "misses": u64, "rate": f64 },
+               "baseline_rate": f64, "lines_routed": u64, "pending_id": string|null,
+               "proposed_version": u64|null }
+```
+`watching` is every established source (rate under threshold); the list is ordered
+tripped/proposed first. The `sources` array in `MetricsFrame` gains `"parser": string|null,
+"window_rate": f64, "baseline_rate": f64, "drift": "none|watching|tripped|proposed"`.
+
+Pending records gain: `"updates": string|null` (the parser this proposal replaces),
+`"version": u64` (proposed), `"current_version": u64|null`. `GET /api/pending/{id}` gains
+`"current_definition": string|null` and `"diff": string|null` (a unified diff of the
+current file against the proposal, for the review screen's diff view). Approving an
+update writes over `parsers/<name>.toml` atomically, keeps the replaced file as
+`pending/approved/<name>.v<current>.toml`, and the approve response gains
+`"replaced_version": u64|null`. A hand-written parser's `[parser]` table may carry
+`version = N` (default 1).
+
+SSE `drift` event: a `DriftAlert`, sent when a source's state changes. Counters in
+`Snapshot`: `drift_tripped`, `drift_lines_routed`, `drift_proposals`, `drift_cleared`.
+
+## Syslog listeners (item 6)
+
+`ulpf serve ... --syslog-udp ADDR --syslog-tcp ADDR` (either, both, or neither). A UDP
+datagram is one event, stored byte for byte with no terminator added. A TCP stream is
+framed by RFC 6587 octet counting when a connection starts with `digits SP`, otherwise by
+the same line rule as files (terminators kept inside the event); a connection that closes
+mid-event stores the partial bytes as an event (nothing is dropped) and counts
+`syslog_tcp_partial`. The source name is `udp/<peer ip>` or `tcp/<peer ip>`, so drift,
+inference and the pivot's device fallback are per sending device. Listeners share the
+engine's queue and its block-on-full policy: a burst past capacity blocks the listener
+thread, and the kernel's socket buffer absorbs or drops behind it; what the kernel drops
+is invisible to the process by design and is measured by the soak from the sender's
+count. `GET /api/status` gains `"syslog": { "udp": addr|null, "tcp": addr|null }`.
+`Snapshot` gains `syslog_udp_datagrams`, `syslog_udp_bytes`, `syslog_tcp_connections`,
+`syslog_tcp_events`, `syslog_tcp_bytes`, `syslog_tcp_partial`.
+
+## Metrics frame, status and evidence additions
+
+`MetricsFrame` gains `"integrity": { "records", "head", "last_verify", "running" }` (as
+in `GET /api/integrity`, without checkpoints), `"replay": { "running", "last_version" }`,
+`"drift": [ DriftAlert ]` (tripped and proposed only), `"syslog": { "udp_datagrams",
+"tcp_events", "tcp_connections" }`. `GET /api/status` gains `"schema": { "name",
+"version", "entities": { kind: path } }`, `"output_format": "jsonl|parquet"`, `"syslog"`.
+
+`Evidence.templates[].slots[]` gains `"reason": string`: why the name was suggested
+(`"key \`src-mac\` before the value"`, `"vocabulary: \`{ip}:{port}->{ip}:{port}\` names
+src/dst"`) or why it stayed generic. `suggested` keeps its meaning (true = a rule
+produced the name).
+
+## Output format (item 13, only after 1-12)
+
+`--format jsonl|parquet` on `run` and `replay`; the tail, traceback `emitted`, pivot
+and diff read JSON Lines, so with `parquet` the server keeps the tail in memory and the
+pivot index carries the line text. Documented when it lands; absent until then.
+
+## SSE client obligations
+
+The server sends at most one `tail` frame per 250 ms with at most 200 events and one
+`metrics` frame per 500 ms regardless of client count. A client renders frames on
+`requestAnimationFrame`, keeps at most `--tail` rows in the DOM, and drops frames it
+could not render rather than queueing them, so a full-rate run cannot lock the browser.

@@ -6,6 +6,16 @@
 name = "ocsf"
 version = "1.3.0"
 
+# The five schema paths the pivot index groups events by. Kinds are fixed; the paths are
+# this schema's business, so the index never learns a vendor field name. `device` falls
+# back to the ingest source name when the path is absent from an event.
+[entities]
+src_ip = "src_endpoint.ip"
+dst_ip = "dst_endpoint.ip"
+user = "user.name"
+dst_port = "dst_endpoint.port"
+device = "device.hostname"
+
 # Source values that mean "nothing here". Dropped before mapping, never in `unmapped`.
 [values]
 absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]

@@ -1,5 +1,96 @@
 # ULPF progress
 
+## v2 (2026-09-05 evening session, autonomous): product
+
+Compared head to head against another project at 04:00, demonstrated at 10:00. Everything
+below is verified by running, never by reading. Skills: `software-design-philosophy`
+loaded (every interface decision); `example-skills:frontend-design` loaded before the UI
+lane; `aposd-critique` reserved for the review pass (item 15); no `prompting-practices`
+skill and no skills-audit `MANIFEST.md` exist on this machine (checked 2026-09-05), its
+requirements are carried from the brief. Tiers: lead on Fable; design, spine review and
+verification workers on Opus; corpus, harness, mappings and UI workers on Sonnet with the
+source document in hand; Haiku banned (D30). Baseline at a9d0dd8: 71 tests, clippy clean,
+260k events/s.
+
+### Definition of done (each item checked only after running it)
+- [ ] 1. Field-level provenance: `GET /api/events/{id}` returns, per normalized field, the
+      source field and the byte range in the raw record; the traceback view highlights it.
+      Offsets come from the borrowed `Cow` spans (D15), computed only on the traceback path.
+- [ ] 2. Replay: `ulpf replay` (and `POST /api/replay`) re-runs the raw store through the
+      current parsers and mappings into `out.v<N>.jsonl`, streams a diff against the previous
+      version (events changed, fields added, fields lost) with a why line per change. Demo:
+      parser bug -> run -> fix -> replay -> every past event corrected, store untouched.
+- [ ] 3. Pivot: entity index (src ip, dst ip, user, dst port, device) over normalized
+      events, declared per mapping; `GET /api/pivot` and a timeline view across devices.
+- [ ] 4. Drift: per-source rolling match rate; an established source whose window trips
+      routes its misses into inference with the current parser as prior; a versioned update
+      with a diff lands in `pending/`; a two-format source does not trip.
+- [ ] 5. Integrity chain: per-record chain value, `ulpf verify` names the first broken
+      record, `ulpf attest` exports what a stranger needs to re-verify offline.
+- [ ] 6. Syslog UDP + TCP listeners in `serve`; soak >= 10M events over an appended file
+      plus a live socket, UI open, RSS flat, counters reconciled; queue saturation recorded.
+- [ ] 7. Slot naming: kv keys, preceding-constant names, curated vocabulary
+      (`docs/slot-vocabulary.md`); every name marked suggested with its reason in evidence.
+- [ ] 8. ECS: `mappings/ecs.toml` only plus `--schema ecs`; the diff touches mappings and
+      the selector only.
+- [ ] 9. Multi-core: measured -j scaling before and after any change; single writer and one
+      sequencer preserved; alloc and round-trip tests untouched; honest numbers recorded.
+- [ ] 10. Corpus: real captures (web, licence read) and locally generated captures (tool
+      version + exact setup) replace synthetic samples where obtained; three unseen formats;
+      the twelve parsers fixed against the real data.
+- [ ] 11. Harness: `docs/evaluation.md` scorecard + `eval/` scripts taking any tool's
+      command template; ULPF's scorecard generated and committed.
+- [ ] 12. UI: live feed, review (merge/discard, naming reasons), traceback with provenance,
+      pivot timeline, replay diff, drift alerts, integrity status; batched SSE; keyboard.
+- [ ] 13. Parquet output, only after 1-12 are green; crate and static build verified first.
+- [ ] 14. Regression: full suite, clippy, alloc test, round-trip, isolation; bench within variance.
+- [ ] 15. `aposd-critique` pass, every finding fixed or closed with evidence.
+- [ ] 16. This file's demo script rewritten (commands, expected output, reset, 04:00
+      procedure); CLAUDE.md, DECISIONS.md, docs current; committed and pushed.
+- Out of scope by the brief: segment rotation and retention (design note only, `docs/retention.md`).
+
+### Spine order (lead, sequential, each lands green)
+provenance offsets in the API -> integrity chain -> replay -> pivot index -> drift ->
+syslog listeners + soak -> multi-core -> Parquet.
+
+### Lanes opened before the spine (fan-out 1)
+Split: (a) corpus acquisition, several Sonnet workers with web access, one per vendor
+group plus one for unseen formats, each returning files under `corpus/` with a provenance
+note and the licence it read; (b) local generation, one Sonnet worker per open-source
+tool (Suricata, Squid, OpenVPN, nginx, one outside the twelve), each standing the tool up
+in Docker, driving traffic, capturing logs and writing the exact setup; (c) harness, one
+Sonnet worker writing `eval/` and `docs/evaluation.md` against the CLI as it is at a9d0dd8;
+(d) API contract extension, the lead (interface design for features not yet built).
+Why not fewer: disjoint file sets, no shared state, every lane is hours of wall-clock the
+spine does not need to wait for. Each worker returns: files written, commands run with
+their exit codes, licences read, uncertainties. A worker's claim is a claim until the lead
+runs it.
+
+### Fan-out 2 (13:58 IST, after the contract; the user lifted the agent budget)
+Split: (e) slot naming, one Opus worker owning `crates/ulpf-infer` and
+`docs/slot-vocabulary.md` after the lead's review of `shape()` (names only from
+`key_before`, a 30-word list, else `kind+n`, no reason text); (f) integrity chain, Opus in a
+worktree owning `ulpf-store` and the `verify`/`attest` subcommands (index entry becomes
+offset + chain, store id, genesis, attestation with checkpoints); (g) pivot index and the
+normalize half of provenance, Opus in a worktree owning `ulpf-normalize`, a new
+`pivot.rs`, the `pivot` subcommand and `[entities]` in `ocsf.toml`; (h) ECS mapping, Opus,
+`mappings/ecs.toml` + tests only; (i) soak harness, Opus, `scripts/soak.sh` plus an early
+12-minute soak of the file-append path against the baseline binary; (j) retention design
+note; (k) Parquet feasibility in scratch, report only; (l) UI, Opus in a worktree with
+`frontend-design`, seven screens against the v2 contract, v2 routes mocked in scratch
+until the server lands. The lead keeps engine.rs, pipeline.rs, server.rs, pending.rs,
+inference.rs: replay, traceback wiring, drift, syslog, multi-core, and every merge.
+Why not fewer: each worker owns a disjoint file set; the engine files are the only
+shared surface and stay with one writer. Each returns a schema-validated report
+(worktree, branch, commits, tests pass/fail, clippy, measurements, public API, decisions,
+contract gaps, uncertainties, not done); the lead merges by running the full suite.
+
+### Verified state / in flight / tried and abandoned / next action
+(kept current below as the session proceeds)
+
+---
+
+
 Started 2026-09-04. Single autonomous session building v0.1 from nothing.
 
 ## Definition of done (each item is checked only after running it)
