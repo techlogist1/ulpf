@@ -467,3 +467,98 @@ The server sends at most one `tail` frame per 250 ms with at most 200 events and
 `metrics` frame per 500 ms regardless of client count. A client renders frames on
 `requestAnimationFrame`, keeps at most `--tail` rows in the DOM, and drops frames it
 could not render rather than queueing them, so a full-rate run cannot lock the browser.
+
+---
+
+# v4 additions (2026-09-06, the morning of the demo): the frame tells the truth, flags per event, export
+
+Everything above stays as written. Every addition below is a new field, a new route or a new
+query parameter; nothing that exists changes shape. The UI is built against this text.
+
+## Metrics frame: the queue as it is, and a windowed rate
+
+`MetricsFrame` gains:
+
+- `"queue": { "depth": u64, "capacity": u64 }`: the batches in flight between the ingest
+  threads and the output thread at the moment the frame was computed (the counter the
+  high-water mark is taken from). `engine.queue_high_water` stays the high-water mark since
+  start.
+- `"rate": { "over_secs": f64, "framed_per_sec": f64, "emitted_per_sec": f64 }`: framed and
+  emitted events per second over the frames the server computed in the last 10 s at most;
+  `over_secs` is the span between the oldest sample kept and this frame; both rates are 0 with
+  fewer than two samples. The server samples whenever it computes a frame (an SSE tick, `GET
+  /api/metrics`), so the window covers the time a client was watching. `engine.events_per_sec`
+  stays the run average since start, the number the counter block prints.
+
+## Traceback: the emitted line from the output, and the bytes on their own
+
+`GET /api/events/{raw_id}`:
+- `emitted` is looked up in the tail ring first and then in the JSON Lines output the sink
+  wrote (a binary search over the file by raw id, bounded to the bytes flushed when the request
+  began); `"emitted_from": "tail" | "output" | null` says which. It stays `null` only when the
+  record has not reached the output (stored but not yet emitted, or an output that is a
+  device such as `/dev/null`), never because it scrolled out of the ring.
+- `?bytes=0` leaves `text` and `hex` `null` and everything else as before; `bytes_len` still
+  says how long the record is. A client that reads the bytes from the route below asks for
+  this and is spared a JSON body six times the record's size.
+
+`GET /api/events/{raw_id}/bytes` → `application/octet-stream`, the record's exact bytes (what
+`ulpf raw <id>` prints), read through the writer's own lock like the JSON route;
+`Content-Length` is `bytes_len`. `404 not_found` with the JSON route's error body when the id
+was never issued.
+
+## Pivot: the paging cursor, spelled out
+
+The response carries `"next_before_id": u64|null` beside `next_before` (both `null` on the
+last page) and the query takes `before_id`, `after`, `after_id` as the prose above says: the
+cursor is the pair `(time, raw id)`, so events sharing a millisecond are neither repeated nor
+skipped. `related_over` is the number of the entity's newest events (at most 10,000) that
+`related` was computed over, and each related value's `events` is how many of those events
+the value appeared in, so `events / related_over` is a share and the panel says "in N of the
+M newest events". The response also carries `"elapsed_ms": { "header", "timeline",
+"related", "lines", "total" }` (each f64), the time each part of the query took, so a slow
+pivot names its cause.
+
+## Trust flags (per event): outcomes, not a score
+
+Every emitted line already carries the outcome of every stage for that event; nothing is
+computed on the hot path for this section and nothing is added to the line. A screen reads
+its flags from these fields:
+
+| flag | from | set when |
+|---|---|---|
+| `no_parser` | `ulpf.parse_status` | `"no_parser"`: no definition claimed the event |
+| `parse_failed` | `ulpf.parse_status` | any value other than `"parsed"` and `"no_parser"`: the failure reason |
+| `sub_uncovered` | `ulpf.sub_status` | `"uncovered"`: a message id no sub pattern covers yet |
+| `sub_no_match` | `ulpf.sub_status` | `"no_match"`: a gated sub ran and failed |
+| `time_from_receipt` | `ulpf.time_policies` | contains `"receipt_fallback"`: no device time was found and `time` is the receipt time |
+| `time_error` | `ulpf.time_error` | present: the timestamp text was found but did not parse (its reason) |
+| `class_unknown` | `class_uid` | `0`: no class rule matched the fields |
+| `unmapped` | `unmapped` | present: the number of its keys is the count of source fields no mapping rule consumed |
+| `utf8_lossy` | `ulpf.utf8_lossy` | `true`: the output text is not the exact bytes |
+
+They are the per-event form of the counter block's `no_parser`, `parse_failed`,
+`sub_uncovered`, `sub_no_match`, `time_from_receipt`, `time_error`, `class_unknown`,
+`unmapped_fields` and `utf8_lossy`: summing a flag over the output equals the counter. They
+are not a confidence score and are never shown as one: ULPF reports which stage did not reach
+its outcome, never a probability.
+
+## Export: the output file, streamed
+
+`GET /api/export?format=jsonl|csv&from=<raw_id>&to=<raw_id>&q=<terms>` streams the live
+output (`--output`, version 1) as it is on disk: from the first line whose raw id is at least
+`from` (default: the first line) to the last whose raw id is at most `to` (default: the last
+line flushed when the request began). The lines are copied as the sink wrote them, never
+re-parsed and never held in memory: the server opens the file read-only, bounded to the length
+flushed at the start of the request, so a line the writer is mid-way through is never sent,
+and finds `from` by the same binary search the traceback uses. `q` is a space-separated list
+of terms; a line is sent when every term occurs in its text, case-insensitive, which is the
+rule the Live screen's filter applies to a row, so an export with the screen's terms is
+exactly the filtered view.
+
+`format=jsonl` (default) sends the lines verbatim as `application/x-ndjson`. `format=csv`
+sends `text/csv` with a header row and the eleven columns the Parquet sink writes (D64:
+`raw_id, time, parser, source, class_uid, normalized, src_ip, dst_ip, user, device, dst_port`;
+`time` is epoch milliseconds, `normalized` the JSON line itself), RFC 4180 quoting, an empty
+field for a value the line does not carry. `Content-Disposition: attachment; filename="<output
+stem>-<from>-<to>.<ext>"`. `404 not_found` when the output is a device with nothing to read.
