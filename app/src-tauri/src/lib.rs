@@ -4,6 +4,7 @@
 
 mod ingest;
 mod menu;
+mod title;
 
 use std::fs;
 use std::io::{Read, Write};
@@ -55,7 +56,9 @@ pub fn run() {
                 down: Mutex::new(None),
             });
             menu::install(&handle)?;
-            thread::spawn(move || start(&handle, data));
+            let h = handle.clone();
+            thread::spawn(move || start(&h, data));
+            thread::spawn(move || title::title_loop(&handle));
             Ok(())
         })
         .on_menu_event(|app, event| menu::action(app, event.id().as_ref()))
