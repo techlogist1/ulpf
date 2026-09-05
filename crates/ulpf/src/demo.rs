@@ -193,7 +193,11 @@ fn dechunk(s: &str) -> String {
         if n == 0 {
             break;
         }
-        out.push_str(&after[..n.min(after.len())]);
+        let mut end = n.min(after.len());
+        while end > 0 && !after.is_char_boundary(end) {
+            end -= 1;
+        }
+        out.push_str(&after[..end]);
         rest = after.get(n + 2..).unwrap_or("");
     }
     out
@@ -636,5 +640,15 @@ mod tests {
         for text in ANCHORS {
             assert!(section.contains(text), "PROGRESS.md lost: {text}");
         }
+    }
+
+    // Every route the runner calls answers with content-length, so this path is unreached; it
+    // still may not panic, which a byte length landing inside a multibyte char used to do.
+    #[test]
+    fn dechunk_never_panics_on_a_length_it_cannot_trust() {
+        assert_eq!(dechunk("4\r\nabcd\r\n0\r\n\r\n"), "abcd");
+        assert_eq!(dechunk("2\r\n\u{e9}\r\n0\r\n\r\n"), "\u{e9}");
+        assert_eq!(dechunk("1\r\n\u{e9}\r\n0\r\n\r\n"), "");
+        assert_eq!(dechunk("99\r\nshort\r\n"), "short\r\n"); // truncated: what is left, not a panic
     }
 }

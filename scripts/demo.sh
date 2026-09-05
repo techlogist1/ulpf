@@ -1,7 +1,8 @@
 #!/bin/zsh
-# The runner is `ulpf demo` (D67): the same demo plays on macOS, Windows and Linux, where no
-# shell exists. This wrapper only finds the binary and hands the flags over, so anything that
-# referenced scripts/demo.sh keeps working. Any other shell re-executes this file with zsh.
+# The runner is `ulpf demo` (D67): the demo is orchestration inside the binary, so playing it
+# needs no shell. Played end to end on macOS only; the Windows branches are compiled by CI and
+# have not been run (D74). This wrapper only finds the binary and hands the flags over, so
+# anything that referenced scripts/demo.sh keeps working. Any other shell re-execs this with zsh.
 #   scripts/demo.sh            # interactive: Enter advances; the server stays up for questions at the end
 #   scripts/demo.sh --auto     # unattended rehearsal: fixed pauses, then stop and reset
 #   scripts/demo.sh --check    # inputs, ports, and every title and command verbatim in PROGRESS.md
