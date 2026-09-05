@@ -23,12 +23,33 @@ syslog = true
 [strategy]
 kind = "pattern"
 patterns = [
+  # `logging emblem` + `logging timestamp rfc5424`: the documented general format is
+  # `[<PRI>]: [Timestamp] [Device-ID] : %ASA-Level-Number: text` and EMBLEM prints a
+  # colon straight after <PRI>, so the body a relay hands on starts `:<RFC3339>: %ASA-`
+  # with the device-id empty. (ASA General Operations CLI Configuration Guide, Logging:
+  # "when EMBLEM is enabled, the syslog message prints colon (:) after <PRI> field".)
+  ':{device_time:timestamp}: %ASA-{severity:int}-{msg_id:int}: {message:rest}',
+  ':{device_time:timestamp}: %FTD-{severity:int}-{msg_id:int}: {message:rest}',
+  ':{device_time:timestamp}: %ASA-{subfacility:word}-{severity:int}-{msg_id:int}: {message:rest}',
+  # Same timestamp option without EMBLEM: no colon before the stamp, and the device-id
+  # (`logging device-id`) then the documented ` : ` separator before the message id.
+  # The envelope only skips that separator when it follows the header hostname, so the
+  # strategy takes it here.
+  '{device_time:timestamp} {device_id:word} : %ASA-{severity:int}-{msg_id:int}: {message:rest}',
+  '{device_time:timestamp} {device_id:word} : %FTD-{severity:int}-{msg_id:int}: {message:rest}',
+  '{device_time:timestamp} {device_id:word} : %ASA-{subfacility:word}-{severity:int}-{msg_id:int}: {message:rest}',
+  '{device_time:timestamp}: %ASA-{severity:int}-{msg_id:int}: {message:rest}',
+  '{device_time:timestamp}: %FTD-{severity:int}-{msg_id:int}: {message:rest}',
   '%ASA-{severity:int}-{msg_id:int}: {message:rest}',
   '%FTD-{severity:int}-{msg_id:int}: {message:rest}',
   '%ASA-{subfacility:word}-{severity:int}-{msg_id:int}: {message:rest}',
 ]
 
-# No [[timestamp]] declared: the syslog envelope timestamp is used automatically.
+# The EMBLEM/rfc5424 stamp is the device's own clock in UTC; without it the syslog
+# envelope timestamp (which a relay may have rewritten) is used automatically.
+[[timestamp]]
+field = "device_time"
+format = "rfc3339"
 
 [[sub]]
 field = "message"
@@ -53,6 +74,17 @@ constants = { direction = "inbound", action = "built" }
 # Teardown carries no direction: the first pair is the lower-security interface's side
 # whichever way the connection was built, so the endpoints keep neutral names
 # (lower_/higher_). The build event with the same connection_id has the direction.
+# Newer builds append two more documented fields after the reason, id_port_num and
+# rx_ring_num, each -1 when the platform does not track it. The reason itself is
+# unquoted free text with spaces, so only a raw regex can tell it from those trailing
+# integers; without this the reason would swallow them.
+[[sub]]
+field = "message"
+when = { msg_id = ["302014", "302016"] }
+kind = "pattern"
+regex = 'Teardown (?P<protocol>\S+) connection (?P<connection_id>\d+) for (?P<lower_interface>[^:]+):(?P<lower_ip>[^/ ]+)/(?P<lower_port>\d+) to (?P<higher_interface>[^:]+):(?P<higher_ip>[^/ ]+)/(?P<higher_port>\d+) duration (?P<duration>\S+) bytes (?P<bytes>\d+) (?P<teardown_reason>.*?) (?P<id_port_num>-?\d+) (?P<rx_ring_num>-?\d+)$'
+constants = { action = "teardown" }
+
 [[sub]]
 field = "message"
 when = { msg_id = ["302014", "302016"] }
@@ -111,6 +143,75 @@ when = { msg_id = "710003" }
 kind = "pattern"
 pattern = '{protocol:word} access denied by ACL from {src_ip:ip}/{src_port:int} to {dst_interface:word}:{dst_ip:ip}/{dst_port:int}'
 constants = { action = "deny" }
+
+# --- administrative and management-plane messages ---------------------------------
+# 111008 `User user executed the command string`, 111009 `User user executed cmd:string`,
+# 111010 `User username, running application-name from IP ip addr, executed cmd`.
+# The real device single-quotes every one of these values.
+[[sub]]
+field = "message"
+when = { msg_id = "111008" }
+kind = "pattern"
+pattern = "User '{user:text}' executed the '{command:text}' command."
+
+[[sub]]
+field = "message"
+when = { msg_id = "111009" }
+kind = "pattern"
+pattern = "User '{user:text}' executed cmd: {command:rest}"
+
+[[sub]]
+field = "message"
+when = { msg_id = "111010" }
+kind = "pattern"
+pattern = "User '{user:text}', running '{application:text}' from IP {src_ip:ip}, executed '{command:text}'"
+
+# 113006 `User user locked out on exceeding number successive failed authentication
+# attempts`.
+[[sub]]
+field = "message"
+when = { msg_id = "113006" }
+kind = "pattern"
+pattern = "User '{user:text}' locked out on exceeding '{max_fail:int}' successive failed authentication attempts"
+constants = { action = "deny" }
+
+# 502101/502102 `... local dbase: Uname: user Priv: privilege_level Encpass: *****`,
+# 502103 `User priv level changed: Uname: user From: level To: level`.
+[[sub]]
+field = "message"
+when = { msg_id = ["502101", "502102"] }
+kind = "pattern"
+patterns = [
+  'New user added to local dbase: Uname: {user:word} Priv: {privilege_level:int} Encpass: {_:rest}',
+  'User deleted from local dbase: Uname: {user:word} Priv: {privilege_level:int} Encpass: {_:rest}',
+]
+
+[[sub]]
+field = "message"
+when = { msg_id = "502103" }
+kind = "pattern"
+pattern = 'User priv level changed: Uname: {user:word} From: {privilege_level_from:int} To: {privilege_level_to:int}'
+
+# 710005 `{TCP|UDP|SCTP} request discarded from source_address/source_port to
+# interface_name:dest_address/service`. A management-plane hit gives no source port.
+[[sub]]
+field = "message"
+when = { msg_id = "710005" }
+kind = "pattern"
+patterns = [
+  '{protocol:word} request discarded from {src_ip:ip}/{src_port:int} to {dst_interface:word}:{dst_ip:ip}/{dst_service:word}',
+  '{protocol:word} request discarded from {src_ip:ip} to {dst_interface:word}:{dst_ip:ip}/{dst_service:word}',
+]
+constants = { action = "discard" }
+
+# 609002 `Teardown local-host zone_name:ip_address duration time`; the zone is `*` when
+# the host does not belong to one interface.
+[[sub]]
+field = "message"
+when = { msg_id = "609002" }
+kind = "pattern"
+pattern = 'Teardown local-host {src_zone:text}:{src_ip:ip} duration {duration:word}'
+constants = { action = "teardown" }
 
 [[sub]]
 field = "message"

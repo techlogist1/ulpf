@@ -25,3 +25,9 @@ garbage line that is not an access log entry
 1788516946.400    130 10.0.0.30 TCP_MISS/200 1000 GET http://trunc
 another line no parser claims
 1788516947.500    180 192.168.3.100 TCP_MISS/200 2560 GET http://example.com/last - DIRECT/93.184.216.34 text/html
+1613260836.625    355 172.17.0.1 TCP_TUNNEL_ABORTED/200 5319 CONNECT google.com:443 - HIER_DIRECT/142.250.184.174 -
+1613260824.636     71 172.17.0.1 NONE/503 0 CONNECT https:443 - HIER_NONE/- -
+1749046087.123      0 192.168.1.1 TCP_DENIED/403 3807 CONNECT westeurope.monitoring.azure.com:443 - HIER_NONE/- text/html
+1788596862.958      0 192.168.117.1 TCP_MEM_HIT/200 429 GET http://origin/logo.png - HIER_NONE/- image/png
+1788596865.461      0 192.168.117.1 NONE_NONE/400 3543 - ? - HIER_NONE/- text/html
+1788596864.360      0 192.168.117.1 TCP_DENIED/403 3394 GET http://blocked.test/x - HIER_NONE/- text/html

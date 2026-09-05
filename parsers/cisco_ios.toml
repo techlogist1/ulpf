@@ -152,3 +152,36 @@ patterns = [
   'Line protocol on Interface {interface:text}, changed state to {state:word}',
   'Interface {interface:text}, changed state to {state:word}',
 ]
+
+# --- SISF device tracking (Switch Integrated Security Features) --------------------
+# The theft messages name the type, then the binding: address, VLAN, the interface the
+# binding was learned on, the MAC, and the interface the conflicting binding arrived on.
+# Two key spellings are in the field: the short letters IOS/IOS-XE has always used
+# (A= V= I= M= New=) and the long ones newer Catalyst IOS-XE prints
+# (IP= VLAN= MAC= IF= "New I/F="). Sources: Cisco "Troubleshoot SISF on Catalyst 9000
+# Series Switches" (Doc ID 221562) for the long spelling and the message set, and
+# "Configuring SISF-based Device Tracking" for the theft categories (2026-09-05).
+# The address slot is `word`, not `ip`: SISF prints whatever the binding table holds,
+# including the malformed IPv6 text a spoofing attempt put there.
+[[sub]]
+field = "message"
+when = { mnemonic = ["IP_THEFT", "MAC_THEFT", "MAC_AND_IP_THEFT", "MAC_IP_THEFT"] }
+kind = "pattern"
+patterns = [
+  '{theft_type:text} Theft A={src_ip:word} V={vlan:int} I={interface:word} M={src_mac:word} New={new_interface:rest}',
+  '{theft_type:text} Theft IP={src_ip:word} VLAN={vlan:int} MAC={src_mac:word} IF={interface:word} New I/F={new_interface:rest}',
+]
+
+# PAK_DROP names the address, optionally the gateway (G=) or the MAC, the VLAN, the
+# interface, the protocol that carried the packet (P=, e.g. ARP, DHCPv6::REP, NDP::RA)
+# and a free-text reason, which runs to the end of the message.
+[[sub]]
+field = "message"
+when = { mnemonic = "PAK_DROP" }
+kind = "pattern"
+patterns = [
+  'Message dropped A={src_ip:word} G={gateway_ip:word} V={vlan:int} I={interface:word} P={packet_type:word} Reason={reason:rest}',
+  'Message dropped A={src_ip:word} V={vlan:int} I={interface:word} M={src_mac:word} P={packet_type:word} Reason={reason:rest}',
+  'Message dropped IP={src_ip:word} VLAN={vlan:int} MAC={src_mac:word} I/F={interface:word} P={packet_type:word} Reason={reason:rest}',
+]
+constants = { action = "dropped" }

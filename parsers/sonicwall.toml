@@ -29,13 +29,21 @@ format = "%Y-%m-%d %H:%M:%S %Z"
 field = "time"
 format = "%Y-%m-%d %H:%M:%S"
 
+# src/dst are the colon-joined address, port, interface and (with a resolved name)
+# hostname. SonicOS writes the separators whether or not it has the part: a management
+# hit has no interface (`10.0.0.1:51692`), an admin session no port
+# (`10.0.0.1::X0`), and a v6 flow carries the address in srcV6/dstV6 and leaves the v4
+# slot empty (`:28503:WAN:HOST`, `::LAN:HOST`). Each part is therefore an optional
+# group: a part the device left empty is the absence of that field, not a mis-split
+# value.
 [[sub]]
 field = "src"
 kind = "pattern"
 anchor = "full"
 patterns = [
-  '{src_ip:ip}:{src_port:int}:{src_interface:text}:{src_host:rest}',
-  '{src_ip:ip}:{src_port:int}:{src_interface:rest}',
+  '{?{src_ip:ip}}:{?{src_port:int}}:{?{src_interface:text}}:{src_host:rest}',
+  '{?{src_ip:ip}}:{?{src_port:int}}:{src_interface:rest}',
+  '{?{src_ip:ip}}:{src_port:int}',
   '{src_ip:ip}',
 ]
 
@@ -44,8 +52,9 @@ field = "dst"
 kind = "pattern"
 anchor = "full"
 patterns = [
-  '{dst_ip:ip}:{dst_port:int}:{dst_interface:text}:{dst_host:rest}',
-  '{dst_ip:ip}:{dst_port:int}:{dst_interface:rest}',
+  '{?{dst_ip:ip}}:{?{dst_port:int}}:{?{dst_interface:text}}:{dst_host:rest}',
+  '{?{dst_ip:ip}}:{?{dst_port:int}}:{dst_interface:rest}',
+  '{?{dst_ip:ip}}:{dst_port:int}',
   '{dst_ip:ip}',
 ]
 
