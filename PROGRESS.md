@@ -294,9 +294,19 @@ look at the captures and a grep of `ui/dist` for external references.
       0.0025 s; a small record with `values=4096` has `values_cut` 0 and every `value_len` null.
       116 tests, clippy clean. The pivot's 500 ms and `elapsed_ms` are lane 2P's; the server
       tests are lane 2T's (three of four green at 03:30 against 18fab3e).
-- [ ] L2b. UI plumbing: trust badges per tail row and a flagged-only key, live filter across
-      every field, export link with the filter's terms, traceback over `/bytes`, seen-with
-      wording, queue depth and windowed rate where the Live screen labelled the gaps.
+- [x] L2b. (lane 2U, merged 05:00 IST as eb4540e, seven commits 28bb681..c1696f3 plus merges of
+      main, D90) Trust flags per tail row as two-letter marks with `f` for flagged-only, the
+      filter over every field (terms, the export route's rule) with `e` exporting the filtered
+      view (a download of 181,096 bytes, every line carrying the term), the traceback over
+      `?bytes=0&values=4096` plus the bytes route (the 4 MB record: 1,267 ms to the ruler before,
+      62-75 ms after), `emitted_from` and the cut named, the windowed rates with the window in the
+      label and the run average beside them, the queue depth now with the high-water mark as a
+      rule, the seen-with wording, eight `v4-*` captures indexed, design.md rows and the overlay
+      keys. The Opus verifier reproduced twelve keyboard and count checks and nine screens with a
+      clean console; its two findings (the overlay lacked `f`/`e`; design.md and the screens index
+      lacked the rows) were closed by the builder's docs commit c1696f3 before the session limit
+      stopped the fix round. The lead viewed v4-live-flags-1280. Known, pre-existing: the tail's
+      header labels drift from their columns (`--cols` in em against two font sizes).
 - [x] L3. (merged 04:01 IST as a9c8ac6, 360faec + 59c9ea8, D80) `cef.toml`, `leef.toml`,
       `cloudtrail.toml` from the specifications (cited in each header) with samples and fixtures;
       class rules and field lists in both mappings, additive (the lead checked the 51 replaced
@@ -313,10 +323,23 @@ look at the captures and a grep of `ui/dist` for external references.
       `severity`, the syslog scale's name, so 10 -> Other and 1 -> Critical; a LEEF 2.0 delimiter
       written `0xHH` splits on the literal `0` with no counted failure. Lead's gate at a9c8ac6:
       116 tests, clippy clean, 15 parsers 0 problems, demo check 18/18.
-- [ ] L4. Tag builds the static CLI for Linux musl, macOS and Windows beside the installers; a
-      Windows smoke job runs `ulpf.exe` over the samples and reads `/api/status`; pre-release
-      tag pushed and green with the run URL and artifact names; README front door; one
-      headline number; `scripts/coverage.sh` and `docs/coverage.md` from the counter block.
+- [x] L4. (merged 04:58 IST as 1a7f05e, eleven commits 0ff8e98..f62ef5c, D85-D87) `cli` builds
+      the static CLI for x86_64 musl (static-pie, stripped: 8,904,048 bytes from 57,032,312),
+      aarch64 macOS and x86_64 Windows beside the installers on the one draft release with
+      SHA256SUMS; `smoke-windows` ran the engine on Windows for the first time (check, run over
+      the samples with framed asserted against the non-empty line count, verify, serve answering
+      `/api/status`, a drop emitted, stopped clean); tag `v0.1.0-rc1` green with all seven jobs
+      (https://github.com/techlogist1/ulpf/actions/runs/33995222954), the draft holds eight
+      assets and is not published; README rewritten as a front door with one headline (258,411
+      events/s, harness median, `-j 7`, output written) and every other figure labelled;
+      `scripts/coverage.sh` and `docs/coverage.md` (12 samples, 17 real, 29 generated corpus
+      files, every number from `--report-json`). The Opus verifier's seven findings (numbers one
+      format short of the merged tree, the format table, coverage rows, an unlabelled index-on
+      figure) closed in the fix round on the merged tree (CI green at 33997822506 and
+      33998224513). Known: the gh token lacks the `workflow` scope, so workflow files push only
+      over SSH (`ssh://git@ssh.github.com:443/techlogist1/ulpf.git`); the rc1 binaries predate
+      lanes D, I and 2T (7B tags rc3); `crates/ulpf/tests/server.rs:209` is a timing assertion
+      that failed once at load 12 (saw 96 of 250) and passes alone.
 - [x] L5. (pushed 03:59 IST, `origin/lane-5-xml` at 1b8aa19, D75 on the branch) Coherent, all
       of it: the seventh strategy `xml` on `xmlparser` 0.13.6 (MIT/Apache-2.0, zero deps; quick-xml
       measured at 23 allocations per parse and ruled out), values borrowed, entity-bearing values
@@ -363,11 +386,21 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] LD. `ulpf demo` plays the PROGRESS demo from the binary with `--auto`, `--check`, `--reset`;
       `scripts/demo.sh` the wrapper; the reset purges generated parsers from `parsers/`; a full
       `--auto` pass on the merged binary; the Windows smoke job runs `--check` (lane 7B).
-- [ ] L7. Windows first-class (lane 7, then 7B for the 04:07 items): installer from the release
-      page, SmartScreen sentence, webview runtime, sidecar and data directory through the platform
-      abstractions, designed failure states, the smoke job that installs and launches, a new
-      pre-release tag; the job object, the locked-store message, the bundle excluding generated
-      parsers, `CARGO_TARGET_DIR`, which installer the job exercised.
+- [~] L7. (lane 7 merged 05:03 IST, nine commits c6400e3..26d0bbd, D89; 7B dispatched 05:05)
+      Lane 7's builder hit the session limit before returning, so no structured report and no
+      verifier ran: the lead reviewed the diff (11 files, +367/-25: the offline WebView2 installer
+      mode, the failure sentences on the splash with `engine.log` named, the pinned-port hook,
+      the three Windows differences commented in ingest.rs, `sidecar.ps1`, `smoke-windows.ps1`,
+      the README's Windows section from the installers, three captures) and its CI: the branch is
+      green (https://github.com/techlogist1/ulpf/actions/runs/33998207341) and `app-smoke-windows`
+      installed the NSIS build into AppData\Local\ULPF, saw `server.url`, and printed `orphan:
+      ulpf.exe pid 1904 outlived a Stop-Process of the window`, which is the tester's finding
+      reproduced and the reason for 7B's job object. Tag `v0.1.0-rc2` is on the lane 7 head (run
+      33998466623; its draft held the two macOS assets when read at 05:00). 7B (Opus builder,
+      Fable verifier, ceiling 07:10): the job object, the locked-store sentence with a button, the
+      first-run copy and the bundle step excluding generated parsers, `CARGO_TARGET_DIR` and the
+      dist binary in the sidecar scripts, `--profile dist` in the `cli` and `bundle` jobs, `ulpf
+      demo --check` in the smoke job, which installer it exercised, tag rc3.
 - [x] LI. (merged 04:17 IST as 20a66c2, eight commits 3e85c8a..f68781d, D84) Intensity: Low /
       Balanced / Max with the machine's core count and the index state, persisted in
       `app_config_dir/intensity`, applied at sidecar start, a clean restart on change with the
@@ -378,9 +411,18 @@ look at the captures and a grep of `ui/dist` for external references.
       settings file disagrees with the engine, Quit leaves no `ulpf serve`; two findings closed
       (app/README's Menus paragraph contradicted the new section; the captures were unindexed).
       Not verified on Windows (the config path and TerminateProcess are named in comments).
-- [ ] LP. Profiles: `release` without LTO, `dist` with fat LTO for shipped binaries, installers,
-      the Docker image and the harness; the harness re-run on the dist build in a quiet window;
-      README and CI say which profile (lane 4B).
+- [x] LP. (merged 04:59 IST as 6752d02, adfafcc, D88) `release` without LTO (11,778,856
+      bytes), `dist` with fat LTO and one codegen unit (8,777,544 bytes, the pre-split release
+      within 96 bytes); the Dockerfile builds `--profile dist` and proves the binary static, the
+      harness builds and measures dist and prints the build it declared, docs/evaluation.md says
+      which build the numbers come from; measured within noise on this M1 Pro (best-of-8 dist
+      1.791 s against release 1.690 s). The Fable verifier confirmed the flags in `-v` output, a
+      cold harness build through run.sh, and a `--no-cache` docker build (230 s, static, 304
+      events emitted under `--network none`); its two findings (five `target/release` hits missing
+      from the grep table, all "stay"; scripts/README.md:14 to follow CI's profile) were docs and
+      are carried by 4B and 7B since the fix round hit the session limit. README's profile
+      sentence and CI's `--profile dist` are lanes 4B and 7B. The harness re-run on dist in a
+      quiet window is lane 4B's.
 - [x] L3b. (pushed 04:30 IST, `origin/lane-3b-cef-leef` at c6e13ca, a9c8ac6 + 4, never merges
       tonight) CEF's seventh header field is `cef_severity`, bucketed in both mappings on
       ArcSight's own ranges (0-3 Low, 4-6 Medium, 7-8 High, 9-10 Very-High to Critical; 14 of 14
@@ -400,6 +442,10 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 05:07 IST: gate at the merge of lanes 4, P, 2U and 7 (main 1a7f05e, 6752d02, eb4540e and the
+  lane 7 merge): 122 tests 0 failed, clippy rc 0, release binary 9,019,000 bytes
+  (Sep 6 04:24), `ulpf check --pending pending` 15 parsers, 2 mappings loaded; 0 problems, `ulpf demo --check`
+  39 ok (rc 0), no external reference in `ui/dist`. GATE GREEN.
 - 04:27 IST: gate at 97934a9 (the lane D follow-up): 122 tests 0 failed (116 + the four v4
   contract tests + the runner's two), clippy clean, `ulpf check --pending pending` 15 parsers, 2
   mappings, 0 problems, `ulpf demo --check` 39 ok, no external reference in `ui/dist`;
@@ -424,14 +470,15 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
-- 04:27 IST: on main: lanes 3, 1, 2P, D, 2T, I (each through the gate). Building: lane 2U (UI
-  plumbing, Opus; rebases on the merged main before merge), lane 4 (releases, Opus), lane 6
-  (index cost, branch), lane 7 (Windows, Opus, Fable review), lane 3b (branch, dispatched 04:03),
-  lane P (profiles, Opus, dispatched 04:09), lane 8 (branch, Fable, dispatched 04:08). Queued
-  behind their parents: 4B (README Windows quick start, the contributed line, `samples/*.log`
-  in every documented command, the profile sentence and CI's `--profile dist`), 7B (job object,
-  locked-store message, bundle and first-run copy excluding generated parsers, `CARGO_TARGET_DIR`,
-  which installer the smoke job exercised, `ulpf demo --check` in the smoke job).
+- 05:08 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7 (each through the gate; the last
+  four under one gate, 05:07). Branches pushed: lane-5-xml, lane-6-index, lane-3b-cef-leef,
+  lane-8-windows. Running: 7B (Opus builder, Fable verifier, ceiling 07:10) and 4B (Opus, Fable,
+  ceiling 07:00), dispatched 05:05 after the owner cleared agents in low-priority mode. The
+  session limit hit at about 04:55 (resets 08:00): lane 7's builder died before returning, lane
+  8's verifier and the fix rounds of P and 2U never ran; the lead reviewed those diffs and
+  captures directly and carried the open findings to 4B and 7B (recorded per lane above). Still
+  the lead's: lane 8's independent review (its Windows job is green), the second adversarial
+  pass, two demo passes, the final sequence, the report.
 
 ### Tried and abandoned (v4)
 - Lane 2P's headline "cut 4-8x": measured only at load 28-36. The controlled pair on a quiet

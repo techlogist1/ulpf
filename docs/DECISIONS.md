@@ -1562,3 +1562,129 @@ D60, D66, so a live control would lie or the engine would grow the reconfigurati
 one-sequencer design exists to avoid); printing the setting in the title (it would claim 7
 cores during the second the old 2-core engine still answers); a tray copy of the submenu
 (two sets of check marks for one choice).
+
+## D85. One draft release carries the CLI and the installers, and the CLI job waits for the bundle job
+**Decision.** A `v*` tag produces exactly one draft release. `tauri-action` creates it (D74);
+the `cli` matrix job builds the bare binary for `x86_64-unknown-linux-musl`,
+`aarch64-apple-darwin` and `x86_64-pc-windows-msvc`, strips it in the naming step (the musl
+binary was 57,032,312 bytes with debug info, 8,904,048 stripped) and proves it static with
+`file` and `ldd` on the file that ships; a `release` job with `needs: [bundle, cli]` on tags
+downloads them, writes `SHA256SUMS` and runs `gh release upload <tag> dist/* --clobber`. The
+`needs` is what guarantees the draft exists before the upload. The draft is not published by
+CI; a draft is invisible without a login, so the README links the release page and says the
+owner publishes it. **Anchor.** `.github/workflows/app.yml` jobs `cli` and `release`;
+`v0.1.0-rc1` (run 33995222954, eight assets). **Principle.** One place a stranger downloads
+from, and every artifact on it is the one the job proved. **Ruled out.** A separate
+`release.yml` (no cross-workflow `needs`, so two workflows would race to create two
+releases); `tauri-action`'s own plain-binary upload (it ships the app's binary, not a CLI
+matrix); `softprops/action-gh-release` (a second action for what `gh` does in one line).
+
+## D86. The Windows smoke job is the proof the binary runs where no human has launched it (D74 amended)
+**Decision.** `smoke-windows` runs on `windows-latest` on every push: `cargo build --release
+-p ulpf`, then in PowerShell `ulpf.exe check` (asserts `parsers` and `0 problems`), `ulpf.exe
+run samples ...` (asserts `framed` equals the non-empty line count of `samples/*` minus the
+one collector-folded FortiGate continuation, so the invariant moves with the tree instead of
+a hard-coded 304), `ulpf.exe verify`, then `Start-Process` on `ulpf.exe serve`, `/api/status`
+polled up to 30 s for a `version`, a sample copied into the watch directory, `/api/metrics`
+polled until `engine.emitted` covers it, `Stop-Process`, the pid asserted gone. Every
+assertion prints `::error::` and exits 1, and each script sets `$ErrorActionPreference`
+itself so pwsh's default cannot turn a native command's stderr into a thrown error. The
+first run of the engine on Windows: identical stage counts to macOS. D74 said a build nobody
+ran is a build, not a verification; this converts the Windows CLI build into the second (the
+installers are launched by lane 7's `app-smoke-windows`, which found the orphaned sidecar
+that 7B's job object answers). **Anchor.** `.github/workflows/app.yml` job `smoke-windows`.
+**Ruled out.** A hard-coded framed count (stale on the next sample); shelling out through
+bash on Windows (the point is the path a Windows user takes); a Linux or macOS smoke job
+(every local run and the harness already exercise both).
+
+## D87. One headline number; every other figure says what it measures (D62 and D66 amended)
+**Decision.** ULPF quotes one throughput figure: 258,411 events/s, ingest through JSON Lines
+on disk, seven worker threads, M1 Pro, median of three, from the committed neutral-harness
+scorecard `eval/results/ulpf-20260905T140426Z-33371/scorecard.md` (2026-09-05), beside
+264/264 correctness. Other figures appear once each, labelled with their thread count and
+output mode: the discarded-output figure (`--output /dev/null`, `-j 7`), the `-j 1` figure
+on the same file, the rate with the entity index on (measured with its command, `-j 7`,
+output written, `--pivot on` 33,537 against `--pivot off` 322,733 on the 497,607-line
+slice). README's "Honest numbers" is the one place they live; the paragraph that printed the
+harness figure and the `/dev/null` figure two lines apart, where they read as competing, is
+gone. A sample run's events/s is labelled startup noise. **Anchor.** README "Honest
+numbers"; the step 11 comment of the PROGRESS demo. **Ruled out.** The higher `/dev/null`
+number as the headline (it is the one no other tool's harness figure is comparable to); a
+range instead of a median (a range invites the top of it); dropping the `/dev/null` figure
+(it is the honest engine measurement the thread-scaling table is built from).
+
+## D88. Two build profiles: `release` builds anywhere, `dist` ships
+**Decision.** `[profile.release]` drops LTO (`lto = false`, default codegen units, `debug =
+1` unchanged); `[profile.dist]` inherits release with `lto = "fat"` and `codegen-units = 1`,
+exactly what release carried, and is what CI ships, what the Docker image contains and what
+the harness measures (`eval/tools/ulpf.toml` builds it, `eval/run.sh` prints the build it
+declared, `docs/evaluation.md` says which build the numbers come from). Evidence they are the
+same build: the pre-split release binary was 8,777,448 bytes, the dist binary 8,777,544 on a
+tree that has moved, the new default 11,778,856 (+34%, no LTO); `-v` shows `-C lto=fat -C
+codegen-units=1` on dist and neither flag on release. Measured on this M1 Pro in a quiet
+window the two are within noise (best-of-8 on a 500k slice at `-j 7`: dist 1.791 s, release
+1.690 s; medians 2.120 against 2.164). The demo stays on `target/release`: it is the build a
+viewer reproduces in a minute and the gap is noise. **Anchor.** `Cargo.toml`, `Dockerfile`
+(`--profile dist`, `target/dist/ulpf`), `eval/tools/ulpf.toml`, `eval/run.sh`,
+`docs/evaluation.md`. **Principle.** A build a tester can reproduce on any machine is worth
+more than any throughput the default path buys; the shipped number is labelled with the
+profile that made it. **Ruled out.** One profile with fat LTO for everyone (a Windows tester
+on a 16 GB box got a successful release build one time in four, and a minute every time with
+LTO off: a first build that fails three times in four is a broken front door); thin LTO on
+the default (nothing measured for it to recover); `dist` as the default with `release` opt-in
+(the default is what a stranger, README, `scripts/demo.sh` and the cold-start criterion
+type, and every `target/release` path stays correct). Cargo offers no alias for a custom
+profile and no stable output path across profiles, so every shipping caller spells
+`--profile dist` and `target/dist/` (Dockerfile, CI, the sidecar script).
+
+## D89. Windows is a first-class target: the installer carries its runtime, a failed start is a sentence, the log has a name
+**Decision.** `bundle.windows.webviewInstallMode` is `offlineInstaller`: the NSIS installer
+carries the full WebView2 runtime (about 127 MB in the docs, 267 MB measured) so a machine
+needs no network at install time and nothing is fetched at runtime; the sidecar is found
+beside the installed executable as `ulpf.exe` (the bundler strips the triple), the data
+directory under `%APPDATA%` through `app_data_dir()`, and the three Windows differences in
+the ingest path (separators joined by `PathBuf`, a rename that never crosses a volume, a
+path with spaces passed as one argument because the engine is spawned with `args`, not a
+shell) are named where they matter. A failed start is a sentence on the splash, then the way
+out, then where the output is: `engine missing` (reinstalling replaces it), `port in use`
+(the port, and `ULPF_APP_PORT` to move it), `The engine stopped (exit N). Its last words: ...
+The whole of its output is in <data>/engine.log` (the sidecar's stderr, truncated per start;
+the store and output are the durable record). The README's Windows section answers from the
+installers, not from memory: the release page (a draft until the owner publishes it), the
+SmartScreen dialog text and clicks, the prerequisites checked against Tauri's page, a
+`sidecar.ps1`, and the five human checks in the click order the video follows. CI's
+`app-smoke-windows` installs the NSIS build silently, launches it from the installed
+location, waits for `server.url` and `/api/status`, and prints which path it achieved; its
+first run found `ulpf.exe` outliving a `Stop-Process` of the window, the fact 7B's job
+object (D91) answers. **Anchor.** `app/src-tauri/tauri.conf.json`, `start` and `SPLASH` in
+`app/src-tauri/src/lib.rs`, `app/src-tauri/src/ingest.rs`, `app/scripts/sidecar.ps1`,
+`app/scripts/smoke-windows.ps1`, `app/README.md`, `docs/screens/app-error-*.png`. **Ruled
+out.** `downloadBootstrapper` (the default; fetches at install time, and a demo machine may
+be offline); a blank window or a spinner on a failed start (the tester saw one); a CI
+artifact as the download (invisible without a login and gone in ninety days).
+
+## D90. The UI reads the v4 contract: flags as marks, one filter rule shared with the export, the record's bytes from the bytes route
+**Decision.** Trust flags (D77) are derived once at flatten time in `row()` from the fields
+`docs/api.md` names and rendered by `Flags.svelte` as two-letter outlined mono marks in a 7em
+tail column (`np pf su sn tr te cu um`N `u8`), every mark the same `--warn` colour because
+every mark is the same kind of fact; `f` shows only flagged rows and the head counts them.
+The filter takes space-separated terms, each a case-insensitive substring of the whole line
+held as one lowercased string per row (the first 64 KiB: a 4 MB record kept whole would put
+2 GB in a full tail), which is the export route's own rule, so the export of a filtered view
+(`e`: jsonl or csv, this view's raw id range or everything) is the view; it writes nothing,
+so it is a choice, not a confirmation. The traceback asks `?bytes=0&values=4096` and reads
+`/api/events/{id}/bytes` as an `ArrayBuffer`: on the 4,000,001-byte record the old client
+pulled one 28,001,884-byte JSON and painted the ruler in 1,267 ms (median of three), this one
+pulls 18,283 bytes of JSON plus the 4,000,001 bytes and paints in 62-75 ms, names where the
+emitted line came from and what was cut; an older server without the route still answers
+with `hex` and is decoded as before. Live's two large numbers are the windowed rates with the
+window in the label and the run average beside them; the queue bar is the depth now with the
+high-water mark as a rule across it; the status line carries the depth on every screen;
+Pivot's seen-with reads "in N of the M newest events". **Anchor.** `ui/src/Flags.svelte`,
+`ui/src/state.svelte.js` (`flagsOf`, `row`), `ui/src/Live.svelte`, `ui/src/Traceback.svelte`,
+the `/* ---- v4: flags, filter, export ---- */` section of `ui/src/app.css`,
+`docs/screens/v4-*.png`. **Ruled out.** Spelling the flag names in the row (thirty em the tail
+has not got) or any per-row colour or score (D77); deriving flags per render (nine fields per
+visible row per frame); the old field-by-field filter (cannot promise the export is the
+view); `Confirm.svelte` for the export (reserved for actions that write); a third large rate
+in the hero (it squeezed the funnel's loss labels at 1280).
