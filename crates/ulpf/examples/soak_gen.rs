@@ -516,7 +516,7 @@ fn main() -> std::io::Result<()> {
                         chunk.extend_from_slice(buf);
                         n += 1;
                         // one write per ~20 ms of events, no fsync
-                        if n % (rate / 50).max(1) == 0 {
+                        if n.is_multiple_of((rate / 50).max(1)) {
                             if f.write_all(&chunk).is_ok() {
                                 counts.file_events.fetch_add(n, Relaxed);
                                 counts.file_bytes.fetch_add(chunk.len() as u64, Relaxed);

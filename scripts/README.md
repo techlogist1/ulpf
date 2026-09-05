@@ -31,7 +31,8 @@ scripts/soak.sh --bin ./target/release/ulpf --minutes 12 --file-rate 150000 \
                 [--udp 127.0.0.1:5514 --udp-rate 20000] \
                 [--tcp 127.0.0.1:5515 --tcp-rate 20000] \
                 [--events-target 10000000] [--watch DIR] [--out DIR]
-scripts/soak.sh --selftest          # generator + both socket senders, ~20 s, no server
+scripts/soak.sh --selftest          # generator + both socket senders, ~45 s, no server
+scripts/soak.sh --report-only DIR   # re-report a finished — or interrupted — run
 ```
 
 Starts `serve` on a fresh store watching `--out DIR/watch` with `--tail 1000`, appends
@@ -58,7 +59,17 @@ Everything lands under `--out`: `plan.txt`, `serve.log` (with the counter block)
 achieved rates, RSS min/max/slope in MB/min over the last five minutes (a leak is a
 positive slope that does not flatten), queue high-water and backpressure blocks with what
 the burst phase did to them, SSE frames and max gap, and `SOAK PASS`/`SOAK FAIL` with
-every number. Exit 0 only on PASS.
+every number. Exit 0 on PASS, 1 on FAIL, 3 on PARTIAL.
+
+`--report-only DIR` prints that same report over a directory that already exists, and is
+the way to get numbers out of a run that was killed. Every input is optional: with no
+counter block in `serve.log` it falls back to `final-metrics.json` (polled just before
+shutdown) or the last `/api/metrics` sample and says so on the header line; with no
+`verify.txt` it runs `ulpf verify` itself when `SOAK_BIN` points at a binary; with no
+`emitted` anywhere it counts the lines of `out.jsonl`. A reconciliation line it cannot
+decide prints `??` instead of `ok`/`FAIL`, and the report ends with a
+`NOT MEASURED` list naming every input it did not have and `SOAK PARTIAL`. A missing
+number is never reported as a passing one.
 
 The load generator is `crates/ulpf/examples/soak_gen.rs`, built on demand into
 `$CARGO_TARGET_DIR/release/examples/soak_gen` (pass `--gen PATH` to skip the build). It
@@ -70,12 +81,18 @@ on a socket are flattened to one line first: syslog is one message per datagram 
 line, so a multi-line sample would otherwise arrive as several events and no soak with
 listeners could ever reconcile.
 
-`--selftest N` proves the generator before you trust a soak: N events, all distinct, and
-the share the real parser registry still detects (99.5% on the shipped samples). The same
-`--selftest` run checks both socket senders against a Python UDP/TCP listener and fails
-unless TCP arrives exactly and UDP within 2%. The listeners the senders aim at do not
-exist in the binary yet — `--udp`/`--tcp` also pass `--syslog-udp`/`--syslog-tcp` to
-`serve`, so a soak with them only runs once that half lands.
+`--selftest` proves the generator before you trust a soak: 200k events, all distinct, and
+the share the real parser registry still detects (99.5% on the shipped samples). It then
+runs both socket senders at a Python UDP/TCP listener twice — newline framing and RFC 6587
+octet counting — and fails unless TCP arrives exactly and UDP within 2%.
+
+The listeners the senders aim at do not exist in the binary yet. `--udp ADDR --udp-rate N`
+and `--tcp ADDR --tcp-rate N` also pass `--syslog-udp`/`--syslog-tcp` to `serve`, so the
+moment that half lands the full soak runs unchanged: the report already reconciles the
+sockets separately from the file, comparing `counts.json`'s `udp_events`/`tcp_events`
+against the events `/api/metrics` attributes to the `udp/<peer>` and `tcp/<peer>` sources.
+A UDP shortfall with zero sender errors is a kernel drop rather than a lost event, and the
+report says so where you read it.
 
 Deviating from the defaults: `--listen` (7878) to soak beside another server, `--gen`,
 `--unknown`, `--burst-secs 0` for no burst, `--tcp-octet-counting` for RFC 6587 framing.

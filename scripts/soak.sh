@@ -9,12 +9,13 @@
 #                   [--udp 127.0.0.1:5514 --udp-rate 20000] [--tcp 127.0.0.1:5515 --tcp-rate 20000] \
 #                   [--events-target 10000000] [--watch DIR] [--out DIR]
 #   scripts/soak.sh --selftest [--gen PATH]      # generator + socket senders, ~20 s, no server
+#   scripts/soak.sh --report-only DIR            # re-report a finished or interrupted run
 set -uo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 BIN=""; GEN=""; MINUTES=12; FILE_RATE=100000; UDP=""; UDP_RATE=0; TCP=""; TCP_RATE=0
 EVENTS_TARGET=0; WATCH=""; OUT=""; LISTEN=127.0.0.1:7878; BURST_SECS=60; BURST_MULT=3
-UNKNOWN="$ROOT/heldout/mikrotik.log"; SELFTEST=0; TCP_OCTET=""
+UNKNOWN="$ROOT/heldout/mikrotik.log"; SELFTEST=0; TCP_OCTET=""; REPORT_ONLY=""
 
 die() { printf 'soak: %s\n' "$*" >&2; exit 2; }
 
@@ -37,13 +38,283 @@ while [ $# -gt 0 ]; do
     --burst-mult) BURST_MULT=$2; shift 2 ;;
     --unknown) UNKNOWN=$2; shift 2 ;;
     --selftest) SELFTEST=1; shift ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    --report-only) REPORT_ONLY=$2; shift 2 ;;
+    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
     *) die "unknown argument $1" ;;
   esac
 done
 
 command -v python3 >/dev/null || die "python3 is required (SSE client, samplers, report)"
 command -v curl >/dev/null || die "curl is required"
+
+# ---------------------------------------------------------------- report
+# `report_run DIR [DRAIN_SECS]` prints the one-screen report for a run directory and
+# exits 0 PASS / 1 FAIL / 3 PARTIAL. Every input is optional: a run that was killed
+# mid-flight still reports what it proved, and names what it cannot say. With
+# SOAK_BIN set it runs `ulpf verify` itself when verify.txt is absent.
+report_run() {
+  python3 - "$1" "${2:-}" <<'PY'
+import json, os, re, subprocess, sys
+out = sys.argv[1]
+drain = float(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[2] else None
+BIN = os.environ.get("SOAK_BIN", "")
+
+def read(p, d=""):
+    try:
+        return open(f"{out}/{p}").read()
+    except OSError:
+        return d
+
+def jload(p, d=None):
+    try:
+        return json.load(open(f"{out}/{p}"))
+    except Exception:
+        return d
+
+def num(pat, text, cast=int, default=None):
+    m = re.search(pat, text)
+    return cast(m.group(1)) if m else default
+
+def n(v, w=14):
+    return f"{v:>{w},}" if isinstance(v, int) else f"{'unknown':>{w}}"
+
+missing = []          # inputs this report did not have
+unknown = []          # reconciliation lines it therefore could not decide
+fail = []
+
+counts = jload("counts.json")
+if counts is None:
+    missing.append("counts.json — what the generator sent is unknown, so nothing reconciles against it")
+    counts = {}
+elif not counts.get("done"):
+    missing.append("counts.json is a mid-run sample (\"done\": false): the generator never wrote its final total")
+serve = read("serve.log")
+if not serve:
+    missing.append("serve.log")
+sse = jload("sse-summary.json")
+if sse is None:
+    missing.append("sse-summary.json — the SSE monitor never wrote its summary (killed?)")
+    sse = {}
+metrics = [json.loads(l) for l in read("metrics.jsonl").splitlines() if l.strip().startswith("{")]
+metrics = [m for m in metrics if "engine" in m]
+final = jload("final-metrics.json")
+last = final or (metrics[-1] if metrics else None)
+
+# ---- engine numbers: the shutdown counter block, else the last metrics sample
+KEYS = ("framed", "stored", "detected", "no_parser", "parsed", "normalized", "emitted")
+if "stages:" in serve:
+    stages = {k: num(rf"stages:.*?\b{k} (\d+)", serve) for k in KEYS}
+    source = "the counter block serve printed on a clean shutdown"
+    rate = num(r"-> ([\d.]+) events/s", serve, float)
+    wall = num(r"events in ([\d.]+) s", serve, float)
+    mbs = num(r"events/s, ([\d.]+) MB/s", serve, float)
+    hw = num(r"high-water (\d+)/", serve)
+    cap = num(r"high-water \d+/(\d+)", serve)
+    blocks = num(r"backpressure blocks (\d+)", serve)
+    batches = num(r"queue: (\d+) batches", serve)
+elif last:
+    e = last["engine"]
+    stages = {k: e.get(k) for k in KEYS}
+    when = "polled just before shutdown" if final else "the LAST 5 s /api/metrics poll, so up to 5 s of events are missing from every number below"
+    source = f"{when} — serve printed no counter block, so it was killed rather than stopped"
+    missing.append("the final counter block (serve was killed, not SIGINTed): engine numbers are a metrics sample")
+    rate, wall, mbs = e.get("events_per_sec"), e.get("elapsed_secs"), e.get("mb_per_sec")
+    hw, cap = e.get("queue_high_water"), e.get("queue_capacity")
+    blocks, batches = e.get("backpressure_blocks"), e.get("batches")
+else:
+    stages = dict.fromkeys(KEYS)
+    source = "nothing — no counter block in serve.log and no /api/metrics sample"
+    missing.append("every engine number: no counter block and no metrics.jsonl")
+    rate = wall = mbs = hw = cap = blocks = batches = None
+
+# out.jsonl is the only independent witness to `emitted` when the engine never said it
+outp = f"{out}/out.jsonl"
+out_bytes = os.path.getsize(outp) if os.path.exists(outp) else None
+out_lines = None
+if out_bytes is not None and stages["emitted"] is None:
+    r = subprocess.run(["wc", "-l", outp], capture_output=True, text=True).stdout.split()
+    out_lines = int(r[0]) if r else None
+
+verify = read("verify.txt")
+if not verify and BIN and os.path.isdir(f"{out}/store"):
+    verify = subprocess.run([BIN, "verify", "--store", f"{out}/store"], capture_output=True, text=True).stdout
+    open(f"{out}/verify.txt", "w").write(verify)
+records = num(r"verified (\d+) records", verify)
+corrupt = num(r"records, (\d+) corrupt", verify)
+chain_ok = "chain ok" in verify
+if records is None:
+    missing.append("ulpf verify over the store (no verify.txt; re-run with SOAK_BIN=<ulpf> to have this report run it)")
+
+sent_file = counts.get("file_events")
+sent_udp = counts.get("udp_events", 0)
+sent_tcp = counts.get("tcp_events", 0)
+sent = None if sent_file is None else sent_file + sent_udp + sent_tcp
+elapsed = counts.get("elapsed_secs") or 0.0
+
+# per-source counts, so the syslog listeners reconcile separately from the file
+srcs = (last or {}).get("sources") or []
+def by_prefix(p):
+    return sum(s.get("events", 0) for s in srcs if str(s.get("name", "")).startswith(p))
+got_udp, got_tcp = by_prefix("udp/"), by_prefix("tcp/")
+if (sent_udp or sent_tcp) and not srcs:
+    missing.append("per-source events (no metrics sample): udp/tcp cannot be reconciled separately")
+
+rss = [l.split("\t") for l in read("rss.tsv").splitlines()[1:] if "\t" in l]
+rss = [(float(a), int(b), int(c)) for a, b, c in rss]
+if not rss:
+    missing.append("rss.tsv — no memory samples, so nothing is known about a leak")
+
+def slope(rows):
+    if len(rows) < 3:
+        return None
+    t0 = rows[0][0]
+    xs = [r[0] - t0 for r in rows]
+    ys = [r[1] / 1024.0 for r in rows]
+    mx = sum(xs) / len(xs); my = sum(ys) / len(ys)
+    den = sum((x - mx) ** 2 for x in xs)
+    return None if den == 0 else sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / den * 60.0
+
+def sl(v):
+    return "n/a" if v is None else f"{v:+.2f} MB/min"
+
+burst = [m for m in metrics if (m.get("gen") or {}).get("phase") == 2]
+pre = [m for m in metrics if (m.get("gen") or {}).get("phase") == 1]
+def eng(m, k):
+    return m["engine"].get(k, 0)
+burst_blocks = (eng(burst[-1], "backpressure_blocks") - eng(burst[0], "backpressure_blocks")) if len(burst) > 1 else None
+burst_hw = max((eng(m, "queue_high_water") for m in burst), default=None)
+pre_blocks = eng(pre[-1], "backpressure_blocks") if pre else None
+pre_hw = max((eng(m, "queue_high_water") for m in pre), default=None)
+
+P = print
+P("=" * 78)
+P(f"ULPF soak report   {out}")
+plan = read("plan.txt").strip()
+if plan:
+    P(plan)
+P(f"engine numbers from: {source}")
+P("=" * 78)
+if sent_file is None:
+    P("generator   counts.json missing — nothing known about what was sent")
+else:
+    P(f"generator   file {sent_file:>12,} events in {elapsed:8.1f} s = {sent_file/max(elapsed,1e-9):>9,.0f} ev/s"
+      f"   ({counts.get('file_bytes',0)/1048576:.0f} MB, {counts.get('behind_chunks',0)} chunks behind schedule)")
+if sent_udp or sent_tcp:
+    P(f"            udp  {sent_udp:>12,} sent ({counts.get('udp_errors',0)} errors)   "
+      f"tcp {sent_tcp:>12,} sent ({counts.get('tcp_connects',0)} connections, {counts.get('tcp_errors',0)} errors)")
+P(f"engine      {n(stages['framed'], 12)} events in {wall or 0:8.1f} s = {rate or 0:>9,.0f} ev/s   "
+  f"({mbs or 0:.1f} MB/s, {batches or 0:,} batches)")
+P(f"queue       high-water {hw}/{cap}   backpressure blocks {blocks}   "
+  f"engaged: {'YES' if (blocks or 0) > 0 else 'no' if blocks is not None else 'unknown'}")
+if burst_blocks is not None:
+    P(f"  before    phase 1 (1x): {pre_blocks:,} blocks, queue high-water {pre_hw}/{cap}")
+    P(f"  burst     phase 2 (3x): +{burst_blocks:,} blocks, queue high-water {burst_hw}/{cap}")
+else:
+    P("  burst     no phase-2 metrics samples in this run")
+if rss:
+    mb = [r[1] / 1024.0 for r in rss]
+    span = rss[-1][0] - rss[0][0]
+    half = [r for r in rss if r[0] >= rss[0][0] + span / 2]
+    last5 = [r for r in rss if r[0] >= rss[-1][0] - 300]
+    P(f"RSS         min {min(mb):.1f} MB  max {max(mb):.1f} MB  last {mb[-1]:.1f} MB   over {span:.0f} s, {len(rss)} samples")
+    P(f"            slope all {sl(slope(rss))}   2nd half {sl(slope(half))}   last 5 min {sl(slope(last5))}")
+    P(f"threads     min {min(r[2] for r in rss)}  max {max(r[2] for r in rss)}")
+if out_bytes is not None:
+    P(f"output      out.jsonl {out_bytes/1048576:,.0f} MB" + (f", {out_lines:,} lines (counted here)" if out_lines is not None else ""))
+P(f"SSE         {sse.get('frames',0):,} frames {sse.get('by_event',{})}   {sse.get('events',0):,} tail events   "
+  f"skipped {sse.get('skipped',0):,}")
+P(f"            max gap {sse.get('max_gap_secs',0):.2f} s   gaps > 5 s: {sse.get('gaps_over_5s',0)}   reconnects {sse.get('reconnects',0)}")
+P(f"drain       {'unknown (run did not reach the drain)' if drain is None else f'{drain:.0f} s after the last append'}")
+if verify.strip():
+    for l in verify.strip().splitlines():
+        P(f"store       {l}")
+for k in ("signals: ", "parse_failed by reason: ", "inference: ", "drift: "):
+    m = re.search(rf"^{k}.*$", serve, re.M)
+    if m:
+        P(m.group(0))
+P("-" * 78)
+
+def check(label, a, b):
+    if a is None or b is None:
+        unknown.append(label)
+        P(f"  ??    {label:<34} {n(a)}  vs  {n(b)}")
+        return
+    if a != b:
+        fail.append(f"{label}: {a:,} != {b:,} (delta {b-a:+,})")
+    P(f"  {'ok  ' if a == b else 'FAIL'}  {label:<34} {a:>14,}  vs  {b:>14,}")
+
+P("reconciliation")
+# A run that never drained has the tailer legitimately behind the appender; calling that
+# a lost event would be a lie, so it is reported as a lag and the verdict stays partial.
+drained = bool(counts.get("done")) and "stages:" in serve
+if sent is not None and stages["framed"] is not None and not drained:
+    # counts.json and the metrics poll are written by different processes at different
+    # instants; only the `gen` block recorded inside a metrics sample is a paired reading,
+    # so the lag is measured from that when it is there.
+    paired = (last or {}).get("gen") if last else None
+    if paired and paired.get("file_events") is not None:
+        a = paired["file_events"] + paired.get("udp_events", 0) + paired.get("tcp_events", 0)
+        b = last["engine"]["framed"]
+        how = "paired sample"
+    else:
+        a, b, how = sent, stages["framed"], "unpaired files (counts.json vs the metrics poll)"
+    lag = a - b
+    unknown.append("sent vs framed (never drained)")
+    P(f"  ??    {'sent (file+udp+tcp)   vs framed':<34} {a:>14,}  vs  {b:>14,}")
+    P(f"        the run never drained, so this is a lag, not a loss: {lag:+,} events "
+      f"({lag/max(rate or 1,1):+.1f} s) from the {how}.")
+else:
+    check("sent (file+udp+tcp)   vs framed", sent, stages["framed"])
+check("framed                vs stored", stages["framed"], stages["stored"])
+check("stored                vs emitted", stages["stored"], stages["emitted"] if stages["emitted"] is not None else out_lines)
+check("stored                vs verify records", stages["stored"], records)
+if sent_udp or sent_tcp or got_udp or got_tcp:
+    check("udp sent              vs udp source events", sent_udp, got_udp if srcs else None)
+    check("tcp sent              vs tcp source events", sent_tcp, got_tcp if srcs else None)
+    if srcs and got_udp < sent_udp and not counts.get("udp_errors"):
+        P("  note  a UDP shortfall with 0 sender errors is a kernel drop, not a lost event:")
+        P("        `netstat -s -p udp` names it (dropped due to full socket buffers).")
+if corrupt:
+    fail.append(f"{corrupt} corrupt records in the store")
+if records is not None and not chain_ok:
+    fail.append("the store's integrity chain did not verify")
+P(f"  {'ok  ' if records is not None and not corrupt else '??  '}  {'corrupt records':<34} "
+  f"{corrupt if corrupt is not None else 'unknown':>14}   chain {'ok' if chain_ok else 'not verified'}")
+
+# The counter block is not noise: it says `time_error` and `parse_failed` on a clean run.
+block = re.compile(r"^(stages:|signals:|queue:|inference:|drift:|parse_failed|pending |files |[\d,]+ events)")
+noise = [l for l in serve.splitlines()
+         if re.search(r"input problem|load problem|shrank|panic|error|reload:", l, re.I)
+         and not block.match(l.strip())]
+if sse.get("gaps_over_5s"):
+    fail.append(f"{sse['gaps_over_5s']} SSE gaps over 5 s (max {sse['max_gap_secs']:.1f} s)")
+if sse.get("errors"):
+    noise += [f"sse: {e}" for e in sse["errors"][:5]]
+P("-" * 78)
+P(f"server log notes: {len(noise)}")
+for l in noise[:10]:
+    P(f"  {l.strip()[:110]}")
+if missing:
+    P("-" * 78)
+    P(f"NOT MEASURED ({len(missing)}) — this report is partial:")
+    for m in missing:
+        P(f"  - {m}")
+    if unknown:
+        P(f"  therefore undecidable: {', '.join(unknown)}")
+P("=" * 78)
+P("SOAK FAIL" if fail else "SOAK PARTIAL" if (missing or unknown) else "SOAK PASS")
+for f in fail:
+    P(f"  {f}")
+sys.exit(1 if fail else 3 if (missing or unknown) else 0)
+PY
+}
+
+if [ -n "$REPORT_ONLY" ]; then
+  [ -d "$REPORT_ONLY" ] || die "$REPORT_ONLY is not a directory"
+  REPORT_ONLY=$(cd "$REPORT_ONLY" && pwd)
+  report_run "$REPORT_ONLY" "" | tee "$REPORT_ONLY/report.txt"
+  exit ${PIPESTATUS[0]}
+fi
 
 # The generator is an example of this workspace; build it if it is not already there.
 if [ -z "$GEN" ]; then
@@ -65,9 +336,12 @@ if [ "$SELFTEST" = 1 ]; then
   trap 'rm -rf "$TD"' EXIT
   printf '== generator: 200000 events ==\n'
   "$GEN" --samples "$ROOT/samples" --parsers "$ROOT/parsers" ${UNKNOWN:+--unknown "$UNKNOWN"} --selftest 200000 || die "generator selftest failed"
-  printf '== sockets: udp 127.0.0.1:5599, tcp 127.0.0.1:5598, 5 s ==\n'
-  python3 - "$TD/listener.json" >"$TD/listener.log" 2>&1 <<'PY' &
+  RC=0
+  for FRAMING in line octet; do
+  printf '== sockets: udp 127.0.0.1:5599, tcp 127.0.0.1:5598 (%s framing), 5 s ==\n' "$FRAMING"
+  python3 - "$TD/listener.json" "$FRAMING" >"$TD/listener-$FRAMING.log" 2>&1 <<'PY' &
 import json, socket, sys, threading, time
+framing = sys.argv[2]
 udp_n = tcp_n = 0
 udp_b = tcp_b = 0
 tcp_conns = 0
@@ -98,8 +372,20 @@ def tcp_conn(c):
         if not d:
             break
         tcp_b += len(d); rest += d
-        *lines, rest = rest.split(b"\n")
-        tcp_n += len(lines)
+        if framing == "line":
+            *lines, rest = rest.split(b"\n")
+            tcp_n += len(lines)
+            continue
+        # RFC 6587 octet counting: <len> SP <body>
+        while True:
+            sp = rest.find(b" ")
+            if sp < 0 or not rest[:sp].isdigit():
+                break
+            want = int(rest[:sp])
+            if len(rest) < sp + 1 + want:
+                break
+            rest = rest[sp + 1 + want:]
+            tcp_n += 1
 def tcp_loop():
     global tcp_conns
     while time.time() < stop:
@@ -117,8 +403,9 @@ json.dump({"udp_events": udp_n, "udp_bytes": udp_b, "tcp_events": tcp_n, "tcp_by
 PY
   LPID=$!
   sleep 1
+  OCTET=""; [ "$FRAMING" = octet ] && OCTET=--tcp-octet-counting
   "$GEN" --samples "$ROOT/samples" --counts "$TD/counts.json" --socket-secs 5 \
-    --udp 127.0.0.1:5599 --udp-rate 20000 --tcp 127.0.0.1:5598 --tcp-rate 20000 >"$TD/gen.json" || die "socket send failed"
+    --udp 127.0.0.1:5599 --udp-rate 20000 --tcp 127.0.0.1:5598 --tcp-rate 20000 $OCTET >"$TD/gen.json" || die "socket send failed"
   wait $LPID
   python3 - "$TD/gen.json" "$TD/listener.json" <<'PY'
 import json, sys
@@ -134,12 +421,18 @@ for k in ("udp_events", "tcp_events"):
 print(f"tcp connections {l['tcp_connections']}, udp errors {g['udp_errors']}, tcp errors {g['tcp_errors']}")
 sys.exit(0 if ok else 1)
 PY
-  exit $?
+  [ $? = 0 ] || RC=1
+  done
+  exit $RC
 fi
 
 # ---------------------------------------------------------------- setup
 [ -n "$BIN" ] || die "--bin PATH is required"
 [ -x "$BIN" ] || die "$BIN is not executable"
+# The syslog listeners land after the senders; fail on that plainly rather than on a clap error.
+if [ -n "$UDP$TCP" ] && ! "$BIN" serve --help 2>&1 | grep -q -- --syslog-udp; then
+  die "$BIN serve has no --syslog-udp/--syslog-tcp yet: the listeners have not landed. Drop --udp/--tcp to soak the file path alone."
+fi
 [ -n "$OUT" ] || OUT=$ROOT/soak/run-$(date +%Y%m%d-%H%M%S)
 mkdir -p "$OUT" || die "cannot create $OUT"
 OUT=$(cd "$OUT" && pwd)
@@ -304,11 +597,19 @@ sleep 0.5
   ${UDP:+--udp "$UDP" --udp-rate "$UDP_RATE"} ${TCP:+--tcp "$TCP" --tcp-rate "$TCP_RATE"} $TCP_OCTET \
   >"$OUT/gen.json" 2>"$OUT/gen.log" &
 GEN_PID=$!
-printf 'soak: generator pid %s, %s phases, counts %s\n' "$GEN_PID" "${#PHASES[@]}" "$OUT/counts.json"
+printf 'soak: generator pid %s, %s phases, counts %s\n' "$GEN_PID" "$((${#PHASES[@]} / 2))" "$OUT/counts.json"
 
+SERVE_DIED=0
 while kill -0 "$GEN_PID" 2>/dev/null; do
   sleep 10
-  kill -0 "$SERVE_PID" 2>/dev/null || { printf 'soak: serve died mid-run\n' >&2; break; }
+  if ! kill -0 "$SERVE_PID" 2>/dev/null; then
+    wait "$SERVE_PID"; SERVE_STATUS=$?
+    printf 'serve exited on its own after %s s, status %s\n' "$SECONDS" "$SERVE_STATUS" >"$OUT/serve-died.txt"
+    printf 'soak: serve died mid-run (status %s)\n' "$SERVE_STATUS" >&2
+    SERVE_DIED=1
+    kill -TERM "$GEN_PID" 2>/dev/null
+    break
+  fi
   printf 'soak: %s | %s\n' "$(date +%H:%M:%S)" "$(cat "$OUT/counts.json" 2>/dev/null)"
 done
 wait "$GEN_PID"
@@ -319,7 +620,7 @@ wait "$GEN_PID"
 SENT=$(python3 -c 'import json,sys; c=json.load(open(sys.argv[1])); print(c["file_events"]+c["udp_events"]+c["tcp_events"])' "$OUT/counts.json")
 printf 'soak: generator done, %s events sent; draining\n' "$SENT"
 DRAIN_START=$(date +%s); LAST=-1; STALL=0
-while :; do
+while [ "$SERVE_DIED" = 0 ]; do
   FRAMED=$(curl -fsS "http://$LISTEN/api/metrics" | python3 -c 'import json,sys; print(json.load(sys.stdin)["engine"]["framed"])' 2>/dev/null || echo -1)
   [ "$FRAMED" -ge "$SENT" ] && break
   if [ "$FRAMED" = "$LAST" ]; then STALL=$((STALL + 1)); else STALL=0; LAST=$FRAMED; fi
@@ -330,6 +631,7 @@ DRAIN=$(( $(date +%s) - DRAIN_START ))
 printf 'soak: drained in %s s\n' "$DRAIN"
 
 # ---------------------------------------------------------------- stop
+curl -fsS "http://$LISTEN/api/metrics" -o "$OUT/final-metrics.json" 2>/dev/null
 kill -TERM "$MON_PID" 2>/dev/null; wait "$MON_PID" 2>/dev/null
 kill -INT "$SERVE_PID" 2>/dev/null
 for _ in $(seq 240); do kill -0 "$SERVE_PID" 2>/dev/null || break; sleep 0.5; done
@@ -340,134 +642,6 @@ trap - EXIT
 "$BIN" verify --store "$OUT/store" >"$OUT/verify.txt" 2>&1
 printf 'soak: %s\n' "$(head -1 "$OUT/verify.txt")"
 
-python3 - "$OUT" "$DRAIN" <<'PY' | tee "$OUT/report.txt"
-import json, re, sys
-out, drain = sys.argv[1], float(sys.argv[2])
-def read(p, d=""):
-    try:
-        return open(f"{out}/{p}").read()
-    except OSError:
-        return d
-def jload(p, d=None):
-    try:
-        return json.load(open(f"{out}/{p}"))
-    except Exception:
-        return d
-
-counts = jload("counts.json", {}) or {}
-serve = read("serve.log")
-verify = read("verify.txt")
-sse = jload("sse-summary.json", {}) or {}
-metrics = [json.loads(l) for l in read("metrics.jsonl").splitlines() if l.strip().startswith("{")]
-metrics = [m for m in metrics if "engine" in m]
-
-def num(pat, text, cast=int, default=None):
-    m = re.search(pat, text)
-    return cast(m.group(1)) if m else default
-
-stages = {k: num(rf"stages:.*?\b{k} (\d+)", serve) for k in
-          ("framed", "stored", "detected", "no_parser", "parsed", "normalized", "emitted")}
-rate = num(r"-> ([\d.]+) events/s", serve, float)
-mbs = num(r"events/s, ([\d.]+) MB/s", serve, float)
-wall = num(r"events in ([\d.]+) s", serve, float)
-hw = num(r"high-water (\d+)/(\d+)", serve)
-cap = num(r"high-water \d+/(\d+)", serve)
-blocks = num(r"backpressure blocks (\d+)", serve)
-batches = num(r"queue: (\d+) batches", serve)
-infer = re.search(r"^inference: .*$", serve, re.M)
-signals = re.search(r"^signals: .*$", serve, re.M)
-pfail = re.search(r"^parse_failed by reason: .*$", serve, re.M)
-records = num(r"verified (\d+) records", verify)
-corrupt = num(r"records, (\d+) corrupt", verify)
-
-sent_file = counts.get("file_events", 0)
-sent_udp = counts.get("udp_events", 0)
-sent_tcp = counts.get("tcp_events", 0)
-sent = sent_file + sent_udp + sent_tcp
-elapsed = counts.get("elapsed_secs", 0.0) or 1.0
-
-rss = [l.split("\t") for l in read("rss.tsv").splitlines()[1:] if "\t" in l]
-rss = [(float(a), int(b), int(c)) for a, b, c in rss]
-def slope_mb_per_min(rows):
-    if len(rows) < 3:
-        return 0.0
-    t0 = rows[0][0]
-    xs = [r[0] - t0 for r in rows]; ys = [r[1] / 1024.0 for r in rows]
-    n = len(xs); mx = sum(xs) / n; my = sum(ys) / n
-    den = sum((x - mx) ** 2 for x in xs)
-    return 0.0 if den == 0 else sum((x - mx) * (y - my) for x, y in zip(xs, ys)) / den * 60.0
-
-last5 = [r for r in rss if r[0] >= rss[-1][0] - 300] if rss else []
-burst = [m for m in metrics if (m.get("gen") or {}).get("phase") == 2]
-def eng(m, k):
-    return m["engine"].get(k, 0)
-burst_blocks = (eng(burst[-1], "backpressure_blocks") - eng(burst[0], "backpressure_blocks")) if len(burst) > 1 else None
-burst_hw = max((eng(m, "queue_high_water") for m in burst), default=None)
-pre_blocks = eng(burst[0], "backpressure_blocks") if burst else None
-
-P = print
-P("=" * 78)
-P(f"ULPF soak report   {out}")
-P(read("plan.txt").strip())
-P("=" * 78)
-P(f"generator   file {sent_file:>12,} events in {elapsed:8.1f} s = {sent_file/elapsed:>9,.0f} ev/s"
-  f"   ({counts.get('file_bytes',0)/1048576:.0f} MB, {counts.get('behind_chunks',0)} chunks behind schedule)")
-if sent_udp or sent_tcp:
-    P(f"            udp  {sent_udp:>12,} sent ({counts.get('udp_errors',0)} errors)   "
-      f"tcp {sent_tcp:>12,} sent ({counts.get('tcp_connects',0)} connections, {counts.get('tcp_errors',0)} errors)")
-P(f"engine      {stages['framed'] or 0:>12,} events in {wall or 0:8.1f} s = {rate or 0:>9,.0f} ev/s   ({mbs or 0:.1f} MB/s, {batches or 0:,} batches)")
-P(f"queue       high-water {hw}/{cap}   backpressure blocks {blocks}   engaged: {'YES' if (blocks or 0) > 0 else 'no'}")
-if burst_blocks is not None:
-    P(f"  burst     phase 2 (3x): +{burst_blocks:,} blocks (before it: {pre_blocks:,}), queue high-water {burst_hw}/{cap}")
-else:
-    P("  burst     no burst phase in this run")
-if rss:
-    mb = [r[1] / 1024.0 for r in rss]
-    P(f"RSS         min {min(mb):.1f} MB  max {max(mb):.1f} MB  last {mb[-1]:.1f} MB   "
-      f"slope(last 5 min) {slope_mb_per_min(last5):+.2f} MB/min   slope(all) {slope_mb_per_min(rss):+.2f} MB/min")
-    P(f"threads     min {min(r[2] for r in rss)}  max {max(r[2] for r in rss)}   ({len(rss)} samples)")
-P(f"SSE         {sse.get('frames',0):,} frames {sse.get('by_event',{})}   {sse.get('events',0):,} tail events   "
-  f"skipped {sse.get('skipped',0):,}")
-P(f"            max gap {sse.get('max_gap_secs',0):.2f} s   gaps > 5 s: {sse.get('gaps_over_5s',0)}   reconnects {sse.get('reconnects',0)}")
-P(f"drain       {drain:.0f} s after the last append")
-if signals: P(signals.group(0))
-if pfail: P(pfail.group(0))
-if infer: P(infer.group(0))
-P("-" * 78)
-
-fail = []
-def check(label, a, b):
-    ok = a == b
-    if not ok:
-        fail.append(f"{label}: {a:,} != {b:,} (delta {b-a:+,})")
-    P(f"  {'ok  ' if ok else 'FAIL'}  {label:<34} {a:>14,}  vs  {b:>14,}")
-
-P("reconciliation")
-check("sent (file+udp+tcp)   vs framed", sent, stages["framed"] or 0)
-check("framed                vs stored", stages["framed"] or 0, stages["stored"] or 0)
-check("stored                vs emitted", stages["stored"] or 0, stages["emitted"] or 0)
-check("stored                vs verify records", stages["stored"] or 0, records or 0)
-if corrupt:
-    fail.append(f"{corrupt} corrupt records in the store")
-P(f"  {'ok  ' if not corrupt else 'FAIL'}  {'corrupt records':<34} {corrupt if corrupt is not None else 'n/a':>14}")
-
-# The counter block is not noise: it says `time_error` and `parse_failed` on a clean run.
-block = re.compile(r"^(stages:|signals:|queue:|inference:|parse_failed|pending |files |[\d,]+ events)")
-noise = [l for l in serve.splitlines()
-         if re.search(r"input problem|load problem|shrank|panic|error|reload:", l, re.I)
-         and not block.match(l.strip())]
-if sse.get("gaps_over_5s"):
-    fail.append(f"{sse['gaps_over_5s']} SSE gaps over 5 s (max {sse['max_gap_secs']:.1f} s)")
-if sse.get("errors"):
-    noise += [f"sse: {e}" for e in sse["errors"][:5]]
-P("-" * 78)
-P(f"server log notes: {len(noise)}")
-for l in noise[:10]:
-    P(f"  {l.strip()[:110]}")
-P("=" * 78)
-P("SOAK PASS" if not fail else "SOAK FAIL")
-for f in fail:
-    P(f"  {f}")
-sys.exit(0 if not fail else 1)
-PY
+export SOAK_BIN="$BIN"
+report_run "$OUT" "$DRAIN" | tee "$OUT/report.txt"
 exit ${PIPESTATUS[0]}
