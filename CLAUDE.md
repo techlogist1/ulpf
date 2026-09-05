@@ -160,21 +160,35 @@ ulpf run <files|dirs>... --store DIR --output FILE.jsonl [--parsers parsers] [--
          [--schema ocsf] [--tz +05:30] [-j THREADS] [--batch 1024] [--queue 64]
          [--pending pending] [--infer-threshold 64] [--report-json report.json]
 ulpf serve <dirs>... --store DIR --output FILE.jsonl [--listen 127.0.0.1:7878] [--pending pending]
-         [--infer-threshold 64] [--tail 1000] [--poll-ms 250] [--ui-dir ui/dist] + the run options
+         [--infer-threshold 64] [--tail 1000] [--poll-ms 250] [--ui-dir ui/dist]
+         [--syslog-udp 127.0.0.1:5514] [--syslog-tcp 127.0.0.1:5514] + the run options
+ulpf replay --store DIR --output FILE.jsonl [--schema ecs] [--report-json r.json]
+         # every stored record through the current parsers into FILE.vN.jsonl, diff against v(N-1)
+ulpf pivot KIND VALUE --output FILE.jsonl [--limit N]   # one entity's timeline from the index beside the output
+ulpf pivot --rebuild --output FILE.jsonl --mappings mappings --schema ocsf
 ulpf infer FILE [--pending pending] [--parsers parsers] [--decisions]   # offline proposal for one file
 ulpf check [--pending pending]  # load every parser, mapping and pending file, report path:line problems
-ulpf verify --store DIR         # recompute every SHA-256 in the raw store
+ulpf verify --store DIR [--attestation FILE]   # every digest and chain link; names the first bad record
+ulpf attest --store DIR [--out FILE]           # the attestation a stranger re-verifies offline
 ulpf raw <ID> --store DIR       # exact bytes of one raw record (header on stderr)
 ulpf fixture samples/x.log      # fixture skeleton for review (never commit blind)
 ```
+`run` and `serve` take `--receipt <RFC3339>` to pin the receipt time (reproducible output) and
+`--schema ocsf|ecs`. A restart over the same input and store resumes where the store ends
+and completes the output from the store first (D59); a store written before the integrity
+chain is refused by name (delete it). Every `run`/`replay` output has `FILE.vN.meta.json`
+beside it and an entity index `FILE.pivot`.
 Every `run` ends with the counter block: files, bytes, events/s, MB/s; per-stage counts
 (framed, stored, detected, no_parser, parsed, parse_failed by reason, normalized, emitted);
 signals (sub_matched, sub_no_match, sub_uncovered, time_from_receipt, time_error by reason,
 class_unknown, enum_other, unmapped_fields, utf8_lossy); queue batches, high-water and
 backpressure blocks (times the ingest thread found the queue full); inference (buffered,
 buffer full, runs, lines templated/unmatched, proposals written/replaced/skipped by
-reason, approved, rejected, reloads), then the pending proposals awaiting review. The
-same numbers are `engine` in `GET /api/metrics` and the `metrics` SSE event.
+reason, approved, rejected, reloads); drift (tripped, lines routed, update proposals,
+cleared); syslog (udp datagrams/bytes, tcp connections/events/bytes/partial/refused,
+errors); a `recovered: N` line when a restart completed an interrupted output; then the
+pending proposals awaiting review. The same numbers are `engine` in `GET /api/metrics`
+and the `metrics` SSE event.
 When output looks plausible but wrong, read that block first: `no_parser` means the format
 was not recognised, `sub_uncovered` means a message id has no pattern yet, `sub_no_match`
 means a gated sub ran and failed (or an ungated sub met a message you have not modelled),

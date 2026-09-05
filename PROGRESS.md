@@ -101,8 +101,34 @@ The lead wires integrity and pivot into the engine and server, then fixes the ha
 finding that `run` re-ingests from byte zero after a kill (double counting on restart),
 adds `--receipt` to `run`, then syslog listeners.
 
-### Verified state / in flight / tried and abandoned / next action
-(kept current below as the session proceeds)
+### Verified state (16:05 IST; every line was run, not read)
+- main b0f4117: 102 tests, clippy clean, release build current. Replay (D52), naming (D53),
+  drift (D54), integrity chain (D56, store worker), pivot index (D55, pivot worker), provenance
+  spans (D57), ECS (D58), kill recovery + `--receipt` (D59), syslog listeners (D60) are on main,
+  each with its test; every new route smoke-tested with curl against a real `serve`.
+- Soak, file half (soak worker, run1 on the pre-listener build): 10,005,840 events, SOAK PASS,
+  chain ok, RSS flat; report at the worker's scratch `soak/run1/report.txt` (numbers land in
+  PROGRESS when the worker returns). Socket soak pending the listeners (now on main).
+- Harness (`eval/`, `docs/evaluation.md`) generated ULPF's first scorecard; its kill_recovery
+  criterion found the restart double count, fixed in D59.
+- Corpus: 7 of 8 acquisition workers returned; real captures under `corpus/real/*` with
+  PROVENANCE.md (licences read; Elastic-2.0 sources recorded, not copied), generated
+  Suricata and Squid captures under `corpus/generated/`; OpenVPN and nginx/HAProxy/Zeek
+  generators relaunched; a parser-fidelity worker is fixing what the real data breaks.
+- In flight: UI (worktree wf_fe15bb9f-bc9-1), soak socket runs, corpus generators, parser
+  fixes, Parquet sink (feasibility GO: parquet 59.3.0 default-features=false + snap, 27 deps,
+  static link verified, +655 KB, 875k rows/s, RG 8192; additional sink, rolled in serve).
+- Not yet: multi-core measurement (needs a quiet machine: soak runs until ~16:00), review
+  pass, demo script rewrite, container rebuild, push.
+
+### Tried and abandoned (v2)
+- Recovering the output whenever it is empty: a fresh output beside an existing store
+  would have received the whole store; the live meta now names the store and recovery
+  applies only to an output this store's engine already started (D59).
+- Routing the tripping window's own lines to inference: they had already been offered as
+  unknown lines and would shape the update twice (D54).
+- Comparing a replay against the previous version's final parser set: the demo's own
+  reopen-after-fix made v1 look unchanged; the oldest recorded set is the comparison (D52).
 
 ---
 

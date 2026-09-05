@@ -1632,7 +1632,20 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
     let mut pending: BTreeMap<u64, (Vec<u8>, u64, u64, EntityBatch)> = BTreeMap::new();
     let mut next = 0u64;
     let mut since_flush = Instant::now();
-    while let Ok(e) = rx.recv() {
+    loop {
+        // a bounded wait, so a quiet watch directory still sees its last lines on disk
+        // within half a second (the pivot and any reader of the file depend on it)
+        let e = match rx.recv_timeout(Duration::from_millis(500)) {
+            Ok(e) => e,
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                if since_flush.elapsed() > Duration::from_millis(500) {
+                    w.flush().context("flushing output")?;
+                    since_flush = Instant::now();
+                }
+                continue;
+            }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => break,
+        };
         pending.insert(e.seq, (e.buf, e.count, e.first_raw_id, e.entities));
         while let Some((buf, count, first_raw_id, entities)) = pending.remove(&next) {
             w.write_all(&buf).context("writing output")?;
