@@ -105,11 +105,17 @@ was absent, which means the default `downloadBootstrapper`: the installer *downl
 runtime from Microsoft during installation, so a machine that is offline or behind a proxy
 gets an installer that fails or an app whose window never paints. It is now
 `{"type": "offlineInstaller"}` in `src-tauri/tauri.conf.json` (JSON has no comments, so the
-reason is here): the full WebView2 runtime installer is inside the bundle, about 127 MB, and
-the machine needs no network at install time. Tauri's prerequisites page says Windows 10
-1803 and later already carry the runtime, in which case the embedded installer is skipped.
-Nothing is fetched at run time, ever: the app talks only to the engine on 127.0.0.1 (the
-ULPF invariant), and the served UI has no external reference.
+reason is here): the runtime's own installer rides inside the bundle and the machine needs
+no network at install time. **It is not free, and the number is measured, not the docs':**
+the build of 06 Sep 03:59 carries `MicrosoftEdgeWebView2RuntimeInstaller.exe`, 258,614,480 B,
+and the installer is 267,447,747 B against 5,446,983 B for the same tree without it (Tauri's
+page says ~127 MB; today's runtime is twice that). Tauri's prerequisites page says Windows 10
+1803 and later already carry the runtime, in which case the embedded installer is skipped —
+so on a current machine those 250 MB are insurance, not need. If the download hurts more
+than the risk, `embedBootstrapper` costs ~1.8 MB and fetches the runtime at install time
+instead; that is one key in the same object. Nothing is fetched at run time either way: the
+app talks only to the engine on 127.0.0.1 (the ULPF invariant), and the served UI has no
+external reference.
 
 **The sidecar is found where it is installed.** Verified by unpacking the CI artifact of run
 33990295166 (`7z x ULPF_0.1.0_x64-setup.exe`): the NSIS payload is `ulpf-app.exe`
