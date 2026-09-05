@@ -1038,3 +1038,23 @@ index the replay already built (rebuilt once per version on first page request).
 the record header in one place (four copies agree today; a change to the layout is the
 trigger). **Anchor.** the two "review fixes" commits; `PROGRESS.md` "Review pass (v2)".
 **Principle.** As D51: closed by a fix or by written evidence, never by a known-issues list.
+
+## D66. The entity index is on for `serve` and off for `run`
+**Decision.** `--pivot on|off` on both subcommands; `serve` defaults to on (the UI pivots
+live, at device rates), `run` to off (bulk throughput; `ulpf pivot --rebuild` builds the
+index afterwards from the output). Measured 2026-09-05 on the 497,607-event bench slice
+(machine at load 12-17): 27,995-30,963 events/s with the index, 196,160-249,409 without,
+and 158,791-196,461 to `/dev/null`, so the index thread, not the file write, is the cost.
+The bench file is the worst case by construction: `gen_bench` rewrites every address and
+port, so nearly every event carries entity values seen once, and the writer's cost is per
+distinct (kind, value) per commit group; real device logs repeat their entities. The first
+5M-event measurement with the index ran for forty minutes at 2% CPU before it was found
+to be two bench processes sharing one SQLite file, and was discarded. **Anchor.**
+`--pivot` in `crates/ulpf/src/cli.rs`; `Config::pivot_index`, the `index_entities` gate in
+`output_thread`; the numbers in `PROGRESS.md` item 9. **Principle.** Measure the thing you
+report; a default that costs an order of magnitude on the throughput criterion of the
+harness every other tool is judged on is not a default, it is a feature the operator turns
+on. **Ruled out.** Tuning the commit group (the writer already merges queued batches; the
+cost is cardinality, not commits); building the index in `run` on a second thread pool
+(the SQLite writer is single-threaded by nature); dropping the index (the pivot is the
+payoff of normalisation and serve keeps it).

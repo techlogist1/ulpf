@@ -360,7 +360,12 @@ The five kinds are fixed: `src_ip`, `dst_ip`, `user`, `dst_port`, `device`. `dev
 falls back to the ingest source name when the schema field is absent, so every event has
 a device. The index lives beside the output (`out.jsonl.pivot`), is derived data (rebuilt
 by `ulpf pivot --rebuild --output out.jsonl`), and is written by its own thread from the
-entity spans the normalizer reports per event; the hot path gains no allocation.
+entity spans the normalizer reports per event; the hot path gains no allocation. It is on
+by default in `serve` and off in `run` (`--pivot on|off`, D66: its cost is per distinct
+entity value and dominates a bulk run of high-cardinality data); a route on a server whose
+index is off answers `404 not_found`. Paging: `before` plus `before_id` (both from the
+previous page's `next_before` and `next_before_id`) so events sharing a millisecond are
+neither repeated nor skipped.
 
 `GET /api/pivot?kind=K&value=V&limit=N&before=<time_ms>&order=desc|asc` →
 ```

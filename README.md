@@ -14,7 +14,7 @@ See `CLAUDE.md` for architecture and the plain-text folder contract,
 ```
 cargo build --release
 ./target/release/ulpf check
-./target/release/ulpf run samples --store /tmp/ulpf-store --output /tmp/out.jsonl
+./target/release/ulpf run samples --store /tmp/ulpf-store --output /tmp/out.jsonl --pivot on
 ./target/release/ulpf verify --store /tmp/ulpf-store                      # every digest and chain link
 ./target/release/ulpf attest --store /tmp/ulpf-store --out /tmp/attest.json  # what a stranger re-verifies offline
 ./target/release/ulpf raw 3 --store /tmp/ulpf-store

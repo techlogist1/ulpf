@@ -41,7 +41,10 @@ source document in hand; Haiku banned (D30). Baseline at a9d0dd8: 71 tests, clip
       265,752 / 212,427 / 250,674 (median 250,674, 76.5 MB/s). Backpressure engaged at
       every width (4,789 blocks at -j 1 down to 492 at -j 7): the ingest thread outruns the
       workers, so parallelism is the throughput. Against v1's 260k on a quiet machine this is
-      within the stated ±10% variance. The pivot index and `--parquet` costs are below.
+      within the stated ±10% variance. Costs of the optional sinks on the 497,607-event
+      slice (load 12-17): entity index on 28-31k events/s against 196-249k off (D66: off by
+      default in `run`, on in `serve`); `--parquet` 0.46x on the output thread when enabled
+      (D64, the worker's measurement, before the row was switched to the entity arena).
 - [x] 10. (D63; `corpus/README.md`; six parsers fixed from vendor docs; unseen: nginx, HAProxy, Zeek, OpenVPN 2.6) Corpus: real captures (web, licence read) and locally generated captures (tool
       version + exact setup) replace synthetic samples where obtained; three unseen formats;
       the twelve parsers fixed against the real data.
