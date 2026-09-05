@@ -1,5 +1,97 @@
 # ULPF progress
 
+## v3 (2026-09-05 night session, autonomous): fixes, UI redesign, desktop app, demo runner
+
+Started 20:12 IST at 9d39679 (107 tests, clippy clean). The owner is away; this file and the
+committed captures under `docs/screens/` are what they review from a phone, so both are current
+at every commit and main is never half-done. The brief names a 22:00 demo; the demo script below
+still says 10:00 and the 04:00 comparison, which is the last thing the owner wrote; both stand.
+Skills: `software-design-philosophy` loaded (interface decisions); `example-skills:frontend-design`
+loaded by the UI and app workers, not the lead; no `prompting-practices` skill on this machine
+(its requirements carried from the brief: clean lead context, structured worker returns, kill
+timers); the skills-audit manifest is `~/Documents/dev/skills-audit/MANIFEST.md`; no `aposd` pass
+this session. No "last session report section 8" exists in the tree (grep for weak spots and
+section 8 found nothing), so Phase A is the brief's own list. Tiers: lead and the three lane
+workers on Fable, verifiers on Opus; Haiku banned (D30).
+
+### Definition of done (each item checked only after running it)
+- [ ] A1. Inference uses the names it already has: JSON object keys become slot names (reason
+      `json key`, suggested), a `#fields` header names delimited columns (reason `header`).
+      Zeek json conn/dns and TSV conn re-graded, suggested-vs-typed-only counts beside the old.
+      TSV http.log explosion: 40 minutes at most. Kill timer 90 min from dispatch.
+- [x] A4. The nine stale `worktree-wf_*` branches and worktrees removed 20:18 IST after
+      confirming each: eight were ancestors of main (515dc9ab, 9e3d885f, bad47452-1..5,
+      fe15bb9f, all `merge-base --is-ancestor` yes, 0 commits ahead); `worktree-wf_d4c9a934-b72-1`
+      was 2 ahead (7c76587, 4577440: the Parquet worker's crate and `--parquet` flag, 19 files)
+      and is the one re-applied on main as eb2e2c4 ("parquet: --parquet writes a columnar copy",
+      18 files, same crate, same flag, the diff being the merge onto the then-current engine).
+- [ ] A2. Socket soak re-run after the `SO_RCVBUF` negotiation (D62): loss %, RSS range, event
+      count recorded in D62 beside the 47% figure; if loss is still material it is a demo warning.
+- [ ] A3. Honest throughput: -j 1, 2, 4, 7 (three runs at -j 7) on the 5M bench, load average
+      recorded with each; every README/PROGRESS/demo-script sentence that could read as
+      single-core states the thread count with the -j 1 figure beside it.
+- [ ] B. UI redesigned in place (same routes, same API, same three-file embedding): tokens in one
+      place, bundled open-licence text + mono faces, dark default with light through tokens, AA
+      contrast, keyboard map, virtualised lists, throttled SSE; `docs/design.md`; captures of every
+      screen at two widths plus a keyboard-only approve traversal under `docs/screens/` with an
+      index. Kill timer 3 h from dispatch; a coherent partial beats an incoherent whole.
+- [ ] C. Desktop app: Tauri 2 shell in `app/` at the repo root, `ulpf` as a sidecar, `serve` on
+      launch against an app-owned data directory, webview at the server's localhost URL, clean
+      stop on quit; then, each its own commit: file/folder drop with confirmation, native dialogs
+      (data directory, open output folder), sidecar health + counters in the chrome, tray so
+      closing the window keeps the ingest. Five verifications recorded with results. Kill timer
+      90 min to a launching shell showing the live feed; on fire, the app directory goes to a
+      branch with a note and main stays clean.
+- [ ] C-CI. GitHub Actions workflow: macOS and Windows runners build the sidecar and the shell,
+      bundle an installer each, attach both to a tagged release; run URL and artifact names here;
+      Windows not run on a Windows machine tonight, the five owner checks listed.
+- [ ] D. Demo runner: one command that plays the demo script step by step (fresh demo directory,
+      parsers copy, paced known-format drops, one unseen-format drop on cue, what-to-click
+      prompts, clean reset), existing subcommands and watch only. After C lands or is killed.
+- [ ] Final: full suite, clippy, `scripts/isolation.sh` on the final binary (UI checked for
+      external asset references first), the cold-start commands from `docs/evaluation.md`, one
+      complete pass of the demo runner, PROGRESS and DECISIONS current, pushed.
+- Automated UI tests remain absent; tonight's captures are the UI's verification.
+
+### Fan-out 1 (20:20 IST): three lanes, then the lead's measurements
+Split: (A1) inference naming, one Fable worker in its own worktree owning `crates/ulpf-infer`
+and its example, the pending fixture it re-grades and `docs/slot-vocabulary.md`; (B) the UI, one
+Fable worker with `frontend-design` in its own worktree owning `ui/`, `docs/design.md`,
+`docs/screens/`; (C) the app, one Fable worker with `frontend-design` for the shell chrome only,
+in its own worktree owning `app/` and `.github/workflows/`, allowed `#[cfg(windows)]`-only
+shims where the sidecar does not compile on Windows (the unix code stays byte-identical, the
+lead diffs it at merge). The lead runs A2 (socket soak, backgrounded) and A3 (throughput,
+backgrounded, load recorded) in the main tree, merges each lane by running the full suite and
+the build itself, and writes D after C. Why not fewer: the three lanes touch disjoint files, share
+no state, and each is one to three hours of wall-clock that the others need not wait for; one
+worker doing them in sequence would put the UI (the demo's face) after the app. Why not more: the
+engine, the store and the server are frozen, so there is no fourth lane; verification of each
+lane is a second, independent Opus agent inside the same workflow, not a fourth builder.
+Return format (schema-enforced): worktree path, branch, commits (hash + message), files written,
+tests run with pass/fail counts and the exact commands, clippy result, decisions made (each with
+the alternative ruled out, for DECISIONS), contract gaps (UI: fields a screen needs the API lacks),
+uncertainties verified against current documentation with the source, what is not done and why,
+measurements with their commands. Nothing else: no logs, no transcripts. No worker command runs
+longer than about four minutes (backgrounded and polled past that).
+
+### Verified state (v3, rolling; every line was run, not read)
+- 20:18 IST: A4 done as above; `git worktree list` shows main only; `cargo build --release` at
+  9d39679 up to date; `ulpf check --pending pending` 12 parsers, 2 mappings, 0 problems.
+
+### In flight
+- A1, B, C dispatched 20:20 IST (kill timers 21:50, 23:20, 21:50). A2 soak running in the main
+  tree. A3 waits for the workers' builds to settle (load average is recorded with every run).
+
+### Tried and abandoned (v3)
+- (none yet)
+
+### Next action (if this session is cut off here)
+Merge whichever lane has landed on its branch (`git branch -a`), by running
+`cargo test --workspace --release` and `cargo clippy --workspace --all-targets -- -D warnings`
+on the merged tree before committing to main; then A2/A3 numbers into D62 and item 9; then D.
+
+---
+
 ## v2 (2026-09-05 evening session, autonomous): product
 
 Compared head to head against another project at 04:00, demonstrated at 10:00. Everything
