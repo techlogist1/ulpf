@@ -37,6 +37,13 @@ Measured 2026-09-05 (evening, final build f267496) on an M1 Pro by the neutral h
 19.4 s over three runs, 258k to 264k events/s (median 258k, about 79 MB/s), raw store with SHA-256
 and the integrity chain (flushed per batch) and JSON Lines output included, entity index off (`run`
 default, D66; about 30k events/s with it on); run-to-run variance is about ±10%.
+Thread scaling, measured 2026-09-05 23:05-23:25 IST on the same machine and file with
+`--output /dev/null` (no output write, so above the harness figure), every run started at a
+one-minute load under 4 with no build running: `-j 1` 68,330 events/s (73.2 s); `-j 2` 121,092
+(41.3 s); `-j 4` 200,797 (24.9 s); `-j 7` 314,691 / 337,471 / 345,153 (median 337,471, about
+103 MB/s, 14.5-15.9 s). The default `-j` is the core count minus one (7 on this 8-core M1 Pro),
+so every throughput figure in this repository is a seven-thread figure unless it says `-j 1`;
+the single-thread engine does 68k events/s on this file.
 
 Parser families (`parsers/`): Cisco ASA, Cisco IOS, Fortinet FortiGate, OpenVPN,
 Palo Alto PAN-OS, pfSense filterlog, Check Point Log Exporter, Juniper SRX, SonicWall

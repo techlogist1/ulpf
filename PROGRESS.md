@@ -60,9 +60,23 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       DEMO WARNING: UDP syslog on a loaded laptop loses datagrams in the kernel; feed the demo
       device over TCP or a file. A run with nothing else on the host is still owed and is the
       last measurement of the session, after every lane has finished.
-- [ ] A3. Honest throughput: -j 1, 2, 4, 7 (three runs at -j 7) on the 5M bench, load average
-      recorded with each; every README/PROGRESS/demo-script sentence that could read as
-      single-core states the thread count with the -j 1 figure beside it.
+- [x] A3. (23:05-23:25 IST, from the quiet-window watcher: each run started at a one-minute load
+      under 4 with no rustc/cargo/ld alive, load sampled every 2 s during the run; `ulpf run
+      bench/mixed-5000000.log --output /dev/null --infer-threshold 0 -j N`, fresh store each
+      time, the merged binary of 22:54) Honest throughput on the 5M bench, 1,526 MB:
+
+      | -j | events/s | MB/s | wall | load before / peak during |
+      |---|---|---|---|---|
+      | 1 | 68,330 | 20.9 | 73.2 s | 3.59 / 4.88 |
+      | 2 | 121,092 | 37.0 | 41.3 s | 3.93 / 5.13 |
+      | 4 | 200,797 | 61.3 | 24.9 s | 3.85 / 10.65 (lane V ingesting beside it) |
+      | 7 | 314,691 / 337,471 / 345,153 (median 337,471) | 96-105 | 14.5-15.9 s | 3.4-3.9 / 5.0-9.5 |
+
+      Against the 18:31 loaded run (66,827 / 118,038 / 218,391 / median 250,674) the single
+      thread is within 2%, the seven-thread median is 35% higher with `--output /dev/null` on a
+      quieter host. README's throughput paragraph now carries this table's numbers with the
+      thread count and the `-j 1` figure; item 9 below and the demo's step 11 comment say the
+      thread count with every number.
 - [x] B. (D69-D71; merged 22:45 IST as b85c1c4, five commits 273d2d9..00062be, verified by an
       independent Opus pass: git surface ui/ + docs/design.md + docs/screens/ only, dist exactly
       three files with no runtime fetch, fonts real WOFF2 byte-identical to IBM's release with the
@@ -262,7 +276,9 @@ source document in hand; Haiku banned (D30). Baseline at a9d0dd8: 71 tests, clip
       needed and none was made. Measured 2026-09-05 18:31 on the M1 Pro (load 8 at start,
       other agents active), 5,000,000 events, 1526 MB, `--output /dev/null`, inference off:
       -j 1 66,827 events/s (74.8 s); -j 2 118,038 (42.4 s); -j 4 218,391 (22.9 s); -j 7
-      265,752 / 212,427 / 250,674 (median 250,674, 76.5 MB/s). Backpressure engaged at
+      265,752 / 212,427 / 250,674 (median 250,674, 76.5 MB/s); re-measured on a quiet host
+      23:05-23:25 (v3 A3): -j 1 68,330, -j 2 121,092, -j 4 200,797, -j 7 median 337,471, all
+      with `--output /dev/null`, 7 threads being the default here. Backpressure engaged at
       every width (4,789 blocks at -j 1 down to 492 at -j 7): the ingest thread outruns the
       workers, so parallelism is the throughput. Against v1's 260k on a quiet machine this is
       within the stated ±10% variance. Costs of the optional sinks on the 497,607-event
@@ -349,7 +365,8 @@ with evidence, and defers only with a written revisit trigger.
 - Final build f267496: 107 tests (2 ignored), clippy clean, release binary and `ulpf:static`
   image (11.7 MB, built by the harness from this tree) current. Harness scorecard on it:
   `eval/results/ulpf-20260905T140426Z-33371/scorecard.md`: throughput 263,588 / 258,411 /
-  258,398 events/s (median 258,411, about 79 MB/s, 19.0-19.4 s per 5M events), correctness
+  258,398 events/s at 7 worker threads (median 258,411, about 79 MB/s, 19.0-19.4 s per 5M
+  events; -j 1 is 68k on this file, v3 A3), correctness
   264/264, raw preservation and chain ok, unknown format 1 proposal, 12 damaged inputs no
   crash no hang, isolation PASS, container build and run PASS, cold start PASS, kill recovery
   consistent (5,000,000 = 5,000,000); the memory criterion's peak RSS of 1.5 GB is the
@@ -563,6 +580,9 @@ git log --oneline -1 -- mappings/ecs.toml ; git show --stat 5f7abd5 | tail -3   
 cargo run --release -p ulpf --example gen_bench -- 5000000 bench
 ./target/release/ulpf run bench/mixed-5000000.log --store /tmp/ulpf-bench --output /dev/null --infer-threshold 0
 #    numbers: see "Verified state" below; never quote one you did not just measure
+#    say the thread count with the number: -j 7 is the default here (cores minus one): 337k events/s
+#    median with --output /dev/null, -j 1 68k on the same file (v3 A3); the harness figure with the
+#    JSON Lines output written is 258k at 7 threads
 
 # 12. kill recovery: kill -9 a run, restart it, same output id for id
 ./target/release/ulpf run bench/mixed-5000000.log --store /tmp/kr --output /tmp/kr.jsonl --infer-threshold 0 & sleep 3; kill -9 $!
