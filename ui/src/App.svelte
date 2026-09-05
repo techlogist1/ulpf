@@ -153,6 +153,8 @@
         <dl>
           <dt>space</dt><dd>hold the tail still, and release it</dd>
           <dt>Enter</dt><dd>trace the selected event's bytes</dd>
+          <dt>f</dt><dd>only the rows carrying a flag, and every row again</dd>
+          <dt>e</dt><dd>the export choice: Enter takes the file, Esc closes it</dd>
         </dl>
         <h3>Traceback</h3>
         <dl>
