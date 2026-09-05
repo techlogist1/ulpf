@@ -73,9 +73,11 @@ prints the exact input bytes behind any output line's `ulpf.raw_id`.
 mkdir -p demo/watch && ./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl
 ```
 
-Then open <http://127.0.0.1:7878> (keys `1`-`7`, `?` for the map). Copy a log file into
-`demo/watch` and the screens move within 500 ms:
+Then open <http://127.0.0.1:7878> (key `0` for Flow, `1`-`7` for the screens behind it,
+`?` for the map). Copy a log file into `demo/watch` and the screens move within 500 ms:
 
+- **Flow** — the front door: every station of the machine — ingest, preserve, detect,
+  parse, normalize, emit — live, each one opening the screen behind it.
 - **Live** — per-stage counters, throughput, every source with what claimed it, the event tail.
 - **Review** — a format nothing claimed, clustered into a proposal: every slot with the
   reason its name was chosen, and the evidence behind every template. Approve activates it.
