@@ -1,7 +1,8 @@
 //! The zero-copy invariant, measured: after warm-up, `Registry::detect` and
 //! `Parser::parse` allocate nothing for every family whose values are borrowed spans.
 //! The documented exceptions (JSON values, a quoted value with escapes, a sub on a
-//! materialised value) are exercised separately and bounded.
+//! materialised value, an xml value with an entity reference) are exercised separately
+//! and bounded.
 
 mod common;
 
@@ -147,4 +148,61 @@ kind = "leef"
         .unwrap_or(0);
     assert_eq!(allocations, 0);
     assert_field(&out, "usrName", b"jdoe");
+}
+
+/// xml: keys are dotted paths that exist nowhere in the event, so they are owned, but
+/// pooled in `Parsed` and recycled by `clear`; after warm-up a line with no entity
+/// reference allocates nothing and a line with one entity-bearing value allocates once.
+#[test]
+fn xml_allocates_only_for_entity_bearing_values_after_warm_up() {
+    let _serial = SERIAL.lock().unwrap();
+    let p = parser(r#"
+[parser]
+name = "xml"
+vendor = "v"
+product = "p"
+[match]
+contains = ["<Event"]
+[strategy]
+kind = "xml"
+[[timestamp]]
+field = "System.TimeCreated.SystemTime"
+format = "rfc3339"
+[[sub]]
+field = "System.EventID"
+when = { "System.EventID" = "4624" }
+kind = "pattern"
+pattern = "{_:int}"
+anchor = "full"
+constants = { event_name = "An account was successfully logged on" }
+"#);
+    let plain: &[u8] = b"<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><Provider Name='Microsoft-Windows-Security-Auditing' Guid='{54849625-5478-4994-A5BA-3E3B0328C30D}'/><EventID>4624</EventID><Version>2</Version><Level>0</Level><Task>12544</Task><Opcode>0</Opcode><Keywords>0x8020000000000000</Keywords><TimeCreated SystemTime='2015-11-12T00:24:35.079785200Z'/><EventRecordID>211</EventRecordID><Correlation/><Execution ProcessID='716' ThreadID='760'/><Channel>Security</Channel><Computer>WIN-GG82ULGC9GO</Computer><Security/></System><EventData><Data Name='SubjectUserSid'>S-1-5-18</Data><Data Name='SubjectUserName'>WIN-GG82ULGC9GO$</Data><Data Name='SubjectDomainName'>WORKGROUP</Data><Data Name='SubjectLogonId'>0x3e7</Data><Data Name='TargetUserSid'>S-1-5-21-1377283216-344919071-3415362939-500</Data><Data Name='TargetUserName'>Administrator</Data><Data Name='TargetDomainName'>WIN-GG82ULGC9GO</Data><Data Name='TargetLogonId'>0x8dcdc</Data><Data Name='LogonType'>2</Data><Data Name='LogonProcessName'>User32</Data><Data Name='AuthenticationPackageName'>Negotiate</Data><Data Name='WorkstationName'>WIN-GG82ULGC9GO</Data><Data Name='ProcessId'>0x44c</Data><Data Name='ProcessName'>C:\\Windows\\System32\\svchost.exe</Data><Data Name='IpAddress'>127.0.0.1</Data><Data Name='IpPort'>0</Data></EventData></Event>";
+    let with_entity: Vec<u8> = String::from_utf8_lossy(plain).replace("Administrator", "R&amp;D").into_bytes();
+    let mut scratch = ulpf_parse::Scratch::default();
+    let mut out = Parsed::default();
+    for _ in 0..3 {
+        p.parse(plain, &ctx(), &mut scratch, &mut out).unwrap();
+        p.parse(&with_entity, &ctx(), &mut scratch, &mut out).unwrap();
+    }
+    fn count<'a>(p: &'a ulpf_parse::Parser, line: &'a [u8], scratch: &mut ulpf_parse::Scratch, out: &mut Parsed<'a>) -> usize {
+        (0..3)
+            .map(|_| {
+                let before = ALLOCS.load(Relaxed);
+                for _ in 0..100 {
+                    p.parse(line, &ctx(), scratch, out).unwrap();
+                }
+                ALLOCS.load(Relaxed) - before
+            })
+            .min()
+            .unwrap_or(0)
+    }
+    let plain_allocs = count(&p, plain, &mut scratch, &mut out);
+    assert_eq!(plain_allocs, 0, "a line with no entity reference");
+    assert_field(&out, "EventData.TargetUserName", b"Administrator");
+    assert_field(&out, "event_name", b"An account was successfully logged on");
+    assert!(out.timestamp.is_some());
+    let entity_allocs = count(&p, &with_entity, &mut scratch, &mut out);
+    assert_eq!(entity_allocs, 100, "one allocation per entity-bearing value, per parse");
+    assert_field(&out, "EventData.TargetUserName", b"R&D");
+    assert_eq!(out.fields.iter().filter(|f| matches!(f.value, Cow::Owned(_))).count(), 1);
 }

@@ -551,3 +551,119 @@ pattern = '{path:text}?{query:rest}'
     run(&p, br#"{"other": 1}"#, &mut out).unwrap();
     assert_eq!(out.sub, ulpf_parse::SubStatus::NotApplicable);
 }
+
+const XML_DEF: &str = r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = ["<Event"]
+[strategy]
+kind = "xml"
+"#;
+
+#[test]
+fn xml_attributes_text_nesting_named_data_and_namespaces() {
+    let p = parser(XML_DEF);
+    let mut out = Parsed::default();
+    let line = br#"<?xml version="1.0"?><Event xmlns="http://schemas.microsoft.com/win/2004/08/events/event"><!-- rendered --><System><Provider Name="Microsoft-Windows-Security-Auditing" Guid="{54849625-5478-4994-A5BA-3E3B0328C30D}"/><EventID>4624</EventID><TimeCreated SystemTime="2015-11-12T00:24:35.079785200Z"/><Correlation/><Execution ProcessID="716" ThreadID="760"/><Computer>WIN-GG82ULGC9GO</Computer></System><EventData><Data Name="SubjectUserSid">S-1-5-18</Data><Data Name="LogonType">2</Data><Data Name="Empty"></Data><Data>unnamed one</Data><Data>unnamed two</Data><Data><![CDATA[a<b & c]]></Data></EventData><ns:Extra ns:Kind="x" xmlns:ns="urn:example"><ns:Item>y</ns:Item></ns:Extra></Event>"#;
+    run(&p, line, &mut out).unwrap();
+    assert_field(&out, "System.Provider.Name", b"Microsoft-Windows-Security-Auditing");
+    assert_field(&out, "System.Provider.Guid", b"{54849625-5478-4994-A5BA-3E3B0328C30D}");
+    assert_field(&out, "System.EventID", b"4624");
+    assert_field(&out, "System.TimeCreated.SystemTime", b"2015-11-12T00:24:35.079785200Z");
+    assert_field(&out, "System.Execution.ProcessID", b"716");
+    assert_field(&out, "System.Execution.ThreadID", b"760");
+    assert_field(&out, "System.Computer", b"WIN-GG82ULGC9GO");
+    assert_field(&out, "EventData.SubjectUserSid", b"S-1-5-18");
+    assert_field(&out, "EventData.LogonType", b"2");
+    assert!(out.get(b"EventData.Empty").is_none(), "an empty named element is no field");
+    assert!(out.get(b"EventData.Data.Name").is_none(), "the naming attribute is not a field");
+    assert_field(&out, "EventData.Data", b"unnamed one");
+    assert_field(&out, "EventData.Data2", b"unnamed two");
+    assert_field(&out, "EventData.Data3", b"a<b & c");
+    assert_field(&out, "Extra.Kind", b"x");
+    assert_field(&out, "Extra.Item", b"y");
+    assert!(out.fields.iter().all(|f| !f.key.starts_with(b"xmlns") && !f.key.ends_with(b".xmlns")), "{:?}", pairs(&out));
+    assert!(out.fields.iter().all(|f| !f.key.starts_with(b"Event.")), "the root is not part of a key");
+    assert!(out.timestamp.is_none(), "no [[timestamp]] in this definition");
+    assert!(out.fields.iter().all(|f| matches!(f.value, std::borrow::Cow::Borrowed(_))), "every value is a span of the event");
+
+    // single-quoted attributes, pretty-printed whitespace between elements, entities
+    let line = b"<Event xmlns='urn:x'>\n  <System>\n    <Provider Name='P'/>\n    <EventID>1</EventID>\n  </System>\n  <EventData>\n    <Data Name='CommandLine'>&quot;C:\\a b\\x.exe&quot; /c a &amp; b &lt;in&gt; &#65;&#x42; it&apos;s</Data>\n  </EventData>\n</Event>\r\n";
+    run(&p, line, &mut out).unwrap();
+    assert_field(&out, "System.Provider.Name", b"P");
+    assert_field(&out, "System.EventID", b"1");
+    assert_field(&out, "EventData.CommandLine", b"\"C:\\a b\\x.exe\" /c a & b <in> AB it's");
+    assert_eq!(out.fields.len(), 3, "{:?}", pairs(&out));
+    let owned = out.fields.iter().filter(|f| matches!(f.value, std::borrow::Cow::Owned(_))).count();
+    assert_eq!(owned, 1, "only the entity-bearing value is materialised");
+}
+
+#[test]
+fn xml_malformed_input_is_a_counted_failure() {
+    let p = parser(XML_DEF);
+    let mut out = Parsed::default();
+    assert_eq!(run(&p, b"<Event><a b='1'>x</a", &mut out), Err(ParseFailure::InvalidXml), "unterminated tag");
+    assert!(out.fields.is_empty(), "a failed parse leaves no partial fields");
+    assert_eq!(run(&p, b"<Event>< a>1</a></Event>", &mut out), Err(ParseFailure::InvalidXml), "stray <");
+    assert_eq!(run(&p, b"<Event", &mut out), Err(ParseFailure::InvalidXml));
+    assert_eq!(run(&p, b"", &mut out), Err(ParseFailure::InvalidXml), "no element");
+    assert_eq!(run(&p, b"just text", &mut out), Err(ParseFailure::InvalidXml), "no element");
+    assert_eq!(run(&p, b"<Event><a>\xff</a></Event>", &mut out), Err(ParseFailure::InvalidXml), "not UTF-8");
+    // an entity cut off at the end of input is kept as written, never a panic
+    run(&p, b"<Event><a>x &amp", &mut out).unwrap();
+    assert_field(&out, "a", b"x &amp");
+    run(&p, b"<Event><a>x &unknown; &#xZZ; &#99999999999;</a></Event>", &mut out).unwrap();
+    assert_field(&out, "a", b"x &unknown; &#xZZ; &#99999999999;");
+    // a 1 MB attribute is one borrowed span
+    let mut big = b"<Event><a v='".to_vec();
+    big.extend(std::iter::repeat_n(b'x', 1 << 20));
+    big.extend_from_slice(b"'>t</a></Event>");
+    run(&p, &big, &mut out).unwrap();
+    assert_eq!(out.get(b"a.v").map(|v| v.len()), Some(1 << 20));
+    assert!(matches!(out.get(b"a.v"), Some(std::borrow::Cow::Borrowed(_))));
+    // an unclosed root still yields what it carried (a forwarder that cut the line)
+    run(&p, b"<Event><System><EventID>4624</EventID></System>", &mut out).unwrap();
+    assert_field(&out, "System.EventID", b"4624");
+    // keys are pooled: the third parse of the same line reuses the first's buffers
+    let line = b"<Event><System><EventID>1</EventID><Computer>h</Computer></System></Event>";
+    for _ in 0..3 {
+        run(&p, line, &mut out).unwrap();
+    }
+    assert_eq!(out.fields.len(), 2);
+    assert_field(&out, "System.Computer", b"h");
+}
+
+#[test]
+fn xml_subs_gate_on_dotted_keys_and_timestamp_reads_system_time() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = ["<Event"]
+[strategy]
+kind = "xml"
+[[timestamp]]
+field = "System.TimeCreated.SystemTime"
+format = "rfc3339"
+[[sub]]
+field = "System.EventID"
+when = { "System.EventID" = "4624", "System.Provider.Name" = "Microsoft-Windows-Security-Auditing" }
+kind = "pattern"
+pattern = "{_:int}"
+anchor = "full"
+constants = { event_name = "An account was successfully logged on" }
+"#);
+    let mut out = Parsed::default();
+    run(&p, b"<Event><System><Provider Name='Microsoft-Windows-Security-Auditing'/><EventID>4624</EventID><TimeCreated SystemTime='2015-11-12T00:24:35.079785200Z'/></System></Event>", &mut out).unwrap();
+    assert_field(&out, "event_name", b"An account was successfully logged on");
+    assert_eq!(out.sub, ulpf_parse::SubStatus::Matched);
+    assert_eq!(out.timestamp.map(|t| t.epoch_nanos), Some(1_447_287_875_079_785_200));
+    run(&p, b"<Event><System><Provider Name='Other'/><EventID>4624</EventID></System></Event>", &mut out).unwrap();
+    assert_eq!(out.sub, ulpf_parse::SubStatus::Uncovered);
+    assert!(out.get(b"event_name").is_none());
+}

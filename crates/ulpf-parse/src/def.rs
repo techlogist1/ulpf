@@ -132,6 +132,7 @@ pub enum StrategyKind {
     Cef,
     Leef,
     Pattern,
+    Xml,
 }
 
 impl Strategy {
@@ -181,6 +182,7 @@ impl StrategyKind {
             StrategyKind::Cef => "cef",
             StrategyKind::Leef => "leef",
             StrategyKind::Pattern => "pattern",
+            StrategyKind::Xml => "xml",
         }
     }
 }

@@ -64,6 +64,7 @@ fn all_strategies_are_machine_emittable() {
         Strategy { kind: StrategyKind::Cef, ..Default::default() },
         Strategy { kind: StrategyKind::Leef, ..Default::default() },
         Strategy { kind: StrategyKind::Pattern, patterns: vec!["a {b:int}".into()], regex: Some("(?P<z>.)".into()), anchor: Some(Anchor::Full), ..Default::default() },
+        Strategy { kind: StrategyKind::Xml, ..Default::default() },
     ];
     for (i, s) in strategies.into_iter().enumerate() {
         let def = ParserDefinition {
