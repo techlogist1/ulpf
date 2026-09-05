@@ -1,0 +1,25 @@
+[package]
+name = "ulpf-app"
+version = "0.1.0"
+description = "ULPF desktop shell: starts the engine, shows its UI, takes dropped logs"
+edition = "2021"
+license = "MIT"
+publish = false
+
+# Its own workspace root: the engine's root workspace lists its members explicitly and
+# must not pick this package up, and this package must not resolve to that root.
+[workspace]
+
+[lib]
+name = "ulpf_app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
+serde_json = "1"

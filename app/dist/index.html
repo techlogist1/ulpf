@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ULPF</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: grid; place-items: center;
+    background: #14171c; color: #d9dde3;
+    font: 15px/1.5 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  main { text-align: center; width: min(32rem, 90vw); }
+  .mark {
+    width: 56px; height: 56px; margin: 0 auto 22px; border-radius: 6px;
+    background: #2b3038; display: grid; place-items: center; gap: 5px; padding: 12px;
+    box-sizing: border-box; grid-template-rows: repeat(3, 1fr);
+  }
+  .mark i { display: block; height: 4px; background: #e8ebef; border-radius: 2px; justify-self: start; }
+  .mark i:nth-child(1) { width: 100%; }
+  .mark i:nth-child(2) { width: 62%; }
+  .mark i:nth-child(3) { width: 82%; }
+  h1 { font-weight: 400; font-size: 20px; letter-spacing: .02em; margin: 0 0 6px; color: #f2f4f7; }
+  #msg { margin: 0; color: #9aa3ad; }
+  #msg.err { color: #f0b46b; }
+  .pulse { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #9aa3ad; margin-left: 8px; vertical-align: middle; animation: pulse 1.4s ease-in-out infinite; }
+  #msg.err .pulse { display: none; }
+  @keyframes pulse { 0%, 100% { opacity: .25 } 50% { opacity: 1 } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none; opacity: .7 } }
+  .hint { margin-top: 28px; font-size: 13px; color: #6f7883; }
+</style>
+</head>
+<body>
+<main>
+  <div class="mark" aria-hidden="true"><i></i><i></i><i></i></div>
+  <h1>ULPF</h1>
+  <p id="msg">Starting the engine<span class="pulse"></span></p>
+  <p class="hint">Drop log files or folders anywhere in this window once the feed is up.</p>
+</main>
+<script>
+  // The shell puts the status line in the URL fragment: "#text", or "#!text" for an error.
+  // A fragment change on the loaded page updates it in place, so no reload and no race.
+  function show() {
+    var h = decodeURIComponent(location.hash.slice(1));
+    if (!h) return;
+    var err = h[0] === '!';
+    var m = document.getElementById('msg');
+    m.textContent = err ? h.slice(1) : h;
+    m.className = err ? 'err' : '';
+    if (!err) { var s = document.createElement('span'); s.className = 'pulse'; m.appendChild(s); }
+  }
+  addEventListener('hashchange', show);
+  show();
+</script>
+</body>
+</html>
