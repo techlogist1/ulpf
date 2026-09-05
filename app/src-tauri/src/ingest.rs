@@ -14,6 +14,12 @@ use crate::{toast, Engine};
 /// volume and then renamed into `<data>/watch` under a unique name, so the engine's poller
 /// sees a complete file or nothing, never a half-written one. Folders keep their
 /// structure (the engine walks them); only regular files are copied.
+///
+/// Windows: the paths arrive from the OS (a drop or the native picker) and are joined with
+/// `PathBuf`, so the separator is never written here; staging and watch are two directories
+/// of the one data directory, so the rename is never across volumes (`fs::rename` on
+/// Windows cannot cross one); and a data directory under a user name with spaces travels as
+/// one argument because the engine is spawned with `args`, not through a shell.
 pub(crate) fn ingest_paths(app: &AppHandle, paths: &[PathBuf]) {
     let (app, paths) = (app.clone(), paths.to_vec());
     thread::spawn(move || {
