@@ -1,3 +1,24 @@
+# demo.sh — a wrapper; the runner is `ulpf demo`
+
+```
+scripts/demo.sh            # interactive: Enter advances, the server stays up at the end
+scripts/demo.sh --auto     # unattended rehearsal: fixed 3 s pauses, then stop and reset
+scripts/demo.sh --check    # inputs, ports, and no drift from the demo section of PROGRESS.md
+scripts/demo.sh --reset    # stop a leftover server and remove demo/
+```
+
+The runner lives in the binary (`ulpf demo`, D67), so playing the demo needs no shell; this
+script only finds `./target/release/ulpf` and hands the flags over. It has been played end to
+end on macOS only: the two Windows branches (`taskkill` and `tasklist`, in
+`crates/ulpf/src/demo.rs`) are compiled by the `windows-latest` job of
+`.github/workflows/app.yml` (`cargo build --release -p ulpf`) and have not been executed, the
+same standing as the desktop app's Windows installers (D74). The subcommand takes `--dir`,
+`--listen`, `--syslog` and `--repo` for a second rehearsal beside a live server. It plays steps 0-9 of the demo section of PROGRESS.md with the existing
+subcommands, spawning its own `ulpf serve` on `demo/watch` with `--parsers demo/parsers
+--pending demo/pending`, so nothing lands in the repo's `parsers/` or `pending/`; steps 10-13
+are named, not played. `--check` starts nothing: it reports `ok`/`DRIFT` per item and exits 0
+or 1, and `cargo test -p ulpf demo` asserts the same titles and commands.
+
 # isolation.sh — proves the binary makes no outbound connection
 
 ```

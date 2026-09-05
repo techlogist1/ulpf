@@ -34,11 +34,46 @@ another directory (the old one is left as it is).
 
 ## Menus
 
-File: Add files… (Cmd/Ctrl+O), Add folder…, Open output folder, Open in browser, Choose data
-directory…. Tray (menu bar on macOS, notification area on Windows): Show, Open output
-folder, Open in browser, Quit. Closing the window hides it and the engine keeps ingesting;
-Quit is what stops the engine. The title reads `ULPF · engine ok · N events · M pending`
-once a second, or `engine down (exit N)` if the engine stopped.
+File: Add files… (Cmd/Ctrl+O), Add folder…, Open output folder, Open in browser, Intensity ▸
+(Low, Balanced, Max — the running one check-marked), Choose data directory…. Tray (menu bar
+on macOS, notification area on Windows): Show, Open output folder, Open in browser, Quit —
+no Intensity there, it is a File-menu setting only. Closing the window hides it and the
+engine keeps ingesting; Quit is what stops the engine. The title reads `ULPF · engine ok · N
+events · M pending · Balanced · 4 of 8 cores · index on` once a second (the intensity part is
+the next section), or `engine down (exit N)` if the engine stopped.
+
+## Intensity: how hard the engine works
+
+`File > Intensity` is one setting with three choices. Each label carries this machine's own
+numbers, so nobody has to know the core count before choosing (an eight-core Mac):
+
+| | Workers | Entity index |
+|---|---|---|
+| `Low · 2 of 8 cores · entity index off` | one core under four cores, else two | off |
+| `Balanced · 4 of 8 cores · entity index on` (default) | half the cores | on |
+| `Max · 7 of 8 cores · entity index on` | all but one (the engine's own default) | on |
+
+The two are one control because they are one question: how much of the machine ULPF may
+take. Only Low gives the entity index up — it costs an order of magnitude on bulk
+throughput (D66) but it is what the Pivot screen reads, so it stays on everywhere else.
+
+The choice becomes `-j N --pivot on|off` on the `ulpf serve` command line and is kept as one
+word in `<config dir>/intensity`, beside the `data_dir` override (macOS
+`~/Library/Application Support/dev.ulpf.desktop/intensity`, Windows
+`%APPDATA%\dev.ulpf.desktop\intensity`); a missing or unreadable file means Balanced. The
+engine fixes both its worker count and the index when it starts, so choosing a different
+intensity restarts it: the window says `Restarting the engine at Max: 7 of 8 cores, entity
+index on`, the child is killed the way Quit kills it (safe under the engine's kill recovery,
+D59), a new one starts on a fresh free port against the same store, and a notice says
+`Engine ready at Max · 7 of 8 cores · entity index on` when it answers. Nothing in the store
+or the output is lost across the restart.
+
+The title carries what the running engine reports, not what the file asks for:
+`ULPF · engine ok · 1,250 events · 1 pending · Balanced · 4 of 8 cores · index on`, with the
+core count and `index on/off` from `GET /api/status` (`threads`, `pivot_index`). While a
+restart is in flight the two disagree and the title says `restarting` instead of quoting a
+number nothing is using. The tray menu does not repeat the submenu; the window menu is the
+one place the setting lives.
 
 ## When it does not start
 
@@ -65,7 +100,9 @@ Captures of the three, taken from the built app on macOS: `docs/screens/app-erro
   and `ulpf-app.exe` + `ulpf.exe` in one directory on Windows. The executable keeps the
   crate's name on both (`ULPF` is the bundle and the Start-menu shortcut), so Task Manager
   shows `ulpf-app.exe` for the window and `ulpf.exe` for the engine.
-- App data path: see the table (`app.path().app_data_dir()` on both).
+- App data path: see the table (`app.path().app_data_dir()` on both); the `intensity` file
+  sits in `app_config_dir` beside `data_dir`, so it follows the same two paths
+  (`src/intensity.rs`).
 - Installer: `.app` + `.dmg` on macOS; NSIS `.exe` + `.msi` on Windows. Tauri's NSIS
   `installMode` default is `currentUser`: it installs under `%LOCALAPPDATA%` and asks for no
   administrator, which is why the CI smoke job looks for the installed executable there.
@@ -74,7 +111,8 @@ Captures of the three, taken from the built app on macOS: `docs/screens/app-erro
 - Tray icon: a template image (alpha only) drawn at runtime on macOS so it follows the
   menu bar's style; the coloured app icon on Windows (`src/menu.rs`).
 - Stopping the engine: std's `Child::kill`, SIGKILL on macOS and `TerminateProcess` on
-  Windows; both are safe under the engine's kill recovery (D59).
+  Windows; both are safe under the engine's kill recovery (D59). An intensity change uses
+  the same kill, so the restart behaves the same way on both platforms.
 - The splash page is served from `tauri://localhost` on macOS and `http://tauri.localhost`
   on Windows (`SPLASH` in `src/lib.rs`).
 - Positional reads in the store and the UDP receive buffer in the syslog listener have

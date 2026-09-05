@@ -1435,3 +1435,79 @@ could not fix in a definition are on branch `lane-3b-cef-leef` (CEF's header sev
 named `severity`, the syslog scale's name, so its 0-10 scale is canonicalised backwards; a
 LEEF 2.0 delimiter written `0xHH` splits on the literal `0` with no counted failure); they
 are named in the two headers and merge after the demo.
+
+## D79. Motion shows the truth of the system or it does not exist
+**Decision.** Motion is allowed exactly where it reports a state change or the movement of
+data through the machine, and forbidden as decoration. Flow (`ui/src/Flow.svelte`, `#/` and
+`#/flow`, key `0`, Esc from any top-level screen) draws the six stations on one line with
+the inference branch and the pending tray under detect and the chain under preserve; every
+number is a value the API returned and every motion is driven by one. The pulse on a link is
+one element (a repeating 6 px dash every 32 px) moved by one Web Animations translate, looped;
+each 500 ms frame sets its playback rate from that link's own rate as `px/s = 16·log10(1 +
+events/s)` (1/s crawls at 5 px/s, 100/s at 32, 10,000/s at 64, 400,000/s at 90), so six moving
+elements cover any rate and a speed change never jumps; at rate 0 the dashes fade over `--d2`
+and the track stays. The rate is that stage's counter delta between the last two frames over
+their interval, or the server's `rate`/`queue` window when the frame carries one, and the
+label under the number says which. Tokens: `--d1` 120 ms (a value or badge changed), `--d2`
+240 ms (a screen arrived, a result replaced a confirmation, the queue bar, a chain mark, the
+branch lighting), `--ease cubic-bezier(.2,0,0,1)`, `--pulse` 6 px, `--pitch` 32 px. A
+screen fades in over `--d2` only after the first hash change; a count badge pops over `--d1`
+by a keyed re-mount, gated so the first frame's counts and a screen's opening state appear
+still; the approve result, a verify verdict that lands after the screen opened and a drift
+state that changes get the same one change. A selection moving (h/l on Flow, j/k on a list)
+is the reader's own action and reports nothing, so it snaps everywhere. `prefers-reduced-motion`
+turns every transition and animation off in one stylesheet rule and stops the script
+animations from being created: the diagram stands with the same numbers. Station to screen:
+ingest opens Live, preserve opens Integrity, detect opens Drift (detection is per source),
+the branch and the tray open Review (nothing is parsed until a human approves), parse opens
+the newest record's Traceback, normalize opens Pivot (the entity index is built from
+normalized paths), emit opens Replay (emit writes v1, Replay the next version). **Anchor.**
+`ui/src/Flow.svelte`, `ui/src/keys.js` (`stations()`, `reduced()`), the `/* ---- flow ---- */`
+section of `ui/src/app.css`, `docs/design.md` Motion section, `docs/screens/flow-*`.
+**Principle.** The counters are the product; a screen that moves when nothing changed is
+lying about the machine (D69: no decoration). **Ruled out.** One DOM element per event
+(400,000 events in 25 s is 16,000 nodes a second; a visible tab drops frames and a hidden one
+queues them); a canvas particle system (a second rendering model beside the DOM, script per
+frame on the main thread, no tokens, invisible to reduced-motion and the theme); motion on
+hover (reports nothing that changed; the station's border-colour transition was removed for
+this reason); a selection ease (the same property as hover, and every other selection in the
+app snaps); a hero animation on load (decoration by definition, and the first frame's counts
+would move without having changed).
+
+## D81. A pivot names the cost of each part of its answer, and `related` reads the index the way the input is read
+**Decision.** Every pivot page carries `elapsed_ms { header, timeline, related, lines, total }`
+(`crates/ulpf/src/pivot.rs`, `Elapsed`), so a slow pivot says which part was slow instead of
+being "about 500 ms" (a figure the record had never measured: on a 233,854-event slice the
+busiest user answered in 93 ms quiet and 239 ms at load 30, and `related` was 78-98% of it).
+The read side opens its connections with `SQLITE_OPEN_NO_MUTEX` and `mmap_size` 1 GiB
+(`open_reader`): rusqlite's `Connection` is not `Sync`, so SQLite's serialized mode bought
+nothing and cost a fifth of a scan in mutex calls, and the 2 MB page cache re-read every page
+of a 30 MB scan through `pread` and a copy. `related` scans the four other kinds on four
+read-only connections opened once, under `std::thread::scope` (a panicked scan is an error
+value); blobs and values are borrowed from the row and a value is copied only on a hit;
+membership in the window is one bit per id over the window's span. Pages are byte-identical
+to before (eleven pages over six entities, every second page through the cursor, `cmp`), and
+the controlled pair on a quiet machine reads 2.6-3.3x (jdoe 93 -> 29 ms, dst_port 443 89 ->
+33, src_ip 74 -> 28); the loaded end (load 28-36) read 4-8x because the old path's mutex and
+`pread` lose more under contention. **Anchor.** `open_reader`, `PivotIndex::open`,
+`related`, `scan_related` in `crates/ulpf/src/pivot.rs`; `docs/api.md` v4 (`elapsed_ms`).
+**Principle.** Inputs are memory-mapped and read without copies (CLAUDE.md); the index is an
+input on the read side. A number on screen is measured, and a slow answer names its cause.
+**Ruled out.** A larger `cache_size` (heap per connection, still a copy per page); a thread
+pool or async for the four scans (the query already runs under `Live`'s index mutex; four
+scoped threads cost about 100 µs); `HashSet<u64>` membership (SipHash and two allocations per
+row, 15% of the profile) or a sorted `Vec` with binary search (fourteen compares against one
+shift); a covering index `(kind, first_id, last_id, value, blob)` or a `WITHOUT ROWID` table
+clustered by `(kind, first_id)`, which would remove the table seek per posting row that is
+now 55% of the scan's CPU but doubles the writer's work (D66: the index thread is `serve`'s
+throughput cap) and changes the layout of a file older serves still open; a
+`first_id..last_id` pre-check before decoding (98% of rows hold one posting on the bench,
+so the extra column read costs more than the decodes it saves); RELATED_WINDOW and
+RELATED_ROW_BUDGET unchanged, because changing them changes `related_over`.
+
+## D82, D83: reserved
+D82 is lane 8's design for the store reopen under a live mapping, the stop path's handles and
+the null output device (branch `lane-8-windows`, written on that branch, merges after the demo
+on the owner's go). D83 is the post-demo decision on a directory-level include or exclude for
+the engine's inputs (tonight every documented command names `samples/*.log`; a bare `samples`
+directory ingests `samples/README.md` as a log).

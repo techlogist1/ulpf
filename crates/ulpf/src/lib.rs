@@ -4,6 +4,7 @@
 //! engine workers and the fixture harness.
 
 pub mod cli;
+pub mod demo;
 pub mod engine;
 pub mod fixture;
 pub mod inference;

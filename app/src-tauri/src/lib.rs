@@ -3,6 +3,7 @@
 // serves in the window and stops it on quit. Nothing here parses a log.
 
 mod ingest;
+mod intensity;
 mod menu;
 mod title;
 
@@ -64,7 +65,7 @@ pub fn run() {
             });
             menu::install(&handle)?;
             let h = handle.clone();
-            thread::spawn(move || start(&h, data));
+            thread::spawn(move || start(&h, data, "Starting"));
             thread::spawn(move || title::title_loop(&handle));
             Ok(())
         })
@@ -148,16 +149,18 @@ fn is_toml(p: &Path) -> bool {
 
 /// Starts the sidecar against `data` on a free localhost port, waits for `/api/status`,
 /// records the URL in `<data>/server.url` and points the window at it. Runs on its own
-/// thread; every failure lands on the splash page and in the title.
-pub(crate) fn start(app: &AppHandle, data: PathBuf) {
+/// thread; every failure lands on the splash page and in the title. `verb` is what the
+/// window says it is doing: "Starting" at launch, "Restarting" after a setting changed.
+pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     let engine = app.state::<Engine>();
     let generation = engine.generation.fetch_add(1, Relaxed) + 1;
     *engine.data.lock().unwrap() = data.clone();
     *engine.url.lock().unwrap() = None;
     *engine.down.lock().unwrap() = None;
     let _ = fs::remove_file(data.join("server.url"));
+    let (chosen, cores) = (intensity::load(app), intensity::cores());
     set_title(app, "ULPF · starting engine…");
-    splash(app, "Starting the engine", false);
+    splash(app, &format!("{verb} the engine at {}: {} of {cores} cores, entity index {}", chosen.name(), chosen.threads(cores), intensity::on_off(chosen.pivot())), false);
 
     if let Err(e) = prepare(app, &data) {
         return fail(app, generation, "start failed", &format!("Cannot prepare {}: {e}", data.display()));
@@ -182,7 +185,7 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf) {
     let arg = |p: &str| data.join(p).to_string_lossy().into_owned();
     // Every path is absolute: the engine's --parsers and --mappings default to paths
     // relative to its working directory, which an app has no useful one of.
-    let args = [
+    let mut args = vec![
         "serve".to_string(),
         arg("watch"),
         "--store".into(),
@@ -198,6 +201,10 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf) {
         "--listen".into(),
         format!("127.0.0.1:{port}"),
     ];
+    // The intensity setting, applied where the engine takes it: both the worker count and
+    // the entity index are fixed when the process starts, which is why changing the setting
+    // comes back through here rather than reaching into a running engine.
+    args.extend(chosen.args(cores));
     // The bundler copies `binaries/ulpf-<triple>[.exe]` beside the app executable with the
     // triple stripped; `sidecar("ulpf")` resolves that name on both platforms and, on
     // Windows, spawns without a console window.
@@ -262,6 +269,7 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf) {
             let _ = fs::write(data.join("server.url"), &url);
             *engine.url.lock().unwrap() = Some(url.clone());
             navigate(app, &url);
+            intensity::ready_notice(app, chosen, cores);
             return;
         }
         thread::sleep(Duration::from_millis(200));
