@@ -155,6 +155,37 @@ kind = "leef"
     assert_eq!(run(&p, b"LEEF:1.0|V|P", &mut out), Err(ParseFailure::InvalidLeef));
 }
 
+/// IBM: the delimiter is "a single character or the hex value for that character. The hex
+/// value can be represented by the prefix 0x or x".
+#[test]
+fn leef_delimiter_hex_prefixes_and_bad_digits() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = ["LEEF:"]
+[strategy]
+kind = "leef"
+"#);
+    for header in ["0x5E", "x5E", "X5e", "^"] {
+        let line = format!("LEEF:2.0|V|P|1.0|evt|{header}|devTime=1788516923123^src=10.0.0.1^dst=10.0.0.2^sev=9");
+        let mut out = Parsed::default();
+        run(&p, line.as_bytes(), &mut out).unwrap_or_else(|e| panic!("{header}: {e:?}"));
+        assert_field(&out, "src", b"10.0.0.1");
+        assert_field(&out, "dst", b"10.0.0.2");
+        assert_field(&out, "sev", b"9");
+    }
+    let mut out = Parsed::default();
+    // A prefix with digits that are not hex is a counted failure, not a silent split on tab.
+    assert_eq!(
+        run(&p, b"LEEF:2.0|V|P|1.0|evt|0xZZ|src=10.0.0.1^dst=10.0.0.2", &mut out),
+        Err(ParseFailure::InvalidLeef)
+    );
+    assert!(field(&out, "src").is_none());
+}
+
 #[test]
 fn pattern_anchors_braces_discard_and_regex_escape_hatch() {
     let p = parser(r#"

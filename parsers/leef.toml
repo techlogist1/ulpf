@@ -10,8 +10,8 @@
 # value can be represented by the prefix 0x or x" (IBM's examples: `^` and `x5E`). "Each
 # event attribute must be separated by tab or the delimiter character, but the order of
 # attributes is not enforced." Without a delimiter field LEEF 2.0 attributes are
-# tab-separated like 1.0. The engine reads the `xHH` form; the `0xHH` spelling is not read
-# and such a line splits on the literal `0`.
+# tab-separated like 1.0. The engine reads both spellings, `xHH` and `0xHH` (either case);
+# a prefix whose digits are not hex is counted as invalid_leef, never split on tab.
 # The strategy names leef_version, device_vendor, device_product, device_version,
 # event_id and emits every attribute key as written (the predefined ones: devTime,
 # devTimeFormat, src, dst, srcPort, dstPort, proto, usrName, sev, cat, identSrc,

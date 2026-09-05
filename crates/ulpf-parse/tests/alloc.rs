@@ -115,11 +115,14 @@ kind = "leef"
 "#);
     let cef_line = b"CEF:0|Vendor|Product|1.0|100|Name of the event|5|src=10.0.0.5 spt=51234 dst=10.0.0.7 dpt=443 act=allow msg=plain words here cs1=a cs1Label=b";
     let leef_line = b"LEEF:2.0|Vendor|Product|1.0|100|^|src=10.0.0.5^dst=10.0.0.7^act=allow^usrName=jdoe";
+    // The hex delimiter spelling reads the same span, so it must not allocate either.
+    let leef_hex = b"LEEF:2.0|Vendor|Product|1.0|100|0x5E|src=10.0.0.5^dst=10.0.0.7^act=allow^usrName=jdoe";
     let mut scratch = ulpf_parse::Scratch::default();
     let mut out = Parsed::default();
     for _ in 0..3 {
         cef.parse(cef_line, &ctx(), &mut scratch, &mut out).unwrap();
         leef.parse(leef_line, &ctx(), &mut scratch, &mut out).unwrap();
+        leef.parse(leef_hex, &ctx(), &mut scratch, &mut out).unwrap();
     }
     // minimum over three attempts: the runner's own threads may allocate once, the parser never
     let allocations = (0..3)
@@ -128,6 +131,7 @@ kind = "leef"
             for _ in 0..100 {
                 cef.parse(cef_line, &ctx(), &mut scratch, &mut out).unwrap();
                 leef.parse(leef_line, &ctx(), &mut scratch, &mut out).unwrap();
+                leef.parse(leef_hex, &ctx(), &mut scratch, &mut out).unwrap();
             }
             ALLOCS.load(Relaxed) - before
         })

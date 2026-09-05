@@ -155,6 +155,25 @@ fn extension_pairs<'a>(ext: &'a [u8], eqs: &mut Vec<(usize, usize)>, out: &mut P
 
 static LEEF_HEADER: [&[u8]; 5] = [b"leef_version", b"device_vendor", b"device_product", b"device_version", b"event_id"];
 
+/// LEEF 2.0's optional delimiter field. IBM: "You can use a single character or the hex
+/// value for that character. The hex value can be represented by the prefix 0x or x".
+/// Empty means tab. A prefixed value whose digits do not parse is a counted failure rather
+/// than a fall back to tab, which would split the attributes on the wrong byte in silence.
+fn delimiter_byte(d: &[u8]) -> Result<u8, ParseFailure> {
+    let hex = match d {
+        [] => return Ok(b'\t'),
+        // A single byte is the delimiter itself, even where it is `x` or `0`.
+        [one] => return Ok(*one),
+        [b'0', b'x' | b'X', rest @ ..] | [b'x' | b'X', rest @ ..] => rest,
+        [first, ..] => return Ok(*first),
+    };
+    if !matches!(hex.len(), 1 | 2) {
+        return Err(ParseFailure::InvalidLeef);
+    }
+    let text = std::str::from_utf8(hex).map_err(|_| ParseFailure::InvalidLeef)?;
+    u8::from_str_radix(text, 16).map_err(|_| ParseFailure::InvalidLeef)
+}
+
 pub(crate) fn apply_leef<'a>(text: &'a [u8], scratch: &mut StructuredScratch, out: &mut Parsed<'a>) -> Result<(), ParseFailure> {
     let start = memchr::memmem::find(text, b"LEEF:").ok_or(ParseFailure::InvalidLeef)?;
     let body = &text[start + 5..];
@@ -164,23 +183,15 @@ pub(crate) fn apply_leef<'a>(text: &'a [u8], scratch: &mut StructuredScratch, ou
     if parts.len() < 6 {
         return Err(ParseFailure::InvalidLeef);
     }
-    for (name, part) in LEEF_HEADER.iter().zip(parts) {
-        out.push(*name, unescape_if_needed(&body[part.clone()]));
-    }
-    // LEEF 2.0 has an optional delimiter field: a literal byte or `xHH`.
+    // The delimiter is read before any field is pushed, so a bad one fails with nothing half-written.
     let (delim, attrs): (u8, &[u8]) = if is_v2 && parts.len() == 7 {
-        let d = &body[parts[5].clone()];
-        let byte = if d.is_empty() {
-            b'\t'
-        } else if d.len() == 3 && (d[0] == b'x' || d[0] == b'X') {
-            u8::from_str_radix(std::str::from_utf8(&d[1..]).unwrap_or("09"), 16).unwrap_or(b'\t')
-        } else {
-            d[0]
-        };
-        (byte, &body[parts[6].clone()])
+        (delimiter_byte(&body[parts[5].clone()])?, &body[parts[6].clone()])
     } else {
         (b'\t', &body[parts[parts.len() - 1].clone()])
     };
+    for (name, part) in LEEF_HEADER.iter().zip(parts) {
+        out.push(*name, unescape_if_needed(&body[part.clone()]));
+    }
     for pair in attrs.split(|&b| b == delim) {
         if let Some(eq) = memchr::memchr(b'=', pair) {
             let key = &pair[..eq];

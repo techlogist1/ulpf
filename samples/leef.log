@@ -14,3 +14,4 @@ LEEF:2.0|Vendor|Proxy|6.0|300|^|devTime=03/Sep/2026:10:15:24 +0530^devTimeFormat
 LEEF:2.0|Vendor|Product|1.0|109|^|devTime=Sep 03 2026 10:15:25 AM^devTimeFormat=MMM dd yyyy hh:mm:ss a^src=10.0.0.1^dst=10.0.0.2^sev=1
 LEEF:2.0|Vendor|VPN|4.2|200|^|devTime=1788516960000^usrName=jörg^src=203.0.113.9^dst=10.0.0.5^isLoginEvent=true^sev=4
 LEEF:2.0|Vendor|Product|1.0|110|^|devTime=03 Sep 2026 10:15:26^devTimeFormat=dd MMM yyyy HH:mm:ss^src=10.0.0.1^dst=10.0.0.2^sev=1
+LEEF:2.0|Vendor|Product|1.0|111|0x5E|devTime=1788516970000^src=10.0.0.1^dst=10.0.0.2^srcPort=41000^dstPort=443^proto=6^sev=9^cat=firewall
