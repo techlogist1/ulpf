@@ -1511,3 +1511,54 @@ the null output device (branch `lane-8-windows`, written on that branch, merges 
 on the owner's go). D83 is the post-demo decision on a directory-level include or exclude for
 the engine's inputs (tonight every documented command names `samples/*.log`; a bare `samples`
 directory ingests `samples/README.md` as a log).
+
+## D67, amended: the runner is a subcommand
+`ulpf demo [--auto] [--check] [--reset] [--dir demo] [--listen 127.0.0.1:7878] [--syslog
+127.0.0.1:5514] [--repo .]` (`crates/ulpf/src/demo.rs`) plays the demo section of PROGRESS.md
+from the binary, and `scripts/demo.sh` is a wrapper that finds the binary and hands the flags
+over, because the team records on a Windows machine where no shell runs the script and a demo
+that plays on one laptop is one laptop away from not happening. It adds no engine behaviour:
+it spawns `current_exe() serve` with `--parsers demo/parsers --pending demo/pending`, copies
+files into the watch directory, speaks HTTP/1.1 to localhost over a `TcpStream` (the shape of
+`crates/ulpf/tests/server.rs`, so the binary gains no HTTP client), runs verify and attest as
+children, and kills the server at the end because a killed run restarts to the same output
+and store as an uninterrupted one (D59). `--check` keeps and widens the old grep: the ten step
+headings and the seventeen command strings are constants the runner prints, and each must
+appear verbatim in the demo section (the inputs and both ports are checked too); `cargo test`
+asserts the same, so drift fails the suite. Requests the demo makes on stage (approve,
+traceback, replay) print their failure where the answer would go instead of aborting; setup
+failures stop with a reason and exit 1. The reset also removes any generated parser (`origin =
+"inferred"`) from the repo's `parsers/`: a CLI approve writes it there, and a demo copy or a
+bundle made after it knows the unseen format already, so the demo cannot raise a proposal (a
+Windows tester hit exactly this). **Ruled out.** A PowerShell twin of the script (two runners
+drift, which is the failure D67 exists to prevent); a `--demo` flag on `serve` (engine
+behaviour for the demo's sake); shelling out to `sh -c` for the copies (the same portability
+hole one level down); `?` on every request (correct for a script, wrong for a stage);
+loosening the check to a fuzzy match (a match that tolerates an edit proves nothing).
+
+## D84. One Intensity setting with three named choices, applied by restarting the engine
+**Decision.** The desktop app exposes the engine's `-j` and `--pivot` as one setting with
+three choices whose labels carry this machine's own numbers from `available_parallelism`:
+`Low · 2 of 8 cores · entity index off` (one core under four cores, else two), `Balanced ·
+4 of 8 cores · entity index on` (half; the default a fresh install and an unreadable settings
+file both get), `Max · 7 of 8 cores · entity index on` (all but one, the engine's own
+default). The choice becomes `-j N --pivot on|off` on the serve line and is kept as one word
+in `app_config_dir/intensity` beside the `data_dir` override. Changing it restarts the
+sidecar: the child is killed as Quit kills it (D59 makes it safe), a fresh free port, the
+same store; the page that is up says `Restarting the engine at Low: 2 of 8 cores, entity
+index off` and then `Engine ready at ...` (1.18 s end to end on this Mac). The title quotes
+the running engine, not the file: `ULPF · engine ok · N events · M pending · Balanced · 4 of
+8 cores · index on` from `/api/status` (`threads`, `pivot_index`), and `restarting` when the
+two disagree. **Anchor.** `app/src-tauri/src/intensity.rs`, the `Intensity` submenu in
+`app/src-tauri/src/menu.rs`, `intensity_part` in `app/src-tauri/src/title.rs`, the Intensity
+section of `app/README.md`, `docs/screens/app-intensity-*.png`. **Principle.** A number a
+person quotes is the number the machine is running; a setting names what it costs on this
+machine. **Ruled out.** Two independent controls (a typed thread count with the index left
+on is a machine at full tilt at a tenth of its throughput, D66, and a number typed by someone
+who does not know the core count); Max as the default (right for a headless run, wrong for a
+demo machine also driving a browser and a recording); a live change (the engine fixes its
+worker count when it builds the pool and takes the index switch at start by design, D40,
+D60, D66, so a live control would lie or the engine would grow the reconfiguration path the
+one-sequencer design exists to avoid); printing the setting in the title (it would claim 7
+cores during the second the old 2-core engine still answers); a tray copy of the submenu
+(two sets of check marks for one choice).

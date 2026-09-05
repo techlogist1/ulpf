@@ -305,7 +305,8 @@ The raw store is opened read-only by the replay (through the writer's snapshot i
   "running": null | { "version": u64, "done": u64, "total": u64, "started": rfc3339 },
   "last": null | ReplayReport }
 ```
-`POST /api/replay` body `{}` or `{ "schema": string }` → `{ "version": u64, "started": true,
+`POST /api/replay` body `{}` or `{ "schema": string }` (an empty body is accepted only without a
+`Content-Type: application/json` header; a client that sets the header sends `{}`) → `{ "version": u64, "started": true,
 "total": u64 }`; `409 conflict` while a replay runs. The replay uses the parser pipeline
 as it is at the start (the `Arc` it read); a parser approved mid-replay takes effect for
 the live stream and the next replay, and the report says which generation it used.
