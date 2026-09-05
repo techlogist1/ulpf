@@ -78,10 +78,13 @@
       by.set(r.device, a)
     }
     const step = span / 4
-    const ticks = [0, 1, 2, 3, 4].map((i) => ({ x: i * 25, t: lo + i * step }))
-    return { lo, hi, ticks, sameDay: fmt.day(lo) === fmt.day(hi), devices: [...by.entries()].sort((a, b) => b[1].reduce((s, t) => s + t.n, 0) - a[1].reduce((s, t) => s + t.n, 0)) }
+    const sameDay = fmt.day(lo) === fmt.day(hi)
+    const label = (t) => (sameDay ? fmt.clock(t).slice(0, 8) : fmt.time(t).slice(5, 16))
+    // A window narrower than the label's resolution would print the same second five
+    // times; a tick is kept only where its label differs from the one before it.
+    const ticks = [0, 1, 2, 3, 4].map((i) => ({ x: i * 25, t: lo + i * step, label: label(lo + i * step) })).filter((t, i, a) => i === 0 || t.label !== a[i - 1].label)
+    return { lo, hi, span: hi - lo, ticks, sameDay, devices: [...by.entries()].sort((a, b) => b[1].reduce((s, t) => s + t.n, 0) - a[1].reduce((s, t) => s + t.n, 0)) }
   })
-  const tickLabel = (t) => (lanes?.sameDay ? fmt.clock(t).slice(0, 8) : fmt.time(t).slice(5, 16))
 
   $effect(() => keys((e) => {
     if (e.key === '/') { box?.focus(); box?.select(); return true }
@@ -211,7 +214,7 @@
           <div class="axis">
             <span></span>
             <span class="ticks">
-              {#each lanes.ticks as t, i}<span class="tick" class:first={i === 0} class:last={i === lanes.ticks.length - 1} style="left:{t.x}%">{tickLabel(t.t)}</span>{/each}
+              {#each lanes.ticks as t (t.x)}<span class="tick" class:first={t.x === 0} class:last={t.x === 100} style="left:{t.x}%">{t.label}{#if lanes.ticks.length === 1 && lanes.span > 0}, {fmt.n(lanes.span)} ms wide{/if}</span>{/each}
             </span>
             <span class="lcount xs muted">{lanes.sameDay ? fmt.day(lanes.lo) : ''}</span>
           </div>
@@ -222,7 +225,7 @@
         <div>
           <div class="head">
             <h2>Timeline</h2>
-            <span class="note">newest first, {fmt.n(rows.length)} of {fmt.n(data.total)} loaded, Enter traces the selected event</span>
+            <span class="note">newest first, {fmt.n(rows.length)} of {fmt.n(data.total)} loaded, click or Enter traces the event</span>
             {#if noLine}<span class="note">{hasLines ? `${fmt.n(noLine)} rows have left the tail; open one for the stored record` : 'the index carries no emitted line; open a row for the record'}</span>{/if}
           </div>
           <div style="--cols:11em 10em 9em{hasLines ? ' 8em 6em minmax(0,1fr)' : ' minmax(0,1fr)'} 5em">
@@ -251,18 +254,18 @@
         </div>
 
         <div class="related">
-          <div class="head"><h2>Seen with</h2><span class="note">the ten most frequent per kind over the newest {fmt.n(data.related_over ?? data.total)} events; click to pivot</span></div>
+          <div class="head"><h2>Seen with</h2><span class="note">the ten most frequent per kind over the newest {fmt.n(data.related_over ?? data.total)} events; the bar is that share; click to pivot</span></div>
           {#each KINDS as k}
             {@const items = data.related?.[k] ?? []}
             {#if items.length}
-              {@const top = items[0].events || 1}
+              {@const top = data.related_over ?? data.total ?? 1}
               <div>
                 <h3>{k}</h3>
                 <ul>
                   {#each items as r}
                     <li>
                       <a href="#/pivot/{encodeURIComponent(k)}/{encodeURIComponent(r.value)}" class:dev={k === 'device'} style={k === 'device' ? `--c:${tint(r.value)}` : ''}>{r.value}</a>
-                      <span class="share"><i style="width:{(100 * r.events) / top}%"></i></span>
+                      <span class="share" title="{fmt.pct(r.events / top)} of those events"><i style="width:{Math.min(100, (100 * r.events) / top)}%"></i></span>
                       <span class="n">{fmt.n(r.events)}</span>
                     </li>
                   {/each}

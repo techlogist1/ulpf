@@ -40,7 +40,8 @@ export const fmt = {
   n: (x) => (x == null ? '–' : Number(x).toLocaleString('en-US')),
   f: (x, d = 1) => (x == null ? '–' : Number(x).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })),
   mb: (b) => (b == null ? '–' : (b / 1048576).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
-  pct: (x) => (x == null ? '–' : `${(Number(x) * 100).toFixed(1)}%`),
+  // A difference of two rates can be -1e-17; toFixed keeps the sign as "-0.0".
+  pct: (x) => (x == null ? '–' : `${(Number(x) * 100).toFixed(1).replace(/^-(0(\.0+)?)$/, '$1')}%`),
   pairs: (list) => (Array.isArray(list) && list.length ? list.map(([r, n]) => `${r} ${fmt.n(n)}`).join('  ') : 'none'),
   time: (ms) => (ms == null ? '–' : new Date(ms).toISOString().replace('T', ' ').replace('Z', '')),
   // "2026-09-04T10:23:00.000Z" or epoch ms -> "09-04 10:23:00.000". The year is identical on

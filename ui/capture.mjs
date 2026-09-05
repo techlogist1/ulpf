@@ -12,6 +12,9 @@ const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ?
 const base = arg('base', 'http://127.0.0.1:7881')
 const out = arg('out', '../docs/screens')
 const chrome = arg('chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome')
+// --only a,b,c re-shoots those names (approve = the five-step flow) and leaves README.md and index.json alone.
+const only = arg('only', null)?.split(',') ?? null
+const wanted = (name) => !only || only.includes(name)
 mkdirSync(out, { recursive: true })
 
 const j = async (p) => (await fetch(base + p)).json()
@@ -35,6 +38,7 @@ const missing = String((await j('/api/integrity')).records + 100000)
 const browser = await puppeteer.launch({ executablePath: chrome, headless: true, args: ['--hide-scrollbars'] })
 const index = []
 async function shot(name, width, height, url, what, prepare) {
+  if (!wanted(name)) return
   const page = await browser.newPage()
   await page.setViewport({ width, height, deviceScaleFactor: 1 })
   await page.goto(`${base}/${url}`, { waitUntil: 'domcontentloaded' })
@@ -75,7 +79,7 @@ await shot('empty-pivot-value', 1280, 800, '#/pivot/user/nobody-has-this-name', 
 await shot('reject-confirm', 1280, 800, `#/review/${encodeURIComponent(reviewId)}`, 'review: x opens the reject confirmation, marked as the destructive one; Enter confirms, Esc cancels', async (p) => { await key(p, 'x') })
 
 // Keyboard-only approve: open review, walk to the proposal, open it, a, Enter.
-if (approveId) {
+if (approveId && wanted('approve')) {
   const page = await browser.newPage()
   await page.setViewport({ width: 1280, height: 800 })
   await page.goto(`${base}/#/live`, { waitUntil: 'domcontentloaded' })
@@ -113,6 +117,7 @@ if (empty) {
   }
 }
 await browser.close()
+if (only) { console.log(`${index.length} captures re-shot in ${out}; README.md and index.json untouched`); process.exit(0) }
 
 const lines = ['# Screen captures', '', `Captured headlessly by \`ui/capture.mjs\` against a populated \`ulpf serve\` (${status.version ?? 'ulpf'} at ${base}). One line per file.`, '', '| file | screen | width | what it shows |', '|---|---|---|---|', ...index.map((i) => `| ${i.file} | ${i.screen} | ${i.width} | ${i.what} |`)]
 writeFileSync(join(out, 'README.md'), lines.join('\n') + '\n')

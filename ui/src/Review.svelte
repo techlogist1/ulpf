@@ -115,6 +115,8 @@
     if (r.ok) { result = { kind: 'ok', done: true, title: `Rejected ${r.data.id}`, proof: [['moved to', r.data.moved_to], ['remembered', 'an identical later proposal for this source is skipped']] }; loadList() }
     else result = { kind: 'bad', title: 'Reject failed', body: `${r.data.error} (${r.data.reason})` }
   }
+  // The confirmation sat where the reader was looking; the result replaces it from above.
+  const reveal = (el) => { el.scrollIntoView({ block: 'start' }); el.focus({ preventScroll: true }) }
   const diffClass = (l) => (l.startsWith('+') && !l.startsWith('+++') ? 'add' : l.startsWith('-') && !l.startsWith('---') ? 'del' : l.startsWith('@@') ? 'hunk' : '')
 </script>
 
@@ -205,7 +207,7 @@
           <span class="note">{detail.updates ? `overwrites parsers/${detail.updates}.toml on approval` : 'written to the parsers directory on approval'}</span>
         </div>
         {#if result?.done}
-          <div class="notice {result.kind}">
+          <div class="notice {result.kind}" tabindex="-1" {@attach reveal}>
             <b>{result.title}</b>
             {#if result.proof}<div class="proof">{#each result.proof as [k, v]}<span>{k}</span><b>{v}</b>{/each}</div>{/if}
             {#if result.problems?.length}<ul class="problems">{#each result.problems as p}<li>{p}</li>{/each}</ul>{/if}
@@ -245,7 +247,7 @@
             </div>
           {/if}
           {#if result}
-            <div class="notice {result.kind}">
+            <div class="notice {result.kind}" tabindex="-1" {@attach reveal}>
               <b>{result.title}</b>
               {#if result.body}<pre>{result.body}</pre>{/if}
               {#if result.problems?.length}<ul class="problems">{#each result.problems as p}<li>{p}</li>{/each}</ul>{/if}

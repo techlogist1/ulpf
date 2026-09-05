@@ -137,9 +137,11 @@ brand mark. Line length is bounded by columns, and prose blocks (`.empty`, notes
 Rows are `--row` 22 px, the top bar `--top` 36 px, the status line `--foot` 22 px. The page
 gutter is `--s5` and the content stops at `--page-max` 2400 px so a 27-inch monitor at
 2560 px gets a wider tail, a wider byte ruler (256 bytes per row instead of 159) and
-sources beside parsers, not a strip in the middle. Two breakpoints: under 1400 px the
-sources and parsers tables stack (the sources table needs 800 px of columns); under
-1100 px every two-column split stacks.
+sources beside parsers, not a strip in the middle. Two breakpoints: under 1650 px the
+sources and parsers tables stack (the sources table's ten columns need about 1000 px with a
+long proposal id, and the parsers table 560 beside it); under 1100 px every two-column split
+stacks. The page's bottom padding clears the fixed status line, so the last row of a table
+is never under it.
 
 ## Contrast
 
@@ -214,12 +216,12 @@ Every class is in `ui/src/app.css` under a section comment; no component adds it
 | funnel | `.funnel` + `.fst` | the six pipeline stages as numbers with a proportional track and the loss between stages |
 | queue | `.queue` | high-water against capacity with the producer's block count |
 | byte ruler | `.bytes` | offset column, text (n bytes per row, never splitting a UTF-8 sequence) or hex (16 per row with ASCII); owned ranges lit by tint, control bytes as `\xNN` |
-| legend | `.legend` | the tint of every source key |
+| legend | `.legend` | the tint of every source key; two rows at most (`.clip`), a button shows all N when a record has more |
 | provenance lists | `.prov` | parser fields and normalized paths, each row lighting its bytes on hover, pinning on click |
 | trail | `.trail` | the breadcrumb of pivots or the review path |
 | entity | `.entity` | the pivoted value at `--t3` with its facts |
 | lanes | `.lanes` + `.lane` + `.axis` | one lane per device over the loaded window, ticks merged when closer than a pixel, a five-tick time axis |
-| related | `.related` | the ten most frequent co-occurring values per kind with a share bar; every value is a link that pivots |
+| related | `.related` | the ten most frequent co-occurring values per kind; the bar is the value's share of the events the list was computed over, so equal counts are equal bars; every value is a link that pivots |
 | template | `.tpl` | one inferred template: id, support, verified, members, the pattern, the slot table (name, kind, why this name, after, distinct, examples), example lines, history |
 | diff | `.diff` | a unified diff, added and removed lines washed |
 | why | `.why` | the replay report's explanation lines set at `--t2`, above the counters they explain |
