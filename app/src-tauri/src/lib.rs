@@ -68,14 +68,14 @@ pub fn run() {
 // ---- data directory -------------------------------------------------------------------
 
 /// The override the user chose, kept as one line in the app's config directory:
-/// macOS `~/Library/Application Support/dev.ulpf.app/data_dir`, Windows
-/// `%APPDATA%\dev.ulpf.app\data_dir` (both from Tauri's path resolver).
+/// macOS `~/Library/Application Support/dev.ulpf.desktop/data_dir`, Windows
+/// `%APPDATA%\dev.ulpf.desktop\data_dir` (both from Tauri's path resolver).
 fn config_file(app: &AppHandle) -> PathBuf {
     app.path().app_config_dir().expect("app config dir").join("data_dir")
 }
 
 /// The chosen directory, else Tauri's app data directory: macOS
-/// `~/Library/Application Support/dev.ulpf.app`, Windows `%APPDATA%\dev.ulpf.app`.
+/// `~/Library/Application Support/dev.ulpf.desktop`, Windows `%APPDATA%\dev.ulpf.desktop`.
 fn configured_data_dir(app: &AppHandle) -> PathBuf {
     fs::read_to_string(config_file(app))
         .ok()
