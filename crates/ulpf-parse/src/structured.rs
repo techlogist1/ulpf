@@ -315,10 +315,26 @@ fn push_xml_field<'a>(text: &'a [u8], stack: &[Range<usize>], leaf: Option<Range
     while out.fields[mark..].iter().any(|f| *f.key == *key) {
         n += 1;
         key.truncate(base);
-        key.extend_from_slice(n.to_string().as_bytes());
+        push_decimal(&mut key, n);
     }
     let value = if decode { decode_entities(value) } else { Cow::Borrowed(value) };
     out.push(Cow::Owned(key), value);
+}
+
+// The sibling counter on the stack: `to_string` was one allocation per repeated unnamed
+// element, quadratic over an unnamed `<Data>` list.
+fn push_decimal(key: &mut Vec<u8>, mut n: u32) {
+    let mut buf = [0u8; 10];
+    let mut i = buf.len();
+    loop {
+        i -= 1;
+        buf[i] = b'0' + (n % 10) as u8;
+        n /= 10;
+        if n == 0 {
+            break;
+        }
+    }
+    key.extend_from_slice(&buf[i..]);
 }
 
 /// `&amp; &lt; &gt; &quot; &apos; &#N; &#xN;`; anything else after `&` is kept as
