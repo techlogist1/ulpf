@@ -143,6 +143,90 @@ long proposal id, and the parsers table 560 beside it); under 1100 px every two-
 stacks. The page's bottom padding clears the fixed status line, so the last row of a table
 is never under it.
 
+## Motion
+
+One rule reconciles a screen that is satisfying to watch with the bans above: motion is
+allowed exactly where it shows the truth of the system and forbidden as decoration. Events
+moving from station to station are data, not ornament; a badge that pops did change; a
+verdict that fades in did just arrive. Nothing moves on load, nothing eases on hover, and
+under `prefers-reduced-motion` every animation and transition is off (the stylesheet's one
+media rule, and `reduced()` in `keys.js` before any script-driven animation is created): the
+same numbers stand as a still diagram, a link with a rate shows its dashes standing still and
+an idle link is a plain line (`docs/screens/flow-reduced-1280.png`).
+
+### Tokens
+
+| token | value | use |
+|---|---|---|
+| `--d1` | 120 ms | a value or badge changed, a selection moved, a queue bar grew |
+| `--d2` | 240 ms | a screen arrived, a result replaced a confirmation, a pulse hid or showed |
+| `--ease` | `cubic-bezier(0.2, 0, 0, 1)` | decelerate: things arrive and settle, nothing bounces |
+| `--pulse` | 6 px | one dash of the flow pulse |
+| `--pitch` | 32 px | dash to dash; one animation loop travels one pitch |
+
+### The pulse and its rate law
+
+A link between two stations is a 2 px track (`--line-2`) carrying one element, a repeating
+gradient of `--pulse` dashes every `--pitch`, moved by a single Web Animations `translate` of
+one pitch per second at playbackRate 1 and looped, so the dashes never end and the browser
+composites it without script. The count of moving elements on the whole screen is six (five
+links and the inference branch), whatever the event rate: a pulse is a count and a speed,
+never one element per event. Every 500 ms metrics frame sets each animation's
+`playbackRate` from that link's own rate, which changes the speed without a jump:
+
+    px/s = 16 · log10(1 + events/s)        playbackRate = px/s ÷ 32
+
+so 1 event/s crawls at 5 px/s, 100/s runs at 32 px/s, 10,000/s at 64, and 400,000/s at 90;
+one order of magnitude more is one step faster, which is how throughput is read, where a
+linear law would make a sample file invisible or a bench drop a blur. At rate 0 the dashes
+fade out over `--d2` and the track stays: idle is a plain line, not a stopped pulse.
+
+The rate behind each link is that stage's counter difference between the frames of the last
+two seconds divided by their interval (`framed` for the headline, `stored` for the first
+link, `detected`, `parsed`, `normalized`, `emitted` for the next four, `infer_buffered` for
+the branch), computed in the client from every frame it receives. When a frame carries the
+server's own window (`rate.framed_per_sec`, `rate.emitted_per_sec`, `rate.over_secs`, and
+`queue.depth`, `queue.capacity`; the v4 contract) the headline and the queue use it and the
+label under the number says which source is on screen; without it the queue shows only the
+run's high-water tick and says the depth is unreported. While the stream is down the
+pulses stop and the notice names the last frame's time.
+
+### Where else motion is allowed
+
+| what moved | motion | why |
+|---|---|---|
+| a screen replaced another (navigation) | `enter`: opacity 0 to 1 and 2 px up over `--d2`, only after the first hash change (`:root[data-nav]`) | the reader asked for a different screen; the first paint is never animated |
+| a count badge changed (pending, drift, the tray) | `pop`: scale 1.25 to 1 over `--d1`, by a keyed re-mount, gated so the first frame's counts appear still | the number is different; the eye is told where |
+| approve or reject completed | the result notice arrives with `enter` | the confirmation was replaced by what was written |
+| a verify finished after the screen opened | the verdict arrives with `enter`; the one on screen at open does not | the state changed while the reader watched |
+| a drift state changed after the screen opened | the state tag pops | the source tripped, proposed or cleared |
+| a station's selection moved (h / l) | border colour over `--d1` | the reader's own action |
+| the queue bar, the chain's newest mark | width and colour over `--d2` / `--d1` | a depth or a record count the frame reported |
+| replay and verify in flight | the meter and the busy sweep (unchanged) | work in progress |
+
+Forbidden and absent: hover transitions, a hero animation on load, per-event particles,
+pulses on the vertical tray link (a proposal waiting is a state, so that link is lit `--pend`,
+not moving), any easing on data that did not change.
+
+### Station to screen
+
+Flow is the front door (`#/`, `#/flow`, key `0`; Esc from any top-level screen returns to it);
+the seven windows are one step behind it. Each station opens the screen that holds that
+stage's evidence:
+
+| station | key | opens | because |
+|---|---|---|---|
+| ingest | `i` | Live | the sources, the tail and every counter are what came in and from where |
+| preserve | `s` | Integrity | the store is the proof: chain head, verify, attestation |
+| detect | `d` | Drift | detection is per source; Drift is where a source's parser stops claiming it |
+| the branch and the tray | `r` | Review | unknown lines become a proposal there, and nothing is parsed until a human approves |
+| parse | `p` | Traceback of the newest record | the parsed fields lit in the bytes is the one picture of parsing |
+| normalize | `n` | Pivot | the entity index is built from normalized paths; one entity across every device is what normalization buys |
+| emit | `e` | Replay | emit writes version 1; Replay writes the next version and diffs them |
+
+`h` / `l` or the arrows move a selection along the line and Enter opens it; each station is
+also a link, so a click does the same.
+
 ## Contrast
 
 WCAG 2 contrast ratios computed from the token values (the script that produced this
@@ -195,7 +279,8 @@ Every class is in `ui/src/app.css` under a section comment; no component adds it
 
 | component | class | what it is |
 |---|---|---|
-| top bar | `.top` | brand, the seven screens with their digit and a count badge (pending, drift), theme and keys buttons; sticky |
+| top bar | `.top` | brand, Flow and the seven screens with their digit and a count badge (pending, drift), theme and keys buttons; sticky |
+| flow | `.flow` + `.line` + `.station` + `.link` + `.under` | the front door: six stations on an eleven-column grid (station, link, station, ...), each with its name and key, its counter at `--t3`, its loss in `--warn`; a link is the 2 px track with one pulse element; the sub-row under a link or station is placed by grid column: `.queue` (the bar with the high-water tick), `.chain` (one mark per attestation checkpoint, the newest lit `--ok` while records arrive), `.branch` (the inference node and the tray on a `--pend` rule when lines are buffered or a proposal waits) |
 | status line | `.foot` | stream state with a dot, listen address, schema, syslog sockets, uptime, clients, frames skipped, events skipped; fixed at the bottom |
 | section head | `.head` | title, a note in `--fg-2`, controls pushed right; `.quiet` drops the rule |
 | facts | `.facts` | label/value pairs in one wrapping line (record header, entity header, evidence params) |
@@ -242,11 +327,15 @@ sees the same box; there is no single-click path to any of the four.
 
 | where | key | does |
 |---|---|---|
+| anywhere | `0` | Flow, the front door |
 | anywhere | `1` to `7` | Live, Review, Traceback, Pivot, Replay, Drift, Integrity |
 | anywhere | `?` | the key map; Esc closes |
 | anywhere | `t` | light or dark |
 | anywhere | `/` | the search or filter box of this screen; Esc leaves it |
-| anywhere | Esc | close the map, leave a box, release a pinned range, or go from a detail to its list |
+| anywhere | Esc | close the map, leave a box, release a pinned range, go from a detail to its list, or from a top-level screen back to Flow |
+| Flow | `i` `s` `d` `p` `n` `e` | open the screen behind ingest, preserve, detect, parse, normalize, emit |
+| Flow | `r` | the tray: Review |
+| Flow | `h` / `l`, arrows | move the selection along the line; Enter opens it |
 | any list | `j` / `k`, arrows | move down, up; the selected row is kept in view |
 | any list | `g` / `G` | first, last |
 | any list | Enter | open the selected row |
