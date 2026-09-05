@@ -1039,7 +1039,10 @@ dependencies = [
  "memchr",
  "memmap2",
  "rusqlite",
+ "serde",
+ "serde_json",
  "sha2",
+ "ulpf-time",
 ]
 
 [[package]]

@@ -104,10 +104,21 @@ enum Cmd {
         #[arg(long)]
         pending: Option<PathBuf>,
     },
-    /// Recompute every digest in a raw store.
+    /// Recompute every digest and chain value in a raw store.
     Verify {
         #[arg(long, default_value = "ulpf.ulpf-store")]
         store: PathBuf,
+        /// Also check every checkpoint of an attestation taken earlier (`ulpf attest`).
+        #[arg(long)]
+        attestation: Option<PathBuf>,
+    },
+    /// Write the store's attestation document: store id, genesis, head and checkpoints.
+    Attest {
+        #[arg(long, default_value = "ulpf.ulpf-store")]
+        store: PathBuf,
+        /// Write the JSON here instead of stdout.
+        #[arg(long)]
+        out: Option<PathBuf>,
     },
     /// Print one raw record's exact bytes to stdout (header on stderr).
     Raw {
@@ -289,15 +300,51 @@ pub fn main() -> Result<()> {
             }
             Ok(())
         }
-        Cmd::Verify { store } => {
+        Cmd::Verify { store, attestation } => {
             let reader = ulpf_store::RawReader::open(&store).with_context(|| format!("opening store {}", store.display()))?;
-            let report = reader.verify();
+            let attestation = match &attestation {
+                Some(path) => {
+                    let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+                    Some(serde_json::from_str::<ulpf_store::Attestation>(&text).with_context(|| format!("{} is not an attestation document", path.display()))?)
+                }
+                None => None,
+            };
+            let report = match &attestation {
+                Some(att) => reader.verify_against(att),
+                None => reader.verify(),
+            };
+            println!("store {} genesis {}", ulpf_store::hex(&reader.store_id()), ulpf_store::hex(&reader.genesis()));
             println!("verified {} records, {} corrupt", report.checked, report.corrupt.len());
             for id in report.corrupt.iter().take(20) {
                 println!("corrupt: raw id {}", id.0);
             }
-            if !report.corrupt.is_empty() {
+            match report.first_bad {
+                None => println!("chain ok (head {})", reader.head().map(|h| ulpf_store::hex(&h)).unwrap_or_else(|| "-".into())),
+                Some((id, reason)) => println!("chain broken at id {} ({})", id.0, reason.as_str()),
+            }
+            if let Some(att) = &attestation {
+                if let Some(problem) = &report.attestation_problem {
+                    println!("attestation: {problem}");
+                }
+                match report.bad_checkpoint {
+                    Some(id) => println!("attestation: checkpoint at id {} disagrees with the store (generated {})", id.0, att.generated),
+                    None => println!("attestation: {} of {} checkpoints agree ({} records attested, generated {})", report.checkpoints, att.checkpoints.len(), att.records, att.generated),
+                }
+            }
+            if !report.ok() {
                 std::process::exit(1);
+            }
+            Ok(())
+        }
+        Cmd::Attest { store, out } => {
+            let reader = ulpf_store::RawReader::open(&store).with_context(|| format!("opening store {}", store.display()))?;
+            let json = serde_json::to_string_pretty(&reader.attest())?;
+            match out {
+                Some(path) => {
+                    std::fs::write(&path, format!("{json}\n")).with_context(|| format!("writing {}", path.display()))?;
+                    eprintln!("attested {} records to {}", reader.len(), path.display());
+                }
+                None => println!("{json}"),
             }
             Ok(())
         }
