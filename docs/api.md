@@ -385,7 +385,9 @@ thread, and the kernel's socket buffer absorbs or drops behind it; what the kern
 is invisible to the process by design and is measured by the soak from the sender's
 count. `GET /api/status` gains `"syslog": { "udp": addr|null, "tcp": addr|null }`.
 `Snapshot` gains `syslog_udp_datagrams`, `syslog_udp_bytes`, `syslog_tcp_connections`,
-`syslog_tcp_events`, `syslog_tcp_bytes`, `syslog_tcp_partial`.
+`syslog_tcp_events`, `syslog_tcp_bytes`, `syslog_tcp_partial`, `syslog_tcp_refused` (connections
+beyond the cap of 256) and `syslog_errors`. `GET /api/status` `syslog` carries the addresses
+actually bound (port 0 resolved), `null` while a listener is not up.
 
 ## Metrics frame, status and evidence additions
 

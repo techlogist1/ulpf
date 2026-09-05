@@ -34,6 +34,8 @@ fn config(dir: &Path, inputs: Vec<PathBuf>) -> Config {
         infer_threshold: 64,
         tail_capacity: 16,
         receipt_nanos: None,
+        syslog_udp: None,
+        syslog_tcp: None,
     }
 }
 

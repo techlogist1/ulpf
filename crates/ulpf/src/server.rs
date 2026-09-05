@@ -233,7 +233,7 @@ fn metrics_frame(live: &Live) -> Value {
         "replay": replay_summary(live),
         "integrity": live.integrity_summary(),
         "pivot": live.pivot_counters.lock().unwrap_or_else(|e| e.into_inner()).as_ref().map(|c| json!({ "batches": c.batches.load(Relaxed), "postings": c.postings.load(Relaxed), "blocked": c.blocked.load(Relaxed), "errors": c.errors.load(Relaxed) })),
-        "syslog": { "udp_datagrams": 0, "tcp_events": 0, "tcp_connections": 0 },
+        "syslog": { "udp_datagrams": live.metrics.syslog_udp_datagrams.load(Relaxed), "tcp_events": live.metrics.syslog_tcp_events.load(Relaxed), "tcp_connections": live.metrics.syslog_tcp_connections.load(Relaxed) },
         "drift": live.drift_alerts().into_iter().filter(|a| matches!(a.state, DriftState::Tripped | DriftState::Proposed)).collect::<Vec<_>>(),
         "server": {
             "sse_clients": live.sse_clients.load(Relaxed),
@@ -286,7 +286,7 @@ async fn status(State(app): State<App>) -> Json<Value> {
             "entities": serde_json::to_value(pipeline.mapping.entities()).unwrap_or(Value::Null),
         },
         "output_format": "jsonl",
-        "syslog": { "udp": Value::Null, "tcp": Value::Null },
+        "syslog": { "udp": live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).0.map(|a| a.to_string()), "tcp": live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).1.map(|a| a.to_string()) },
     }))
 }
 

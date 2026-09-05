@@ -866,3 +866,28 @@ other way round. **Ruled out.** A per-batch ingest row in the catalogue (a SQLit
 per 1024 events for a fact the records already carry); refusing to start on a torn output
 (operator intervention for a routine crash); an output cursor file (a third thing to keep
 consistent after a crash).
+
+## D60. Syslog listeners are producers on the same queue, sequenced under the store lock
+**Decision.** `serve --syslog-udp ADDR --syslog-tcp ADDR` adds a UDP thread and a TCP
+acceptor with one thread per connection (capped at 256; refusals counted). A datagram is
+one event; a TCP connection is framed by RFC 6587 octet counting when it opens with
+`digits SP`, else by the file line rule, and what is left when it closes is final input
+(complete lines the continuation rule was holding become events; an unterminated tail is
+an event counted `syslog_tcp_partial`). Events are batched per peer (`udp/<ip>`,
+`tcp/<ip>`) by count, bytes or 50 ms, appended to the store under one lock, and the batch
+sequence is taken inside that lock, so with three producers the output thread still
+receives batches in raw id order; `send_batch` therefore takes a sequence rather than
+owning one, and `Live.seq` replaced the ingest thread's private counter. A batch's bytes
+are owned (`Backing::Owned`) rather than mapped. Listeners share the queue's block-on-full
+policy; what the kernel drops before `recv` is invisible to the process by construction
+and is measured by the soak from the sender's count, with an 8 MiB receive buffer asked
+for. **Anchor.** `crates/ulpf/src/syslog.rs`; `Live::seq`, `Backing::Owned`, the listener
+spawn in `serve` in `crates/ulpf/src/engine.rs`; `crates/ulpf/tests/syslog.rs`.
+**Principle.** Raw before understanding for sockets too: the bytes reach the store before
+any parser sees them, byte for byte (a datagram gets no terminator, a framed line keeps
+its own). One sequencer, one writer: the invariant that made the output order equal the
+id order for one producer is now enforced by taking the sequence where the ids are issued.
+**Ruled out.** One batch mixing peers (per-source stats, drift and inference key on the
+batch's source; per-peer batches keep every existing path correct with no worker change);
+a thread pool for TCP (a connection is a device; devices are few and long-lived);
+tokio for the listeners (the engine's threads and a blocking `recv` are the whole design).

@@ -54,6 +54,14 @@ pub struct Metrics {
     pub drift_lines_routed: AtomicU64,
     pub drift_proposals: AtomicU64,
     pub drift_cleared: AtomicU64,
+    pub syslog_udp_datagrams: AtomicU64,
+    pub syslog_udp_bytes: AtomicU64,
+    pub syslog_tcp_connections: AtomicU64,
+    pub syslog_tcp_events: AtomicU64,
+    pub syslog_tcp_bytes: AtomicU64,
+    pub syslog_tcp_partial: AtomicU64,
+    pub syslog_tcp_refused: AtomicU64,
+    pub syslog_errors: AtomicU64,
 }
 
 /// One worker's counts for one batch.
@@ -164,6 +172,14 @@ impl Metrics {
             drift_lines_routed: g(&self.drift_lines_routed),
             drift_proposals: g(&self.drift_proposals),
             drift_cleared: g(&self.drift_cleared),
+            syslog_udp_datagrams: g(&self.syslog_udp_datagrams),
+            syslog_udp_bytes: g(&self.syslog_udp_bytes),
+            syslog_tcp_connections: g(&self.syslog_tcp_connections),
+            syslog_tcp_events: g(&self.syslog_tcp_events),
+            syslog_tcp_bytes: g(&self.syslog_tcp_bytes),
+            syslog_tcp_partial: g(&self.syslog_tcp_partial),
+            syslog_tcp_refused: g(&self.syslog_tcp_refused),
+            syslog_errors: g(&self.syslog_errors),
         }
     }
 }
@@ -214,6 +230,14 @@ pub struct Snapshot {
     pub drift_lines_routed: u64,
     pub drift_proposals: u64,
     pub drift_cleared: u64,
+    pub syslog_udp_datagrams: u64,
+    pub syslog_udp_bytes: u64,
+    pub syslog_tcp_connections: u64,
+    pub syslog_tcp_events: u64,
+    pub syslog_tcp_bytes: u64,
+    pub syslog_tcp_partial: u64,
+    pub syslog_tcp_refused: u64,
+    pub syslog_errors: u64,
 }
 
 fn by_reason(list: &[(&str, u64)]) -> String {
@@ -254,6 +278,11 @@ impl std::fmt::Display for Snapshot {
             self.infer_buffered, self.infer_buffer_full, self.infer_runs, self.infer_lines_templated, self.infer_lines_unmatched,
             self.proposals_written, self.proposals_replaced, by_reason(&self.proposals_skipped), self.approved, self.rejected, self.reloads
         )?;
-        write!(f, "drift: tripped {}  lines routed {}  update proposals {}  cleared {}", self.drift_tripped, self.drift_lines_routed, self.drift_proposals, self.drift_cleared)
+        writeln!(f, "drift: tripped {}  lines routed {}  update proposals {}  cleared {}", self.drift_tripped, self.drift_lines_routed, self.drift_proposals, self.drift_cleared)?;
+        write!(
+            f,
+            "syslog: udp datagrams {} ({} bytes)  tcp connections {} events {} ({} bytes) partial {} refused {}  errors {}",
+            self.syslog_udp_datagrams, self.syslog_udp_bytes, self.syslog_tcp_connections, self.syslog_tcp_events, self.syslog_tcp_bytes, self.syslog_tcp_partial, self.syslog_tcp_refused, self.syslog_errors
+        )
     }
 }

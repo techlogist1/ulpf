@@ -85,6 +85,12 @@ enum Cmd {
         /// Directory poll interval in milliseconds.
         #[arg(long, default_value_t = 250)]
         poll_ms: u64,
+        /// Listen for syslog over UDP (one datagram is one event), e.g. 127.0.0.1:5514.
+        #[arg(long)]
+        syslog_udp: Option<SocketAddr>,
+        /// Listen for syslog over TCP (RFC 6587 octet counting or newline framing).
+        #[arg(long)]
+        syslog_tcp: Option<SocketAddr>,
     },
     /// Run inference over one file as if no parser covered it; write the proposal to the pending directory.
     Infer {
@@ -209,6 +215,8 @@ impl EngineArgs {
             pending: (self.infer_threshold > 0).then(|| self.pending.clone()),
             infer_threshold: self.infer_threshold,
             tail_capacity,
+            syslog_udp: None,
+            syslog_tcp: None,
             receipt_nanos: match &self.receipt {
                 Some(text) => {
                     let ctx = ulpf_time::Context { receipt_epoch_nanos: engine::now_nanos(), default_offset_secs: 0 };
@@ -278,15 +286,18 @@ pub fn main() -> Result<()> {
             }
             Ok(())
         }
-        Cmd::Serve { watch, engine: args, listen, tail, ui_dir, poll_ms } => {
-            let cfg = args.config(watch, tail)?;
+        Cmd::Serve { watch, engine: args, listen, tail, ui_dir, poll_ms, syslog_udp, syslog_tcp } => {
+            let mut cfg = args.config(watch, tail)?;
+            cfg.syslog_udp = syslog_udp;
+            cfg.syslog_tcp = syslog_tcp;
             let live = engine::Live::open(&cfg, true)?;
             for p in live.load_problems.lock().unwrap_or_else(|e| e.into_inner()).iter() {
                 eprintln!("load problem: {p}");
             }
             let server = crate::server::Server::start(std::sync::Arc::clone(&live), listen, ui_dir)?;
             server.install_ctrl_c(std::sync::Arc::clone(&live));
-            eprintln!("ulpf: serving http://{} ; watching {} ; {} parsers loaded ; ctrl-c to stop", server.addr, cfg.inputs.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join(", "), live.pipeline().registry.len());
+            let listeners: Vec<String> = [("udp", cfg.syslog_udp), ("tcp", cfg.syslog_tcp)].iter().filter_map(|(k, a)| a.map(|a| format!("syslog {k} {a}"))).collect();
+            eprintln!("ulpf: serving http://{} ; watching {} ; {}{} parsers loaded ; ctrl-c to stop", server.addr, cfg.inputs.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join(", "), if listeners.is_empty() { String::new() } else { format!("{} ; ", listeners.join(", ")) }, live.pipeline().registry.len());
             let report = engine::serve(&live, Duration::from_millis(poll_ms.max(50)));
             server.shutdown();
             print_report(&report?)

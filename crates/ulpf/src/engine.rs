@@ -61,6 +61,9 @@ pub struct Config {
     /// A fixed receipt time for every event (reproducible runs, fixture comparison);
     /// `None` takes the wall clock per batch.
     pub receipt_nanos: Option<i64>,
+    /// Syslog listeners for `serve`; `None` binds nothing.
+    pub syslog_udp: Option<std::net::SocketAddr>,
+    pub syslog_tcp: Option<std::net::SocketAddr>,
 }
 
 #[derive(Debug)]
@@ -343,6 +346,13 @@ pub struct Live {
     pivot_index: Mutex<Option<PivotIndex>>,
     pub receipt_nanos: Option<i64>,
     pub recovered: AtomicU64,
+    /// Batch sequence, assigned under the store lock so several producers (files, UDP,
+    /// TCP) hand the output thread batches in raw id order.
+    pub seq: AtomicU64,
+    pub syslog_udp: Option<std::net::SocketAddr>,
+    pub syslog_tcp: Option<std::net::SocketAddr>,
+    /// The addresses the listeners actually bound (port 0 resolved), once they are up.
+    pub syslog_bound: Mutex<(Option<std::net::SocketAddr>, Option<std::net::SocketAddr>)>,
     /// The store id the live output's meta named before this process opened it: the
     /// output continues this store (recover), is fresh (nothing to recover) or belongs
     /// to another store (say so, recover nothing).
@@ -382,6 +392,8 @@ impl std::fmt::Display for ReplayError {
 pub(crate) enum Backing {
     Mapped(Option<Mmap>),
     Store(RawReader),
+    /// Bytes received on a socket, owned by the batch that carries them.
+    Owned(Vec<u8>),
 }
 
 pub(crate) struct FileCtx {
@@ -396,6 +408,7 @@ impl FileCtx {
         match &self.backing {
             Backing::Mapped(m) => m.as_deref().unwrap_or(&[]),
             Backing::Store(r) => r.segment(),
+            Backing::Owned(v) => v,
         }
     }
 }
@@ -645,6 +658,10 @@ impl Live {
             pivot_index: Mutex::new(None),
             receipt_nanos: cfg.receipt_nanos,
             recovered: AtomicU64::new(0),
+            seq: AtomicU64::new(0),
+            syslog_udp: cfg.syslog_udp,
+            syslog_tcp: cfg.syslog_tcp,
+            syslog_bound: Mutex::new((None, None)),
             prior_output_store,
             parsers_signature: Mutex::new(parsers_signature(&cfg.parsers)),
             stop: AtomicBool::new(false),
@@ -1077,7 +1094,6 @@ struct Threads<'scope> {
     writer: std::thread::ScopedJoinHandle<'scope, Result<()>>,
     inference: std::thread::ScopedJoinHandle<'scope, ()>,
     in_flight: Arc<AtomicI64>,
-    seq: u64,
 }
 
 fn start<'scope, 'env: 'scope>(scope: &'scope std::thread::Scope<'scope, 'env>, live: &'env Arc<Live>) -> Threads<'scope> {
@@ -1102,7 +1118,7 @@ fn start<'scope, 'env: 'scope>(scope: &'scope std::thread::Scope<'scope, 'env>, 
     // channel disconnects, and ingest's next send fails instead of blocking forever.
     drop(out_tx);
     drop(batch_rx);
-    Threads { batch_tx, workers, writer, inference, in_flight, seq: 0 }
+    Threads { batch_tx, workers, writer, inference, in_flight }
 }
 
 /// Joins everything after ingest is done. The throughput clock stops when the output
@@ -1158,7 +1174,7 @@ fn report(live: &Arc<Live>, elapsed: Duration, inference: Duration, input_proble
 /// Truncate the torn line, find the last emitted raw id, and send every later stored
 /// record through the pipeline into the output before any new input, so output and store
 /// agree again with no duplicate and no gap. Returns how many records were recovered.
-fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI64, seq: &mut u64, problems: &mut Vec<String>) -> Result<u64> {
+fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI64, problems: &mut Vec<String>) -> Result<u64> {
     use std::io::{Read, Seek, SeekFrom};
     if live.output.as_os_str() == "-" {
         return Ok(0);
@@ -1237,8 +1253,7 @@ fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI6
             sources.push(rec.source);
         }
         live.metrics.batches.fetch_add(1, Relaxed);
-        let batch = Batch { seq: *seq, file: Arc::clone(&ctx), receipt_nanos: 0, first_raw_id: id, ranges, receipts, sources };
-        *seq += 1;
+        let batch = Batch { seq: live.seq.fetch_add(1, Relaxed), file: Arc::clone(&ctx), receipt_nanos: 0, first_raw_id: id, ranges, receipts, sources };
         in_flight.fetch_add(1, Relaxed);
         tx.send(batch).map_err(|_| anyhow!("processing stopped before recovery finished; see the output error"))?;
         id += n as u64;
@@ -1262,14 +1277,14 @@ pub fn run(cfg: &Config) -> Result<Report> {
     }
     let mut input_problems = Vec::new();
     let timing = std::thread::scope(|scope| {
-        let mut t = start(scope, &live);
+        let t = start(scope, &live);
         let ingest_result = (|| {
-            recover_output(&live, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
+            recover_output(&live, &t.batch_tx, &t.in_flight, &mut input_problems)?;
             // a restart over the same inputs and store continues where the store ends
             let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().unwrap_or_default();
             for (path, name) in &files {
                 let start = resume.get(name).copied().unwrap_or(0);
-                ingest_file(&live, path, name, start, true, true, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
+                ingest_file(&live, path, name, start, true, true, &t.batch_tx, &t.in_flight, &mut input_problems)?;
             }
             Ok(())
         })();
@@ -1295,9 +1310,31 @@ struct Tailed {
 pub fn serve(live: &Arc<Live>, poll: Duration) -> Result<Report> {
     let mut input_problems = Vec::new();
     let timing = std::thread::scope(|scope| {
-        let mut t = start(scope, live);
-        let ingest_result = recover_output(live, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems).and_then(|_| poll_loop(live, poll, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems));
-        finish(live, t, ingest_result)
+        let t = start(scope, live);
+        // listeners share the queue, the store lock and the sequence with the file tailer
+        let mut listeners = Vec::new();
+        if let Some(addr) = live.syslog_udp {
+            let tx = t.batch_tx.clone();
+            let in_flight = Arc::clone(&t.in_flight);
+            listeners.push(scope.spawn(move || crate::syslog::udp_listener(live, addr, tx, &in_flight)));
+        }
+        if let Some(addr) = live.syslog_tcp {
+            let tx = t.batch_tx.clone();
+            let in_flight = Arc::clone(&t.in_flight);
+            listeners.push(scope.spawn(move || crate::syslog::tcp_listener(live, addr, tx, &in_flight)));
+        }
+        let ingest_result = recover_output(live, &t.batch_tx, &t.in_flight, &mut input_problems).and_then(|_| poll_loop(live, poll, &t.batch_tx, &t.in_flight, &mut input_problems));
+        // a listener that failed to bind ends the run with its error; stop the others first
+        live.stop();
+        let mut listener_result = Ok(());
+        for h in listeners {
+            match h.join() {
+                Ok(Err(e)) if listener_result.is_ok() => listener_result = Err(e),
+                Err(_) if listener_result.is_ok() => listener_result = Err(anyhow!("syslog listener panicked")),
+                _ => {}
+            }
+        }
+        finish(live, t, ingest_result.and(listener_result))
     });
     live.store.lock().unwrap_or_else(|e| e.into_inner()).flush(true)?;
     let (elapsed, inference) = timing?;
@@ -1305,7 +1342,7 @@ pub fn serve(live: &Arc<Live>, poll: Duration) -> Result<Report> {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight: &AtomicI64, seq: &mut u64, problems: &mut Vec<String>) -> Result<()> {
+fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight: &AtomicI64, problems: &mut Vec<String>) -> Result<()> {
     let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().unwrap_or_default();
     let mut files: HashMap<PathBuf, Tailed> = HashMap::new();
     while !live.stopped() {
@@ -1344,7 +1381,7 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
                 let stream = entry.growing_ticks >= 4;
                 if finalize || stream {
                     let before = entry.consumed;
-                    match ingest_file(live, &path, &name, entry.consumed, finalize, false, tx, in_flight, seq, problems)? {
+                    match ingest_file(live, &path, &name, entry.consumed, finalize, false, tx, in_flight, problems)? {
                         Some(consumed) => {
                             entry.consumed = consumed;
                             live.metrics.bytes.fetch_add(consumed.saturating_sub(before), Relaxed);
@@ -1376,7 +1413,7 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
 /// and reported here, once). Batch mode passes `count_file` and the whole file is counted
 /// here; the tailer counts a file when it first sees it and bytes as it consumes them.
 #[allow(clippy::too_many_arguments)]
-fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool, count_file: bool, tx: &SyncSender<Batch>, in_flight: &AtomicI64, seq: &mut u64, problems: &mut Vec<String>) -> Result<Option<u64>> {
+fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool, count_file: bool, tx: &SyncSender<Batch>, in_flight: &AtomicI64, problems: &mut Vec<String>) -> Result<Option<u64>> {
     let file = match File::open(path) {
         Ok(f) => f,
         Err(e) => {
@@ -1436,21 +1473,22 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
                 }
             }
         }
-        // One store lock per batch: ids are issued, bytes reach the OS, then the batch
-        // escapes, so a crash can never reissue an id that was already emitted.
-        let batch_first = {
+        // One store lock per batch: ids are issued, bytes reach the OS, the sequence is
+        // taken, then the batch escapes, so a crash can never reissue an id that was
+        // already emitted and a second producer cannot slip a later batch ahead.
+        let (batch_first, seq) = {
             let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
             let first = store.len();
             for r in &ranges {
                 store.append(source, receipt, &bytes[r.clone()]).context("raw store append failed; aborting to avoid an incomplete store")?;
             }
             store.flush(false).context("raw store flush failed")?;
-            first
+            (first, live.seq.fetch_add(1, Relaxed))
         };
         first_id.get_or_insert(RawId(batch_first));
         count += ranges.len() as u64;
         let ranges = std::mem::replace(&mut ranges, Vec::with_capacity(live.batch_events));
-        send_batch(tx, &live.metrics, in_flight, live.queue_cap, seq, &ctx, receipt, batch_first, ranges)?;
+        send_batch(tx, &live.metrics, in_flight, live.queue_cap, seq, &ctx, receipt, batch_first, ranges, Vec::new())?;
         receipt = live.receipt_nanos.unwrap_or_else(now_nanos);
         if done {
             break;
@@ -1467,10 +1505,9 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
 }
 
 #[allow(clippy::too_many_arguments)]
-fn send_batch(tx: &SyncSender<Batch>, metrics: &Metrics, in_flight: &AtomicI64, queue_cap: usize, seq: &mut u64, ctx: &Arc<FileCtx>, receipt: i64, first_raw_id: u64, ranges: Vec<std::ops::Range<usize>>) -> Result<()> {
+pub(crate) fn send_batch(tx: &SyncSender<Batch>, metrics: &Metrics, in_flight: &AtomicI64, queue_cap: usize, seq: u64, ctx: &Arc<FileCtx>, receipt: i64, first_raw_id: u64, ranges: Vec<std::ops::Range<usize>>, receipts: Vec<i64>) -> Result<()> {
     metrics.batches.fetch_add(1, Relaxed);
-    let batch = Batch { seq: *seq, file: Arc::clone(ctx), receipt_nanos: receipt, first_raw_id, ranges, receipts: Vec::new(), sources: Vec::new() };
-    *seq += 1;
+    let batch = Batch { seq, file: Arc::clone(ctx), receipt_nanos: receipt, first_raw_id, ranges, receipts, sources: Vec::new() };
     // Depth counts batches handed to the channel and not yet taken by a worker. Counted
     // before the send and clamped to the capacity, so the high-water can never claim a
     // depth the channel cannot hold; the worker decrements after its receive.
