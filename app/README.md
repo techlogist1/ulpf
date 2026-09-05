@@ -178,9 +178,23 @@ from the C in `rusqlite`'s bundled SQLite. On a machine without the Microsoft Vi
 the program runs, so the window shows `The engine stopped (exit 3221225781)` — that is
 0xC0000135, STATUS_DLL_NOT_FOUND — with `It printed nothing.` and an empty `engine.log`; that
 exact pair of symptoms is this missing DLL. Either install the
-redistributable (`winget install Microsoft.VCRedist.2015+.x64`), or build the Windows engine
-with `RUSTFLAGS=-C target-feature=+crt-static`, which links that runtime into `ulpf.exe` and
+redistributable (`winget install Microsoft.VCRedist.2015+.x64`), or take a build from after
+06 Sep 04:45: the workflow's Windows engine step now sets
+`RUSTFLAGS=-C target-feature=+crt-static`, which links that runtime into `ulpf.exe` and
 leaves nothing to install.
+
+**What CI checks now.** `app-smoke-windows` in `.github/workflows/app.yml` runs after the
+bundle job on `windows-latest`: it installs the NSIS installer silently (`/S`, the NSIS
+switch), finds the installed `ulpf-app.exe` under `%LOCALAPPDATA%`, proves `ulpf.exe` sits
+beside it, launches the app, waits for `%APPDATA%\dev.ulpf.desktop\server.url` and for
+`/api/status` to answer JSON, checks that both processes are running, then kills the window
+and reports whether the engine outlived it. If the runner cannot host a webview the job
+drives the installed engine instead (`check`, `demo --check`, `run samples`, `serve` +
+`/api/status`) and prints `SMOKE PATH: app` or `SMOKE PATH: sidecar` so the log says which
+one it achieved. The same script runs by hand: `pwsh app\scripts\smoke-windows.ps1
+-Installer <the .exe>`. The Windows engine in that workflow is built with
+`RUSTFLAGS=-C target-feature=+crt-static`, so the shipped `ulpf.exe` no longer needs the
+Visual C++ redistributable.
 
 ### Building from source on Windows
 

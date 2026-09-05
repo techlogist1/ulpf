@@ -15,6 +15,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # D74 said nobody had launched the Windows app. This installs what the bundle job built,
+  # launches the installed app, and proves the window and the engine came up together. If the
+  # runner cannot host a webview it drives the engine the installer put on disk instead; the
+  # job's last line says which of the two paths it achieved.
+  app-smoke-windows:
+    needs: bundle
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: windows-x64-nsis
+          path: installer
+
+      - name: install it, launch it, quit it
+        shell: pwsh
+        run: |
+          $setup = (Get-ChildItem installer -Recurse -Filter '*-setup.exe' | Select-Object -First 1).FullName
+          if (-not $setup) { Write-Host '::error::no NSIS installer in the windows-x64-nsis artifact'; exit 1 }
+          & .\app\scripts\smoke-windows.ps1 -Installer $setup
+
   bundle:
     strategy:
       fail-fast: false
@@ -45,7 +67,12 @@ jobs:
           cache-dependency-path: app/pnpm-lock.yaml
 
       - name: engine (the sidecar)
+        # Windows: link the C runtime statically. rusqlite's bundled SQLite otherwise leaves
+        # ulpf.exe importing VCRUNTIME140.dll, which a machine without the Visual C++
+        # redistributable does not have; the engine then cannot start there at all.
         run: cargo build --release -p ulpf
+        env:
+          RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
 
       # binaries/ulpf-<host triple>[.exe]; the same script a developer runs locally.
       - name: name the sidecar for this target
