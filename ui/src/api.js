@@ -15,17 +15,58 @@ export async function api(method, url, body) {
   try {
     data = await res.json()
   } catch {
-    data = { error: `${res.status} ${res.statusText}`, reason: `http_${res.status}` }
+    // A route this build does not serve answers with a bare 404 and no JSON body.
+    data = {
+      error: res.status === 404 ? `${String(url).split('?')[0]} is not served by this build` : `${res.status} ${res.statusText}`,
+      reason: `http_${res.status}`,
+    }
   }
   return { ok: res.ok, status: res.status, data }
+}
+
+export const leaf = (o, path) => String(path).split('.').reduce((a, k) => (a == null ? a : a[k]), o)
+
+// Nested normalized object -> [[dotted path, scalar]], in schema order.
+export function flat(o, prefix = '', out = []) {
+  for (const [k, v] of Object.entries(o ?? {})) {
+    const p = prefix ? `${prefix}.${k}` : k
+    if (v && typeof v === 'object' && !Array.isArray(v)) flat(v, p, out)
+    else out.push([p, Array.isArray(v) ? v.join(', ') : v])
+  }
+  return out
 }
 
 export const fmt = {
   n: (x) => (x == null ? '–' : Number(x).toLocaleString('en-US')),
   f: (x, d = 1) => (x == null ? '–' : Number(x).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })),
   mb: (b) => (b == null ? '–' : (b / 1048576).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })),
-  pairs: (list) => (Array.isArray(list) && list.length ? list.map(([r, n]) => `${r} ${fmt.n(n)}`).join(', ') : 'none'),
+  pct: (x) => (x == null ? '–' : `${(Number(x) * 100).toFixed(1)}%`),
+  pairs: (list) => (Array.isArray(list) && list.length ? list.map(([r, n]) => `${r} ${fmt.n(n)}`).join('  ') : 'none'),
   time: (ms) => (ms == null ? '–' : new Date(ms).toISOString().replace('T', ' ').replace('Z', '')),
-  cut: (s, n = 120) => (s == null ? '' : String(s).length > n ? String(s).slice(0, n - 1) + '…' : String(s)),
+  clock: (ms) => (ms == null ? '–' : new Date(ms).toISOString().slice(11, 23)),
+  day: (ms) => (ms == null ? '–' : new Date(ms).toISOString().slice(0, 10)),
+  ago: (s) => {
+    if (s == null) return '–'
+    const n = Math.floor(s)
+    return n < 60 ? `${n}s` : n < 3600 ? `${Math.floor(n / 60)}m ${n % 60}s` : `${Math.floor(n / 3600)}h ${Math.floor((n % 3600) / 60)}m`
+  },
+  cut: (s, n = 160) => (s == null ? '' : String(s).length > n ? String(s).slice(0, n - 1) + '…' : String(s)),
+  hex: (h) => (h == null ? '–' : `${String(h).slice(0, 8)}…${String(h).slice(-8)}`),
   json: (o) => JSON.stringify(o, null, 2),
+}
+
+// One line of the fields an analyst reads first, in the order they read them.
+export function summarize(line) {
+  const p = (k) => leaf(line, k)
+  const ep = (a, b) => (p(a) == null ? null : p(b) == null ? String(p(a)) : `${p(a)}:${p(b)}`)
+  const out = []
+  const src = ep('src_endpoint.ip', 'src_endpoint.port')
+  const dst = ep('dst_endpoint.ip', 'dst_endpoint.port')
+  if (src || dst) out.push(`${src ?? '?'} ${dst ? '> ' + dst : ''}`.trim())
+  for (const k of ['connection_info.protocol_name', 'app_name', 'actor.user.name', 'user.name', 'firewall_rule.name', 'finding_info.title', 'http_request.url.hostname', 'dns_query.hostname']) {
+    const v = p(k)
+    if (v != null && v !== '') out.push(String(v))
+  }
+  if (!out.length && line?.message) out.push(String(line.message))
+  return out.join('  ')
 }
