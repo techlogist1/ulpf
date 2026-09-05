@@ -1,6 +1,7 @@
 <script>
   import { api, fmt, flat } from './api.js'
   import { keys, nav } from './keys.js'
+  import VList from './VList.svelte'
 
   let { id = '' } = $props()
   let input = $state('')
@@ -14,6 +15,8 @@
   let sel = $state(-1)
   let showHex = $state(false)
   let box = $state(null)
+  let wrapEl = $state(null)
+  let width = $state(1200)
 
   async function load(rid) {
     if (rid === '' || rid == null) return
@@ -24,6 +27,13 @@
     else err = r.data
   }
   $effect(() => { input = id; load(id) })
+  $effect(() => {
+    const measure = () => { if (wrapEl) width = wrapEl.clientWidth }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  })
+  $effect(() => { if (wrapEl && data) width = wrapEl.clientWidth })
 
   function go(e) {
     e.preventDefault()
@@ -32,7 +42,6 @@
   }
 
   const hot = $derived(pin ?? over)
-
   const bytes = $derived.by(() => {
     const h = data?.hex ?? ''
     const a = new Uint8Array(h.length / 2)
@@ -43,13 +52,14 @@
   const prov = $derived(data?.now?.provenance ?? null)
   const timeSpan = $derived(data?.now?.time?.text_span ?? null)
 
-  // One colour per source key, assigned in the order the parser produced them.
+  // One tint per source key, assigned in the order the parser produced them.
   const colourOf = $derived.by(() => {
     const map = new Map()
     for (const f of fields ?? []) if (!map.has(f.key)) map.set(f.key, `var(--p${map.size % 8})`)
     for (const p of prov ?? []) if (!map.has(p.source_key)) map.set(p.source_key, `var(--p${map.size % 8})`)
     return map
   })
+  const tint = (k) => colourOf.get(k) ?? 'var(--line-3)'
 
   // Byte range -> owning key, non-overlapping, in byte order. The timestamp is added last
   // and dropped where a parser field already owns those bytes.
@@ -61,7 +71,6 @@
     // key/value pairs parsed out of it). Light the parts, not the wrapper.
     // ponytail: O(n²) over one record's fields; a sweep if a parser ever reports thousands.
     const inner = raw.filter((a, i) => !raw.some((b, j) => j !== i && b.s >= a.s && b.e <= a.e && b.e - b.s < a.e - a.s))
-    // Shortest first at any start, then greedy: whatever still overlaps is counted, not hidden.
     inner.sort((a, b) => a.s - b.s || a.e - b.e)
     const out = []
     let clipped = 0
@@ -71,68 +80,87 @@
     }
     if (timeSpan) {
       const [s, e] = timeSpan
-      const clash = out.some((o) => s < o.e && e > o.s)
-      if (!clash) {
-        out.push({ key: '(timestamp)', s, e, time: true })
-        out.sort((a, b) => a.s - b.s)
-      }
+      if (!out.some((o) => s < o.e && e > o.s)) { out.push({ key: '(timestamp)', s, e, time: true }); out.sort((a, b) => a.s - b.s) }
     }
+    for (const o of out) o.id = `${o.s}:${o.e}`
     return { list: out, overlapped: clipped }
   })
   const owned = $derived(spans.list)
   const overlapped = $derived(spans.overlapped)
 
-  const decoder = new TextDecoder('utf-8', { fatal: false })
-  // Pieces of one chunk, control bytes shown as \xNN so nothing in the record is invisible.
-  function pieces(from, to) {
-    const text = decoder.decode(bytes.slice(from, to))
-    const out = []
-    let run = ''
-    for (const ch of text) {
-      const c = ch.codePointAt(0)
-      if (c < 0x20 || c === 0x7f) { if (run) { out.push({ t: run, ctl: false }); run = '' } out.push({ t: '\\x' + c.toString(16).padStart(2, '0'), ctl: true }) }
-      else run += ch
-    }
-    if (run) out.push({ t: run, ctl: false })
-    return out
-  }
-
-  const chunks = $derived.by(() => {
+  // The byte ruler: fixed-width rows so a 4 MB record is 30,000 rows of which 30 are in the
+  // DOM. Text rows never split a UTF-8 sequence; hex rows are the classic sixteen.
+  const cols = $derived(showHex ? 16 : Math.max(32, Math.min(256, Math.floor((width - 96) / 7.2))))
+  const starts = $derived.by(() => {
+    const n = bytes.length
     const out = []
     let at = 0
-    for (const o of owned) {
-      if (o.s > at) out.push({ key: null, pieces: pieces(at, o.s) })
-      out.push({ key: o.key, id: `${o.s}:${o.e}`, time: o.time, pieces: pieces(o.s, o.e), span: [o.s, o.e] })
-      at = o.e
+    while (at < n) {
+      out.push(at)
+      let next = at + cols
+      if (!showHex) while (next < n && (bytes[next] & 0xc0) === 0x80) next--
+      if (next <= at) next = at + cols
+      at = next
     }
-    if (at < bytes.length) out.push({ key: null, pieces: pieces(at, bytes.length) })
+    if (!out.length) out.push(0)
     return out
   })
+  const decoder = new TextDecoder('utf-8', { fatal: false })
+  // Control bytes are shown as \xNN so nothing in the record is invisible.
+  function text(from, to) {
+    const t = decoder.decode(bytes.subarray(from, to))
+    const out = []
+    let run = ''
+    for (const ch of t) {
+      const c = ch.codePointAt(0)
+      if (c < 0x20 || c === 0x7f) { if (run) { out.push({ t: run }); run = '' } out.push({ t: '\\x' + c.toString(16).padStart(2, '0'), ctl: true }) }
+      else run += ch
+    }
+    if (run) out.push({ t: run })
+    return out
+  }
+  // Segments of one row: plain runs and owned runs, from the sorted span list.
+  function segments(s, e) {
+    const out = []
+    let lo = 0, hi = owned.length
+    while (lo < hi) { const m = (lo + hi) >> 1; if (owned[m].e <= s) lo = m + 1; else hi = m }
+    let at = s
+    for (let i = lo; i < owned.length && owned[i].s < e; i++) {
+      const o = owned[i]
+      const a = Math.max(o.s, s), b = Math.min(o.e, e)
+      if (a > at) out.push({ s: at, e: a })
+      out.push({ s: a, e: b, o })
+      at = b
+    }
+    if (at < e) out.push({ s: at, e })
+    return out
+  }
+  const rowEnd = (i) => (i + 1 < starts.length ? starts[i + 1] : bytes.length)
+  const hex2 = (b) => b.toString(16).padStart(2, '0')
+  const asc = (b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.')
+  const rowHot = (i) => hot && hot.s < rowEnd(i) && hot.e > starts[i]
+  const rangeOf = (o) => ({ id: o.id, key: o.key, s: o.s, e: o.e })
+  const toggle = (o) => (pin = pin?.id === o.id ? null : rangeOf(o))
+  const byId = (sid) => owned.find((o) => o.id === sid)
+  const lightRow = (r) => { const o = r.span && byId(idOf(r.span)); over = o ? rangeOf(o) : null }
+  const pinRow = (r) => { const o = r.span && byId(idOf(r.span)); if (o) toggle(o) }
 
   const provRows = $derived(prov ?? [])
   // Three different reasons nothing is lit, and they mean different things at 3am.
   const spanNote = $derived(
     owned.length
-      ? 'each lit range is one parsed field: hover either side to light it, click to keep it lit'
+      ? `${owned.length} lit range${owned.length === 1 ? '' : 's'}: hover either side, click to keep one lit`
       : !fields && !prov
         ? 'this server reports no field spans'
         : fields?.length
-          ? 'every value in this record was materialised (a JSON value, an unescaped string, a joined timestamp), so no range is a slice of these bytes'
+          ? 'every value was materialised (a JSON value, an unescaped string, a joined timestamp): no range is a slice of these bytes'
           : 'no parser claimed this record, so nothing points into its bytes',
   )
   $effect(() => keys((ev) => {
     if (ev.key === '/') { box?.focus(); box?.select(); return true }
     if (ev.key === 'Escape' && pin) { pin = null; return true }
     if (ev.key === 'h') { showHex = !showHex; return true }
-    return nav(ev, provRows.length, sel, (n) => {
-      sel = n
-      const r = provRows[n]
-      over = r?.span ? { id: idOf(r.span), key: r.source_key } : null
-    }, (n) => {
-      const r = provRows[n]
-      const id = idOf(r?.span)
-      if (id) pin = pin?.id === id ? null : { id, key: r.source_key }
-    })
+    return nav(ev, provRows.length, sel, (n) => { sel = n; lightRow(provRows[n]) }, (n) => pinRow(provRows[n]))
   }))
 
   const diffPaths = $derived.by(() => {
@@ -146,77 +174,67 @@
       else if (String(a.get(p)) !== String(v)) out.push([p, String(a.get(p)), String(v)])
     return out
   })
-
-  const dump = (a) => {
-    const rows = []
-    for (let i = 0; i < a.length; i += 16) {
-      const s = [...a.slice(i, i + 16)]
-      rows.push(`${i.toString(16).padStart(8, '0')}  ${s.map((b) => b.toString(16).padStart(2, '0')).join(' ').padEnd(47)}  ${s.map((b) => (b >= 32 && b < 127 ? String.fromCharCode(b) : '.')).join('')}`)
-    }
-    return rows.join('\n')
-  }
+  const timeText = $derived(timeSpan ? decoder.decode(bytes.subarray(timeSpan[0], timeSpan[1])) : null)
+  const policies = $derived(data?.now?.time?.policies ?? data?.emitted?.ulpf?.time_policies ?? [])
 </script>
 
 <section>
   <div class="head">
     <h2>Traceback</h2>
-    <span class="note">every emitted line back to the bytes it came from</span>
+    <span class="note">one emitted line back to the bytes it came from</span>
     <form class="bar push" onsubmit={go}>
       <label class="sm muted" for="rid">raw id</label>
-      <input id="rid" type="search" inputmode="numeric" bind:value={input} bind:this={box} placeholder="4211" size="10" />
+      <input id="rid" type="search" inputmode="numeric" bind:value={input} bind:this={box} placeholder="raw id  /" size="12" />
       <button class="btn primary" type="submit" disabled={busy}>Look up</button>
-      {#if busy}<span class="muted sm">loading</span>{/if}
     </form>
   </div>
+  {#if busy}<p class="loading">reading record {id} through the writer's lock</p>{/if}
 </section>
 
 {#if err}
   <div class="notice bad">
-    <b>{err.error}</b> <span class="muted">({err.reason})</span>
-    {#if err.store_len != null}<p class="sm">The store holds {fmt.n(err.store_len)} records; ids run 0 to {fmt.n(Math.max(0, err.store_len - 1))}.</p>{/if}
+    <b>{err.error}</b>
+    <span class="muted">{err.reason}{#if err.status != null && err.status !== 404}, HTTP {err.status}{/if}</span>
+    {#if err.store_len != null}<span>The store holds {fmt.n(err.store_len)} records, ids 0 to {fmt.n(Math.max(0, err.store_len - 1))}. Open one from Live, or enter an id in that range.</span>{/if}
   </div>
 {:else if !data && !id}
-  <p class="empty">Enter a raw id, or open a row from Live. The record's exact stored bytes are shown with every parsed field's span lit, its digest re-checked now, and its place in the hash chain.</p>
+  <div class="empty">
+    <b>No record chosen.</b>
+    <span>Enter a raw id above, press Enter on a row in Live, or follow an event from Pivot or Replay.</span>
+    <span class="sm">What you get: the exact stored bytes with every parsed field's range lit, the digest re-checked now, and the record's place in the hash chain.</span>
+  </div>
 {:else if data}
   <section class="stack">
     <div class="facts">
-      <div><span>raw_id</span><b>{data.raw_id}</b></div>
+      <div><span>raw id</span><b>{data.raw_id}</b></div>
       <div><span>source</span><b>{data.source}</b></div>
       <div><span>receipt</span><b>{data.receipt}</b></div>
       <div><span>bytes</span><b>{fmt.n(data.bytes_len)}</b></div>
-      <div><span>parser now</span><b>{data.now?.parser ?? 'none'}</b></div>
+      <div><span>parser now</span><b class:is-warn={!data.now?.parser}>{data.now?.parser ?? 'none'}</b></div>
       <div><span>status</span><b class:is-warn={data.now?.parse_status !== 'parsed'}>{data.now?.parse_status}</b></div>
     </div>
 
-    <div class="chain">
-      <div class="d">
+    <div class="verdicts">
+      <div class="verdict" class:ok={data.digest_match} class:bad={!data.digest_match}>
+        <b>{data.digest_match ? 'Bytes unchanged since receipt' : 'Bytes do not match their digest'}</b>
         <span class="lab">stored SHA-256</span><pre>{data.stored_sha256}</pre>
         <span class="lab">recomputed now</span><pre>{data.recomputed_sha256}</pre>
-        <p class="sm" class:is-ok={data.digest_match} class:is-bad={!data.digest_match}>
-          {data.digest_match ? 'The bytes still hash to the digest recorded when they arrived.' : 'The bytes do not hash to the recorded digest.'}
-        </p>
       </div>
       {#if data.chain}
-        <div class="d">
+        <div class="verdict" class:ok={data.chain_match} class:bad={!data.chain_match}>
+          <b>{data.chain_match ? 'Follows the record before it' : 'Chain value does not follow from the previous record'}</b>
           <span class="lab">prev_chain</span><pre>{data.prev_chain}</pre>
-          <span class="lab">chain</span><pre>{data.chain}</pre>
-          <p class="sm" class:is-ok={data.chain_match} class:is-bad={!data.chain_match}>
-            {data.chain_match ? 'sha256(prev_chain ‖ digest) equals chain: this record follows the one before it.' : 'The chain value does not follow from its predecessor.'}
-          </p>
+          <span class="lab">chain = sha256(prev_chain ‖ digest)</span><pre>{data.chain}</pre>
         </div>
       {/if}
-      <div class="d">
-        <span class="lab">timestamp</span>
-        {#if data.now?.time}
-          <pre>{data.now.time.text_span ? decoder.decode(bytes.slice(data.now.time.text_span[0], data.now.time.text_span[1])) : 'not found in the bytes'}</pre>
-          <p class="sm muted">
-            {#if data.now.time.text_span}bytes {data.now.time.text_span[0]}–{data.now.time.text_span[1]}{:else}taken from the receipt time{/if}
-          </p>
-          <div class="bar">{#each data.now.time.policies ?? [] as p}<span class="tag warn">{p}</span>{:else}<span class="tag ok">no policy applied</span>{/each}</div>
-        {:else}
-          <pre class="muted">{data.emitted?.metadata?.original_time ?? '–'}</pre>
-          <div class="bar">{#each data.emitted?.ulpf?.time_policies ?? [] as p}<span class="tag warn">{p}</span>{/each}</div>
+      <div class="verdict" class:ok={timeSpan && !policies.length} class:warn={!timeSpan || policies.length}>
+        <b>{timeSpan ? (policies.length ? 'Device time read, with a policy applied' : 'Device time read from the bytes') : 'Device time not found: receipt time used'}</b>
+        {#if timeSpan}
+          <span class="lab">bytes {timeSpan[0]}–{timeSpan[1]}</span><pre>{timeText}</pre>
+        {:else if data.emitted?.metadata?.original_time}
+          <span class="lab">original_time as emitted</span><pre>{data.emitted.metadata.original_time}</pre>
         {/if}
+        <div class="bar">{#each policies as p}<span class="tag warn">{p}</span>{/each}</div>
       </div>
     </div>
 
@@ -224,83 +242,82 @@
       <div class="head">
         <h2>Raw record</h2>
         <span class="note">{spanNote}</span>
-        {#if overlapped > 0}<span class="tag warn" title="two reported ranges cover the same bytes; the narrower one is shown">{overlapped} overlapping range{overlapped === 1 ? '' : 's'} not lit</span>{/if}
-        {#if pin}<span class="tag accent">{pin.key} bytes {pin.id.replace(':', '–')} held lit, Esc releases</span>{/if}
-        <span class="push"><button class="btn" onclick={() => (showHex = !showHex)}>{showHex ? 'Hide hex' : 'Show hex'}</button></span>
+        {#if overlapped > 0}<span class="tag warn" title="two reported ranges cover the same bytes; the narrower one is shown">{overlapped} overlapping not lit</span>{/if}
+        <span class="push bar">
+          {#if pin}<span class="pinned" style="--c:{tint(pin.key)}"><b>{pin.key}</b> {pin.s}–{pin.e} held, Esc releases</span>{/if}
+          <button class="btn" class:on={showHex} onclick={() => (showHex = !showHex)}>{showHex ? 'Text' : 'Hex'}<kbd>h</kbd></button>
+        </span>
       </div>
-      <div class="raw">{#each chunks as c}{#if c.key}<span
-            class="sp"
-            class:hot={hot?.id === c.id} class:pin={pin?.id === c.id}
-            style="background:color-mix(in srgb, {colourOf.get(c.key) ?? 'var(--rule-strong)'} 22%, transparent); color:{colourOf.get(c.key) ?? 'var(--ink)'}"
-            tabindex="0"
-            role="button"
-            title="{c.key}  bytes {c.span[0]}–{c.span[1]}  (click to keep it lit)"
-            onmouseenter={() => (over = { id: c.id, key: c.key })}
-            onmouseleave={() => (over = null)}
-            onfocus={() => (over = { id: c.id, key: c.key })}
-            onblur={() => (over = null)}
-            onclick={() => (pin = pin?.id === c.id ? null : { id: c.id, key: c.key })}
-            onkeydown={(ev) => { if (ev.key === 'Enter' || ev.key === ' ') { pin = pin?.id === c.id ? null : { id: c.id, key: c.key }; ev.preventDefault() } }}
-          >{#each c.pieces as p}{#if p.ctl}<i class="ctl">{p.t}</i>{:else}{p.t}{/if}{/each}</span>{:else}{#each c.pieces as p}{#if p.ctl}<i class="ctl">{p.t}</i>{:else}{p.t}{/if}{/each}{/if}{/each}</div>
-      {#if !fields && !prov}
-        <p class="notice sm">This server answers the v1 contract: it returns the bytes and the parsed result, but no per-field byte spans, so nothing is lit above.</p>
-      {:else if !owned.length && fields?.length}
-        <p class="notice sm">Every field below is marked <b>derived</b>: this parser materialises its values rather than borrowing them from the record, so the mapping from field to bytes is the key itself, not a range.</p>
+      {#if colourOf.size}
+        <div class="legend" style="margin-bottom:var(--s3)">
+          {#each [...colourOf] as [k, c] (k)}<span style="--c:{c}"><i class="sw"></i>{k}</span>{/each}
+          {#if timeSpan}<span style="--c:var(--fg-2)"><i class="sw" style="background:none;box-shadow:inset 0 -2px 0 var(--fg-2)"></i>timestamp</span>{/if}
+        </div>
       {/if}
-      {#if showHex}<pre class="raw" style="line-height:1.5">{dump(bytes)}</pre>{/if}
+      <div class="bytes" class:hexmode={showHex} bind:this={wrapEl} style="--cols:7ch minmax(0,1fr){showHex ? ' auto' : ''}">
+        <VList items={starts} max={showHex ? 528 : 396} rowH={22}>
+          {#snippet header()}
+            <div class="vh"><span class="off">offset</span><span>{showHex ? 'bytes, sixteen per row' : `${cols} bytes per row`}</span>{#if showHex}<span>ascii</span>{/if}</div>
+          {/snippet}
+          {#snippet row(s, i)}
+            {@const e = rowEnd(i)}
+            <div class="vr static" class:mark={rowHot(i)}>
+              <span class="off">{showHex ? s.toString(16).padStart(6, '0') : s}</span>
+              {#if showHex}
+                <span class="hex">{#each segments(s, e) as g}{#if g.o}<span class="sp" class:time={g.o.time} class:hot={hot?.id === g.o.id} style="--c:{g.o.time ? 'var(--fg-2)' : tint(g.o.key)}" title="{g.o.key}  bytes {g.o.s}–{g.o.e}" onmouseenter={() => (over = rangeOf(g.o))} onmouseleave={() => (over = null)} onclick={() => toggle(g.o)} role="button" tabindex="-1">{[...bytes.subarray(g.s, g.e)].map(hex2).join(' ')}</span>{:else}{[...bytes.subarray(g.s, g.e)].map(hex2).join(' ')}{/if}{#if g.e < e}{' '}{/if}{/each}</span>
+                <span class="asc">{#each segments(s, e) as g}{#if g.o}<span class="sp" class:hot={hot?.id === g.o.id} style="--c:{g.o.time ? 'var(--fg-2)' : tint(g.o.key)}">{[...bytes.subarray(g.s, g.e)].map(asc).join('')}</span>{:else}{[...bytes.subarray(g.s, g.e)].map(asc).join('')}{/if}{/each}</span>
+              {:else}
+                <span class="txt">{#each segments(s, e) as g}{#if g.o}<span class="sp" class:time={g.o.time} class:hot={hot?.id === g.o.id} style="--c:{g.o.time ? 'var(--fg-2)' : tint(g.o.key)}" title="{g.o.key}  bytes {g.o.s}–{g.o.e}  (click to keep it lit)" onmouseenter={() => (over = rangeOf(g.o))} onmouseleave={() => (over = null)} onclick={() => toggle(g.o)} role="button" tabindex="-1">{#each text(g.s, g.e) as p}{#if p.ctl}<i class="ctl">{p.t}</i>{:else}{p.t}{/if}{/each}</span>{:else}{#each text(g.s, g.e) as p}{#if p.ctl}<i class="ctl">{p.t}</i>{:else}{p.t}{/if}{/each}{/if}{/each}</span>
+              {/if}
+            </div>
+          {/snippet}
+        </VList>
+      </div>
+      {#if !fields && !prov}
+        <p class="notice sm" style="margin-top:var(--s3)">This server answers the v1 contract: bytes and parsed result, no per-field byte spans, so nothing is lit above.</p>
+      {/if}
     </div>
 
     <div class="split">
-      <div>
-        <div class="head"><h2>Parser fields</h2><span class="note">the device's own vocabulary, in parser order</span></div>
-        {#if fields}
-          <div class="scroll">
-            <table class="tbl prov">
-              <thead><tr><th>key</th><th>value</th><th class="num">bytes</th></tr></thead>
-              <tbody>
-                {#each fields as f, i (f.key + i)}
-                  {@const fid = idOf(f.span)}
-                  <tr class="click" class:hot={fid && hot?.id === fid} class:pin={fid && pin?.id === fid}
-                      onmouseenter={() => (over = fid && { id: fid, key: f.key })} onmouseleave={() => (over = null)}
-                      onclick={() => (pin = !fid ? pin : pin?.id === fid ? null : { id: fid, key: f.key })}>
-                    <td class="k"><i class="swatch" style="background:{colourOf.get(f.key) ?? 'var(--rule-strong)'}"></i>{f.key}</td>
-                    <td class="v">{fmt.cut(f.value, 90)}</td>
-                    <td class="num">{#if f.span}{f.span[0]}–{f.span[1]}{:else}<span class="tag">derived</span>{/if}</td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
+      <div class="prov" style="--cols:minmax(0,1.1fr) minmax(0,1.6fr) 9em">
+        <div class="head"><h2>Parser fields</h2><span class="note">the device's own vocabulary, in parser order, {fmt.n(fields?.length ?? 0)} pairs</span></div>
+        {#if fields?.length}
+          <VList items={fields} max={330}>
+            {#snippet header()}<div class="vh"><span>key</span><span>value</span><span class="num">bytes</span></div>{/snippet}
+            {#snippet row(f)}
+              {@const fid = idOf(f.span)}
+              <div class="vr" class:hot={fid && hot?.id === fid} class:pin={fid && pin?.id === fid} style="--c:{tint(f.key)}"
+                   onmouseenter={() => lightRow(f)} onmouseleave={() => (over = null)} onclick={() => pinRow(f)} role="button" tabindex="-1">
+                <span class="k"><i class="sw"></i>{f.key}</span>
+                <span class="v" title={f.value}>{f.value}</span>
+                <span class="num from">{#if f.span}{f.span[0]}–{f.span[1]}{:else}derived{/if}</span>
+              </div>
+            {/snippet}
+          </VList>
+        {:else if fields}
+          <div class="empty"><b>No fields.</b><span>The parser claimed this record but produced no key/value pairs.</span></div>
         {:else}
-          <p class="empty">This server does not report the parser's own key/value pairs. The normalized result is below.</p>
+          <div class="empty"><b>No parser fields reported.</b><span>The normalized result is below.</span></div>
         {/if}
       </div>
-      <div>
+      <div class="prov" style="--cols:minmax(0,1.2fr) minmax(0,1.4fr) 10em">
         <div class="head"><h2>Normalized</h2><span class="note">schema path, and the field it came from</span></div>
-        {#if prov?.length}
-          <div class="scroll">
-            <table class="tbl prov">
-              <thead><tr><th>path</th><th>value</th><th>from</th></tr></thead>
-              <tbody>
-                {#each provRows as p, i (p.path + i)}
-                  {@const pid = idOf(p.span)}
-                  <tr class="click" class:hot={pid && hot?.id === pid} class:pin={pid && pin?.id === pid} class:sel={sel === i}
-                      tabindex="0" role="button"
-                      onmouseenter={() => (over = pid && { id: pid, key: p.source_key })} onmouseleave={() => (over = null)}
-                      onfocus={() => (over = pid && { id: pid, key: p.source_key })} onblur={() => (over = null)}
-                      onclick={() => (pin = !pid ? pin : pin?.id === pid ? null : { id: pid, key: p.source_key })}
-                      onkeydown={(ev) => { if (ev.key === 'Enter') { if (pid) pin = pin?.id === pid ? null : { id: pid, key: p.source_key }; ev.preventDefault() } }}>
-                    <td class="k"><i class="swatch" style="background:{colourOf.get(p.source_key) ?? 'var(--rule-strong)'}"></i>{p.path}</td>
-                    <td class="v">{fmt.cut(p.value, 60)} {#if p.canonical}<span class="tag accent" title="the mapping rewrote this value">canonical</span>{/if}</td>
-                    <td class="v is-dim">{p.source_key}{#if !p.span}<span class="tag"> derived</span>{/if}</td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
-          <p class="sm muted">Fields the mapping synthesised (class_uid, metadata) have no source field and are not listed.</p>
+        {#if provRows.length}
+          <VList items={provRows} max={330} {sel}>
+            {#snippet header()}<div class="vh"><span>path</span><span>value</span><span>from</span></div>{/snippet}
+            {#snippet row(p, i)}
+              {@const pid = idOf(p.span)}
+              <div class="vr" class:hot={pid && hot?.id === pid} class:pin={pid && pin?.id === pid} class:sel={sel === i} style="--c:{tint(p.source_key)}"
+                   onmouseenter={() => lightRow(p)} onmouseleave={() => (over = null)} onclick={() => { sel = i; pinRow(p) }} role="button" tabindex="-1">
+                <span class="k"><i class="sw"></i>{p.path}</span>
+                <span class="v" title={p.value}>{p.value}{#if p.canonical} <span class="tag" title="the mapping rewrote this value">canonical</span>{/if}</span>
+                <span class="from">{p.source_key}{#if !p.span} · derived{/if}</span>
+              </div>
+            {/snippet}
+          </VList>
+          <p class="xs muted" style="margin-top:var(--s2)">Fields the mapping synthesised (class_uid, metadata) have no source field and are not listed.</p>
         {:else}
-          <p class="empty">This server does not report which source field fed each schema field. The normalized object is below.</p>
+          <div class="empty"><b>Nothing normalized from a source field.</b><span>{data.now?.parser ? 'The mapping produced only synthesised fields for this parser.' : 'No parser claimed this record.'}</span></div>
         {/if}
       </div>
     </div>
@@ -309,22 +326,22 @@
       <div>
         <div class="head"><h2>Emitted</h2><span class="note">as written to the output</span></div>
         {#if data.emitted}
-          <pre class="panel pad" style="max-height:40vh;overflow:auto">{fmt.json(data.emitted)}</pre>
+          <pre class="json">{fmt.json(data.emitted)}</pre>
         {:else}
-          <p class="empty">Not in the tail any more. The output file holds the emitted line.</p>
+          <div class="empty"><b>Not in the tail any more.</b><span>The output file holds the emitted line; the result of parsing the bytes now is on the right.</span></div>
         {/if}
       </div>
       <div>
-        <div class="head"><h2>Now</h2><span class="note">the same bytes through the parsers as they are loaded right now</span></div>
-        <pre class="panel pad" style="max-height:40vh;overflow:auto">{fmt.json(data.now?.normalized ?? {})}</pre>
+        <div class="head"><h2>Now</h2><span class="note">the same bytes through the parsers loaded right now</span></div>
+        <pre class="json">{fmt.json(data.now?.normalized ?? {})}</pre>
         {#if diffPaths}
           {#if diffPaths.length}
-            <table class="tbl" style="margin-top:var(--s2)">
+            <table class="tbl" style="margin-top:var(--s3)">
               <thead><tr><th>changed path</th><th>emitted</th><th>now</th></tr></thead>
               <tbody>{#each diffPaths as [p, a, b]}<tr><td class="mono">{p}</td><td class="mono is-dim">{fmt.cut(a, 40)}</td><td class="mono is-warn">{fmt.cut(b, 40)}</td></tr>{/each}</tbody>
             </table>
           {:else}
-            <p class="sm is-ok">Identical: the parsers loaded now produce exactly what was emitted.</p>
+            <p class="sm is-ok" style="margin-top:var(--s3)">Identical: the parsers loaded now produce exactly what was emitted.</p>
           {/if}
         {/if}
       </div>

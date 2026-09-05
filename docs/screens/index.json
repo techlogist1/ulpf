@@ -1,0 +1,266 @@
+[
+  {
+    "file": "live-1280.png",
+    "screen": "live",
+    "width": 1280,
+    "what": "live feed: rates, funnel, queue, tail, sources, parsers, every engine counter"
+  },
+  {
+    "file": "review-list-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "review: the pending proposals, kind, lines, templates, unmatched, problems"
+  },
+  {
+    "file": "review-detail-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "review: definition editor, actions, evidence with templates, slot names and the reason for each"
+  },
+  {
+    "file": "review-update-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence"
+  },
+  {
+    "file": "trace-1280.png",
+    "screen": "trace",
+    "width": 1280,
+    "what": "traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance"
+  },
+  {
+    "file": "trace-hover-1280.png",
+    "screen": "trace",
+    "width": 1280,
+    "what": "traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields"
+  },
+  {
+    "file": "trace-hex-1280.png",
+    "screen": "trace",
+    "width": 1280,
+    "what": "traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns"
+  },
+  {
+    "file": "trace-big-1280.png",
+    "screen": "trace",
+    "width": 1280,
+    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive"
+  },
+  {
+    "file": "pivot-search-1280.png",
+    "screen": "pivot",
+    "width": 1280,
+    "what": "pivot: kind selector and the entities with the most events"
+  },
+  {
+    "file": "pivot-1280.png",
+    "screen": "pivot",
+    "width": 1280,
+    "what": "pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities"
+  },
+  {
+    "file": "replay-1280.png",
+    "screen": "replay",
+    "width": 1280,
+    "what": "replay: why v2 differs, counters, parser changes, by field, versions, the diff entries"
+  },
+  {
+    "file": "drift-1280.png",
+    "screen": "drift",
+    "width": 1280,
+    "what": "drift: every established source with its window rate against the baseline; tripped and proposed first"
+  },
+  {
+    "file": "integrity-1280.png",
+    "screen": "integrity",
+    "width": 1280,
+    "what": "integrity: verdict of the last verify, records, store id, genesis and chain head"
+  },
+  {
+    "file": "live-2560.png",
+    "screen": "live",
+    "width": 2560,
+    "what": "live feed: rates, funnel, queue, tail, sources, parsers, every engine counter"
+  },
+  {
+    "file": "review-list-2560.png",
+    "screen": "review",
+    "width": 2560,
+    "what": "review: the pending proposals, kind, lines, templates, unmatched, problems"
+  },
+  {
+    "file": "review-detail-2560.png",
+    "screen": "review",
+    "width": 2560,
+    "what": "review: definition editor, actions, evidence with templates, slot names and the reason for each"
+  },
+  {
+    "file": "review-update-2560.png",
+    "screen": "review",
+    "width": 2560,
+    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence"
+  },
+  {
+    "file": "trace-2560.png",
+    "screen": "trace",
+    "width": 2560,
+    "what": "traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance"
+  },
+  {
+    "file": "trace-hover-2560.png",
+    "screen": "trace",
+    "width": 2560,
+    "what": "traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields"
+  },
+  {
+    "file": "trace-hex-2560.png",
+    "screen": "trace",
+    "width": 2560,
+    "what": "traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns"
+  },
+  {
+    "file": "trace-big-2560.png",
+    "screen": "trace",
+    "width": 2560,
+    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive"
+  },
+  {
+    "file": "pivot-search-2560.png",
+    "screen": "pivot",
+    "width": 2560,
+    "what": "pivot: kind selector and the entities with the most events"
+  },
+  {
+    "file": "pivot-2560.png",
+    "screen": "pivot",
+    "width": 2560,
+    "what": "pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities"
+  },
+  {
+    "file": "replay-2560.png",
+    "screen": "replay",
+    "width": 2560,
+    "what": "replay: why v2 differs, counters, parser changes, by field, versions, the diff entries"
+  },
+  {
+    "file": "drift-2560.png",
+    "screen": "drift",
+    "width": 2560,
+    "what": "drift: every established source with its window rate against the baseline; tripped and proposed first"
+  },
+  {
+    "file": "integrity-2560.png",
+    "screen": "integrity",
+    "width": 2560,
+    "what": "integrity: verdict of the last verify, records, store id, genesis and chain head"
+  },
+  {
+    "file": "keys-1280.png",
+    "screen": "keys",
+    "width": 1280,
+    "what": "the shortcut overlay (?)"
+  },
+  {
+    "file": "empty-trace-1280.png",
+    "screen": "empty",
+    "width": 1280,
+    "what": "empty state: traceback with no record chosen"
+  },
+  {
+    "file": "error-trace-1280.png",
+    "screen": "error",
+    "width": 1280,
+    "what": "error state: a trace of raw id 503741, which the store never issued"
+  },
+  {
+    "file": "light-trace-1280.png",
+    "screen": "light",
+    "width": 1280,
+    "what": "the same traceback under the light theme (t)"
+  },
+  {
+    "file": "light-live-1280.png",
+    "screen": "light",
+    "width": 1280,
+    "what": "the live feed under the light theme (t)"
+  },
+  {
+    "file": "empty-pivot-value-1280.png",
+    "screen": "empty",
+    "width": 1280,
+    "what": "empty state: a pivot on a value no event carries"
+  },
+  {
+    "file": "reject-confirm-1280.png",
+    "screen": "reject",
+    "width": 1280,
+    "what": "review: x opens the reject confirmation, marked as the destructive one; Enter confirms, Esc cancels"
+  },
+  {
+    "file": "approve-1-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "keyboard approve 1: the digit 2 opens Review from anywhere"
+  },
+  {
+    "file": "approve-2-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "keyboard approve 2: j selects the proposal (haproxy)"
+  },
+  {
+    "file": "approve-3-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "keyboard approve 3: Enter opens it; the definition, the actions and the evidence"
+  },
+  {
+    "file": "approve-4-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "keyboard approve 4: a opens the confirmation; focus is on Approve, Esc would cancel"
+  },
+  {
+    "file": "approve-5-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "keyboard approve 5: Enter confirms; the result names the file, the parsers loaded and how many buffered lines the new parser now claims"
+  },
+  {
+    "file": "empty-live-1280.png",
+    "screen": "live",
+    "width": 1280,
+    "what": "empty state: a fresh server with zero events: rates, funnel, queue and the tail say what will fill them"
+  },
+  {
+    "file": "empty-review-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "empty state: nothing to review: what makes a proposal appear"
+  },
+  {
+    "file": "empty-pivot-1280.png",
+    "screen": "pivot",
+    "width": 1280,
+    "what": "empty state: no entities indexed yet"
+  },
+  {
+    "file": "empty-replay-1280.png",
+    "screen": "replay",
+    "width": 1280,
+    "what": "empty state: no output versions yet"
+  },
+  {
+    "file": "empty-drift-1280.png",
+    "screen": "drift",
+    "width": 1280,
+    "what": "empty state: no source established yet: the thresholds in words"
+  },
+  {
+    "file": "empty-integrity-1280.png",
+    "screen": "integrity",
+    "width": 1280,
+    "what": "empty state: an empty store: the genesis is fixed, the head appears with the first record"
+  }
+]

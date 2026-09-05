@@ -23,8 +23,30 @@ The Rust binary embeds them with `include_str!` and serves `/`, `/app.js`, `/app
 serves the three files from disk on every request, so edit, rebuild, reload.
 
 All colours, fonts and spacing steps are CSS custom properties in the block at the
-top of `src/app.css` (`:root { ... }`). Nothing below that block hard-codes a value.
-Components carry no `<style>` blocks; every class lives in that one stylesheet.
+top of `src/app.css` (`:root { ... }`; the light theme redefines the colour tokens under
+`:root[data-theme="light"]`). Nothing below that block hard-codes a value. Components
+carry no `<style>` blocks; every class lives in that one stylesheet. `docs/design.md` is
+the system: tokens, scales, colour semantics with the contrast table, the component
+inventory and the keyboard map.
+
+## Fonts
+
+IBM Plex Sans (400, 600) and IBM Plex Mono (400, 500), Latin-1 subsets from IBM's own
+release, OFL-1.1 (`fonts/LICENSE-OFL.txt`), 78,656 bytes in total. `vite.config.js` sets
+`assetsInlineLimit` high enough that they are inlined into `dist/app.css` as `data:` URIs,
+so the binary carries them and the page never fetches a font. After a build:
+
+    grep -c 'url(data:font/woff2' dist/app.css     # 1
+    ls dist                                        # exactly index.html app.js app.css
+
+## Captures
+
+    node capture.mjs --base http://127.0.0.1:7881 --out ../docs/screens [--big <raw id>] [--approve <pending id>]
+
+shoots every screen at 1280x800 and 2560x1440 against a populated `ulpf serve`, plus the
+stateful ones (hover, hex, the shortcut overlay, empty and error states, light theme, the
+keyboard-only approve flow, one capture per key) and writes `docs/screens/README.md`, one
+line per file. Needs Chrome at its usual path and `puppeteer-core` (a dev dependency).
 
 ## Develop
 
