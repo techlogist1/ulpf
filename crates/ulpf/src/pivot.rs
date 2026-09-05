@@ -44,8 +44,11 @@ const RELATED_WINDOW: usize = 10_000;
 const RELATED_ROW_BUDGET: usize = 50_000;
 /// Posting rows one timeline page may read before it answers with what it has.
 const PAGE_ROW_BUDGET: usize = 20_000;
-/// Batches the writer joins into one transaction when the producer is ahead of it.
-const COMMIT_BATCHES: usize = 8;
+/// The writer's page cache, KiB. Three of the index's B-trees are keyed by entity value,
+/// so a commit group touches pages all over them; the default 2 MiB cache spilled every
+/// page to the WAL several times per group and read it back (measured: 93% of the thread
+/// in pwrite/pread, D76). 256 MiB holds a group's dirty set for an index of a few hundred MB.
+const CACHE_KIB: i64 = 65_536;
 
 pub fn index_path(output: &Path) -> PathBuf {
     let mut s = output.as_os_str().to_os_string();
@@ -121,16 +124,14 @@ impl PivotWriter {
                 let mut w = Writer { conn, devices: HashMap::new(), parsers: HashMap::new(), max_span: 0 };
                 let mut drained: Vec<BatchBuf> = Vec::new();
                 while let Ok(batch) = rx.recv() {
-                    // one transaction per *group* of batches: whatever is already queued
-                    // joins this one, so a fast producer costs fewer commits and fewer
-                    // entity upserts (the groups merge), never a lost posting
+                    // one transaction per *group* of batches: everything already queued
+                    // joins this one (the channel's capacity bounds the group), so a
+                    // producer that is ahead costs one commit per queue-full and the
+                    // value-keyed pages are rewritten once per group, not once per batch
                     drained.clear();
                     drained.push(batch);
-                    while drained.len() < COMMIT_BATCHES {
-                        match rx.try_recv() {
-                            Ok(b) => drained.push(b),
-                            Err(_) => break,
-                        }
+                    while let Ok(b) = rx.try_recv() {
+                        drained.push(b);
                     }
                     match w.write(&drained) {
                         Ok(n) => {
@@ -197,9 +198,10 @@ impl Drop for PivotWriter {
 
 fn open_writer(path: &Path) -> Result<Connection> {
     let conn = Connection::open(path).with_context(|| format!("opening pivot index {}", path.display()))?;
-    conn.execute_batch(
+    conn.execute_batch(&format!(
         "PRAGMA journal_mode = WAL;
          PRAGMA synchronous = OFF;
+         PRAGMA cache_size = -{CACHE_KIB};
          CREATE TABLE IF NOT EXISTS postings (kind INTEGER NOT NULL, value BLOB NOT NULL,
             first_id INTEGER NOT NULL, last_id INTEGER NOT NULL, n INTEGER NOT NULL, blob BLOB NOT NULL);
          CREATE INDEX IF NOT EXISTS postings_kv ON postings(kind, value, first_id);
@@ -210,8 +212,8 @@ fn open_writer(path: &Path) -> Result<Connection> {
             first_time INTEGER NOT NULL, last_time INTEGER NOT NULL, PRIMARY KEY (kind, value)) WITHOUT ROWID;
          CREATE TABLE IF NOT EXISTS entity_devices (kind INTEGER NOT NULL, value BLOB NOT NULL, device_id INTEGER NOT NULL,
             parser_id INTEGER NOT NULL, events INTEGER NOT NULL, PRIMARY KEY (kind, value, device_id, parser_id)) WITHOUT ROWID;
-         CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v INTEGER NOT NULL);",
-    )
+         CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v INTEGER NOT NULL);"
+    ))
     .context("creating the pivot index schema")?;
     Ok(conn)
 }
@@ -805,7 +807,7 @@ pub fn rebuild(output: &Path, mapping: &Mapping, batch_events: usize) -> Result<
     let entities = mapping.entities();
     let paths: Vec<(EntityKind, &str)> = EntityKind::ALL.into_iter().filter_map(|k| entities.path(k).map(|p| (k, p))).collect();
 
-    let mut writer = PivotWriter::start(output, 8)?;
+    let mut writer = PivotWriter::start(output, 64)?;
     let mut report = RebuildReport { events: 0, postings: 0, unreadable_lines: 0, elapsed_secs: 0.0 };
     let mut offset = 0u64;
     let mut pending: Vec<OwnedPosting> = Vec::new();
