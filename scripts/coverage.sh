@@ -135,8 +135,10 @@ print("- `lines` is the file's own line count; `framed` is what the engine made 
       " the two differ where a collector folded one event over two lines.")
 print("- `PROVENANCE.md` and `setup/` are documentation and are not run.")
 print()
-print("The Zeek rows are the honest uncovered set today. Their numbers change once lane 3's"
-      " mapping rule lands; regenerate this file after that merge.")
+print("The Zeek rows are the honest uncovered set: sixteen files, 23,434 lines, no parser"
+      " claims one of them. Lane 3's CEF, LEEF and CloudTrail definitions have landed and"
+      " did not move them; Zeek stays one of the unseen formats the live inference demo"
+      " runs against (`corpus/README.md`) until a Zeek definition exists.")
 print()
 
 for group, title in (("samples", "## samples/"),

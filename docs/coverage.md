@@ -3,23 +3,26 @@
 Every sample and every corpus file through the built binary, one fresh store each.
 Regenerate with `scripts/coverage.sh > docs/coverage.md`.
 
-- binary: `./target/release/ulpf` at commit `a9faf79`
-- generated: 2026-09-05 21:57 UTC
+- binary: `./target/release/ulpf` at commit `0c197bc`
+- generated: 2026-09-05 23:04 UTC
 - per file: `ulpf run <file> --store <fresh> --output <scratch> --infer-threshold 0 --report-json <scratch>`; every number below is a field of that JSON report.
 - `lines` is the file's own line count; `framed` is what the engine made of it, so the two differ where a collector folded one event over two lines.
 - `PROVENANCE.md` and `setup/` are documentation and are not run.
 
-The Zeek rows are the honest uncovered set today. Their numbers change once lane 3's mapping rule lands; regenerate this file after that merge.
+The Zeek rows are the honest uncovered set: sixteen files, 23,434 lines, no parser claims one of them. Lane 3's CEF, LEEF and CloudTrail definitions have landed and did not move them; Zeek stays one of the unseen formats the live inference demo runs against (`corpus/README.md`) until a Zeek definition exists.
 
 ## samples/
 
 | file | lines | framed | detected | parsed | parse_failed | sub_uncovered | sub_no_match | time_from_receipt | class_unknown | unmapped_fields |
 |---|---|---|---|---|---|---|---|---|---|---|
+| `samples/cef.log` | 14 | 14 | 14 | 14 | none | 0 | 0 | 1 | 1 | 60 |
 | `samples/check_point.log` | 13 | 13 | 13 | 13 | none | 0 | 0 | 0 | 0 | 241 |
 | `samples/cisco_asa.log` | 30 | 30 | 30 | 30 | none | 1 | 1 | 1 | 6 | 160 |
 | `samples/cisco_ios.log` | 32 | 32 | 32 | 32 | none | 1 | 1 | 2 | 14 | 204 |
+| `samples/cloudtrail.log` | 15 | 15 | 15 | 15 | none | 0 | 0 | 0 | 0 | 256 |
 | `samples/fortinet_fortigate.log` | 12 | 11 | 11 | 11 | none | 0 | 0 | 0 | 2 | 148 |
 | `samples/juniper_srx.log` | 16 | 16 | 16 | 16 | none | 1 | 0 | 0 | 1 | 210 |
+| `samples/leef.log` | 16 | 16 | 16 | 16 | none | 0 | 0 | 1 | 0 | 73 |
 | `samples/openvpn.log` | 44 | 44 | 44 | 44 | none | 0 | 4 | 0 | 30 | 112 |
 | `samples/palo_alto_panos.log` | 22 | 22 | 22 | 22 | none | 1 | 0 | 0 | 2 | 563 |
 | `samples/pfsense_filterlog.log` | 18 | 18 | 18 | 18 | none | 0 | 0 | 0 | 0 | 318 |
