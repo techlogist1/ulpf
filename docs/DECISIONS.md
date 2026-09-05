@@ -1473,3 +1473,41 @@ hover (reports nothing that changed; the station's border-colour transition was 
 this reason); a selection ease (the same property as hover, and every other selection in the
 app snaps); a hero animation on load (decoration by definition, and the first frame's counts
 would move without having changed).
+
+## D81. A pivot names the cost of each part of its answer, and `related` reads the index the way the input is read
+**Decision.** Every pivot page carries `elapsed_ms { header, timeline, related, lines, total }`
+(`crates/ulpf/src/pivot.rs`, `Elapsed`), so a slow pivot says which part was slow instead of
+being "about 500 ms" (a figure the record had never measured: on a 233,854-event slice the
+busiest user answered in 93 ms quiet and 239 ms at load 30, and `related` was 78-98% of it).
+The read side opens its connections with `SQLITE_OPEN_NO_MUTEX` and `mmap_size` 1 GiB
+(`open_reader`): rusqlite's `Connection` is not `Sync`, so SQLite's serialized mode bought
+nothing and cost a fifth of a scan in mutex calls, and the 2 MB page cache re-read every page
+of a 30 MB scan through `pread` and a copy. `related` scans the four other kinds on four
+read-only connections opened once, under `std::thread::scope` (a panicked scan is an error
+value); blobs and values are borrowed from the row and a value is copied only on a hit;
+membership in the window is one bit per id over the window's span. Pages are byte-identical
+to before (eleven pages over six entities, every second page through the cursor, `cmp`), and
+the controlled pair on a quiet machine reads 2.6-3.3x (jdoe 93 -> 29 ms, dst_port 443 89 ->
+33, src_ip 74 -> 28); the loaded end (load 28-36) read 4-8x because the old path's mutex and
+`pread` lose more under contention. **Anchor.** `open_reader`, `PivotIndex::open`,
+`related`, `scan_related` in `crates/ulpf/src/pivot.rs`; `docs/api.md` v4 (`elapsed_ms`).
+**Principle.** Inputs are memory-mapped and read without copies (CLAUDE.md); the index is an
+input on the read side. A number on screen is measured, and a slow answer names its cause.
+**Ruled out.** A larger `cache_size` (heap per connection, still a copy per page); a thread
+pool or async for the four scans (the query already runs under `Live`'s index mutex; four
+scoped threads cost about 100 µs); `HashSet<u64>` membership (SipHash and two allocations per
+row, 15% of the profile) or a sorted `Vec` with binary search (fourteen compares against one
+shift); a covering index `(kind, first_id, last_id, value, blob)` or a `WITHOUT ROWID` table
+clustered by `(kind, first_id)`, which would remove the table seek per posting row that is
+now 55% of the scan's CPU but doubles the writer's work (D66: the index thread is `serve`'s
+throughput cap) and changes the layout of a file older serves still open; a
+`first_id..last_id` pre-check before decoding (98% of rows hold one posting on the bench,
+so the extra column read costs more than the decodes it saves); RELATED_WINDOW and
+RELATED_ROW_BUDGET unchanged, because changing them changes `related_over`.
+
+## D82, D83: reserved
+D82 is lane 8's design for the store reopen under a live mapping, the stop path's handles and
+the null output device (branch `lane-8-windows`, written on that branch, merges after the demo
+on the owner's go). D83 is the post-demo decision on a directory-level include or exclude for
+the engine's inputs (tonight every documented command names `samples/*.log`; a bare `samples`
+directory ingests `samples/README.md` as a log).

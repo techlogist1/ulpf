@@ -19,6 +19,14 @@ on the release build at 9d39679: the proposal for mikrotik appeared 0.9 s after 
 attestation 2 of 2 checkpoints, the tamper named raw id 0 (digest) with exit 1, reset clean;
 the whole pass takes about two and a half minutes. Ports 7878 and 5514 must be free.
 
+**Nothing is approved from the CLI before the video is recorded.** A CLI approve writes the
+generated parser (`origin = "inferred"`, priority -1) into the repo's `parsers/`, and a bundle
+or a demo copy built after it knows mikrotik already, so the unseen-format demo cannot raise a
+proposal; the demo's reset removes any generated parser from `parsers/` before the copy is made,
+and the bundle step and the app's first-run copy exclude them (a Windows tester hit this against
+14d3b0c). Every documented command names the log files (`samples/*.log`), never the bare
+`samples` directory, which would ingest `samples/README.md` as a log.
+
 ```
 cargo build --release                                      # ~1 min; binary target/release/ulpf
 ./target/release/ulpf check --pending pending              # 15 parsers, 2 mappings (ocsf, ecs), 0 problems
@@ -208,7 +216,24 @@ builder, Fable review, ceiling 06:00: the installer reachable from the pre-relea
 named, the webview runtime bundled offline where the framework offers it, sidecar and data
 directory through the platform abstractions, designed failure states, verified prerequisites,
 a Windows CI job that installs and launches the app or falls back to the sidecar and the demo's
-check mode, a new pre-release tag). Dependencies named: lane 7 edits `.github/workflows/app.yml`
+check mode, a new pre-release tag). Addition folded in at 04:07 IST (a Windows tester's report
+against 14d3b0c; the tester's machine has a hardware fault, so random access violations there are
+not engine evidence; the items below reproduce deterministically): on main through the full gate,
+the release profile without LTO and a `dist` profile with fat LTO for the shipped binaries,
+installers, Docker image and the harness (lane P, Opus builder, Fable verifier, dispatched 04:09,
+owns Cargo.toml, the Dockerfile and `eval/`; README and CI lines applied by lane 4B), the Windows
+quick start and the tester's contributed throughput line in README (lane 4B, after lane 4 merges),
+the sidecar in a Windows job object, the locked-store message naming the holder, the bundle and
+first-run copy excluding generated parsers, the packaging script honouring `CARGO_TARGET_DIR`,
+which installer the smoke job exercised (lane 7B, after lane 7 merges), the demo reset purging
+generated parsers and every documented command naming `samples/*.log` (the lead at lane D's
+merge; a directory-level include or exclude for the engine is a post-demo decision, D83
+reserved); on a branch, lane 8 (`lane-8-windows`, Fable builder and verifier, dispatched 04:08,
+ceiling 07:05): the store reopen that truncates a torn tail under a live mapping (Windows refuses
+it), the parquet watch-mode teardown handle, the null output device's stray metadata file and
+wrong count, a Windows CI test job running the whole suite on the branch; and lane 3b
+(`lane-3b-cef-leef`, Opus builder, Fable verifier, dispatched 04:03) for the two CEF/LEEF engine
+defects lane 3 found. Dependencies named: lane 7 edits `.github/workflows/app.yml`
 only after lane 4's YAML is on main (it merges main first); the smoke job's `ulpf demo --check`
 step is lane 7's after lane D merges; lane 2T's tests pass only once the lead's `v4:` commits land.
 Merge gate for every lane: `cargo test --workspace`, `cargo clippy --workspace --all-targets
@@ -299,6 +324,27 @@ look at the captures and a grep of `ui/dist` for external references.
       outside the perimeter line, kept as evidence of extensibility.
 - [ ] L6. Branch `lane-6-index` pushed and described: the profile, what was removed, the
       numbers before and after, whether UDP loss falls with the index on.
+- [ ] L2P. (merged 04:12 IST as 2027391, 986154b, D81) `elapsed_ms` on every pivot page; the
+      related scan on four connections without the SQLite mutex, through mmap, borrowed blobs, a
+      bitset; pages byte-identical to before; the lead's gate on the merged tree.
+- [ ] LD. `ulpf demo` plays the PROGRESS demo from the binary with `--auto`, `--check`, `--reset`;
+      `scripts/demo.sh` the wrapper; the reset purges generated parsers from `parsers/`; a full
+      `--auto` pass on the merged binary; the Windows smoke job runs `--check` (lane 7B).
+- [ ] L7. Windows first-class (lane 7, then 7B for the 04:07 items): installer from the release
+      page, SmartScreen sentence, webview runtime, sidecar and data directory through the platform
+      abstractions, designed failure states, the smoke job that installs and launches, a new
+      pre-release tag; the job object, the locked-store message, the bundle excluding generated
+      parsers, `CARGO_TARGET_DIR`, which installer the job exercised.
+- [ ] LI. Intensity: Low / Balanced / Max with the machine's core count and the index state,
+      persisted, applied at sidecar start, a clean restart on change, the choice and live thread
+      count in the window chrome, screenshots at all three, the decision recorded.
+- [ ] LP. Profiles: `release` without LTO, `dist` with fat LTO for shipped binaries, installers,
+      the Docker image and the harness; the harness re-run on the dist build in a quiet window;
+      README and CI say which profile (lane 4B).
+- [ ] L3b. Branch `lane-3b-cef-leef` pushed and described: CEF `cef_severity` on its own scale,
+      the LEEF `0xHH` delimiter, tests, the twelve originals byte-identical.
+- [ ] L8. Branch `lane-8-windows` pushed and described as ready for the owner's go: the three
+      test names, the Windows test job URL, D82 on the branch.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
