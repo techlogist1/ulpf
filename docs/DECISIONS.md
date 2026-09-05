@@ -1474,9 +1474,12 @@ The demo rule in PROGRESS A2 stands (TCP or the file path for a device that must
 (saves the checkpoint's copy, at most half the writes in the spill regime, and moves the
 index into a WAL of GBs that the D81 reader cannot `mmap`); a cache the size of the index
 (2 GB of RSS on a laptop for a cliff moved, not removed); `page_size` 64 KiB (fewer pages,
-the same bytes spilled). **The gap left.** The cache alone with the old group of 8 was not
-measured, and one run per 5M point is one run; the load is beside every number for that
-reason.
+the same bytes spilled). **Attribution closed (04:31).** The cache alone with the old group of 8 (a variant binary,
+`/tmp/l6/ulpf-cache8`, the slice, load 15-17): 59,568 / 55,325 / 58,611 events/s (median
+58,611, sys 2.4-2.7 s) against 62,802 (sys 1.1-1.5 s) with the group at queue-full: the
+cache is the gain, the larger group halves what sys time is left and adds a few percent.
+**The gap left.** One run per 5M point is one run, and the load is beside every number
+for that reason.
 
 ## D77. Trust flags are the per-event form of the counters, never a score
 **Decision.** A tail row shows, as a compact list of outlined marks, the stages that did not
