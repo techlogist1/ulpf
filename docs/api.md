@@ -490,6 +490,9 @@ query parameter; nothing that exists changes shape. The UI is built against this
   /api/metrics`), so the window covers the time a client was watching. `engine.events_per_sec`
   stays the run average since start, the number the counter block prints.
 
+`GET /api/status` gains `"pivot_index": bool`, whether the entity index is running in this
+process (`--pivot`), beside `threads`: the two numbers a person quotes about the machine.
+
 ## Traceback: the emitted line from the output, and the bytes on their own
 
 `GET /api/events/{raw_id}`:
