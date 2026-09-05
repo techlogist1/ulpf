@@ -365,13 +365,29 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] LP. Profiles: `release` without LTO, `dist` with fat LTO for shipped binaries, installers,
       the Docker image and the harness; the harness re-run on the dist build in a quiet window;
       README and CI say which profile (lane 4B).
-- [ ] L3b. Branch `lane-3b-cef-leef` pushed and described: CEF `cef_severity` on its own scale,
-      the LEEF `0xHH` delimiter, tests, the twelve originals byte-identical.
+- [x] L3b. (pushed 04:30 IST, `origin/lane-3b-cef-leef` at c6e13ca, a9c8ac6 + 4, never merges
+      tonight) CEF's seventh header field is `cef_severity`, bucketed in both mappings on
+      ArcSight's own ranges (0-3 Low, 4-6 Medium, 7-8 High, 9-10 Very-High to Critical; 14 of 14
+      sample lines in the spec bucket, both schemas); LEEF 2.0's delimiter reads `xHH` and `0xHH`
+      in either case, and a prefix whose digits are not hex (`0xZZ`, `0x+5`) is a counted
+      `invalid_leef` instead of a fall back to tab (samples/leef.log line 17 carries `0x5E`,
+      17/17 parsed). 117 tests, clippy clean, the alloc test prints per-family numbers under
+      `--nocapture` (allocations equal materialised values in every family), the twelve original
+      samples byte-identical through main's binary and the branch's on both schemas. The Fable
+      verifier's one defect (the samples README row) closed in the fix round. Gaps recorded on the
+      branch: the string form `Very-High` is not in the Critical bucket; a multi-byte delimiter
+      without a prefix keeps its first byte (spec-undefined); a counted `invalid_leef` carries no
+      header fields (the pipeline's Err shape for every strategy). Merge after the demo: the
+      mapping additions are inside the severity enums, so the rebase onto main is trivial.
 - [ ] L8. Branch `lane-8-windows` pushed and described as ready for the owner's go: the three
       test names, the Windows test job URL, D82 on the branch.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 04:27 IST: gate at 97934a9 (the lane D follow-up): 122 tests 0 failed (116 + the four v4
+  contract tests + the runner's two), clippy clean, `ulpf check --pending pending` 15 parsers, 2
+  mappings, 0 problems, `ulpf demo --check` 39 ok, no external reference in `ui/dist`;
+  `scripts/isolation.sh run samples/cisco_asa.log` ISOLATION PASS (no socket observed).
 - 04:25 IST: the merged tree (lanes 3, 1, 2P, D, 2T, I on main, release binary 9,019,000
   bytes rebuilt after the runner's tamper moved to byte 100): `ulpf demo --check` no drift
   (39 ok), the runner's unit test green, `ulpf demo --auto` end to end in 56.6 s: 15 parsers
