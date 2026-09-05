@@ -679,10 +679,11 @@ fn name_slot(cols: &[Col], idx: usize, kind: SlotKind, placed: &Placed) -> (Opti
 /// beats the `from`/`to` rows. Earlier rules win: entries are inserted, never replaced.
 /// The input's own names (a JSON key) come first: they are the device's vocabulary
 /// verbatim, so no heuristic, not even the slot's type, outranks them.
-fn positional(cols: &[Col], kinds: &[Option<SlotKind>]) -> Placed {
+fn positional(cols: &[Col], kinds: &[Option<SlotKind>], header: Option<&Header>) -> Placed {
     let slots: Vec<usize> = (0..cols.len()).filter(|i| kinds[*i].is_some()).collect();
     let mut out: Placed = BTreeMap::new();
     json_keys(cols, kinds, &mut out);
+    header_columns(cols, kinds, header, &mut out);
     ncsa_combined(cols, &slots, kinds, &mut out);
     address_pair(cols, &slots, kinds, &mut out);
     by_column(cols, kinds, &mut out);
@@ -735,6 +736,59 @@ fn json_keys(cols: &[Col], kinds: &[Option<SlotKind>], out: &mut Placed) {
             reason.push_str(&format!(" (written `{name}`)"));
         }
         place(out, idx, &name, &reason);
+    }
+}
+
+/// A `#fields<sep>name<sep>name…` line (Zeek's TSV header; `#separator` declares the same
+/// byte): the names are the device's own vocabulary for the columns. The line itself is
+/// not an event and stays wherever clustering put it (below support).
+pub struct Header {
+    pub sep: u8,
+    pub fields: Vec<String>,
+}
+
+pub fn headers(bodies: &[&[u8]]) -> Vec<Header> {
+    let mut out: Vec<Header> = Vec::new();
+    for b in bodies {
+        let Some((&sep, names)) = b.strip_prefix(b"#fields").and_then(<[u8]>::split_first) else { continue };
+        if sep.is_ascii_alphanumeric() {
+            continue;
+        }
+        let fields: Vec<String> = names.split(|x| *x == sep).map(lossy).collect();
+        if fields.len() >= 2 && !out.iter().any(|h| h.sep == sep && h.fields == fields) {
+            out.push(Header { sep, fields });
+        }
+    }
+    out
+}
+
+fn seps(text: &[u8], sep: u8) -> usize {
+    text.iter().filter(|b| **b == sep).count()
+}
+
+/// The header whose column count every member line has exactly, if any.
+pub fn header_for<'h>(members: &[Vec<Tok<'_>>], headers: &'h [Header]) -> Option<&'h Header> {
+    headers.iter().find(|h| members.iter().all(|toks| toks.iter().map(|t| seps(t.text, h.sep)).sum::<usize>() + 1 == h.fields.len()))
+}
+
+/// The header names the columns: a slot's column is the separator count in the seed's
+/// text before it, constants included, since constant columns fold into the pattern. A
+/// slot whose own value holds a separator spans several columns and stays generic.
+fn header_columns(cols: &[Col], kinds: &[Option<SlotKind>], header: Option<&Header>, out: &mut Placed) {
+    let Some(h) = header else { return };
+    let mut col = 0;
+    for (idx, c) in cols.iter().enumerate() {
+        let own = c.value_for(0).map_or(0, |v| seps(v, h.sep));
+        if kinds[idx].is_some() {
+            if own > 0 {
+                leave_generic(out, idx, &format!("header names columns {}-{} but this one slot spans them all", col + 1, col + own + 1));
+            } else if let Some(field) = h.fields.get(col) {
+                let name = sanitize(field);
+                let written = if name == *field { String::new() } else { format!(", written `{name}`") };
+                place(out, idx, &name, &format!("header `{field}` (column {}{written})", col + 1));
+            }
+        }
+        col += own;
     }
 }
 
@@ -911,8 +965,8 @@ fn word_after(cols: &[Col], idx: usize) -> Option<String> {
 /// Columns to a `Template` plus the slot descriptions. Every name comes from a printed
 /// rule — a key, a preceding constant, the vocabulary or the slot's own type — and every
 /// slot carries the reason, including the reason it stayed `kind+n`. `rare` is
-/// `rare_count` for the cluster.
-pub fn shape(cols: &[Col], rare: usize) -> (Template, Vec<Slot>) {
+/// `rare_count` for the cluster; `header` is `header_for` the members, when one fits.
+pub fn shape(cols: &[Col], rare: usize, header: Option<&Header>) -> (Template, Vec<Slot>) {
     let mut slots = Vec::new();
     let mut used: BTreeMap<String, usize> = BTreeMap::new();
     let mut generic: BTreeMap<&'static str, usize> = BTreeMap::new();
@@ -934,7 +988,7 @@ pub fn shape(cols: &[Col], rare: usize) -> (Template, Vec<Slot>) {
             Some(kind)
         })
         .collect();
-    let placed = positional(cols, &kinds);
+    let placed = positional(cols, &kinds, header);
 
     let flush_group = |tokens: &mut Vec<Token>, group: &mut Vec<Token>| {
         if !group.is_empty() {

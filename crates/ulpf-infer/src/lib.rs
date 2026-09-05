@@ -99,6 +99,12 @@ struct Candidate {
     slot_evidence: Vec<SlotEvidence>,
 }
 
+/// The tokenized bodies plus whatever column headers they carried.
+struct Input<'a> {
+    toks: Vec<Vec<Tok<'a>>>,
+    headers: Vec<cluster::Header>,
+}
+
 fn body(line: &[u8]) -> &[u8] {
     let mut b = line;
     while let Some((&last, rest)) = b.split_last() {
@@ -188,8 +194,8 @@ fn assign(toks: &[Vec<Tok<'_>>], params: &Params) -> Vec<Cluster> {
 }
 
 /// Builds the candidates for one member set, splitting on keyword slots recursively.
-fn candidates_for(members: Vec<usize>, toks: &[Vec<Tok<'_>>], params: &Params, history: Vec<String>, decisions: &mut Vec<String>, out: &mut Vec<Candidate>, depth: usize) {
-    let member_toks: Vec<Vec<Tok<'_>>> = members.iter().map(|&m| toks[m].clone()).collect();
+fn candidates_for(members: Vec<usize>, input: &Input<'_>, params: &Params, history: Vec<String>, decisions: &mut Vec<String>, out: &mut Vec<Candidate>, depth: usize) {
+    let member_toks: Vec<Vec<Tok<'_>>> = members.iter().map(|&m| input.toks[m].clone()).collect();
     let cols = cluster::consensus(&member_toks);
     let (cols, mut notes) = cluster::presence_rules(cols, members.len(), params);
     let (cols, pre) = cluster::collapse_variable_word_runs(cols, members.len());
@@ -204,7 +210,7 @@ fn candidates_for(members: Vec<usize>, toks: &[Vec<Tok<'_>>], params: &Params, h
             let mut h = history.clone();
             let group_members: Vec<usize> = group.iter().map(|&g| members[g]).collect();
             h.push(format!("split on `{}` ({} lines)", lossy(&value), group_members.len()));
-            candidates_for(group_members, toks, params, h, decisions, out, depth + 1);
+            candidates_for(group_members, input, params, h, decisions, out, depth + 1);
         }
         return;
     }
@@ -217,7 +223,8 @@ fn candidates_for(members: Vec<usize>, toks: &[Vec<Tok<'_>>], params: &Params, h
     for n in notes.iter().chain(&notes2) {
         decisions.push(format!("{label}: {n}"));
     }
-    let (template, slots) = cluster::shape(&cols, cluster::rare_count(members.len(), params));
+    let header = cluster::header_for(&member_toks, &input.headers);
+    let (template, slots) = cluster::shape(&cols, cluster::rare_count(members.len(), params), header);
     let slot_evidence = slots.iter().map(|s| slot_evidence(s, &cols)).collect();
     out.push(Candidate { template, members, history, slot_evidence });
 }
@@ -226,7 +233,7 @@ fn candidates_for(members: Vec<usize>, toks: &[Vec<Tok<'_>>], params: &Params, h
 /// clusters twice (`wlan1: connected` from one, `wlan2: connected` from another). Identical
 /// patterns merge; patterns that differ in exactly one constant word merge and are
 /// re-derived without splitting, so the word becomes a slot.
-fn dedupe(candidates: &mut Vec<Candidate>, toks: &[Vec<Tok<'_>>], params: &Params, decisions: &mut Vec<String>) {
+fn dedupe(candidates: &mut Vec<Candidate>, input: &Input<'_>, params: &Params, decisions: &mut Vec<String>) {
     let mut i = 0;
     while i < candidates.len() {
         let mut j = i + 1;
@@ -258,7 +265,7 @@ fn dedupe(candidates: &mut Vec<Candidate>, toks: &[Vec<Tok<'_>>], params: &Param
             let mut history = candidates[i].history.clone();
             history.push(format!("merged with a template built from `{}`: {note}", other.history.last().cloned().unwrap_or_default()));
             let mut rebuilt = Vec::new();
-            candidates_for(members, toks, params, history, decisions, &mut rebuilt, 4);
+            candidates_for(members, input, params, history, decisions, &mut rebuilt, 4);
             if let Some(c) = rebuilt.pop() {
                 candidates[i] = c;
             }
@@ -417,6 +424,11 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     }
     let clusters = assign(&toks, params);
     decisions.push(format!("clustering: {} lines into {} clusters at similarity {}", toks.iter().filter(|t| !t.is_empty()).count(), clusters.len(), params.similarity));
+    let input = Input { toks, headers: cluster::headers(&bodies) };
+    let toks = &input.toks;
+    for h in &input.headers {
+        decisions.push(format!("header: `#fields` names {} columns separated by {:?}; a template with exactly that many columns takes its slot names from it", h.fields.len(), h.sep as char));
+    }
 
     let mut unmatched = Unmatched::default();
     let mut unmatched_lines: Vec<usize> = Vec::new();
@@ -447,12 +459,12 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
             continue;
         }
         let label = format!("cluster {} ({} lines, seed `{}`)", ci + 1, c.members.len(), lossy(bodies[c.seed]).chars().take(40).collect::<String>());
-        candidates_for(c.members, &toks, params, vec![label], &mut decisions, &mut candidates, 0);
+        candidates_for(c.members, &input, params, vec![label], &mut decisions, &mut candidates, 0);
     }
     if small > 0 {
         decisions.push(format!("{small} clusters below min_support {} sent to unmatched", params.min_support));
     }
-    dedupe(&mut candidates, &toks, params, &mut decisions);
+    dedupe(&mut candidates, &input, params, &mut decisions);
     // specific before general: more constant text first, then support
     candidates.sort_by(|a, b| constant_chars(&b.template).cmp(&constant_chars(&a.template)).then_with(|| b.members.len().cmp(&a.members.len())));
     if candidates.len() > params.max_templates {
@@ -529,7 +541,7 @@ pub fn infer(source: &str, lines: &[&[u8]], params: &Params) -> Proposal {
     }
     let patterns: Vec<String> = templates.iter().filter(|t| in_definition(t)).map(|t| t.pattern.clone()).collect();
     let tpl_refs: Vec<&Template> = candidates.iter().map(|c| &c.template).collect();
-    let matcher = matcher(&toks, &tpl_refs, &mut decisions);
+    let matcher = matcher(toks, &tpl_refs, &mut decisions);
     // only a pattern that reaches the definition can produce the field a spec names; the
     // slot carries the device's name when the input had one (`ts`), else `timestamp`
     let mut ts_fields: Vec<String> = Vec::new();
@@ -708,7 +720,8 @@ pub fn merge(lines: &[&[u8]], syslog: bool, params: &Params) -> Option<TemplateE
     let (cols, notes3) = cluster::collapse_messy_runs(cols, toks.len());
     notes.extend(notes2);
     notes.extend(notes3);
-    let (template, slots) = cluster::shape(&cols, cluster::rare_count(toks.len(), params));
+    let headers = cluster::headers(&bodies);
+    let (template, slots) = cluster::shape(&cols, cluster::rare_count(toks.len(), params), cluster::header_for(&toks, &headers));
     let pattern = template.to_pattern();
     let verified = compile_pattern(&pattern).ok().map(|p| {
         let mut scratch = Scratch::default();
@@ -1017,6 +1030,33 @@ mod tests {
         assert_eq!(p.definition.timestamp[0].field.as_deref(), Some("ts"));
         let toml = toml::to_string(&p.definition).unwrap();
         ulpf_parse::load_str(std::path::Path::new("gen.toml"), &toml).unwrap();
+    }
+
+    #[test]
+    fn a_fields_header_names_the_columns_of_a_delimited_file() {
+        let text = "#separator \\x09\n\
+#fields\tts\tuid\tid.orig_h\tid.orig_p\tproto\thistory\n\
+#types\ttime\tstring\taddr\tport\tenum\tstring\n\
+1788598139.619101\tCxag613FOqKD0xpr26\t192.168.148.3\t51988\ttcp\tShADdFf\n\
+1788598139.641962\tCy2eHt2diBn0JThuV8\t192.168.148.4\t51992\ttcp\tShADdFf\n\
+1788598139.663136\tCrgAkX2woehl3n5097\t192.168.148.5\t52008\ttcp\tShADdFf\n\
+1788598139.676846\tCRLsyU1FtJtCOYVhzh\t192.168.148.6\t52024\ttcp\tShADdFf\n";
+        let s = slots(text);
+        named(&s, "ts", "timestamp", "header `ts` (column 1)");
+        named(&s, "uid", "word", "header `uid` (column 2)");
+        named(&s, "id_orig_h", "ipv4", "header `id.orig_h` (column 3, written `id_orig_h`)");
+        named(&s, "id_orig_p", "int", "header `id.orig_p` (column 4, written `id_orig_p`)");
+        assert!(s.iter().all(|s| s.2), "every slot is named by the header: {s:#?}");
+        let p = infer("conn.log", &lines(text), &Params::default());
+        assert_eq!(p.evidence.unmatched.by_reason.get("below_support"), Some(&3), "the header lines are not events: {:#?}", p.evidence.unmatched);
+        assert_eq!(p.evidence.templates[0].verified, 4);
+        assert_eq!(p.definition.timestamp[0].field.as_deref(), Some("ts"));
+        assert!(p.evidence.decisions.iter().any(|d| d.contains("`#fields` names 6 columns")), "{:#?}", p.evidence.decisions);
+        // a header whose column count does not fit names nothing
+        let other = text.replace("#fields\tts\tuid\tid.orig_h\tid.orig_p\tproto\thistory", "#fields\tts\tuid\tid.orig_h");
+        let s = slots(&other);
+        assert!(s.iter().all(|s| !s.3.contains("header")), "{s:#?}");
+        named(&s, "timestamp", "timestamp", "the slot's own type");
     }
 
     #[test]
