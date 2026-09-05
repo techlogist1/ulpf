@@ -28,10 +28,21 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       | http.log (TSV) | 40 | 541 (76 / 465) | 541 (540 / 1) | 100 of 1,545 (1,354 `template_cap`), unchanged |
 
       Names after: `ts uid id_orig_h id_orig_p id_resp_h id_resp_p proto service duration
-      orig_bytes resp_bytes conn_state ...` (the device's own). http.log's explosion is
-      structural (clustering on tabular data); the delimiter-strategy proposal path was
-      diagnosed in D68 and is a bounded follow-up, not started inside the 90-minute timer.
-      Heldout grades byte-identical before and after. 110 tests, clippy clean.
+      orig_bytes resp_bytes conn_state ...` (the device's own). Heldout grades byte-identical
+      before and after. 110 tests, clippy clean. Then lane A1b (D72; merged 22:52 IST as
+      4d031ec, two commits, two Opus verifications reproducing every number): a headed
+      delimited file whose every row fits the header is ONE `kind = "delimiter"` definition:
+
+      | Zeek file | before (pattern path) | after (D72) |
+      |---|---|---|
+      | http.log | 40 templates, 541 slots, 100 of 1,545 | 1 definition, 30 columns, 1,536 of 1,545 (9 `header`) |
+      | conn.log | 5 templates, 78 slots, 5,096 of 5,129 | 1 definition, 22 columns, 5,120 of 5,129 |
+      | dns.log | (not graded) | 1 definition, 26 columns, 3,400 of 3,409 |
+
+      Approved and run, http.log parses 1,536 of 1,536 data lines, `parse_failed` 0, `ts` as
+      the event time; `class_unknown` on Zeek http fields is mapping work, not done tonight.
+      The lead accepted the ten-line `pending.rs` touch both verifiers flagged (D72 says why).
+      114 tests, clippy clean, heldout byte-identical.
 - [x] A4. The nine stale `worktree-wf_*` branches and worktrees removed 20:18 IST after
       confirming each: eight were ancestors of main (515dc9ab, 9e3d885f, bad47452-1..5,
       fe15bb9f, all `merge-base --is-ancestor` yes, 0 commits ahead); `worktree-wf_d4c9a934-b72-1`
@@ -105,6 +116,10 @@ measurements with their commands. Nothing else: no logs, no transcripts. No work
 longer than about four minutes (backgrounded and polled past that).
 
 ### Verified state (v3, rolling; every line was run, not read)
+- 22:54 IST: A1b merged (4d031ec): `cargo test --workspace` 114 passed, 0 failed, 2 ignored;
+  clippy clean; release build 8,777,448 bytes; the lead's own `ulpf infer corpus/generated/
+  zeek/http.log` on it: 1,545 lines, 1,536 used, 1 template, 9 unmatched `{"header": 9}`,
+  `kind = "delimiter"`, 30 fields from the header.
 - 22:47 IST: B merged (b85c1c4): `cargo test --workspace` 110 passed, 0 failed, 2 ignored;
   clippy `-D warnings` clean (0 warnings); `cargo build --release` embeds the new dist (binary
   8,759,400 bytes); the lead's own grep of `ui/dist` for `https?://`, `@import` and `<link`

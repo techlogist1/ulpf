@@ -65,6 +65,13 @@ timestamp precedes them.
 | `json` | none | Nested keys flatten with `.`; arrays index from 0 (`tags.0`). Nulls are dropped. |
 | `cef` | none | Header fields: `cef_version`, `device_vendor`, `device_product`, `device_version`, `signature_id`, `name`, `severity`; extension pairs as-is. |
 | `leef` | none | LEEF 1.0 (tab) and 2.0 (declared delimiter, `xHH` form allowed). |
+
+A generated definition (`origin = "inferred"`) is usually `kind = "pattern"`. When the unknown
+file carries a `#fields` header and every data row has exactly the header's column count, the
+engine writes a `kind = "delimiter"` definition instead: `fields` are the header's names
+sanitised to `[A-Za-z0-9_]`, `[[timestamp]]` names the column whose every value is a timestamp,
+and the `regex` matcher is the row's column count with that column's shape, anchored to the
+whole line (D72). Zeek's TSV logs are the case it exists for.
 | `pattern` | `pattern` or `patterns` (first match wins), `regex` (raw, `(?P<name>...)`), `anchor` (`start` default, `full`, `none`) | See slot syntax below. |
 
 A key that does not belong to the kind is an error (`key 'pattern' does not apply to

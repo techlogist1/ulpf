@@ -1194,3 +1194,43 @@ visible URL bar, so the same build runs in the desktop webview (D72). **Anchor.*
 Performance is part of the design: a screen that freezes on the record a judge asks for is
 not designed. **Ruled out.** Rendering the whole record as one text node (a 4 MB node froze
 the page); a virtual-list dependency for thirty lines; `history.back()` for back actions.
+
+## D72. A delimited file with a fitting header is one delimiter definition, not a cluster of patterns
+**Decision.** When the buffered lines hold exactly one `#fields` header with an ASCII separator
+and every non-`#`, non-empty body has exactly the header's column count (separators counted in
+the raw bytes, at least `min_support` rows), `ulpf_infer::infer` skips clustering and writes a
+`kind = "delimiter"` definition: `fields` are the header names sanitised (duplicates suffixed),
+`[[timestamp]]` is the column whose every value is a timestamp atom, column types come from the
+pattern path's own `slot_kind` over each column's values (a column of only `-` is text), and the
+matcher is a regex anchored to the whole line with the header's column count and the timestamp
+column's shape (`[0-9]{9,19}(?:\.[0-9]+)?` for epoch, the ISO form for ISO), ending in
+`[\r\n]*$` so the stored terminator does not change the count. The definition is verified as the
+runtime will run it: `Parser::from_definition`, then `matches` and `parse` on every stored line,
+a rejected line being a decision line. Evidence is one template (the `#fields` line verbatim,
+support = data rows, verified = rows parsed) and one slot per column with reason `header \`x\`
+(column i)`. `#`-prefixed lines are unmatched under the new reason `header`. The rule is fit all
+or fall back: a second header, one row of another width, too few rows, a non-ASCII separator,
+or a syslog envelope (the anchored signature would reject its own rows) sends the input down the
+pattern path unchanged, where D68 still names the slots from the header. Two lines of
+`crates/ulpf/src/pending.rs` changed with it, both gated on `StrategyKind::Pattern`:
+`Pending::write` no longer skips a proposal for having no `patterns` unless it is a pattern
+definition, and `regenerate` no longer rewrites `patterns` from the kept templates on a
+non-pattern strategy (which would have put the header line into a delimiter definition and
+failed validation, and was already wrong for a kv or delimiter drift update). The lead accepted
+that touch: it is the review workflow, not the hot path, the store or the API, and no working
+version of the feature exists without it. Measured: http.log 40 templates / 100 of 1,545 lines
+became 1 definition / 30 columns / 1,536 of 1,545; conn.log 5 / 5,096 of 5,129 became 1 / 22 /
+5,120; dns.log 1 / 26 / 3,400 of 3,409; approved, http.log parses 1,536 of 1,536 data lines
+with `ts` as the event time; `heldout/` byte-identical; 114 tests. **Anchor.**
+`crates/ulpf-infer/src/lib.rs` (`header_fitting`, `infer_delimited`, the `if !syslog` guard),
+`crates/ulpf-infer/src/cluster.rs` (`column`, `column_kind`), `crates/ulpf/src/pending.rs`
+(`write`, `regenerate`), `crates/ulpf/tests/live.rs` (a delimiter proposal is written and
+approved). **Principle.** Use the structure the input declares; clustering is for inputs
+that declare none. **Ruled out.** Column count alone as the matcher (any 22-column TSV would
+claim conn.log's parser; the shipped delimiter parsers key on a leading time layout); the
+header text as the matcher (data rows do not carry it); a per-column shape for every typed
+column (a column with rare `-` dissenters would reject those rows); a majority-fit threshold
+(a heuristic where a rule was asked for); prefixing the signature with the syslog envelope
+regex (a second matcher shape for an input that exists nowhere in the corpus); raising
+`max_templates` (40 templates at cap was the shape of the data, D68); a dummy pattern to slip
+past `Pending::write` (a wrong file that fails validation).

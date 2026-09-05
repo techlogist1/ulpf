@@ -151,7 +151,7 @@ reloads on its own when the directory's modification time changes.
     "members": [u32],                           // indices into <id>.lines
     "history": [string]                         // "cluster 3 (...)", "split on `input` (68 lines)", "not in the definition: ..."
   } ],
-  "unmatched": { "count": u64, "examples": [string], "by_reason": { "empty": n, "too_long": n, "below_support": n, "no_template": n, "template_cap": n } },
+  "unmatched": { "count": u64, "examples": [string], "by_reason": { "empty": n, "too_long": n, "below_support": n, "no_template": n, "template_cap": n, "header": n } },   // header: a `#`-prefixed metadata line of a delimited file (D72)
   "decisions": [string],                        // every threshold decision the engine took, in order
   "fingerprint": string
 }

@@ -137,3 +137,17 @@ weighted alignment; ipv6+port and chain tokens; letters-only keyword split; mino
 rule; dead-template drop; head-6 similarity; gap penalty; substitution state; first-token
 substitution both ways; messy-run collapse tightened; keyword-aware dedupe. Eleven
 rounds; the rejected alternatives are in PROGRESS.md "Tried and abandoned (v1)".
+
+## v3 addendum (2026-09-05 night): names the input carries, and headed delimited files
+Two rules landed after the v2 grades above, both leaving the four `heldout/` outputs
+byte-identical (D68, D72). JSON keys are constants in the tokenizer and name their value
+slots; a `#fields` header names delimited columns by position. On Zeek: json/conn 40 slots
+(1 suggested) became 19 (19); json/dns 99 (3) became 42 (42); TSV conn 78 (16) became 78 (78)
+under the naming rule alone. Then a headed delimited file whose every row fits the header
+became one `kind = "delimiter"` proposal: http.log went from 40 pattern templates covering
+100 of 1,545 lines (1,354 at `template_cap`) to 1 definition, 30 named columns, 1,536 of
+1,545 covered (the 9 `#` metadata lines are unmatched under `header`); conn.log from 5
+templates and 5,096 of 5,129 to 1 definition, 22 columns, 5,120; dns.log 1 definition, 26
+columns, 3,400 of 3,409. Approved and run, the http definition parses 1,536 of 1,536 data
+lines with the device's `ts` as the event time and zero `parse_failed`; no class rule in
+`mappings/ocsf.toml` fires on Zeek http fields yet (`class_unknown`), which is mapping work.
