@@ -47,7 +47,9 @@ const PAGE_ROW_BUDGET: usize = 20_000;
 /// The writer's page cache, KiB. Three of the index's B-trees are keyed by entity value,
 /// so a commit group touches pages all over them; the default 2 MiB cache spilled every
 /// page to the WAL several times per group and read it back (measured: 93% of the thread
-/// in pwrite/pread, D76). 256 MiB holds a group's dirty set for an index of a few hundred MB.
+/// in pwrite/pread, D76). 64 MiB holds a group's dirty set while the index is a few hundred
+/// MB; past that the dirty set is the index and no cache below its size helps (D76's
+/// amendment: the 5M bench and the soak).
 const CACHE_KIB: i64 = 65_536;
 
 pub fn index_path(output: &Path) -> PathBuf {

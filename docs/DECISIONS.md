@@ -1422,6 +1422,61 @@ appends, D55); `mmap_size` (the reads vanished with the cache; nothing left for 
 serve); dropping `postings_k` (append-ordered, cheap, and `related` needs it); a
 second writer thread (one SQLite writer per file, D66); the schema change above (a
 contract-preserving 17%, deferred so this branch stays two knobs and a proof).
+**Amendment (2026-09-06 03:47-04:35, the large case and the soak; the branch merged main at
+04:20 so its reader is D81's, its writer unchanged).** The cache is a fix for an index that
+fits and a knob for one that does not. The 5M bench (`bench/mixed-5000000.log`, 1,526 MB,
+never-repeating values, `ulpf run --pivot on --infer-threshold 0`, fresh store, one run each
+because a run is 8-12 minutes; index 1.57 GB at the end) with the 64 MiB cache: 5,000,000
+events in 700.1 s, 7,142 events/s, sys 181 s, RSS 1,389 MB, load before 17.3, peak 25.5; with
+256 MiB: 499.8 s, 10,005 events/s, sys 127 s, RSS 1,676 MB, load before 6.4, peak 15.0; main's
+binary (2 MiB): 1,187,840 events in 228 s, 5,210 events/s, when it was stopped at load 24 (started at
+12.2) with this branch's merge build beside it; the run would not have ended before the timer. The output's growth during the 256 MiB run names the shape: 16 MB/s
+(~11,800 events/s) in the first minutes, 6 MB/s (~4,500) in the last. The arithmetic: a
+group of 64 batches lands ~100,000 inserts into each of three value-keyed trees; while a
+tree has fewer leaves than that, the group's dirty set is the tree and fits the cache (the
+slice: 149 MB index, 0.6 s of sys); once each tree runs to tens of thousands of leaves,
+every random insert dirties its own page, the group's dirty set is the index, and each
+commit spills it to the WAL and the checkpoint copies it again: one `pread` and two
+`pwrite`s per insert per tree, whatever the cache, until the cache holds the whole index.
+**The merged tree (04:20, main's D81 reader over this writer), proof and numbers.** The
+merged binary answers `pivot src_ip fe80::1`, `user jdoe` and `dst_port 443` (`--limit 20`)
+with the same 20 lines and the same header over main's 03:18 index, this writer's index,
+this branch's rebuild of main's output, and the 03:19 answers from each binary (`cmp`). On
+the slice at load 29-37 (the workspace tests running beside it): index on 24,345 / 29,637 /
+68,602 events/s (median 29,637), off 148,135 / 132,213 / 138,373 (median 138,373); the
+ratio at that load is the host's, the best run (68,602, 2.0x) is the branch's.
+**The soak, run 6's shape, on this branch (03:55-04:11, `scripts/soak.sh --bin
+<branch> --minutes 5 --file-rate 10000 --udp 127.0.0.1:7907 --udp-rate 8000 --tcp
+127.0.0.1:7908 --tcp-rate 8000 --listen 127.0.0.1:7906 --out /tmp/l6/soak1`, five lanes
+building beside it: load 7.2 at the start, mean 8.7, peak 19.6; run 6 was a quiet host, mean
+4.1 peak 8.6).** 9,000,000 sent; UDP 1,431,220 of 2,400,000 received, shortfall 968,780
+against a `netstat -s -p udp` full-socket-buffer delta of 968,825 (1,333,308 -> 2,302,133):
+kernel drops, none an engine loss; file and TCP exact; framed = stored = emitted = verified
+8,031,220, chain ok; engine 8,791 events/s over 913.6 s with 2,454 backpressure blocks (run
+6: 7,736 and 2,980); RSS max 899 MB (run 6: 986); index 2.58 GB at the end. Against run 6's
+shortfall of 1,332,667 the loss fell by 363,887 datagrams, 27%, on a busier host, and no
+further: the metrics frames say why. The engine emitted 25,289 events/s in the first minute
+(the whole 26k/s aggregate, queue high-water 3), 19,419 in the second (high-water 64 from
+here on), 13,450, 10,166, 9,010, 6,767 in the third to sixth, and 3,300-5,500 through the
+403 s drain: the cliff above, reached at about 1.5 million events, a few hundred MB of
+index. Every datagram lost was lost after the second minute. **What this settles.** D66's
+"cardinality, not commits" was right about the large case for the wrong reason: the cost
+is not the per-distinct-value upsert's CPU (the slice's profile above, once the cache holds
+the pages, is three B-tree inserts on cached pages) but the page traffic that random keys
+into disk-resident B-trees cost, which no cache below the index's size removes. A writer that
+never blocks the pipeline is a different feed, not a knob: stage postings in memory as
+sorted runs and merge them (an LSM under the same tables and routes), or feed the index
+from the output file the way `rebuild` does so that it lags, reports its lag on
+`/api/status`, and the pipeline runs at index-off speed (a UDP listener behind it then
+keeps up, D62). Either changes D55's "fed per batch by copied values"; neither is tonight's.
+The demo rule in PROGRESS A2 stands (TCP or the file path for a device that must keep up,
+`serve --pivot off` when it is UDP). **Also ruled out.** `wal_autocheckpoint` raised or off
+(saves the checkpoint's copy, at most half the writes in the spill regime, and moves the
+index into a WAL of GBs that the D81 reader cannot `mmap`); a cache the size of the index
+(2 GB of RSS on a laptop for a cliff moved, not removed); `page_size` 64 KiB (fewer pages,
+the same bytes spilled). **The gap left.** The cache alone with the old group of 8 was not
+measured, and one run per 5M point is one run; the load is beside every number for that
+reason.
 
 ## D77. Trust flags are the per-event form of the counters, never a score
 **Decision.** A tail row shows, as a compact list of outlined marks, the stages that did not
