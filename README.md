@@ -205,11 +205,12 @@ Three other figures exist and each measures something different:
   2026-09-05 23:05-23:25 IST, `-j 7`.
 - **68,330 events/s** is one worker thread (`-j 1`) on that same file with
   `--output /dev/null`: the per-thread engine rate, not a machine figure.
-- **about 30,000 events/s** is the rate with the entity index *on* — `-j 7`, JSON Lines
-  written to disk, `--pivot on`, measured 27,995-30,963 on a 497,607-event slice against
-  196,160-249,409 with the index off under the same threads and the same write (D66). An
-  order of magnitude, which is why `run` defaults it off and `serve`, whose UI pivots live,
-  defaults it on. `ulpf pivot --rebuild` builds the index afterwards from the output.
+- **about 30,000 events/s** is the rate with the entity index *on*. Measured for this
+  file on 2026-09-06 over a 497,607-line slice of the same bench file, `-j 7`, JSON Lines
+  written to disk, machine at load 10-14: `--pivot on` 33,537 events/s against `--pivot
+  off` 322,733 for the identical command. An order of magnitude, which is why `run`
+  defaults it off and `serve`, whose UI pivots live, defaults it on (D66).
+  `ulpf pivot --rebuild` builds the index afterwards from the output.
 
 Generate the file the numbers are measured on with
 `cargo run --release -p ulpf --example gen_bench -- 5000000 bench` (see `bench/README.md`).
