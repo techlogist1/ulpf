@@ -21,7 +21,9 @@ use futures_util::stream::Stream;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::engine::{DriftState, Live, ReplayError, TracebackError};
+use crate::engine::{DriftState, IntegrityError, Live, ReplayError, TracebackError};
+use crate::pivot::{Order, PivotQuery};
+use ulpf_normalize::EntityKind;
 use crate::pending::{Pending, ReviewError};
 use crate::tail::TailFrame;
 
@@ -113,6 +115,11 @@ fn router(app: App) -> axum::Router {
         .route("/api/events/{raw_id}", get(traceback))
         .route("/api/replay", get(replay_get).post(replay_post))
         .route("/api/drift", get(drift))
+        .route("/api/integrity", get(integrity))
+        .route("/api/integrity/verify", post(integrity_verify))
+        .route("/api/integrity/attestation", get(attestation))
+        .route("/api/pivot", get(pivot))
+        .route("/api/entities", get(entities))
         .route("/api/replay/{version}/diff", get(replay_diff))
         .with_state(app)
 }
@@ -224,6 +231,9 @@ fn metrics_frame(live: &Live) -> Value {
         "parsers": parsers_json(live),
         "pending_generation": live.pending_generation.load(Relaxed),
         "replay": replay_summary(live),
+        "integrity": live.integrity_summary(),
+        "pivot": live.pivot_counters.lock().unwrap_or_else(|e| e.into_inner()).as_ref().map(|c| json!({ "batches": c.batches.load(Relaxed), "postings": c.postings.load(Relaxed), "blocked": c.blocked.load(Relaxed), "errors": c.errors.load(Relaxed) })),
+        "syslog": { "udp_datagrams": 0, "tcp_events": 0, "tcp_connections": 0 },
         "drift": live.drift_alerts().into_iter().filter(|a| matches!(a.state, DriftState::Tripped | DriftState::Proposed)).collect::<Vec<_>>(),
         "server": {
             "sse_clients": live.sse_clients.load(Relaxed),
@@ -254,6 +264,7 @@ fn replay_error(e: ReplayError) -> ApiError {
 
 async fn status(State(app): State<App>) -> Json<Value> {
     let live = &app.live;
+    let pipeline = live.pipeline();
     let mut started = String::new();
     ulpf_time::format_rfc3339(live.started_nanos, &mut started);
     Json(json!({
@@ -269,6 +280,13 @@ async fn status(State(app): State<App>) -> Json<Value> {
         "queue_capacity": live.queue_cap,
         "tail_capacity": live.tail.capacity(),
         "infer_threshold": live.inference.threshold,
+        "schema": {
+            "name": pipeline.mapping.schema_name(),
+            "version": pipeline.mapping.file().schema.version,
+            "entities": serde_json::to_value(pipeline.mapping.entities()).unwrap_or(Value::Null),
+        },
+        "output_format": "jsonl",
+        "syslog": { "udp": Value::Null, "tcp": Value::Null },
     }))
 }
 
@@ -332,6 +350,56 @@ async fn pending_get(State(app): State<App>, Path(id): Path<String>) -> Result<J
 
 async fn drift(State(app): State<App>) -> Json<Value> {
     Json(serde_json::to_value(app.live.drift_alerts()).unwrap_or(Value::Null))
+}
+
+async fn integrity(State(app): State<App>) -> Json<Value> {
+    Json(app.live.integrity_summary())
+}
+
+async fn integrity_verify(State(app): State<App>) -> Result<Json<Value>, ApiError> {
+    match app.live.start_verify() {
+        Ok(records) => Ok(Json(json!({ "started": true, "records": records }))),
+        Err(IntegrityError::Running) => Err(ApiError::new(StatusCode::CONFLICT, "conflict", "a verify is already running")),
+        Err(IntegrityError::Io(m)) => Err(ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "io", m)),
+    }
+}
+
+async fn attestation(State(app): State<App>) -> Result<Json<Value>, ApiError> {
+    let att = app.live.attestation().map_err(|e| ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "io", e.to_string()))?;
+    Ok(Json(serde_json::to_value(att).unwrap_or(Value::Null)))
+}
+
+#[derive(Deserialize)]
+struct PivotParams {
+    kind: String,
+    value: String,
+    limit: Option<usize>,
+    before: Option<i64>,
+    after: Option<i64>,
+    order: Option<String>,
+}
+
+async fn pivot(State(app): State<App>, Query(q): Query<PivotParams>) -> Result<Json<Value>, ApiError> {
+    let kind = EntityKind::from_name(&q.kind).ok_or_else(|| ApiError::new(StatusCode::UNPROCESSABLE_ENTITY, "invalid", format!("unknown entity kind `{}`; one of {}", q.kind, EntityKind::ALL.iter().map(|k| k.name()).collect::<Vec<_>>().join(", "))))?;
+    let order = if q.order.as_deref() == Some("asc") { Order::Asc } else { Order::Desc };
+    let page = app.live.pivot(&PivotQuery { kind, value: q.value.as_bytes(), limit: q.limit.unwrap_or(200).clamp(1, 500), before: q.before, after: q.after, order }).map_err(|e| ApiError::new(StatusCode::NOT_FOUND, "not_found", format!("pivot index: {e:#}")))?;
+    Ok(Json(serde_json::to_value(page).unwrap_or(Value::Null)))
+}
+
+#[derive(Deserialize)]
+struct EntitiesParams {
+    kind: Option<String>,
+    q: Option<String>,
+    limit: Option<usize>,
+}
+
+async fn entities(State(app): State<App>, Query(p): Query<EntitiesParams>) -> Result<Json<Value>, ApiError> {
+    let kind = match &p.kind {
+        Some(k) => Some(EntityKind::from_name(k).ok_or_else(|| ApiError::new(StatusCode::UNPROCESSABLE_ENTITY, "invalid", format!("unknown entity kind `{k}`")))?),
+        None => None,
+    };
+    let list = app.live.entities(kind, p.q.as_deref().unwrap_or(""), p.limit.unwrap_or(50).clamp(1, 100)).map_err(|e| ApiError::new(StatusCode::NOT_FOUND, "not_found", format!("pivot index: {e:#}")))?;
+    Ok(Json(json!({ "entities": list })))
 }
 
 #[derive(Deserialize)]
@@ -437,6 +505,7 @@ struct StreamState {
     pending_generation: u64,
     replay_generation: u64,
     drift_generation: u64,
+    integrity_generation: u64,
     tick: u64,
     initial: usize,
 }
@@ -446,7 +515,7 @@ const TAIL_PER_TICK: usize = 200;
 
 async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     app.live.sse_clients.fetch_add(1, Relaxed);
-    let state = StreamState { guard: ClientGuard(Arc::clone(&app.live)), queue: VecDeque::new(), last_id: None, pending_generation: app.live.pending_generation.load(Relaxed), replay_generation: app.live.replay_generation.load(Relaxed), drift_generation: app.live.drift_generation.load(Relaxed), tick: 0, initial: q.tail.unwrap_or(100).clamp(1, 500), app };
+    let state = StreamState { guard: ClientGuard(Arc::clone(&app.live)), queue: VecDeque::new(), last_id: None, pending_generation: app.live.pending_generation.load(Relaxed), replay_generation: app.live.replay_generation.load(Relaxed), drift_generation: app.live.drift_generation.load(Relaxed), integrity_generation: app.live.integrity_generation.load(Relaxed), tick: 0, initial: q.tail.unwrap_or(100).clamp(1, 500), app };
     let stream = futures_util::stream::unfold(state, |mut st| async move {
         loop {
             if let Some(ev) = st.queue.pop_front() {
@@ -478,6 +547,11 @@ async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<imp
                 st.pending_generation = generation;
                 let count = live.pending.as_ref().map(|p| p.ids().len()).unwrap_or(0);
                 st.queue.push_back(event("pending", &json!({ "generation": generation, "count": count })));
+            }
+            let igen = live.integrity_generation.load(Relaxed);
+            if igen != st.integrity_generation {
+                st.integrity_generation = igen;
+                st.queue.push_back(event("integrity", &live.integrity_summary()));
             }
             let dgen = live.drift_generation.load(Relaxed);
             if dgen != st.drift_generation {

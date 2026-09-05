@@ -14,6 +14,7 @@
 //! parse, normalize and serialize each batch into one buffer. The output thread reorders
 //! buffers by batch sequence so the JSON Lines order equals raw id order.
 
+use std::borrow::Cow;
 use std::collections::{BTreeMap, HashMap};
 use std::fs::File;
 use std::io::{BufWriter, Write};
@@ -27,13 +28,15 @@ use anyhow::{Context as _, Result, anyhow};
 use memmap2::Mmap;
 use serde::Serialize;
 use sha2::Digest;
+use ulpf_normalize::EntityKind;
 use ulpf_parse::{Parsed, SubStatus};
-use ulpf_store::{Framer, RawId, RawReader, RawStore};
+use ulpf_store::{Attestation, Framer, RawId, RawReader, RawStore, VerifyReason};
 
 use crate::inference::Inference;
 use crate::metrics::{LocalCounts, Metrics, Snapshot};
 use crate::pending::{Pending, PendingSummary, ReviewError};
 use crate::pipeline::Pipeline;
+use crate::pivot::{PivotCounters, PivotIndex, PivotPage, PivotQuery, PivotWriter, Posting};
 use crate::replay::{self, ReplayProgress, ReplayReport, Versions};
 use crate::tail::Tail;
 
@@ -216,6 +219,9 @@ pub struct Traceback {
     pub stored_sha256: String,
     pub recomputed_sha256: String,
     pub digest_match: bool,
+    pub chain: String,
+    pub prev_chain: String,
+    pub chain_match: bool,
     pub emitted: Option<serde_json::Value>,
     pub now: NowParse,
 }
@@ -225,6 +231,66 @@ pub struct NowParse {
     pub parser: Option<String>,
     pub parse_status: String,
     pub normalized: serde_json::Value,
+    /// The parser's own fields with their byte ranges in the raw record (D15: borrowed spans).
+    pub fields: Vec<TraceField>,
+    /// Schema path -> the source field that fed it.
+    pub provenance: Vec<TraceProvenance>,
+    pub time: TraceTime,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TraceField {
+    pub key: String,
+    pub value: String,
+    pub span: Option<(u64, u64)>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TraceProvenance {
+    pub path: String,
+    pub source_key: String,
+    pub span: Option<(u64, u64)>,
+    pub canonical: bool,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct TraceTime {
+    pub text_span: Option<(u64, u64)>,
+    pub policies: Vec<String>,
+}
+
+/// Half-open byte range of `v` inside `base` when `v` borrows from it (a zero-copy span);
+/// `None` for a materialised or constant value. The `Cow` variant is the information here.
+#[allow(clippy::ptr_arg)]
+fn span_in(base: &[u8], v: &Cow<'_, [u8]>) -> Option<(u64, u64)> {
+    let Cow::Borrowed(b) = v else { return None };
+    let (s, bs) = (b.as_ptr() as usize, base.as_ptr() as usize);
+    (s >= bs && s + b.len() <= bs + base.len()).then(|| ((s - bs) as u64, (s - bs + b.len()) as u64))
+}
+
+#[derive(Default)]
+pub struct IntegrityState {
+    pub running: bool,
+    pub last: Option<LastVerify>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LastVerify {
+    pub at: String,
+    pub records: u64,
+    pub ok: bool,
+    pub corrupt: u64,
+    pub first_bad: Option<u64>,
+    pub reason: Option<&'static str>,
+    pub elapsed_secs: f64,
+    pub against_attestation: bool,
+}
+
+#[derive(Debug)]
+pub enum IntegrityError {
+    Running,
+    Io(String),
 }
 
 #[derive(Debug)]
@@ -265,6 +331,11 @@ pub struct Live {
     pub replay_generation: AtomicU64,
     /// Bumped whenever a source's drift state changes, for the SSE feed.
     pub drift_generation: AtomicU64,
+    pub integrity: Mutex<IntegrityState>,
+    pub integrity_generation: AtomicU64,
+    /// The output thread's index writer counters, once it has opened the index.
+    pub pivot_counters: Mutex<Option<Arc<PivotCounters>>>,
+    pivot_index: Mutex<Option<PivotIndex>>,
     parsers_signature: Mutex<Option<(usize, Option<SystemTime>, u64)>>,
     stop: AtomicBool,
 }
@@ -349,18 +420,69 @@ pub(crate) struct Emitted {
     pub(crate) buf: Vec<u8>,
     pub(crate) count: u64,
     pub(crate) first_raw_id: u64,
+    pub(crate) entities: EntityBatch,
+}
+
+/// The entity values of one batch, copied out of the event bytes so the output thread can
+/// index them after the batch's mapping is gone: one arena and one fixed record per event.
+#[derive(Default)]
+pub(crate) struct EntityBatch {
+    pub(crate) arena: Vec<u8>,
+    pub(crate) events: Vec<EventEntities>,
+}
+
+#[derive(Clone, Copy, Default)]
+pub(crate) struct EventEntities {
+    pub(crate) raw_id: u64,
+    pub(crate) time_ms: i64,
+    /// The emitted line's range inside the batch buffer (without its newline).
+    pub(crate) line: (u32, u32),
+    /// Arena ranges; an empty range is absent.
+    pub(crate) parser: (u32, u32),
+    pub(crate) device: (u32, u32),
+    pub(crate) values: [(u32, u32); 5],
+}
+
+impl EntityBatch {
+    fn put(&mut self, bytes: &[u8]) -> (u32, u32) {
+        let s = self.arena.len() as u32;
+        self.arena.extend_from_slice(bytes);
+        (s, self.arena.len() as u32)
+    }
+
+    fn slice(&self, r: (u32, u32)) -> &[u8] {
+        &self.arena[r.0 as usize..r.1 as usize]
+    }
 }
 
 /// Every event of one batch through the pipeline into `out`, with the counts, per-parser
 /// hits and the unknown lines (for inference) collected for the caller. The live worker
 /// and the replay worker both call this; neither has its own per-event path.
 #[allow(clippy::too_many_arguments)]
-pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratch: &mut ulpf_parse::Scratch, hint: &mut Option<usize>, parsed: &mut Parsed<'a>, out: &mut Vec<u8>, counts: &mut LocalCounts, hits: &mut [u64], unknown: &mut Vec<(u64, &'a [u8])>, failed: &mut Vec<(u64, &'a [u8])>) {
+pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratch: &mut ulpf_parse::Scratch, hint: &mut Option<usize>, parsed: &mut Parsed<'a>, out: &mut Vec<u8>, counts: &mut LocalCounts, hits: &mut [u64], unknown: &mut Vec<(u64, &'a [u8])>, failed: &mut Vec<(u64, &'a [u8])>, mut entities: Option<&mut EntityBatch>) {
     let bytes = batch.file.bytes();
     for (i, range) in batch.ranges.iter().enumerate() {
         let event = &bytes[range.clone()];
         let raw_id = batch.first_raw_id + i as u64;
+        let line_start = out.len();
         let outcome = pipeline.process(event, raw_id, batch.source(i), batch.receipt(i), hint, scratch, parsed, out);
+        if let Some(eb) = entities.as_deref_mut() {
+            // up to five small values per event, copied once; the index thread does the rest
+            let mut e = EventEntities { raw_id, time_ms: outcome.stats.time_ms, line: (line_start as u32, out.len().saturating_sub(1) as u32), ..EventEntities::default() };
+            if let Some(p) = outcome.parser {
+                e.parser = eb.put(pipeline.registry.get(p).name().as_bytes());
+            }
+            for (k, slot) in outcome.stats.entities.iter().enumerate() {
+                if let Some(idx) = slot
+                    && let Some(f) = parsed.fields.get(*idx as usize)
+                {
+                    e.values[k] = eb.put(&f.value);
+                }
+            }
+            let dev = e.values[EntityKind::Device as usize];
+            e.device = if dev.0 == dev.1 { eb.put(batch.source(i).as_bytes()) } else { dev };
+            eb.events.push(e);
+        }
         match outcome.parser {
             Some(p) => {
                 counts.detected += 1;
@@ -502,6 +624,10 @@ impl Live {
             replay: Mutex::new(ReplayState::default()),
             replay_generation: AtomicU64::new(0),
             drift_generation: AtomicU64::new(0),
+            integrity: Mutex::new(IntegrityState::default()),
+            integrity_generation: AtomicU64::new(0),
+            pivot_counters: Mutex::new(None),
+            pivot_index: Mutex::new(None),
             parsers_signature: Mutex::new(parsers_signature(&cfg.parsers)),
             stop: AtomicBool::new(false),
         }))
@@ -561,6 +687,81 @@ impl Live {
             })
             .map_err(|e| ReplayError::Io(e.to_string()))?;
         Ok((version, total))
+    }
+
+    /// Verifies every record below the store's current length on its own thread, through
+    /// the writer's flushed files (D42), and records the result for the API.
+    pub fn start_verify(self: &Arc<Self>) -> Result<u64, IntegrityError> {
+        let mut state = self.integrity.lock().unwrap_or_else(|e| e.into_inner());
+        if state.running {
+            return Err(IntegrityError::Running);
+        }
+        let reader = self.store.lock().unwrap_or_else(|e| e.into_inner()).reader().map_err(|e| IntegrityError::Io(e.to_string()))?;
+        let records = reader.len();
+        state.running = true;
+        drop(state);
+        self.integrity_generation.fetch_add(1, Relaxed);
+        let live = Arc::clone(self);
+        std::thread::Builder::new()
+            .name("ulpf-verify".into())
+            .spawn(move || {
+                let started = Instant::now();
+                let report = reader.verify();
+                let mut at = String::new();
+                ulpf_time::format_rfc3339(now_nanos(), &mut at);
+                let last = LastVerify {
+                    at,
+                    records: report.checked,
+                    ok: report.ok(),
+                    corrupt: report.corrupt.len() as u64,
+                    first_bad: report.first_bad.map(|(id, _)| id.0),
+                    reason: report.first_bad.map(|(_, r): (RawId, VerifyReason)| r.as_str()),
+                    elapsed_secs: started.elapsed().as_secs_f64(),
+                    against_attestation: false,
+                };
+                let mut state = live.integrity.lock().unwrap_or_else(|e| e.into_inner());
+                state.last = Some(last);
+                state.running = false;
+                drop(state);
+                live.integrity_generation.fetch_add(1, Relaxed);
+            })
+            .map_err(|e| IntegrityError::Io(e.to_string()))?;
+        Ok(records)
+    }
+
+    /// `GET /api/integrity` without the checkpoints: what the store is, and the last verify.
+    pub fn integrity_summary(&self) -> serde_json::Value {
+        let (records, store_id, genesis, head) = {
+            let store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+            (store.len(), ulpf_store::hex(&store.store_id()), ulpf_store::hex(&store.genesis()), store.head().map(|h| ulpf_store::hex(&h)))
+        };
+        let state = self.integrity.lock().unwrap_or_else(|e| e.into_inner());
+        serde_json::json!({
+            "records": records, "store_id": store_id, "genesis": genesis, "head": head,
+            "checkpoint_every": ulpf_store::CHECKPOINT_EVERY,
+            "last_verify": state.last, "running": state.running,
+        })
+    }
+
+    pub fn attestation(&self) -> std::io::Result<Attestation> {
+        Ok(self.store.lock().unwrap_or_else(|e| e.into_inner()).reader()?.attest())
+    }
+
+    /// One entity's timeline from the index beside the output; the index is opened once.
+    pub fn pivot(&self, q: &PivotQuery<'_>) -> Result<PivotPage> {
+        let mut idx = self.pivot_index.lock().unwrap_or_else(|e| e.into_inner());
+        if idx.is_none() {
+            *idx = Some(PivotIndex::open(&self.output)?);
+        }
+        idx.as_ref().expect("opened above").query(q)
+    }
+
+    pub fn entities(&self, kind: Option<EntityKind>, prefix: &str, limit: usize) -> Result<Vec<crate::pivot::EntitySummary>> {
+        let mut idx = self.pivot_index.lock().unwrap_or_else(|e| e.into_inner());
+        if idx.is_none() {
+            *idx = Some(PivotIndex::open(&self.output)?);
+        }
+        idx.as_ref().expect("opened above").entities(kind, prefix, limit)
     }
 
     /// The current progress of a running replay, if any.
@@ -767,13 +968,49 @@ impl Live {
         let source = names.get(&rec.source).cloned().unwrap_or_else(|| format!("source#{}", rec.source));
         let recomputed: [u8; 32] = sha2::Sha256::digest(&rec.bytes).into();
         let hex = |d: &[u8]| d.iter().map(|b| format!("{b:02x}")).collect::<String>();
+        let (chain, prev_chain) = {
+            let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+            let chain = store.chain(RawId(id)).map_err(|e| TracebackError::Io(e.to_string()))?.unwrap_or([0; 32]);
+            let prev = if id == 0 { store.genesis() } else { store.chain(RawId(id - 1)).map_err(|e| TracebackError::Io(e.to_string()))?.unwrap_or([0; 32]) };
+            (chain, prev)
+        };
+        let expected: [u8; 32] = {
+            let mut h = sha2::Sha256::new();
+            h.update(prev_chain);
+            h.update(rec.sha256);
+            h.finalize().into()
+        };
         let pipeline = self.pipeline();
         let mut scratch = pipeline.registry.scratch();
         let mut parsed = Parsed::default();
         let mut out = Vec::new();
         let mut hint = None;
         let outcome = pipeline.process(&rec.bytes, id, &source, rec.receipt_nanos, &mut hint, &mut scratch, &mut parsed, &mut out);
-        let normalized = serde_json::from_slice(&out).unwrap_or(serde_json::Value::Null);
+        let normalized: serde_json::Value = serde_json::from_slice(&out).unwrap_or(serde_json::Value::Null);
+        let fields: Vec<TraceField> = parsed
+            .fields
+            .iter()
+            .map(|f| TraceField { key: String::from_utf8_lossy(&f.key).into_owned(), value: String::from_utf8_lossy(&f.value).into_owned(), span: span_in(&rec.bytes, &f.value) })
+            .collect();
+        let provenance: Vec<TraceProvenance> = pipeline
+            .mapping
+            .provenance(&parsed)
+            .into_iter()
+            .map(|p| {
+                let f = parsed.fields.get(p.field_index as usize);
+                TraceProvenance {
+                    path: p.path,
+                    source_key: f.map(|f| String::from_utf8_lossy(&f.key).into_owned()).unwrap_or_default(),
+                    span: f.and_then(|f| span_in(&rec.bytes, &f.value)),
+                    canonical: p.canonical,
+                    value: p.value,
+                }
+            })
+            .collect();
+        let time = TraceTime {
+            text_span: parsed.timestamp_text.as_ref().and_then(|t| span_in(&rec.bytes, t)),
+            policies: normalized.pointer("/ulpf/time_policies").and_then(|v| v.as_array()).map(|a| a.iter().filter_map(|x| x.as_str().map(str::to_string)).collect()).unwrap_or_default(),
+        };
         let parser = outcome.parser.map(|i| pipeline.registry.get(i).name().to_string());
         let parse_status = match (outcome.parser, outcome.parse) {
             (None, _) => "no_parser".to_string(),
@@ -793,8 +1030,11 @@ impl Live {
             stored_sha256: hex(&rec.sha256),
             recomputed_sha256: hex(&recomputed),
             digest_match: recomputed == rec.sha256,
+            chain: hex(&chain),
+            prev_chain: hex(&prev_chain),
+            chain_match: expected == chain,
             emitted: self.tail.find(id).and_then(|l| serde_json::from_slice(&l).ok()),
-            now: NowParse { parser, parse_status, normalized },
+            now: NowParse { parser, parse_status, normalized, fields, provenance, time },
         })
     }
 }
@@ -1154,8 +1394,9 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Em
         let mut parsed = Parsed::default();
         let mut unknown: Vec<(u64, &[u8])> = Vec::new();
         let mut failed: Vec<(u64, &[u8])> = Vec::new();
+        let mut entities = EntityBatch::default();
         let pipeline = &*pipeline;
-        process_batch(pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown, &mut failed);
+        process_batch(pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown, &mut failed, Some(&mut entities));
         live.metrics.add(&counts);
         if !unknown.is_empty() {
             live.inference.offer_batch(&batch.file.name, &unknown, &live.metrics);
@@ -1205,7 +1446,7 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Em
                 }
             }
         }
-        if tx.send(Emitted { seq: batch.seq, buf: out, count: batch.ranges.len() as u64, first_raw_id: batch.first_raw_id }).is_err() {
+        if tx.send(Emitted { seq: batch.seq, buf: out, count: batch.ranges.len() as u64, first_raw_id: batch.first_raw_id, entities }).is_err() {
             break;
         }
     }
@@ -1214,22 +1455,47 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Em
 fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
     let stdout;
     let file;
+    let mut pos = 0u64;
+    let mut pivot: Option<PivotWriter> = None;
     let mut w: Box<dyn Write> = if live.output.as_os_str() == "-" {
         stdout = std::io::stdout();
         Box::new(BufWriter::with_capacity(1 << 20, stdout.lock()))
     } else {
         file = File::options().create(true).append(true).open(&live.output).with_context(|| format!("creating output {}", live.output.display()))?;
+        pos = file.metadata().map(|m| m.len()).unwrap_or(0);
+        // the entity index beside the output: derived data on its own thread (D55)
+        match PivotWriter::start(&live.output, live.queue_cap) {
+            Ok(pw) => {
+                *live.pivot_counters.lock().unwrap_or_else(|e| e.into_inner()) = Some(pw.counters());
+                pivot = Some(pw);
+            }
+            Err(e) => eprintln!("ulpf: pivot index disabled: {e:#}"),
+        }
         Box::new(BufWriter::with_capacity(1 << 20, file))
     };
-    let mut pending: BTreeMap<u64, (Vec<u8>, u64, u64)> = BTreeMap::new();
+    let mut pending: BTreeMap<u64, (Vec<u8>, u64, u64, EntityBatch)> = BTreeMap::new();
     let mut next = 0u64;
     let mut since_flush = Instant::now();
     while let Ok(e) = rx.recv() {
-        pending.insert(e.seq, (e.buf, e.count, e.first_raw_id));
-        while let Some((buf, count, first_raw_id)) = pending.remove(&next) {
+        pending.insert(e.seq, (e.buf, e.count, e.first_raw_id, e.entities));
+        while let Some((buf, count, first_raw_id, entities)) = pending.remove(&next) {
             w.write_all(&buf).context("writing output")?;
             live.metrics.emitted.fetch_add(count, Relaxed);
             live.metrics.output_bytes.fetch_add(buf.len() as u64, Relaxed);
+            if let Some(pw) = pivot.as_mut() {
+                let mut postings: Vec<Posting<'_>> = Vec::with_capacity(entities.events.len() * 2);
+                for ev in &entities.events {
+                    let device = entities.slice(ev.device);
+                    let parser = (ev.parser.0 != ev.parser.1).then(|| std::str::from_utf8(entities.slice(ev.parser)).unwrap_or(""));
+                    for (k, r) in ev.values.iter().enumerate() {
+                        if r.0 != r.1 {
+                            postings.push(Posting { raw_id: ev.raw_id, time_ms: ev.time_ms, kind: EntityKind::ALL[k], value: entities.slice(*r), device, parser, offset: pos + ev.line.0 as u64, len: ev.line.1.saturating_sub(ev.line.0) });
+                        }
+                    }
+                }
+                pw.push_batch(&postings);
+            }
+            pos += buf.len() as u64;
             // the buffer moves into the tail; the ring keeps ranges into it, no copy
             live.tail.push_batch(first_raw_id, buf);
             next += 1;
@@ -1242,5 +1508,8 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
         }
     }
     w.flush().context("flushing output")?;
+    if let Some(pw) = pivot {
+        pw.finish();
+    }
     Ok(())
 }

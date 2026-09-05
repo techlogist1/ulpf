@@ -85,6 +85,22 @@ shared surface and stay with one writer. Each returns a schema-validated report
 (worktree, branch, commits, tests pass/fail, clippy, measurements, public API, decisions,
 contract gaps, uncertainties, not done); the lead merges by running the full suite.
 
+### Fan-out 3 (15:40 IST, after the session limit reset; low-priority mode on the weekly budget)
+The limit cut the UI, ECS, soak and Parquet workers and two corpus generators mid-task;
+integrity, pivot and retention had committed and are merged (2491ec0, e256e38, 023bbe7).
+Relaunched on Opus, each in its own workflow: UI resumes in its worktree (merge main
+first, seven screens, Chrome verification against main's binary); ECS resumes (its
+workaround edits to five test files dropped: the real fix, default schema `ocsf` when
+several mappings load, is 7fa1204 on main), adds `[entities]`; soak resumes (commit the
+harness, `--report-only` for the cut run, a 10-minute file soak on the current build,
+senders ready for the listeners); Parquet feasibility fresh in scratch; the OpenVPN and
+nginx/HAProxy/Zeek generators finish from their partial setups; a new parser-fidelity
+worker runs the real corpus through the twelve parsers and fixes what breaks from vendor
+documentation (D30), promoting permissively licensed real lines into samples and fixtures.
+The lead wires integrity and pivot into the engine and server, then fixes the harness's
+finding that `run` re-ingests from byte zero after a kill (double counting on restart),
+adds `--receipt` to `run`, then syslog listeners.
+
 ### Verified state / in flight / tried and abandoned / next action
 (kept current below as the session proceeds)
 

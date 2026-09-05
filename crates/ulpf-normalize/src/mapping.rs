@@ -30,6 +30,8 @@ pub struct NormalizeStats {
     pub enum_other: u32,
     pub time_from_receipt: bool,
     pub utf8_lossy: bool,
+    /// The emitted `time` (epoch milliseconds), for the entity index.
+    pub time_ms: i64,
     /// Per `EntityKind` (indexed by `kind as usize`), the index into `parsed.fields` of the
     /// source field that fed that kind's schema path; `None` when nothing fed it.
     pub entities: [Option<u32>; 5],
@@ -329,7 +331,8 @@ impl Mapping {
                 (prov.receipt_nanos, Policies::RECEIPT_FALLBACK)
             }
         };
-        root.insert("time".into(), Value::from(ulpf_time::epoch_millis(nanos)));
+        stats.time_ms = ulpf_time::epoch_millis(nanos);
+        root.insert("time".into(), Value::from(stats.time_ms));
         let mut meta = match root.remove("metadata") {
             Some(Value::Object(m)) => m,
             _ => Map::new(),

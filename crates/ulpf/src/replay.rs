@@ -328,9 +328,9 @@ pub fn run(job: Job, progress: &AtomicU64, cancel: &AtomicBool) -> Result<Replay
                     let mut failed = Vec::new();
                     hits.clear();
                     hits.resize(pipeline.registry.len(), 0);
-                    process_batch(&pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown, &mut failed);
+                    process_batch(&pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown, &mut failed, None);
                     metrics.add(&counts);
-                    if tx.send(Emitted { seq: batch.seq, buf: out, count: batch.ranges.len() as u64, first_raw_id: batch.first_raw_id }).is_err() {
+                    if tx.send(Emitted { seq: batch.seq, buf: out, count: batch.ranges.len() as u64, first_raw_id: batch.first_raw_id, entities: crate::engine::EntityBatch::default() }).is_err() {
                         break;
                     }
                 }
