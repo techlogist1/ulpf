@@ -54,7 +54,7 @@ source document in hand; Haiku banned (D30). Baseline at a9d0dd8: 71 tests, clip
       pivot timeline, replay diff, drift alerts, integrity status; batched SSE; keyboard.
 - [x] 13. (D64; `--parquet` on run and serve, rolled files, static image verified; 0.46x on the output thread when enabled, off by default) Parquet output, only after 1-12 are green; crate and static build verified first.
 - [x] 14. (after f267496: 107 tests pass, 2 ignored, `clippy --all-targets -D warnings` clean; the alloc test and the store round-trip are in that suite; isolation run, serve and docker PASS on the final binary and image; harness throughput median 258,411 events/s over three runs on the final build against 251k at the multi-core measurement, inside the ±10% variance) Regression: full suite, clippy, alloc test, round-trip, isolation; bench within variance.
-- [x] 15. (D65) `aposd-critique` pass: seven graders, every critical/high/medium finding fixed in two commits (37e41d6 and its predecessor), two closed with evidence, four deferred with triggers.
+- [x] 15. (D65) `aposd-critique` pass: seven graders, every critical/high/medium finding fixed in one commit (37e41d6, 18 files), two closed with evidence, four deferred with triggers.
 - [x] 16. (demo script and 04:00 procedure below; CLAUDE.md, DECISIONS D52-D66 with the D59 amendment, docs/api.md, README throughput paragraph current; final commit pushed to origin/main) This file's demo script rewritten (commands, expected output, reset, 04:00
       procedure); CLAUDE.md, DECISIONS.md, docs current; committed and pushed.
 - Out of scope by the brief: segment rotation and retention (design note only, `docs/retention.md`).
@@ -111,7 +111,7 @@ The lead wires integrity and pivot into the engine and server, then fixes the ha
 finding that `run` re-ingests from byte zero after a kill (double counting on restart),
 adds `--receipt` to `run`, then syslog listeners.
 
-### Fan-out 4 (19:35 IST): the review pass
+### Fan-out 4 (18:27 IST): the review pass
 Seven Opus graders, one per crate group (store; parse+time; normalize+parquet; infer;
 engine+syslog+inference+metrics; replay+pivot+tail; server+pending+cli+contract), each
 running `aposd-critique` read-only and returning the graded table, ranked findings with

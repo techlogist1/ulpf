@@ -1004,8 +1004,8 @@ and off in every measured number).
 
 ## D65. The v2 review pass: what changed, what was closed, what is deferred
 **Decision.** Seven Opus graders ran `aposd-critique` read-only, one per crate group,
-returning graded tables and findings ranked by what hurts at 04:00. Fixed, in two commits
-(store/engine/syslog/sink, then parse/time/infer/server/pending/pivot/replay/cli): the
+returning graded tables and findings ranked by what hurts at 04:00. Fixed, in one commit
+(37e41d6: store/engine/syslog/sink and parse/time/infer/server/pending/pivot/replay/cli): the
 attestation check now compares the head and refuses an empty checkpoint list (a store
 rewritten from record 0 with a stripped attestation verified clean before); the reader
 maps the index before the segment (a verify beside a live serve could name phantom
@@ -1043,7 +1043,7 @@ reload adds one capture-locations slot per pattern per worker; measured negligib
 fifty approvals; revisit if a deployment reloads thousands of times). Persisting the diff
 index the replay already built (rebuilt once per version on first page request). Decoding
 the record header in one place (four copies agree today; a change to the layout is the
-trigger). **Anchor.** the two "review fixes" commits; `PROGRESS.md` "Review pass (v2)".
+trigger). **Anchor.** commit 37e41d6; `PROGRESS.md` "Fan-out 4" and item 15.
 **Principle.** As D51: closed by a fix or by written evidence, never by a known-issues list.
 
 ## D66. The entity index is on for `serve` and off for `run`
