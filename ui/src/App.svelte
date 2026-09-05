@@ -6,11 +6,15 @@
   import Replay from './Replay.svelte'
   import Drift from './Drift.svelte'
   import Integrity from './Integrity.svelte'
+  import Flow from './Flow.svelte'
   import { live, loadStatus } from './state.svelte.js'
   import { screenKey, typing, theme } from './keys.js'
   import { fmt } from './api.js'
 
+  // Flow is the front door (#/ and #/flow, key 0, Esc from any top-level screen); the
+  // seven windows are one step behind it.
   const SCREENS = [
+    { key: '0', view: 'flow', label: 'Flow' },
     { key: '1', view: 'live', label: 'Live' },
     { key: '2', view: 'review', label: 'Review' },
     { key: '3', view: 'trace', label: 'Traceback' },
@@ -23,7 +27,7 @@
   // #/live · #/review/<id> · #/trace/<raw_id> · #/pivot/<kind>/<value> · #/replay · #/drift · #/integrity
   function parse(h) {
     const parts = h.replace(/^#\/?/, '').split('/').map(decodeURIComponent)
-    const view = SCREENS.some((s) => s.view === parts[0]) ? parts[0] : 'live'
+    const view = SCREENS.some((s) => s.view === parts[0]) ? parts[0] : 'flow'
     return { view, a: parts[1] ?? '', b: parts.slice(2).join('/') }
   }
   let route = $state(parse(location.hash))
@@ -33,8 +37,12 @@
     route = parse(location.hash)
     helpOpen = false
     window.scrollTo(0, 0)
+    // The screen transition runs only for a navigation, never for the first paint.
+    document.documentElement.dataset.nav = ''
   })
   loadStatus()
+  // A count badge pops when it changes, not when it first appears with the hello frame.
+  setTimeout(() => (document.documentElement.dataset.live = ''), 1500)
 
   function onKey(e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return
@@ -48,7 +56,9 @@
     if (e.key === 't') { mode = theme(mode === 'light' ? 'dark' : 'light'); return }
     const s = SCREENS.find((x) => x.key === e.key)
     if (s) { location.hash = `#/${s.view}`; e.preventDefault(); return }
-    if (screenKey(e)) e.preventDefault()
+    if (screenKey(e)) { e.preventDefault(); return }
+    // An Esc no screen used goes back to the front door.
+    if (e.key === 'Escape' && route.view !== 'flow') location.hash = '#/flow'
   }
 
   const drifting = $derived((live.drift ?? []).filter((d) => d.state === 'tripped' || d.state === 'proposed').length)
@@ -64,8 +74,8 @@
     {#each SCREENS as s (s.view)}
       <a href="#/{s.view}" class:on={route.view === s.view} aria-current={route.view === s.view ? 'page' : undefined}>
         <kbd>{s.key}</kbd>{s.label}
-        {#if s.view === 'review' && live.pending.count}<span class="count">{live.pending.count}</span>{/if}
-        {#if s.view === 'drift' && drifting}<span class="count warn">{drifting}</span>{/if}
+        {#if s.view === 'review' && live.pending.count}{#key live.pending.count}<span class="count pop">{live.pending.count}</span>{/key}{/if}
+        {#if s.view === 'drift' && drifting}{#key drifting}<span class="count warn pop">{drifting}</span>{/key}{/if}
       </a>
     {/each}
   </nav>
@@ -76,21 +86,27 @@
 </header>
 
 <main>
-  {#if route.view === 'live'}
-    <Live />
-  {:else if route.view === 'review'}
-    <Review id={route.a} />
-  {:else if route.view === 'trace'}
-    <Traceback id={route.a} />
-  {:else if route.view === 'pivot'}
-    <Pivot kind={route.a} value={route.b} />
-  {:else if route.view === 'replay'}
-    <Replay />
-  {:else if route.view === 'drift'}
-    <Drift />
-  {:else}
-    <Integrity />
-  {/if}
+  {#key route.view}
+    <div class="screen">
+      {#if route.view === 'flow'}
+        <Flow />
+      {:else if route.view === 'live'}
+        <Live />
+      {:else if route.view === 'review'}
+        <Review id={route.a} />
+      {:else if route.view === 'trace'}
+        <Traceback id={route.a} />
+      {:else if route.view === 'pivot'}
+        <Pivot kind={route.a} value={route.b} />
+      {:else if route.view === 'replay'}
+        <Replay />
+      {:else if route.view === 'drift'}
+        <Drift />
+      {:else}
+        <Integrity />
+      {/if}
+    </div>
+  {/key}
 </main>
 
 <footer class="foot">
@@ -113,11 +129,18 @@
       <section>
         <h3>Anywhere</h3>
         <dl>
-          <dt>1 … 7</dt><dd>Live, Review, Traceback, Pivot, Replay, Drift, Integrity</dd>
+          <dt>0</dt><dd>Flow, the front door: every station of the machine, live</dd>
+          <dt>1 … 7</dt><dd>Live, Review, Traceback, Pivot, Replay, Drift, Integrity, one step behind it</dd>
           <dt>?</dt><dd>this map</dd>
           <dt>t</dt><dd>light or dark</dd>
           <dt>/</dt><dd>the search or lookup box on this screen</dd>
-          <dt>Esc</dt><dd>close, or leave a detail for its list</dd>
+          <dt>Esc</dt><dd>close, leave a detail for its list, or go back to Flow from any screen</dd>
+        </dl>
+        <h3>Flow</h3>
+        <dl>
+          <dt>i s d p n e</dt><dd>ingest, preserve, detect, parse, normalize, emit: opens the screen behind the station</dd>
+          <dt>r</dt><dd>the tray: proposals waiting for review</dd>
+          <dt>h / l</dt><dd>move along the line (arrows work too), Enter opens</dd>
         </dl>
         <h3>Any list</h3>
         <dl>

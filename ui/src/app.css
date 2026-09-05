@@ -44,6 +44,12 @@
   --top: 36px; --foot: 22px;
   --page-max: 2400px;
   --gutter: var(--s5);
+  /* motion: only where it reports a state change or the movement of data (docs/design.md, Motion) */
+  --d1: 120ms;          /* a value or badge changed, a selection moved */
+  --d2: 240ms;          /* a screen arrived, a result replaced a confirmation */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --pulse: 6px;         /* one dash of the flow pulse */
+  --pitch: 32px;        /* dash to dash; one animation loop travels one pitch */
 }
 :root[data-theme="light"] {
   color-scheme: light;
@@ -90,6 +96,18 @@ p { margin: 0; }
 .top .right button:hover { color: var(--fg); }
 
 main { max-width: var(--page-max); margin: 0 auto; padding: var(--s5) var(--gutter) calc(var(--foot) + var(--s5)); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s6); align-content: start; }
+/* one screen at a time; it arrives with a d2 fade on navigation and never on the first paint */
+main > .screen { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s6); align-content: start; }
+:root[data-nav] main > .screen { animation: enter var(--d2) var(--ease); }
+@keyframes enter { from { opacity: 0; transform: translateY(2px); } }
+/* a count that changed: one d1 settle, driven by a keyed re-mount, so it fires per change and not per frame;
+   the top bar's badges wait for data-live (1.5 s after mount) so the first frame's counts appear still */
+.pop { animation: pop var(--d1) var(--ease); }
+.top .count.pop { animation: none; }
+:root[data-live] .top .count.pop { animation: pop var(--d1) var(--ease); }
+@keyframes pop { from { transform: scale(1.25); } }
+/* a result or verdict that replaced what was on screen */
+.arrive { animation: enter var(--d2) var(--ease); }
 
 .foot { position: fixed; bottom: 0; left: 0; right: 0; height: var(--foot); z-index: 5; display: flex; align-items: center; background: var(--bg-1); border-top: 1px solid var(--line); font: var(--t-1)/1 var(--mono); color: var(--fg-2); padding: 0 var(--gutter); gap: var(--s6); white-space: nowrap; overflow: hidden; }
 .foot b { font-weight: 400; color: var(--fg-1); }
@@ -378,6 +396,52 @@ details summary { cursor: pointer; color: var(--fg-2); font-size: var(--t0); }
 .fields .add { color: var(--ok); } .fields .del { color: var(--bad); } .fields .chg { color: var(--warn); }
 .versions .vr, .versions .vh { --cols: 4em 16em 20em 9em 6em 8em minmax(0, 1fr); }
 
+/* ---- flow ---- */
+/* six stations and five links on one grid; the sub-row under a station or link is placed by
+   grid-column from the component (2 the queue, 3 the chain, 5 the branch, 7 the failures) */
+.flow .lede { display: flex; align-items: baseline; gap: var(--s4); margin-bottom: var(--s6); }
+.flow .lede b { font: 500 var(--t4)/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; min-width: 5ch; }
+.flow .lede span { color: var(--fg-1); font-size: var(--t1); line-height: 1.35; }
+.flow .lede .src { color: var(--fg-2); font-size: var(--t0); }
+.flow .line { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr) minmax(7em, 0.9fr)) minmax(0, 1fr); gap: var(--s5) 0; align-items: start; }
+.flow .station { display: grid; gap: var(--s1); align-content: start; min-width: 0; padding: var(--s3) var(--s3) var(--s3) 0; color: inherit; text-decoration: none; border-top: 2px solid var(--line-2); transition: border-color var(--d1) var(--ease); }
+.flow .station:hover { border-top-color: var(--fg-1); }
+.flow .station.sel { border-top-color: var(--fg); }
+.flow .station .name { display: flex; justify-content: space-between; align-items: baseline; font-weight: 600; font-size: var(--t1); }
+.flow .station kbd { font-size: var(--t-1); color: var(--fg-2); }
+.flow .station .num { font: 500 var(--t3)/1.2 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow .station .lab, .flow .station .sub { font-size: var(--t-1); color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flow .station .loss { font-size: var(--t-1); color: var(--warn); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.flow .station .tag { justify-self: start; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+/* a link: the track, and on it one pulse element whose speed is the rate law; idle hides the dashes */
+.flow .link { position: relative; height: 2px; margin-top: calc(var(--s3) + var(--s2) + var(--t1) * 0.75); background: var(--line-2); overflow: hidden; }
+.flow .link .pulse { position: absolute; top: 0; bottom: 0; left: 0; width: calc(100% + var(--pitch)); background: repeating-linear-gradient(90deg, var(--fg) 0 var(--pulse), transparent var(--pulse) var(--pitch)); opacity: 1; transition: opacity var(--d2) var(--ease); }
+.flow .link.idle .pulse { opacity: 0; }
+.flow .link.v { width: 2px; height: 20px; margin: 0 0 0 var(--s5); }
+.flow .link.v .pulse { width: 2px; height: calc(100% + var(--pitch)); left: 0; top: 0; background: repeating-linear-gradient(180deg, var(--fg) 0 var(--pulse), transparent var(--pulse) var(--pitch)); }
+.flow .under { display: grid; gap: var(--s1); align-content: start; min-width: 0; font-size: var(--t-1); }
+.flow .under .lab { display: flex; justify-content: space-between; gap: var(--s3); color: var(--fg-2); font-size: var(--t-1); white-space: nowrap; overflow: hidden; }
+.flow .under .n { font-family: var(--mono); font-size: var(--t-1); color: var(--fg-1); overflow-wrap: anywhere; }
+.flow .queue { min-width: 0; padding-right: var(--s3); }
+.flow .queue .track { height: 8px; background: var(--line); position: relative; }
+.flow .queue .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--fg-1); transition: width var(--d2) var(--ease); }
+.flow .queue .track i.hw { background: none; border-right: 2px solid var(--warn); }
+.flow .chain { color: inherit; text-decoration: none; padding-right: var(--s3); }
+.flow .chain .marks { display: flex; gap: 2px; height: 8px; }
+.flow .chain .marks i { flex: 0 0 8px; background: var(--line-2); transition: background-color var(--d2) var(--ease); }
+.flow .chain .marks i.none { background: none; border: 1px dashed var(--line-2); }
+.flow .chain .marks.grew i.new { background: var(--ok); }
+.flow .branch { padding-right: var(--s3); }
+.flow .branch .node { display: grid; gap: var(--s1); padding-left: var(--s3); border-left: 2px solid var(--line-2); transition: border-color var(--d2) var(--ease); color: inherit; text-decoration: none; }
+.flow .branch.lit .node { border-left-color: var(--pend); }
+.flow .branch .node .lab { color: var(--fg); font-weight: 600; font-size: var(--t0); justify-content: flex-start; gap: var(--s3); }
+.flow .branch .node .lab kbd { font-weight: 400; font-size: var(--t-1); color: var(--fg-2); }
+.flow .branch .node.sel { border-left-color: var(--fg); }
+.flow .branch .link.v.idle { background: var(--line); }
+.flow .branch .link.v i:not(.pulse) { display: block; width: 100%; height: 100%; background: var(--pend); opacity: 1; transition: opacity var(--d2) var(--ease); }
+.flow .branch .link.v.idle i:not(.pulse) { opacity: 0; }
+.flow .count { font: 500 var(--t-1)/1 var(--mono); padding: 2px 5px; border-radius: 2px; color: var(--bg); background: var(--pend); display: inline-block; }
+.flow .count.none { background: var(--line-2); color: var(--fg-1); }
 /* ---- keymap overlay ---- */
 .overlay { position: fixed; inset: 0; background: var(--shade); display: grid; place-items: center; z-index: 20; }
 .keymap { background: var(--bg-1); border: 1px solid var(--line-2); padding: var(--s6); width: min(92vw, 880px); max-height: 86vh; overflow: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s5) var(--s7); }
