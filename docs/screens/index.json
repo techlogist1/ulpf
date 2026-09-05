@@ -483,6 +483,13 @@
     "how": "tool-driven (Chrome MCP)"
   },
   {
+    "file": "tool-flow-reconnecting-1512.png",
+    "screen": "flow",
+    "width": 1512,
+    "what": "error state: the server behind this tab was stopped; Flow says the stream dropped and when it retries, keeps the last frame's numbers with their time, and the pulses stop; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
     "file": "app-launch.png",
     "screen": "app",
     "width": null,

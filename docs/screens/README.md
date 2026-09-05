@@ -73,6 +73,7 @@ The `*-1280.png` / `*-2560.png` rows in the first table without a tool-driven ma
 | tool-integrity-1280.png | integrity | 1280 | integrity after POST /api/integrity/verify: clean verdict over 249,407 records in 0.53 s, store id, genesis, head; tool-driven (Chrome MCP) |
 | tool-live-1512.png | live | 1512 | the live feed at the widest window this 1512 px display allows: the tail and both lower tables use the width; tool-driven (Chrome MCP) |
 | tool-pivot-1512.png | pivot | 1512 | the jdoe pivot at 1512: timeline and seen-with lists side by side, no empty band; tool-driven (Chrome MCP) |
+| tool-flow-reconnecting-1512.png | flow | 1512 | error state: the server behind this tab was stopped; Flow says the stream dropped and when it retries, keeps the last frame's numbers with their time, and the pulses stop; tool-driven (Chrome MCP) |
 
 ## The desktop app (lane C, `app/`)
 
