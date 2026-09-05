@@ -13,8 +13,12 @@ name = "palo_alto_panos"
 vendor = "Palo Alto Networks"
 product = "PAN-OS"
 
+# The Serial Number column is "the serial number of the firewall that generated the
+# log" and is empty on a VM-Series firewall with no serial (unlicensed / lab), so the
+# matcher accepts any serial including none; the receive-time layout and the documented
+# Type keyword in the next column are the real evidence.
 [match]
-regex = ',[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[0-9]{9,},(?:TRAFFIC|THREAT|SYSTEM|CONFIG|USERID|HIPMATCH|GLOBALPROTECT|CORRELATION|DECRYPTION|AUTHENTICATION|IPTAG|SCTP|TUNNEL|GTP),'
+regex = ',[0-9]{4}/[0-9]{2}/[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2},[^,]*,(?:TRAFFIC|THREAT|SYSTEM|CONFIG|USERID|HIPMATCH|GLOBALPROTECT|CORRELATION|DECRYPTION|AUTHENTICATION|IPTAG|SCTP|TUNNEL|GTP),'
 
 [envelope]
 syslog = true

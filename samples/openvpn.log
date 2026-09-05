@@ -26,3 +26,9 @@ Thu Sep  4 10:18:10 2026 jdøe/203.0.113.9:44321 MULTI: Learn: 10.8.0.6 -> jdøe/2
 Thu Sep  4 10:18:11 2026 203.0.113.9:44321 [jdoe] Peer Connection Initiated with [AF_IN
 Thu Sep  4 12:00:00 2026 jdoe/203.0.113.9:44321 MULTI: Learn sec: 10.8.0.6 -> jdoe/203.0.113.9:44321
 Thu Sep  4 12:00:01 2026 SIGTERM[hard,] received, process exiting
+Jun 21 11:17:33 demo-host.local openvpn: 1.2.3.4:41445 peer info: IV_CIPHERS=AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305
+Jun 21 11:17:33 demo-host.local openvpn[30264]: 1.2.3.4:41445 WARNING: 'link-mtu' is used inconsistently, local='link-mtu 1549', remote='link-mtu 1521'
+May 11 08:42:15 vpn-gw1 ovpn-server[1105]: MULTI: multi_create_instance called
+May 11 08:42:16 vpn-gw1 ovpn-server[1105]: 185.11.22.33:49152 [jsmith_contractor] Peer Connection Initiated with [AF_INET]185.11.22.33:49152
+May 11 08:42:16 vpn-gw1 ovpn-server[1105]: jsmith_contractor/185.11.22.33:49152 MULTI_sva: pool returned IPv4=10.0.8.55, IPv6=(Not enabled)
+May 11 08:42:15 vpn-gw1 ovpn-server[1105]: 185.11.22.33:49152 Re-using SSL/TLS context

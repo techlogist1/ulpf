@@ -100,12 +100,12 @@ raw = ["na", "n/a", "none", "none_none", "unknown", "not-applicable"]
 [[enum.values]]
 value = "Allowed"
 id = 1
-raw = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "passed", "built", "teardown", "open", "opened", "closed", "close", "success", "successful", "succeeded", "login", "logout", "logon", "logoff", "start", "stop", "forward", "forwarded", "nat", "translate", "translated", "connected", "disconnected", "established", "monitor", "monitored", "detect", "detected", "alert", "log", "logged", "key install", "tcp_miss", "tcp_hit", "tcp_tunnel", "tcp_refresh_hit", "tcp_refresh_modified", "tcp_refresh_unmodified", "tcp_mem_hit", "tcp_client_refresh_miss", "tcp_ims_hit", "tcp_negative_hit", "tcp_miss_aborted", "tcp_refresh_miss", "tcp_refresh_fail_old", "tcp_refresh_fail_err", "tcp_offline_hit", "tcp_redirect", "tcp_swapfail_miss", "1"]
+raw = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "passed", "built", "teardown", "open", "opened", "closed", "close", "success", "successful", "succeeded", "login", "logout", "logon", "logoff", "start", "stop", "forward", "forwarded", "nat", "translate", "translated", "connected", "disconnected", "established", "monitor", "monitored", "detect", "detected", "alert", "alarm-without-drop", "log", "logged", "key install", "tcp_miss", "tcp_hit", "tcp_tunnel", "tcp_tunnel_aborted", "tcp_refresh_hit", "tcp_refresh_modified", "tcp_refresh_unmodified", "tcp_mem_hit", "tcp_client_refresh_miss", "tcp_ims_hit", "tcp_negative_hit", "tcp_miss_aborted", "tcp_refresh_miss", "tcp_refresh_fail_old", "tcp_refresh_fail_err", "tcp_offline_hit", "tcp_redirect", "tcp_swapfail_miss", "1"]
 
 [[enum.values]]
 value = "Denied"
 id = 2
-raw = ["deny", "denied", "drop", "dropped", "block", "blocked", "block-url", "block-continue", "reject", "rejected", "discard", "discarded", "refuse", "refused", "prevent", "prevented", "quarantine", "quarantined", "reset", "reset-both", "reset-client", "reset-server", "fail", "failed", "failure", "invalid", "timeout", "timed_out", "expired", "tcp_denied", "tcp_denied_reply", "unauthorized", "sinkhole", "0"]
+raw = ["deny", "denied", "drop", "dropped", "block", "blocked", "block-url", "block-continue", "reject", "rejected", "discard", "discarded", "refuse", "refused", "prevent", "prevented", "quarantine", "quarantined", "reset", "reset-both", "reset-client", "reset-server", "fail", "failed", "failure", "login-fail", "ssl-login-fail", "invalid", "timeout", "timed_out", "expired", "tcp_denied", "tcp_denied_reply", "unauthorized", "sinkhole", "0"]
 
 [[enum]]
 field = "severity"

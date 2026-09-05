@@ -16,7 +16,8 @@ fn fortinet_sample_parses_with_kv_and_timestamp_policies() {
     let idx = reg.index_of("fortinet_fortigate").unwrap();
     let p = reg.get(idx);
     let evs = events(&repo().join("samples/fortinet_fortigate.log"));
-    assert_eq!(evs.len(), 7);
+    // 12 lines, 11 events: the collector-folded line is rejoined with its event.
+    assert_eq!(evs.len(), 11);
     let mut scratch = reg.scratch();
     let mut out = ulpf_parse::Parsed::default();
 
@@ -68,7 +69,7 @@ fn cisco_asa_sample_parses_header_subs_and_envelopes() {
     let idx = reg.index_of("cisco_asa").unwrap();
     let p = reg.get(idx);
     let evs = events(&repo().join("samples/cisco_asa.log"));
-    assert_eq!(evs.len(), 18);
+    assert_eq!(evs.len(), 30);
     let mut scratch = reg.scratch();
     let mut out = ulpf_parse::Parsed::default();
 

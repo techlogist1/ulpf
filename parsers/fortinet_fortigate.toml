@@ -1,6 +1,14 @@
-# Fortinet FortiGate, FortiOS 6.x/7.x syslog in the default key=value format.
+# Fortinet FortiGate syslog in the default key=value format.
 # Sources: FortiOS Log Reference (traffic / utm / event log fields).
 # Values may be quoted or bare; msg="..." may contain spaces and escaped quotes.
+# FortiOS renamed the identity keys at 5.0: `device_id=`/`log_id=` became
+# `devid=`/`logid=`, and the traffic keys `src`/`dst`/`src_int`/`dst_int`/`status`
+# became `srcip`/`dstip`/`srcintf`/`dstintf`/`action`. The strategy is key=value and
+# carries whatever names the device wrote, so both generations parse; the matcher
+# accepts either spelling of the log id rather than leaving a real FortiGate at
+# no_parser (where inference would propose a competing generated definition). The
+# pre-5.0 traffic key names then show up as unmapped_fields, which is the honest
+# signal: the gap is in the mapping, not in the parse.
 
 [parser]
 name = "fortinet_fortigate"
@@ -8,7 +16,8 @@ vendor = "Fortinet"
 product = "FortiGate"
 
 [match]
-contains = ["devname=", "logid="]
+contains = ["devname="]
+regex = 'log_?id='
 
 [envelope]
 syslog = true

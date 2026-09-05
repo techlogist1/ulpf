@@ -16,3 +16,15 @@
 <166>Sep 04 2026 10:15:37 ftd-01 : %FTD-6-302014: Teardown TCP connection 9 for outside:10.1.2.1/22 to inside:10.1.1.2/53496 duration 0:01:02 bytes 4210 TCP FINs
 <166>Sep 04 2026 10:15:38 asa-edge-01 : %ASA-6-113004: AAA user authentication Successful: server = 10.0.0.2, User = jdoe
 <166>Sep 04 2026 10:15:39 asa-edge-01 : %ASA-6-106100: access-list inside_out permitted tcp inside/10.0.0.5(51236) -> outside/142.250.72.14(443) hit-cnt 1 (first hit)
+Oct 30 11:04:25 18.144.133.67 :2025-10-30T11:04:10Z: %ASA-5-111010: User 'admin', running 'N/A' from IP 89.245.16.21, executed 'aaa local authentication attempts max-fail 5'
+Oct 30 11:04:25 18.144.133.67 :2025-10-30T11:04:10Z: %ASA-5-111008: User 'admin' executed the 'aaa local authentication attempts max-fail 5' command.
+Oct 30 10:43:39 18.144.133.67 :2025-10-30T10:43:23Z: %ASA-5-502101: New user added to local dbase: Uname: test-user1 Priv: 2 Encpass: *****
+Oct 30 10:55:19 18.144.133.67 :2025-10-30T10:55:03Z: %ASA-5-502102: User deleted from local dbase: Uname: test-user1 Priv: 2 Encpass: *****
+Oct 30 10:56:07 18.144.133.67 :2025-10-30T10:55:52Z: %ASA-5-502103: User priv level changed: Uname: test-user12 From: 2 To: 14
+Oct 30 11:06:44 18.144.133.67 :2025-10-30T11:06:29Z: %ASA-6-113006: User 'test-user12' locked out on exceeding '5' successive failed authentication attempts
+Nov 18 00:39:39 18.144.133.67 2025-11-15T00:08:44Z ciscoasa : %ASA-7-111009: User 'enable_15' executed cmd: show processes
+Sep 23 18:13:32 18.144.133.67 :2025-09-23T18:13:31Z: %ASA-7-111009: User 'enable_15' executed cmd: show checkheaps
+Sep 23 18:08:22 18.144.133.67 :2025-09-23T18:08:22Z: %ASA-7-710005: TCP request discarded from 198.27.166.158/55608 to management:172.31.12.229/443
+Sep 23 18:08:22 18.144.133.67 :2025-09-23T18:08:22Z: %ASA-6-302013: Built inbound TCP connection 2019 for management:198.27.166.158/55608 (198.27.166.158/55608) to identity:172.31.12.229/443 (172.31.12.229/443) -1 -1
+Sep 23 18:08:22 18.144.133.67 :2025-09-23T18:08:22Z: %ASA-6-302014: Teardown TCP connection 2019 for management:198.27.166.158/55608 to identity:172.31.12.229/443 duration 0:00:00 bytes 1285 TCP Reset-O from identity -1 -1
+Sep 23 19:27:50 18.144.133.67 :2025-09-23T19:27:49Z: %ASA-7-609002: Teardown local-host management:54.245.234.201 duration 0:02:01
