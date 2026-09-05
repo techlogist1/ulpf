@@ -1344,3 +1344,58 @@ nobody ran is a build, not a verification; say which is which. **Ruled out.** Po
 writes for the store on every platform (changes unix behaviour); making `libc` unix-only
 (it compiles unused on Windows); one workflow per OS or a hand-written bundling step
 (tauri-action already names the bundles per target and handles the release).
+
+## D75, D76: reserved for the two branches of the demo morning
+D75 is the xml strategy and the Windows Event definition (branch `lane-5-xml`, written on that
+branch); D76 is the entity index cost (branch `lane-6-index`, written on that branch). Neither
+merges before the demo; their entries arrive with their branches.
+
+## D77. Trust flags are the per-event form of the counters, never a score
+**Decision.** A tail row shows, as a compact list of outlined marks, the stages that did not
+reach their outcome for that event, read from fields the emitted line already carries:
+`ulpf.parse_status` (`no_parser`, or a failure reason), `ulpf.sub_status` (`uncovered`,
+`no_match`), `ulpf.time_policies` containing `receipt_fallback`, `ulpf.time_error`,
+`class_uid == 0`, the key count of `unmapped`, `ulpf.utf8_lossy`. Nothing is computed on the
+hot path and nothing is added to the line: the normalizer has written every one of these since
+v0.1, so summing a flag over an output file equals the counter block's number for it
+(`no_parser`, `parse_failed`, `sub_uncovered`, `sub_no_match`, `time_from_receipt`,
+`time_error`, `class_unknown`, `unmapped_fields`, `utf8_lossy`), which is the test of the
+table in `docs/api.md`. One key (`f`) filters the tail to flagged rows. **Anchor.**
+`docs/api.md` "Trust flags", `ui/src/state.svelte.js` (`row`), `ui/src/Flags.svelte`,
+`crates/ulpf-normalize/src/mapping.rs` (the `ulpf` object). **Principle.** Errors as values
+(CLAUDE.md): each outcome is a counted fact with a reason, and a fact is shown as itself.
+**Ruled out.** A confidence score (a number ULPF cannot justify: the engine knows which stage
+failed, not a probability that the output is right; a score would invite the reader to trust
+0.8 more than 0.7 with no basis); a server-side `flags` array on the line (a hot-path
+allocation for a derivation the client does in constant time per row); colouring rows by
+flag count (a row is tinted because it is in a state, not because it is interesting, D69).
+
+## D78. The emitted line and the export are read from the output file, by raw id, through a snapshot
+**Decision.** `GET /api/events/{id}` finds `emitted` in the tail ring first and then in the
+JSON Lines output the sink wrote, by a binary search over line starts on the raw id in each
+line's `ulpf` object (`crates/ulpf/src/outfile.rs`); `emitted_from` says which. `GET
+/api/export` streams the same file from the first line at or after `from` to the last at or
+before `to`, filtered by terms with the rule the Live screen's filter uses, as JSON Lines
+verbatim or as the eleven Parquet columns in CSV (D64; the five entity columns come from the
+schema's entity paths, so the CSV means the same thing under ocsf and ecs). Both open the
+file read-only and bound every read to the bytes on disk when they opened it, cut to the
+last line terminator, so a line the writer is mid-way through is never returned; the store
+is never opened (D42) and the tail is never the source of an export (its ring holds the
+newest thousand lines). The output is in raw id order by construction (D60), which is what
+turns a lookup into a binary search. The line's raw id is read from `"ulpf":{...,"raw_id":N}`
+with two substring searches rather than a JSON parse, because a search reads about twenty
+lines and one of them may be 4 MB. `?bytes=0` on the traceback leaves `text` and `hex` null
+and `GET /api/events/{id}/bytes` serves the record's exact bytes as an octet stream: a client
+that renders the raw record from bytes (the byte ruler already does) fetches the record's own
+size instead of a JSON body six times larger. **Anchor.** `crates/ulpf/src/outfile.rs`,
+`Live::traceback_with`, `Live::raw_bytes`, `Live::emitted_from_output`, the `export` and
+`traceback_bytes` handlers in `crates/ulpf/src/server.rs`, `docs/api.md` v4. **Principle.**
+Raw before understanding and one writer: a read never touches the writer's handle or the
+store; the file the sink wrote is the record of what was emitted, and reading it is cheaper
+and more honest than re-parsing. **Ruled out.** Re-parsing the stored record through the
+current parsers to reconstruct `emitted` (that is `now`, a different answer whenever a parser
+changed); a line-offset index beside the output (a second derived file to keep in step, for a
+lookup that is already logarithmic); serving the export from the tail ring (bounded to a
+thousand lines) or from a re-run of the pipeline (re-parsing, and a second pass over the
+store); a per-event `flags` field for the export filter (the filter is a substring rule over
+the line text, the same on both sides).
