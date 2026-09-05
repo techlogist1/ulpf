@@ -21,7 +21,7 @@ the whole pass takes about two and a half minutes. Ports 7878 and 5514 must be f
 
 ```
 cargo build --release                                      # ~1 min; binary target/release/ulpf
-./target/release/ulpf check --pending pending              # 12 parsers, 2 mappings (ocsf, ecs), 0 problems
+./target/release/ulpf check --pending pending              # 15 parsers, 2 mappings (ocsf, ecs), 0 problems
 
 # 0. reset between rehearsals (the server uses demo/parsers and demo/pending, so nothing lands in the repo)
 rm -rf demo
@@ -29,13 +29,13 @@ rm -rf demo
 # 1. server + UI (terminal 1): watches demo/watch, listens for syslog on UDP and TCP 5514
 mkdir -p demo/watch demo/parsers demo/pending && cp parsers/*.toml demo/parsers/
 ./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending demo/pending --parsers demo/parsers --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514 --infer-threshold 64
-#    -> ulpf: serving http://127.0.0.1:7878 ; watching demo/watch ; syslog udp 127.0.0.1:5514, syslog tcp 127.0.0.1:5514 ; 12 parsers loaded ; ctrl-c to stop
+#    -> ulpf: serving http://127.0.0.1:7878 ; watching demo/watch ; syslog udp 127.0.0.1:5514, syslog tcp 127.0.0.1:5514 ; 15 parsers loaded ; ctrl-c to stop
 #    open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)
 
 # 2. known formats and a live device: counters, sources and the tail move within 500 ms (one file a second, so the feed visibly moves)
 for f in samples/*.log; do cp "$f" demo/watch/; sleep 1; done
 python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);[s.sendto(l,('127.0.0.1',5514)) for l in open('heldout/edgerouter.log','rb').read().splitlines()]"
-#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed; syslog row: udp datagrams 250
+#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 15 sample sources parsed; syslog row: udp datagrams 250
 
 # 3. an unknown format from a file and from the socket: clustered at 64 lines, "Review (2)" appears
 cp heldout/mikrotik.log demo/watch/
