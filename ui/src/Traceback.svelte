@@ -26,13 +26,16 @@
   let legendMore = $state(false)
   $effect(() => { width; colourOf; legendAll; if (legendEl) legendMore = legendAll || legendEl.scrollHeight > legendEl.clientHeight + 1 })
 
-  // The JSON without the bytes, then the bytes as bytes: a 4 MB record costs one 4 MB body
-  // instead of a 24 MB JSON one. A server that still sends `hex` (before the bytes route
-  // existed) answers `?bytes=0` with it, and that is decoded here as before.
+  // The JSON without the bytes and with long values cut, then the bytes as bytes: a 4 MB
+  // record costs one 4 MB body and kilobytes of JSON instead of a 28 MB one (the same
+  // megabytes are the message value four times over). The ruler below is always the whole
+  // record. A server that still sends `hex` (before the bytes route existed) answers
+  // `?bytes=0` with it, and that is decoded here as before.
+  const VALUE_MAX = 4096
   async function load(rid) {
     if (rid === '' || rid == null) return
     busy = true; err = null; byteErr = null; data = null; bytes = EMPTY; over = null; pin = null; sel = -1
-    const r = await api('GET', `/api/events/${encodeURIComponent(rid)}?bytes=0`)
+    const r = await api('GET', `/api/events/${encodeURIComponent(rid)}?bytes=0&values=${VALUE_MAX}`)
     if (!r.ok) { busy = false; err = r.data; return }
     data = r.data
     bytes = r.data.hex != null ? fromHex(r.data.hex) : await fetchBytes(rid)
@@ -242,6 +245,9 @@
       <div><span>status</span><b class:is-warn={data.now?.parse_status !== 'parsed'}>{data.now?.parse_status}</b></div>
       <div><span>emitted line</span><b class:is-dim={data.emitted_from === undefined} class:is-warn={data.emitted_from === null}>{emittedFrom}</b></div>
     </div>
+    {#if data.values_cut > 0}
+      <p class="notice sm">{fmt.n(data.values_cut)} value{data.values_cut === 1 ? '' : 's'} longer than {fmt.n(VALUE_MAX)} bytes {data.values_cut === 1 ? 'is' : 'are'} shown cut, in the lists and in the two JSON panes. The raw record below is the whole record, byte for byte.</p>
+    {/if}
     {#if byteErr}
       <div class="notice bad"><b>The record's bytes did not load.</b><span class="muted">{byteErr}</span><span>The facts above come from the JSON route; the ruler below is empty until the bytes arrive. Reload the page to ask again.</span></div>
     {/if}
@@ -324,7 +330,7 @@
               <div class="vr" class:hot={fid && hot?.id === fid} class:pin={fid && pin?.id === fid} style="--c:{tint(f.key)}"
                    onmouseenter={() => lightRow(f)} onmouseleave={() => (over = null)} onclick={() => pinRow(f)} role="button" tabindex="-1">
                 <span class="k"><i class="sw"></i>{f.key}</span>
-                <span class="v" title={f.value}>{f.value}</span>
+                <span class="v" title={f.value}>{f.value}{#if f.value_len} <span class="tag warn" title="cut at {fmt.n(VALUE_MAX)} of {fmt.n(f.value_len)} bytes; the bytes above are whole">cut</span>{/if}</span>
                 <span class="num from">{#if f.span}{f.span[0]}–{f.span[1]}{:else}derived{/if}</span>
               </div>
             {/snippet}
@@ -345,7 +351,7 @@
               <div class="vr" class:hot={pid && hot?.id === pid} class:pin={pid && pin?.id === pid} class:sel={sel === i} style="--c:{tint(p.source_key)}"
                    onmouseenter={() => lightRow(p)} onmouseleave={() => (over = null)} onclick={() => { sel = i; pinRow(p) }} role="button" tabindex="-1">
                 <span class="k"><i class="sw"></i>{p.path}</span>
-                <span class="v" title={p.value}>{p.value}{#if p.canonical} <span class="tag" title="the mapping rewrote this value">canonical</span>{/if}</span>
+                <span class="v" title={p.value}>{p.value}{#if p.canonical} <span class="tag" title="the mapping rewrote this value">canonical</span>{/if}{#if p.value_len} <span class="tag warn" title="cut at {fmt.n(VALUE_MAX)} of {fmt.n(p.value_len)} bytes; the bytes above are whole">cut</span>{/if}</span>
                 <span class="from">{p.source_key}{#if !p.span} · derived{/if}</span>
               </div>
             {/snippet}
