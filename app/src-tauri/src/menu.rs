@@ -69,7 +69,7 @@ pub(crate) fn install(app: &AppHandle) -> tauri::Result<()> {
     #[cfg(target_os = "macos")]
     let tray = tray.icon(glyph()).icon_as_template(true);
     #[cfg(not(target_os = "macos"))]
-    let tray = tray.icon(app.default_window_icon().cloned().unwrap_or_else(glyph));
+    let tray = tray.icon(app.default_window_icon().map(|i| Image::new_owned(i.rgba().to_vec(), i.width(), i.height())).unwrap_or_else(glyph));
     tray.build(app)?;
     Ok(())
 }
