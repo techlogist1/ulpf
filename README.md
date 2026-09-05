@@ -32,7 +32,7 @@ docker run --rm -v "$PWD/samples:/data/samples:ro" -v "$PWD/out:/data/out" ulpf:
 
 The runtime image is `scratch`: the executable plus `parsers/` and `mappings/`, nothing else.
 
-**From source.** Rust 1.95, no other build dependency:
+**From source.** Rust 1.95 or newer (edition 2024), no other build dependency:
 
 ```
 cargo build --release        # about one minute; binary at target/release/ulpf
@@ -58,6 +58,9 @@ drift: tripped 0  lines routed 0  update proposals 0  cleared 0
 syslog: udp datagrams 0 (0 bytes)  tcp connections 0 events 0 (0 bytes) partial 0 refused 0  errors 0
 pending: 0 proposals awaiting review (final inference pass 0.002 s)
 ```
+
+(The `events/s` on that line is 304 events in five milliseconds — startup noise, not a
+throughput measurement. The measured figure is under "Honest numbers" below.)
 
 That block is the contract: when the output looks plausible but wrong, read it first.
 `no_parser` means the format was not recognised, `sub_uncovered` means a message id has no
@@ -202,9 +205,10 @@ Three other figures exist and each measures something different:
   2026-09-05 23:05-23:25 IST, `-j 7`.
 - **68,330 events/s** is one worker thread (`-j 1`) on that same file with
   `--output /dev/null`: the per-thread engine rate, not a machine figure.
-- **about 30,000 events/s** is what the entity index costs when it is on. `run` defaults
-  it off and `serve` defaults it on, because the pivot is a live-UI feature and bulk
-  ingest should not pay for it (D66); `ulpf pivot --rebuild` builds it afterwards.
+- **about 30,000 events/s** is the rate with the entity index *on* (`--pivot on`,
+  measured 27,995-30,963 on a 497,607-event slice) — an order of magnitude, which is why
+  `run` defaults it off and `serve`, whose UI pivots live, defaults it on (D66).
+  `ulpf pivot --rebuild` builds the index afterwards from the output.
 
 Generate the file the numbers are measured on with
 `cargo run --release -p ulpf --example gen_bench -- 5000000 bench` (see `bench/README.md`).
