@@ -110,6 +110,16 @@
   })
 
   const provRows = $derived(prov ?? [])
+  // Three different reasons nothing is lit, and they mean different things at 3am.
+  const spanNote = $derived(
+    owned.length
+      ? 'each lit range is one parsed field: hover either side to light it, click to keep it lit'
+      : !fields && !prov
+        ? 'this server reports no field spans'
+        : fields?.length
+          ? 'every value in this record was materialised (a JSON value, an unescaped string, a joined timestamp), so no range is a slice of these bytes'
+          : 'no parser claimed this record, so nothing points into its bytes',
+  )
   $effect(() => keys((ev) => {
     if (ev.key === '/') { box?.focus(); box?.select(); return true }
     if (ev.key === 'Escape' && pin) { pin = null; return true }
@@ -213,7 +223,7 @@
     <div>
       <div class="head">
         <h2>Raw record</h2>
-        <span class="note">{owned.length ? 'each lit range is one parsed field: hover either side to light it, click to keep it lit' : 'this server reports no field spans'}</span>
+        <span class="note">{spanNote}</span>
         {#if overlapped > 0}<span class="tag warn" title="two reported ranges cover the same bytes; the narrower one is shown">{overlapped} overlapping range{overlapped === 1 ? '' : 's'} not lit</span>{/if}
         {#if pin}<span class="tag accent">{pin.key} bytes {pin.id.replace(':', '–')} held lit, Esc releases</span>{/if}
         <span class="push"><button class="btn" onclick={() => (showHex = !showHex)}>{showHex ? 'Hide hex' : 'Show hex'}</button></span>
@@ -234,6 +244,8 @@
           >{#each c.pieces as p}{#if p.ctl}<i class="ctl">{p.t}</i>{:else}{p.t}{/if}{/each}</span>{:else}{#each c.pieces as p}{#if p.ctl}<i class="ctl">{p.t}</i>{:else}{p.t}{/if}{/each}{/if}{/each}</div>
       {#if !fields && !prov}
         <p class="notice sm">This server answers the v1 contract: it returns the bytes and the parsed result, but no per-field byte spans, so nothing is lit above.</p>
+      {:else if !owned.length && fields?.length}
+        <p class="notice sm">Every field below is marked <b>derived</b>: this parser materialises its values rather than borrowing them from the record, so the mapping from field to bytes is the key itself, not a range.</p>
       {/if}
       {#if showHex}<pre class="raw" style="line-height:1.5">{dump(bytes)}</pre>{/if}
     </div>

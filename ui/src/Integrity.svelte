@@ -13,6 +13,8 @@
   }
   load()
   $effect(() => { live.integrity; load() })
+  // the started notice is about a run in flight; the result below replaces it
+  $effect(() => { if (data && !data.running && data.last_verify && note?.kind === 'ok') note = null })
 
   async function verify() {
     busy = true; note = null

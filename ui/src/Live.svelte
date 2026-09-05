@@ -9,7 +9,9 @@
   const alerts = $derived([
     ...(live.drift ?? []).filter((d) => d.state === 'tripped' || d.state === 'proposed').map((d) => ({
       tone: d.state === 'tripped' ? 'warn' : 'accent',
-      text: `${d.source} drifting from ${d.parser}: ${fmt.pct(d.window.rate)} of the last ${fmt.n(d.window.events)} miss, baseline ${fmt.pct(d.baseline_rate)}`,
+      text: d.window?.events
+        ? `${d.source} drifting from ${d.parser}: ${fmt.n(d.window.misses)} of the last ${fmt.n(d.window.events)} events miss, baseline ${fmt.pct(d.baseline_rate)}`
+        : `${d.source} drifting from ${d.parser}: ${fmt.pct(d.window.rate)} of its window missed, baseline ${fmt.pct(d.baseline_rate)}`,
       href: d.pending_id ? `#/review/${encodeURIComponent(d.pending_id)}` : '#/drift',
       link: d.pending_id ? 'review the update' : 'drift',
     })),
@@ -150,6 +152,18 @@
         </span>
       </div>
     {/if}
+    {#if m?.pivot}
+      <div class="crow">
+        <b>pivot</b>
+        <span class="kvs">
+          <span class="kv"><span>postings</span><span class="num">{fmt.n(m.pivot.postings)}</span></span>
+          <span class="kv"><span>batches</span><span class="num">{fmt.n(m.pivot.batches)}</span></span>
+          <span class="kv" class:on={m.pivot.blocked > 0}><span>blocked</span><span class="num">{fmt.n(m.pivot.blocked)}</span></span>
+          <span class="kv" class:bad={m.pivot.errors > 0}><span>errors</span><span class="num">{fmt.n(m.pivot.errors)}</span></span>
+          <span class="kv"><a class="sm" href="#/pivot">open pivot</a></span>
+        </span>
+      </div>
+    {/if}
     {#if m?.replay}
       <div class="crow">
         <b>replay</b>
@@ -214,13 +228,12 @@
     {:else}
       <div class="wrap">
         <table class="tbl">
-          <thead><tr><th>name</th><th>vendor</th><th>product</th><th>strategy</th><th class="num">subs</th><th class="num">prio</th><th>origin</th><th class="num">detected</th><th class="fill"></th></tr></thead>
+          <thead><tr><th>name</th><th>device</th><th>strategy</th><th class="num">subs</th><th class="num">prio</th><th>origin</th><th class="num">detected</th><th class="fill"></th></tr></thead>
           <tbody>
             {#each m.parsers as p (p.name)}
               <tr>
                 <td class="mono">{p.name}</td>
-                <td>{p.vendor}</td>
-                <td>{p.product}</td>
+                <td class="tight" title="{p.vendor} {p.product}">{p.vendor} {p.product}</td>
                 <td class="mono is-dim">{p.strategy}</td>
                 <td class="num">{fmt.n(p.subs)}</td>
                 <td class="num">{fmt.n(p.priority)}</td>
@@ -251,7 +264,7 @@
   {:else}
     <div class="scroll">
       <table class="tbl fixed">
-        <colgroup><col style="width:5.5em" /><col style="width:15em" /><col style="width:12em" /><col style="width:11em" /><col style="width:7em" /><col style="width:14em" /><col /></colgroup>
+        <colgroup><col style="width:5.5em" /><col style="width:12em" /><col style="width:12em" /><col style="width:11em" /><col style="width:7em" /><col style="width:14em" /><col /></colgroup>
         <thead><tr><th class="num">raw</th><th>time</th><th>parser</th><th>class</th><th>action</th><th>device</th><th>summary</th></tr></thead>
         <tbody>
           {#each rows as r, i (r.raw_id)}
