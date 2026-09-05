@@ -772,3 +772,97 @@ outcomes (512 bytes per source for a number the tumbling window gives within one
 of latency); comparing against a fixed absolute miss rate (a device that always had 15%
 unmodelled messages would alert forever); `sub_uncovered` as a miss (a new message id
 under an existing family is the existing "write the next sub" workflow, not drift).
+
+## D55. The entity index is derived data beside the output, fed per batch by copied values, written by its own thread
+**Decision.** `mappings/<schema>.toml` declares `[entities]` (five fixed kinds: `src_ip`,
+`dst_ip`, `user`, `dst_port`, `device`, each a schema path), so the index and its routes
+know entity kinds and never vendor fields. `normalize` reports, per event and without
+allocating, which parsed field fed each kind (`NormalizeStats.entities`, an index into
+`parsed.fields`) and the emitted `time`; the worker copies those values, the parser name
+and the device (schema field, else the source name) into one per-batch arena, and the
+output thread, which alone knows the file offset of every line, turns them into postings
+and hands the batch to the index writer's bounded channel (block on full, never drop).
+The index is SQLite beside the output (`out.jsonl.pivot`): one row per (kind, value,
+commit) holding packed posting entries, a dictionary for devices and parsers, an
+entities summary table; WAL, `synchronous = OFF` because it is rebuildable from the
+output (`ulpf pivot --rebuild`). Queries read postings by range, so an entity with a
+million events answers a page in bounded time; `related` is computed over the newest
+10,000. **Anchor.** `Entities`, `EntityKind` in `crates/ulpf-normalize/src/def.rs`;
+`NormalizeStats::entities`, `Mapping::provenance` in `crates/ulpf-normalize/src/mapping.rs`;
+`crates/ulpf/src/pivot.rs`; `EntityBatch`, `process_batch`, `output_thread` in
+`crates/ulpf/src/engine.rs`; `mappings/ocsf.toml`, `mappings/ecs.toml` `[entities]`.
+**Principle.** The parser/mapping wall extended to the index: entity kinds are schema
+knowledge, declared where schema knowledge lives, so ECS gets a pivot for free. Zero-copy
+hot path kept where it was measured (parse and detect allocate nothing; the alloc test is
+unchanged); the one copy per entity value is amortised into one arena per batch, and
+everything heavier runs on the index thread. **Ruled out.** A row per event (D5's
+arithmetic); parsing the emitted JSON back on the output thread to find entities (2-5 µs
+per event on the ordered path); the index inside the raw store's catalogue (a store is
+raw bytes; entities are a property of one output schema and change with a replay).
+
+## D56. Integrity is exposed through the writer's snapshot, never through a second store handle
+**Decision.** `GET /api/integrity`, `POST /api/integrity/verify` and the attestation route
+read the store id, genesis and head under the store lock, and verify on a background
+thread over `RawStore::reader()` (flush, then a `RawReader` bounded to the flushed record
+count) so ingest continues while a million records are checked; the result and the
+running flag live in `Live` and reach clients as the `integrity` SSE event. The traceback
+carries `chain`, `prev_chain` (genesis for id 0) and `chain_match`, recomputed from the
+stored digest on every request, beside the digest pair it already had. **Anchor.**
+`Live::start_verify`, `integrity_summary`, `attestation`, `Live::traceback` in
+`crates/ulpf/src/engine.rs`; the three routes in `crates/ulpf/src/server.rs`. **Principle.**
+D41/D42 kept: the server owns nothing, and no code path opens the store twice.
+**Ruled out.** Verifying under the store lock (blocks ingest for the length of the scan);
+a cached chain in the server (two truths).
+
+## D57. Provenance spans are pointer arithmetic on the borrowed values, computed only on the traceback
+**Decision.** A parsed field's span is `[start, end)` of its `Cow::Borrowed` slice inside
+the record's bytes, found by comparing pointers; a materialised value (JSON, unescaped,
+joined timestamp, constant) has no span and the API says so with `null`. `Mapping::provenance`
+runs the same alias-ranking routine as `normalize` over the same `Parsed`, so the two
+cannot disagree, and returns the field index; the traceback joins it to the span.
+**Anchor.** `span_in`, `TraceField`, `TraceProvenance`, `TraceTime` in
+`crates/ulpf/src/engine.rs`; `Mapping::provenance` in `crates/ulpf-normalize/src/mapping.rs`.
+**Principle.** The offsets already existed because the hot path is zero-copy (D15); the
+feature surfaces them without adding a byte to the per-event path. **Ruled out.**
+Recording offsets during parsing (a field per slot per event on the hot path, for a
+value only the traceback reads).
+
+## D58. ECS is one mapping file; the default schema stays `ocsf` when several mappings load
+**Decision.** `mappings/ecs.toml` (ECS 9.5.0) maps the same source vocabulary under ECS
+paths with its own `[entities]`; `--schema ecs` selects it; no parser changed (the branch
+diff touches `mappings/` and the normalize tests only). With two mapping files the
+pipeline's "first loaded" default became `ecs` by file name and broke every test that
+relied on the default, which the first worker patched around in five test files; the
+fix is one line in `Pipeline::load`: prefer the mapping named `ocsf`, else the first.
+**Anchor.** `mappings/ecs.toml`; `Pipeline::load` in `crates/ulpf/src/pipeline.rs`;
+`ecs_mapping_loads_and_has_no_vendor_vocabulary` (and siblings) in
+`crates/ulpf-normalize/tests/normalize.rs`. **Principle.** The wall proven by a diff: a
+second output schema is additive. Pull complexity downward: the default is the engine's,
+not five test files' knowledge. **Ruled out.** Passing `--schema ocsf` everywhere (every
+teammate command and every test carries a fact the loader should own); erroring when
+several mappings load and no schema is given (breaks `ulpf run samples` on a fresh clone).
+
+## D59. A killed run restarts to the same output and store as an uninterrupted one
+**Decision.** `run` and `serve` both start by reconciling output and store. The store is
+flushed per batch before ids escape (D33), the output's `BufWriter` is not, so after a
+kill the output ends in a torn line and lacks the last stored records. Startup truncates
+the torn line, reads the last emitted raw id (none for an empty or missing output), and
+sends every later stored record through the pipeline into the output first, with the
+receipt each record was stored with, through the same workers and the same ordered output
+thread (a `Backing::Store` snapshot, D52). Ingest then resumes per source at the byte
+offset the store already holds: the catalogue's completed ingests plus the torn tail,
+summed from the records themselves. The counter block prints `recovered: N`. Found by the
+evaluation harness (kill_recovery: a restart appended `partial + baseline` events, so the
+score was "DOUBLE-COUNTED"); `crates/ulpf/tests/recovery.rs` kills the real binary
+mid-run and asserts the restart equals the clean run id for id. `--receipt` pins the
+receipt time so two runs over the same input are byte-identical (the fixture harness's
+own knob, now on the CLI, so the black-box scorecard's 8 time-fallback mismatches are
+gone). **Anchor.** `recover_output`, the `resume` map in `run`, `Live::receipt_nanos` in
+`crates/ulpf/src/engine.rs`; `RawStore::ingested_bytes` in `crates/ulpf-store/src/store.rs`;
+`--receipt` in `crates/ulpf/src/cli.rs`; `crates/ulpf/tests/recovery.rs`. **Principle.**
+Define the error out of existence: there is no "resume" verb and no flag; a restart is a
+start. The store stays the single truth and the output is derived from it, never the
+other way round. **Ruled out.** A per-batch ingest row in the catalogue (a SQLite write
+per 1024 events for a fact the records already carry); refusing to start on a torn output
+(operator intervention for a routine crash); an output cursor file (a third thing to keep
+consistent after a crash).

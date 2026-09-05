@@ -48,6 +48,10 @@ struct EngineArgs {
     /// Unknown lines a source needs before its first proposal; 0 disables inference.
     #[arg(long, default_value_t = 64)]
     infer_threshold: usize,
+    /// Fix the receipt time of every event (RFC 3339 or epoch seconds/millis) for a
+    /// reproducible run; the fixture harness uses 2026-09-04T12:00:00Z.
+    #[arg(long)]
+    receipt: Option<String>,
 }
 
 #[derive(Subcommand)]
@@ -205,6 +209,13 @@ impl EngineArgs {
             pending: (self.infer_threshold > 0).then(|| self.pending.clone()),
             infer_threshold: self.infer_threshold,
             tail_capacity,
+            receipt_nanos: match &self.receipt {
+                Some(text) => {
+                    let ctx = ulpf_time::Context { receipt_epoch_nanos: engine::now_nanos(), default_offset_secs: 0 };
+                    Some(ulpf_time::parse(text.as_bytes(), &ulpf_time::Format::Auto, &ctx).map_err(|e| anyhow::anyhow!("--receipt `{text}`: {e:?}"))?.epoch_nanos)
+                }
+                None => None,
+            },
         })
     }
 }
@@ -218,6 +229,9 @@ fn print_report(report: &engine::Report) -> Result<()> {
         writeln!(err, "input problem: {p}")?;
     }
     writeln!(err, "definitions: {} parsers loaded, {} file problems", report.parsers_loaded, report.load_problems.len())?;
+    if report.recovered > 0 {
+        writeln!(err, "recovered: {} stored records an interrupted run had not written to the output", report.recovered)?;
+    }
     writeln!(err, "{}", report.snapshot)?;
     if report.inference_secs > 0.0 || !report.pending.is_empty() {
         writeln!(err, "pending: {} proposals awaiting review (final inference pass {:.3} s)", report.pending.len(), report.inference_secs)?;

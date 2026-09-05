@@ -58,6 +58,9 @@ pub struct Config {
     pub infer_threshold: usize,
     /// Emitted lines kept for the server's tail.
     pub tail_capacity: usize,
+    /// A fixed receipt time for every event (reproducible runs, fixture comparison);
+    /// `None` takes the wall clock per batch.
+    pub receipt_nanos: Option<i64>,
 }
 
 #[derive(Debug)]
@@ -68,6 +71,8 @@ pub struct Report {
     pub parsers_loaded: usize,
     pub pending: Vec<PendingSummary>,
     pub inference_secs: f64,
+    /// Records a killed run had stored but not emitted, written to the output at startup.
+    pub recovered: u64,
 }
 
 #[derive(Debug, Default, Clone, Serialize)]
@@ -336,6 +341,12 @@ pub struct Live {
     /// The output thread's index writer counters, once it has opened the index.
     pub pivot_counters: Mutex<Option<Arc<PivotCounters>>>,
     pivot_index: Mutex<Option<PivotIndex>>,
+    pub receipt_nanos: Option<i64>,
+    pub recovered: AtomicU64,
+    /// The store id the live output's meta named before this process opened it: the
+    /// output continues this store (recover), is fresh (nothing to recover) or belongs
+    /// to another store (say so, recover nothing).
+    prior_output_store: Option<String>,
     parsers_signature: Mutex<Option<(usize, Option<SystemTime>, u64)>>,
     stop: AtomicBool,
 }
@@ -592,8 +603,12 @@ impl Live {
             _ => None,
         };
         let threshold = if pending.is_some() { cfg.infer_threshold } else { 0 };
+        let store_id = ulpf_store::hex(&store.store_id());
+        let mut prior_output_store = None;
         if cfg.output.as_os_str() != "-" {
-            Versions::new(&cfg.output).write_live_meta(pipeline.mapping.schema_name(), 0, pipeline.files.clone()).with_context(|| format!("writing the version meta beside {}", cfg.output.display()))?;
+            let versions = Versions::new(&cfg.output);
+            prior_output_store = versions.read_meta(1).map(|m| m.store_id);
+            versions.write_live_meta(&store_id, pipeline.mapping.schema_name(), 0, pipeline.files.clone()).with_context(|| format!("writing the version meta beside {}", cfg.output.display()))?;
         }
         Ok(Arc::new(Live {
             metrics: Metrics::default(),
@@ -628,6 +643,9 @@ impl Live {
             integrity_generation: AtomicU64::new(0),
             pivot_counters: Mutex::new(None),
             pivot_index: Mutex::new(None),
+            receipt_nanos: cfg.receipt_nanos,
+            recovered: AtomicU64::new(0),
+            prior_output_store,
             parsers_signature: Mutex::new(parsers_signature(&cfg.parsers)),
             stop: AtomicBool::new(false),
         }))
@@ -812,8 +830,9 @@ impl Live {
                 *self.parsers_signature.lock().unwrap_or_else(|e| e.into_inner()) = parsers_signature(&self.parsers_dir);
                 self.metrics.reloads.fetch_add(1, Relaxed);
                 let generation = self.generation.fetch_add(1, Relaxed) + 1;
+                let store_id = ulpf_store::hex(&self.store.lock().unwrap_or_else(|e| e.into_inner()).store_id());
                 if self.output.as_os_str() != "-"
-                    && let Err(e) = Versions::new(&self.output).write_live_meta(&schema, generation, files)
+                    && let Err(e) = Versions::new(&self.output).write_live_meta(&store_id, &schema, generation, files)
                 {
                     eprintln!("ulpf: version meta: {e:#}");
                 }
@@ -1130,7 +1149,103 @@ fn report(live: &Arc<Live>, elapsed: Duration, inference: Duration, input_proble
         parsers_loaded: live.pipeline().registry.len(),
         pending: live.pending.as_ref().map(Pending::list).unwrap_or_default(),
         inference_secs: inference.as_secs_f64(),
+        recovered: live.recovered.load(Relaxed),
     })
+}
+
+/// After a kill, the output file may end in a torn line and lack records the store holds
+/// (the store is flushed per batch before ids escape, D33; the output buffer is not).
+/// Truncate the torn line, find the last emitted raw id, and send every later stored
+/// record through the pipeline into the output before any new input, so output and store
+/// agree again with no duplicate and no gap. Returns how many records were recovered.
+fn recover_output(live: &Arc<Live>, tx: &SyncSender<Batch>, in_flight: &AtomicI64, seq: &mut u64, problems: &mut Vec<String>) -> Result<u64> {
+    use std::io::{Read, Seek, SeekFrom};
+    if live.output.as_os_str() == "-" {
+        return Ok(0);
+    }
+    let store_id = ulpf_store::hex(&live.store.lock().unwrap_or_else(|e| e.into_inner()).store_id());
+    match &live.prior_output_store {
+        // a fresh output beside an existing store starts at the store's next id (ids continue)
+        None => return Ok(0),
+        Some(prior) if prior.is_empty() => return Ok(0),
+        Some(prior) if *prior != store_id => {
+            problems.push(format!("{}: written from store {}.., this store is {}..; nothing recovered, new events append", live.output.display(), &prior[..prior.len().min(8)], &store_id[..8]));
+            return Ok(0);
+        }
+        Some(_) => {}
+    }
+    // the last emitted raw id: none when the output is missing or empty (every stored
+    // record is then unemitted), else the id on the last complete line
+    let last_id: Option<u64> = match File::options().read(true).write(true).open(&live.output) {
+        Err(_) => None,
+        Ok(mut f) => {
+            let len = f.metadata()?.len();
+            if len == 0 {
+                None
+            } else {
+                let tail_len = len.min(1 << 20);
+                f.seek(SeekFrom::Start(len - tail_len))?;
+                let mut tail = vec![0u8; tail_len as usize];
+                f.read_exact(&mut tail)?;
+                match tail.iter().rposition(|b| *b == b'\n') {
+                    None if tail_len == len => {
+                        // one torn line and nothing before it: the output starts over
+                        f.set_len(0)?;
+                        problems.push(format!("{}: a torn first line from an interrupted run was removed", live.output.display()));
+                        None
+                    }
+                    None => return Ok(0),
+                    Some(last_nl) => {
+                        if last_nl + 1 != tail.len() {
+                            f.set_len(len - tail_len + last_nl as u64 + 1)?;
+                            problems.push(format!("{}: a torn last line ({} bytes) from an interrupted run was removed", live.output.display(), tail.len() - last_nl - 1));
+                        }
+                        let line_start = tail[..last_nl].iter().rposition(|b| *b == b'\n').map(|p| p + 1).unwrap_or(0);
+                        match replay::raw_id_of(&tail[line_start..last_nl]) {
+                            Some(id) => Some(id),
+                            None => return Ok(0),
+                        }
+                    }
+                }
+            }
+        }
+    };
+    let first = last_id.map(|l| l + 1).unwrap_or(0);
+    let (reader, names, total) = {
+        let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+        let total = store.len();
+        if first >= total {
+            return Ok(0);
+        }
+        (store.reader()?, store.source_names()?, total)
+    };
+    let count = total - first;
+    let ctx = Arc::new(FileCtx { backing: Backing::Store(reader), name: "recovered".into(), names });
+    let Backing::Store(store) = &ctx.backing else { unreachable!() };
+    let seg = store.segment();
+    let mut id = first;
+    while id < total {
+        let n = ((total - id) as usize).min(live.batch_events);
+        let mut ranges = Vec::with_capacity(n);
+        let mut receipts = Vec::with_capacity(n);
+        let mut sources = Vec::with_capacity(n);
+        for i in 0..n {
+            let rec = store.get(RawId(id + i as u64)).ok_or_else(|| anyhow!("raw id {} is unreadable while recovering the output", id + i as u64))?;
+            let start = rec.bytes.as_ptr() as usize - seg.as_ptr() as usize;
+            ranges.push(start..start + rec.bytes.len());
+            receipts.push(rec.receipt_nanos);
+            sources.push(rec.source);
+        }
+        live.metrics.batches.fetch_add(1, Relaxed);
+        let batch = Batch { seq: *seq, file: Arc::clone(&ctx), receipt_nanos: 0, first_raw_id: id, ranges, receipts, sources };
+        *seq += 1;
+        in_flight.fetch_add(1, Relaxed);
+        tx.send(batch).map_err(|_| anyhow!("processing stopped before recovery finished; see the output error"))?;
+        id += n as u64;
+    }
+    live.recovered.store(count, Relaxed);
+    problems.push(format!("{}: {count} records the store held but the output lacked (ids {first}..{}) were written first", live.output.display(), total - 1));
+    Ok(count)
 }
 
 /// Batch mode: every input once, then the counter block.
@@ -1149,8 +1264,12 @@ pub fn run(cfg: &Config) -> Result<Report> {
     let timing = std::thread::scope(|scope| {
         let mut t = start(scope, &live);
         let ingest_result = (|| {
+            recover_output(&live, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
+            // a restart over the same inputs and store continues where the store ends
+            let resume = live.store.lock().unwrap_or_else(|e| e.into_inner()).ingested_bytes().unwrap_or_default();
             for (path, name) in &files {
-                ingest_file(&live, path, name, 0, true, true, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
+                let start = resume.get(name).copied().unwrap_or(0);
+                ingest_file(&live, path, name, start, true, true, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems)?;
             }
             Ok(())
         })();
@@ -1177,7 +1296,7 @@ pub fn serve(live: &Arc<Live>, poll: Duration) -> Result<Report> {
     let mut input_problems = Vec::new();
     let timing = std::thread::scope(|scope| {
         let mut t = start(scope, live);
-        let ingest_result = poll_loop(live, poll, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems);
+        let ingest_result = recover_output(live, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems).and_then(|_| poll_loop(live, poll, &t.batch_tx, &t.in_flight, &mut t.seq, &mut input_problems));
         finish(live, t, ingest_result)
     });
     live.store.lock().unwrap_or_else(|e| e.into_inner()).flush(true)?;
@@ -1296,7 +1415,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
     let mut count = 0u64;
     let mut first_id = None;
     let mut ranges: Vec<std::ops::Range<usize>> = Vec::with_capacity(live.batch_events);
-    let mut receipt = now_nanos();
+    let mut receipt = live.receipt_nanos.unwrap_or_else(now_nanos);
     let mut consumed = start;
     let bytes = ctx.bytes();
     let mut framer = Framer::new(&bytes[start..], eof);
@@ -1332,7 +1451,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
         count += ranges.len() as u64;
         let ranges = std::mem::replace(&mut ranges, Vec::with_capacity(live.batch_events));
         send_batch(tx, &live.metrics, in_flight, live.queue_cap, seq, &ctx, receipt, batch_first, ranges)?;
-        receipt = now_nanos();
+        receipt = live.receipt_nanos.unwrap_or_else(now_nanos);
         if done {
             break;
         }

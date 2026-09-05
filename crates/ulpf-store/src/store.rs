@@ -254,16 +254,35 @@ impl RawStore {
 
     /// Bytes ever ingested per source name, summed over the catalogue's ingest rows: the
     /// offset a restarted tailer resumes from.
-    pub fn ingested_bytes(&self) -> io::Result<HashMap<String, u64>> {
-        let mut stmt = self
-            .catalog
-            .prepare("SELECT s.name, SUM(i.byte_count) FROM ingests i JOIN sources s ON s.id = i.source_id GROUP BY s.name")
-            .map_err(sql_err)?;
-        let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?))).map_err(sql_err)?;
+    /// Bytes already stored per source name: the completed ingests in the catalogue plus
+    /// the records a killed run appended after its last ingest row (the torn tail, summed
+    /// from the records themselves through a snapshot), so a restart resumes exactly where
+    /// the store ends and never stores a byte twice.
+    pub fn ingested_bytes(&mut self) -> io::Result<HashMap<String, u64>> {
         let mut out = HashMap::new();
-        for row in rows {
-            let (name, bytes) = row.map_err(sql_err)?;
-            out.insert(name, bytes.max(0) as u64);
+        let mut accounted = 0u64;
+        {
+            let mut stmt = self
+                .catalog
+                .prepare("SELECT s.name, SUM(i.byte_count), MAX(i.first_raw_id + i.event_count) FROM ingests i JOIN sources s ON s.id = i.source_id GROUP BY s.name")
+                .map_err(sql_err)?;
+            let rows = stmt.query_map([], |r| Ok((r.get::<_, String>(0)?, r.get::<_, i64>(1)?, r.get::<_, Option<i64>>(2)?))).map_err(sql_err)?;
+            for row in rows {
+                let (name, bytes, end) = row.map_err(sql_err)?;
+                out.insert(name, bytes.max(0) as u64);
+                accounted = accounted.max(end.unwrap_or(0).max(0) as u64);
+            }
+        }
+        if accounted < self.next_id {
+            let names = self.source_names()?;
+            let reader = self.reader()?;
+            for id in accounted..reader.len() {
+                if let Some(rec) = reader.get(RawId(id))
+                    && let Some(name) = names.get(&rec.source)
+                {
+                    *out.entry(name.clone()).or_default() += rec.bytes.len() as u64;
+                }
+            }
         }
         Ok(out)
     }
