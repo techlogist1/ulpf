@@ -71,7 +71,7 @@ await shot('empty-trace', 1280, 800, '#/trace', 'empty state: traceback with no 
 await shot('error-trace', 1280, 800, `#/trace/${missing}`, `error state: a trace of raw id ${missing}, which the store never issued`)
 await shot('light-trace', 1280, 800, `#/trace/${traceId}`, 'the same traceback under the light theme (t)', async (p) => { await key(p, 't') })
 await shot('light-live', 1280, 800, '#/live', 'the live feed under the light theme (t)', async (p) => { await key(p, 't') })
-await shot('empty-pivot', 1280, 800, '#/pivot/user/nobody-has-this-name', 'empty state: a pivot on a value no event carries')
+await shot('empty-pivot-value', 1280, 800, '#/pivot/user/nobody-has-this-name', 'empty state: a pivot on a value no event carries')
 await shot('reject-confirm', 1280, 800, `#/review/${encodeURIComponent(reviewId)}`, 'review: x opens the reject confirmation, marked as the destructive one; Enter confirms, Esc cancels', async (p) => { await key(p, 'x') })
 
 // Keyboard-only approve: open review, walk to the proposal, open it, a, Enter.
