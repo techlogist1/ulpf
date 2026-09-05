@@ -1,1 +1,0 @@
-docker run --rm --network none -v "/Users/lokavyasingh/Documents/dev/ssh hackathon/samples:/data/input:ro" -v "/Users/lokavyasingh/Documents/dev/ssh hackathon/eval/results/ulpf-20260905T092307Z/raw/container-out:/data/out" ulpf:static run /data/input --store /tmp/s --output /data/out/out.jsonl

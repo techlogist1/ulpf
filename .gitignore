@@ -15,3 +15,4 @@
 /demo/
 ui/node_modules/
 /.claude/worktrees/
+eval/results/*/raw/

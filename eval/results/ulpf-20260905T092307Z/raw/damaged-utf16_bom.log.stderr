@@ -1,9 +1,0 @@
-definitions: 12 parsers loaded, 0 file problems
-ulpf: 1 files (0 failed), 0.01 MB, 19 events in 0.001 s -> 16621 events/s, 4.5 MB/s, 7 worker threads
-stages: framed 19  stored 19  detected 0  no_parser 19  parsed 0  parse_failed 0  normalized 19  emitted 19 (28398 bytes)
-parse_failed by reason: none
-signals: sub_matched 0  sub_no_match 0  sub_uncovered 0  time_from_receipt 19  time_error [none]  class_unknown 19  enum_other 0  unmapped_fields 0  utf8_lossy 2
-queue: 1 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
-inference: buffered 19 (buffer full 0)  runs 1  lines templated 15 unmatched 4  proposals written 1 replaced 0 skipped [none]  approved 0  rejected 0  reloads 0
-pending: 1 proposals awaiting review (final inference pass 0.044 s)
-  utf16_bom  source utf16_bom.log  19 lines  1 templates  4 unmatched
