@@ -1880,3 +1880,67 @@ silent reset straight off the menu item — it destroys an approved parser by ac
 thing the operator needs before a destructive act is the directory's name and a choice. Deleting
 while the engine still runs — the store lock is held by the writer, so the removal would half
 succeed and leave the app pointing at a store that no longer matches its index.
+
+## D101. Windows correctness: the store never shrinks a file, stop closes every handle, a device output leaves nothing behind
+**Decision.** Three faults a Windows tester reproduced against 14d3b0c, each fixed where
+every caller routes through, on branch `lane-8-windows` (merged after the demo on the owner's
+go; a store written by main opens here unchanged and vice versa, the on-disk format is
+untouched). (1) *Recovery reclaims a torn tail in place.* `RawStore::open` used to
+`set_len` both files to the recovered end; Windows refuses that while any process has the
+file mapped (`SetEndOfFile` → `ERROR_USER_MAPPED_FILE`, os error 1224), which is what the
+round-trip test does by holding a `RawReader` across the reopen, and on POSIX a reader
+mapped across the shrink faults on its next access past the new end (a latent bug the Mac
+never showed). `recover` now overwrites the bytes between the recovered end and the file
+end with zeros and the writer resumes at the recovered end, so the next append overwrites
+them; no file is ever shrunk. The writer's walk-back now also checks the last entry's digest
+and chain link, not only its shape, so a torn write (a complete header over a half-written
+body, a complete offset beside a half-written chain) can never become the head.
+`RawReader::open` no longer takes the file length as the record count: it drops trailing
+entries that are not a record (the zero region, an entry pointing past the segment) and
+keeps a record whose digest or chain is wrong for `verify` to name, so a tamper of the last
+record is still reported and never silently dropped. `RawStore::reader` still bounds the
+snapshot to the writer's flushed count (D52, D56 survive unchanged: the snapshot is a
+prefix of validated entries, appends after it are invisible, nothing is written). (2)
+*Stop closes what it opened.* `Live` owned the store for its whole life, so after `serve`
+returned the segment, the index, the catalogue and its WAL were still open in a process
+that kept the `Arc<Live>` (the Parquet watch-mode test, the desktop shell if it ever
+embedded the engine); Unix let the temp directory go, Windows returned os error 32. `Live`
+now holds `Mutex<Option<RawStore>>` behind `Live::store()` (an error once closed, never a
+panic) and `Live::close()` runs on every exit path of `run` and `serve`, dropping the store
+and the pivot index's read connection; a request racing shutdown gets "the store is
+closed". (3) *A device output leaves nothing behind and the meta counts the file.*
+`output_is_sink` knew `-` and `/dev/*` only, so `--output NUL` on Windows wrote
+`NUL.v1.meta.json` into the working directory; it now recognises `NUL`, `\\.\NUL` and
+`\\?\NUL` on Windows only. The live meta's `events` was written as 0 at open and never
+updated while the counter block said a million; `report` now writes it as what the run
+emitted when the output started empty (`Live::output_start`, the file length at the first
+write, is 0) and as the file's line count otherwise (a restart appended to an earlier
+run's lines), and `Versions::list` counts v1 from the file always, since the live meta is
+only right at the last clean stop. **Anchor.** `recover`, `zero_tail`, `RawReader::open`,
+`RawReader::get` in `crates/ulpf-store/src/store.rs`;
+`a_reader_mapped_across_a_reopen_keeps_its_records_and_no_file_shrinks` in
+`crates/ulpf-store/tests/roundtrip.rs`; `StoreGuard`, `Live::store`, `Live::close`,
+`output_is_sink`, `is_nul`, `report`, `output_start` in `crates/ulpf/src/engine.rs`;
+`Versions::list` in `crates/ulpf/src/replay.rs`;
+`stop_releases_every_file_the_engine_opened` in `crates/ulpf/tests/stop.rs` (counts this
+process's descriptors under the temp directory through `F_GETPATH` on macOS and
+`/proc/self/fd` on Linux, and removes the directory, which is the check Windows makes);
+`a_null_device_output_leaves_nothing_beside_it_or_in_the_cwd` and
+`the_version_meta_counts_the_lines_the_output_holds` in `crates/ulpf/tests/output_meta.rs`;
+`.github/workflows/windows-tests.yml` (the whole suite on `windows-latest` on every push to
+the branch). **Principle.** Immutability as a property of the interface (D7): the only
+bytes recovery touches are bytes that were never a record, and the logical end of the store
+is what the entries prove, never what the filesystem reports; stop means stopped on every
+platform, and a counter the meta disagrees with is a bug wherever it appears. **Ruled out.**
+Dropping and remapping every reader across a reopen (the store cannot see readers in other
+processes, `ulpf verify` beside a starting `run` being the real case; and it would leave the
+POSIX fault in place); a reader walk-back that also drops a record with a wrong digest or
+chain (a tampered last record would vanish from `verify` instead of being named); a
+running line count kept in the meta across runs (a killed run leaves it stale, and the
+scan runs only when an earlier run's lines are already in the file); `Option` inside
+`RawStore` instead of inside `Live` (every store method would grow a closed branch for a
+state only the engine creates). **Not done.** A verify or replay thread still running when
+`serve` returns is not joined (both are bounded and finish on their own; a cancel-and-join
+at stop is a separate change); a fourth Windows failure outside this brief,
+`udp_and_tcp_events_enter_the_store_and_output_exactly_once_in_order` timing out, is
+recorded in PROGRESS with what the branch's Windows run shows.
