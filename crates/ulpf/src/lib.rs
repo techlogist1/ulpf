@@ -10,5 +10,6 @@ pub mod inference;
 pub mod metrics;
 pub mod pending;
 pub mod pipeline;
+pub mod replay;
 pub mod server;
 pub mod tail;

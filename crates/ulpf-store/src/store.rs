@@ -376,6 +376,12 @@ impl RawReader {
         self.count == 0
     }
 
+    /// The whole mapped segment; a record's bytes are a sub-slice of it, so a caller can
+    /// keep byte ranges into the segment instead of copying records.
+    pub fn segment(&self) -> &[u8] {
+        &self.seg
+    }
+
     /// The record with this id, or `None` if the id was never issued or the record is
     /// structurally damaged (bad magic, length past end of segment).
     pub fn get(&self, id: RawId) -> Option<RawRecord<'_>> {

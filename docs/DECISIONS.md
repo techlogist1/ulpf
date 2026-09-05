@@ -678,3 +678,53 @@ state from outside) already holds because the mutable pieces are private or behi
 methods. Revisit when a second consumer of `Live` appears. **Anchor.** the commit named
 "review fixes" and this entry; `PROGRESS.md` "Review pass". **Principle.** A finding is
 closed by a fix or by written evidence, never by a known-issues list.
+
+## D52. Replay is a second engine over a store snapshot, not a mode of the live one
+**Decision.** `ulpf replay` and `POST /api/replay` read every record below the store's
+length at start through a `RawReader` the writer flushed first (in `serve`, through the
+same files the writer holds; the reader is bounded to that length so appends after the
+snapshot are invisible), and drive the shared `process_batch` with their own workers,
+counters and output thread. Batches carry per-event receipts and source ids (empty
+vectors on the live path, so the hot path pays one branch), so a replayed event sees the
+receipt it was stored with and `processed_time` and every no-year timestamp resolve as
+they did. Outputs are versioned beside the base path (`out.v2.jsonl`, `.meta.json`,
+`.diff.jsonl`); the diff is a streaming merge by raw id with a byte-identical fast path;
+`why` compares the SHA-256 of every parser and mapping file against the set the previous
+version's first events were written with (the live meta keeps every earlier set in
+`history`, so a reload or a reopen after a fix is visible, not hidden). A replay holds the
+`Arc<Pipeline>` it started with: a parser approved mid-replay changes the live stream and
+the next replay, and the report names the generation it used. **Anchor.**
+`crates/ulpf/src/replay.rs`; `process_batch`, `Batch::receipt/source`, `Live::start_replay`
+in `crates/ulpf/src/engine.rs`; `RawReader::segment`; `crates/ulpf/tests/replay.rs`.
+**Principle.** Deep module: one per-batch path for live and replay (a second copy would
+drift); information hiding: the diff and the versions know nothing of the engine; the
+store's append-only interface is untouched (the replay never holds a writer).
+**Ruled out.** Replaying through the live worker pool with a flag (every counter, the tail,
+inference and per-source stats would need a "not this one" branch per event); a separate
+process for the server's replay (cannot read source names while the writer holds the
+catalogue, and no progress); comparing against the previous version's *final* file set
+(the demo's own reopen-after-fix made v1 look unchanged; found by the test).
+
+## D53. Slot names come from stated rules, each with its reason in the evidence
+**Decision.** `SlotEvidence.reason` says which rule named a slot: (a) a `key=`/`key:` or
+compound key before the value; (b) a plain constant word before the slot, gated by a
+27-word stopword list (connectives, syslog severities in RouterOS topic lists, tcp/udp/icmp)
+and by "`:` then space is a syslog tag, not a key"; (c) a curated vocabulary
+(`docs/slot-vocabulary.md`, compiled in): keyed rows (`SRC=`/`from`/`saddr` -> `src_ip`,
+`SPT=` -> `src_port`, `IN=` -> `in_interface`, ...), the first `{ip}:{port}->{ip}:{port}`
+pair on a line, `from {ip} port {port}`, `for {word} from`, `{word}[{int}]:` -> `pid`,
+ICMP `type=`/`code=`, a bracketed rule label, a TCP-flag run, the NCSA combined layout;
+(d) the timestamp kind; (e) otherwise `kind+n`, `suggested = false`, with the reason it
+stayed generic. Names are device-side words (`src_ip`, `user`, `proto`), never schema
+paths; where two spellings are conventional the one already an alias in `mappings/ocsf.toml`
+wins, so an approved proposal normalizes without a mapping edit. The old `in`/`out` names
+were aliases of `traffic.bytes_in/out`; the vocabulary fixes that. Held-out grades are
+unchanged (14/250, 9/250, 1/250, 19/285) with, for example, nginx going from one named
+slot of eight to eight. **Anchor.** `name_slot`, `VOCAB`, `STOPWORDS` in
+`crates/ulpf-infer/src/cluster.rs`; `SlotEvidence` in `crates/ulpf-infer/src/lib.rs`;
+`docs/slot-vocabulary.md`; the naming tests in `cluster.rs`. **Principle.** No model
+anywhere: every name has a reason a reviewer can read and a source a judge can check.
+**Ruled out.** Naming from any preceding word (`info`, `on`, `for`, `tcp` became names);
+naming the second address pair (RouterOS logs the NAT pair after the first; which is
+pre-translation is the reviewer's call); value-inspection rules beyond TCP flags (no
+held-out grade justified them).

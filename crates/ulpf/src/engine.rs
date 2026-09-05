@@ -28,12 +28,13 @@ use memmap2::Mmap;
 use serde::Serialize;
 use sha2::Digest;
 use ulpf_parse::{Parsed, SubStatus};
-use ulpf_store::{Framer, RawId, RawStore};
+use ulpf_store::{Framer, RawId, RawReader, RawStore};
 
 use crate::inference::Inference;
 use crate::metrics::{LocalCounts, Metrics, Snapshot};
 use crate::pending::{Pending, PendingSummary, ReviewError};
 use crate::pipeline::Pipeline;
+use crate::replay::{self, ReplayProgress, ReplayReport, Versions};
 use crate::tail::Tail;
 
 pub struct Config {
@@ -152,35 +153,147 @@ pub struct Live {
     pub review_errors: AtomicU64,
     pub sse_clients: AtomicU64,
     pub load_problems: Mutex<Vec<String>>,
+    pub replay: Mutex<ReplayState>,
+    /// Bumped whenever the replay state changes (start, progress, done), for the SSE feed.
+    pub replay_generation: AtomicU64,
     parsers_signature: Mutex<Option<(usize, Option<SystemTime>, u64)>>,
     stop: AtomicBool,
 }
 
-struct FileCtx {
-    mmap: Option<Mmap>,
-    name: String,
+/// What the server can say about replays: the one running (if any), the last report,
+/// and the sparse indexes of diff files it has opened.
+#[derive(Default)]
+pub struct ReplayState {
+    pub running: Option<(ReplayProgress, Arc<AtomicU64>)>,
+    pub last: Option<ReplayReport>,
+    pub last_error: Option<String>,
+    pub diff_indexes: HashMap<u64, Arc<replay::DiffIndex>>,
+}
+
+#[derive(Debug)]
+pub enum ReplayError {
+    Running,
+    Invalid(String),
+    Io(String),
+}
+
+impl std::fmt::Display for ReplayError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ReplayError::Running => write!(f, "a replay is already running"),
+            ReplayError::Invalid(s) | ReplayError::Io(s) => write!(f, "{s}"),
+        }
+    }
+}
+
+/// Where a batch's bytes live: a memory-mapped input file, or the raw store's segment
+/// when a replay reads records back.
+pub(crate) enum Backing {
+    Mapped(Option<Mmap>),
+    Store(RawReader),
+}
+
+pub(crate) struct FileCtx {
+    pub(crate) backing: Backing,
+    pub(crate) name: String,
+    /// Source id -> name, for batches whose events come from several sources (replay).
+    pub(crate) names: HashMap<u32, String>,
 }
 
 impl FileCtx {
     fn bytes(&self) -> &[u8] {
-        self.mmap.as_deref().unwrap_or(&[])
+        match &self.backing {
+            Backing::Mapped(m) => m.as_deref().unwrap_or(&[]),
+            Backing::Store(r) => r.segment(),
+        }
     }
 }
 
-struct Batch {
-    seq: u64,
-    file: Arc<FileCtx>,
-    receipt_nanos: i64,
-    first_raw_id: u64,
-    ranges: Vec<std::ops::Range<usize>>,
+pub(crate) struct Batch {
+    pub(crate) seq: u64,
+    pub(crate) file: Arc<FileCtx>,
+    pub(crate) receipt_nanos: i64,
+    pub(crate) first_raw_id: u64,
+    pub(crate) ranges: Vec<std::ops::Range<usize>>,
+    /// Per-event receipt and source when they vary within the batch (replay); empty
+    /// means every event took the batch's receipt and the file's name (live ingest).
+    pub(crate) receipts: Vec<i64>,
+    pub(crate) sources: Vec<u32>,
+}
+
+impl Batch {
+    fn receipt(&self, i: usize) -> i64 {
+        self.receipts.get(i).copied().unwrap_or(self.receipt_nanos)
+    }
+
+    fn source(&self, i: usize) -> &str {
+        match self.sources.get(i) {
+            Some(s) => self.file.names.get(s).map(String::as_str).unwrap_or(&self.file.name),
+            None => &self.file.name,
+        }
+    }
 }
 
 /// One worker's serialised batch on its way to the output thread.
-struct Emitted {
-    seq: u64,
-    buf: Vec<u8>,
-    count: u64,
-    first_raw_id: u64,
+pub(crate) struct Emitted {
+    pub(crate) seq: u64,
+    pub(crate) buf: Vec<u8>,
+    pub(crate) count: u64,
+    pub(crate) first_raw_id: u64,
+}
+
+/// Every event of one batch through the pipeline into `out`, with the counts, per-parser
+/// hits and the unknown lines (for inference) collected for the caller. The live worker
+/// and the replay worker both call this; neither has its own per-event path.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn process_batch<'a>(pipeline: &'a Pipeline, batch: &'a Batch, scratch: &mut ulpf_parse::Scratch, hint: &mut Option<usize>, parsed: &mut Parsed<'a>, out: &mut Vec<u8>, counts: &mut LocalCounts, hits: &mut [u64], unknown: &mut Vec<(u64, &'a [u8])>) {
+    let bytes = batch.file.bytes();
+    for (i, range) in batch.ranges.iter().enumerate() {
+        let event = &bytes[range.clone()];
+        let raw_id = batch.first_raw_id + i as u64;
+        let outcome = pipeline.process(event, raw_id, batch.source(i), batch.receipt(i), hint, scratch, parsed, out);
+        match outcome.parser {
+            Some(p) => {
+                counts.detected += 1;
+                if let Some(h) = hits.get_mut(p) {
+                    *h += 1;
+                }
+            }
+            None => {
+                counts.no_parser += 1;
+                unknown.push((raw_id, event));
+            }
+        }
+        if let Some(p) = outcome.parser {
+            match outcome.parse {
+                Ok(()) => counts.parsed += 1,
+                Err(f) => {
+                    counts.parse_failed(f);
+                    // a generated parser's signature is loose by construction (D45): a
+                    // line it claims but cannot parse is still an unknown line for inference
+                    if pipeline.registry.get(p).definition().matcher.priority < 0 {
+                        unknown.push((raw_id, event));
+                    }
+                }
+            }
+        }
+        match outcome.sub {
+            SubStatus::Matched => counts.sub_matched += 1,
+            SubStatus::NoMatch => counts.sub_no_match += 1,
+            SubStatus::Uncovered => counts.sub_uncovered += 1,
+            SubStatus::NotApplicable => {}
+        }
+        if let Some(r) = outcome.time_error {
+            counts.time_error(r);
+        }
+        let s = outcome.stats;
+        counts.normalized += 1;
+        counts.time_from_receipt += s.time_from_receipt as u64;
+        counts.class_unknown += (s.class_uid == 0) as u64;
+        counts.enum_other += s.enum_other as u64;
+        counts.unmapped_fields += s.unmapped as u64;
+        counts.utf8_lossy += s.utf8_lossy as u64;
+    }
 }
 
 pub fn now_nanos() -> i64 {
@@ -246,6 +359,9 @@ impl Live {
             _ => None,
         };
         let threshold = if pending.is_some() { cfg.infer_threshold } else { 0 };
+        if cfg.output.as_os_str() != "-" {
+            Versions::new(&cfg.output).write_live_meta(pipeline.mapping.schema_name(), 0, pipeline.files.clone()).with_context(|| format!("writing the version meta beside {}", cfg.output.display()))?;
+        }
         Ok(Arc::new(Live {
             metrics: Metrics::default(),
             pipeline: RwLock::new(Arc::new(pipeline)),
@@ -272,9 +388,94 @@ impl Live {
             review_errors: AtomicU64::new(0),
             sse_clients: AtomicU64::new(0),
             load_problems: Mutex::new(load_problems),
+            replay: Mutex::new(ReplayState::default()),
+            replay_generation: AtomicU64::new(0),
             parsers_signature: Mutex::new(parsers_signature(&cfg.parsers)),
             stop: AtomicBool::new(false),
         }))
+    }
+
+    /// Starts a replay of every stored record on its own thread. The store is flushed and
+    /// snapshotted (ids below its length now) through the writer's files; the pipeline is
+    /// the current one, or a fresh load when a different schema is asked for.
+    pub fn start_replay(self: &Arc<Self>, schema: Option<&str>) -> Result<(u64, u64), ReplayError> {
+        if self.output.as_os_str() == "-" {
+            return Err(ReplayError::Invalid("replay needs a file output, not stdout".into()));
+        }
+        let mut state = self.replay.lock().unwrap_or_else(|e| e.into_inner());
+        if state.running.is_some() {
+            return Err(ReplayError::Running);
+        }
+        let pipeline = match schema {
+            Some(s) if Some(s) != self.pipeline().mapping.schema_name().into() => {
+                let (p, _) = Pipeline::load(&self.parsers_dir, &self.mappings_dir, Some(s), self.default_offset_secs).map_err(|e| ReplayError::Invalid(format!("{e:#}")))?;
+                Arc::new(p)
+            }
+            _ => self.pipeline(),
+        };
+        let (reader, total, names) = {
+            let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+            store.flush(false).map_err(|e| ReplayError::Io(e.to_string()))?;
+            let total = store.len();
+            let names = store.source_names().map_err(|e| ReplayError::Io(e.to_string()))?;
+            let reader = RawReader::open(&self.store_dir).map_err(|e| ReplayError::Io(e.to_string()))?;
+            let total = total.min(reader.len());
+            (reader, total, names)
+        };
+        let versions = Versions::new(&self.output);
+        let version = versions.next();
+        let progress = Arc::new(AtomicU64::new(0));
+        let mut started = String::new();
+        ulpf_time::format_rfc3339(now_nanos(), &mut started);
+        state.running = Some((ReplayProgress { version, done: 0, total, started }, Arc::clone(&progress)));
+        state.last_error = None;
+        drop(state);
+        self.replay_generation.fetch_add(1, Relaxed);
+        let job = replay::Job { versions, version, pipeline, threads: self.threads, batch: self.batch_events, parsers_generation: self.generation.load(Relaxed), names, reader, total };
+        let live = Arc::clone(self);
+        std::thread::Builder::new()
+            .name("ulpf-replay".into())
+            .spawn(move || {
+                let cancel = AtomicBool::new(false);
+                let result = replay::run(job, &progress, &cancel);
+                let mut state = live.replay.lock().unwrap_or_else(|e| e.into_inner());
+                match result {
+                    Ok(report) => state.last = Some(report),
+                    Err(e) => state.last_error = Some(format!("{e:#}")),
+                }
+                state.running = None;
+                drop(state);
+                live.replay_generation.fetch_add(1, Relaxed);
+            })
+            .map_err(|e| ReplayError::Io(e.to_string()))?;
+        Ok((version, total))
+    }
+
+    /// The current progress of a running replay, if any.
+    pub fn replay_progress(&self) -> Option<ReplayProgress> {
+        let state = self.replay.lock().unwrap_or_else(|e| e.into_inner());
+        state.running.as_ref().map(|(p, done)| ReplayProgress { done: done.load(Relaxed), ..p.clone() })
+    }
+
+    /// A page of one version's diff, indexing the file on first use.
+    pub fn replay_diff(&self, version: u64, after: Option<u64>, limit: usize, kind: Option<&str>) -> Result<(Vec<replay::DiffEntry>, Option<u64>), ReplayError> {
+        let versions = Versions::new(&self.output);
+        let path = versions.diff_path(version);
+        if !path.exists() {
+            return Err(ReplayError::Invalid(format!("version {version} has no diff")));
+        }
+        let index = {
+            let mut state = self.replay.lock().unwrap_or_else(|e| e.into_inner());
+            match state.diff_indexes.get(&version) {
+                Some(i) => Arc::clone(i),
+                None => {
+                    let i = Arc::new(replay::index_diff(&path).map_err(|e| ReplayError::Io(e.to_string()))?);
+                    state.diff_indexes.insert(version, Arc::clone(&i));
+                    i
+                }
+            }
+        };
+        replay::page(&path, &index, after, limit, kind).map_err(|e| ReplayError::Io(e.to_string()))
     }
 
     pub fn pipeline(&self) -> Arc<Pipeline> {
@@ -291,11 +492,18 @@ impl Live {
         match Pipeline::load(&self.parsers_dir, &self.mappings_dir, self.schema.as_deref(), self.default_offset_secs) {
             Ok((pipeline, problems)) => {
                 let loaded = pipeline.registry.len();
+                let files = pipeline.files.clone();
+                let schema = pipeline.mapping.schema_name().to_string();
                 *self.pipeline.write().unwrap_or_else(|e| e.into_inner()) = Arc::new(pipeline);
                 *self.load_problems.lock().unwrap_or_else(|e| e.into_inner()) = problems.clone();
                 *self.parsers_signature.lock().unwrap_or_else(|e| e.into_inner()) = parsers_signature(&self.parsers_dir);
                 self.metrics.reloads.fetch_add(1, Relaxed);
                 let generation = self.generation.fetch_add(1, Relaxed) + 1;
+                if self.output.as_os_str() != "-"
+                    && let Err(e) = Versions::new(&self.output).write_live_meta(&schema, generation, files)
+                {
+                    eprintln!("ulpf: version meta: {e:#}");
+                }
                 ReloadReport { parsers_loaded: loaded, problems, generation }
             }
             Err(e) => ReloadReport { parsers_loaded: self.pipeline().registry.len(), problems: vec![format!("reload failed, previous registry kept: {e:#}")], generation: self.generation.load(Relaxed) },
@@ -667,7 +875,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
     let start = (start as usize).min(len as usize);
     let source = live.store.lock().unwrap_or_else(|e| e.into_inner()).source_id(name)?;
     let ingest_started = now_nanos();
-    let ctx = Arc::new(FileCtx { mmap, name: name.to_string() });
+    let ctx = Arc::new(FileCtx { backing: Backing::Mapped(mmap), name: name.to_string(), names: HashMap::new() });
     let mut count = 0u64;
     let mut first_id = None;
     let mut ranges: Vec<std::ops::Range<usize>> = Vec::with_capacity(live.batch_events);
@@ -725,7 +933,7 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
 #[allow(clippy::too_many_arguments)]
 fn send_batch(tx: &SyncSender<Batch>, metrics: &Metrics, in_flight: &AtomicI64, queue_cap: usize, seq: &mut u64, ctx: &Arc<FileCtx>, receipt: i64, first_raw_id: u64, ranges: Vec<std::ops::Range<usize>>) -> Result<()> {
     metrics.batches.fetch_add(1, Relaxed);
-    let batch = Batch { seq: *seq, file: Arc::clone(ctx), receipt_nanos: receipt, first_raw_id, ranges };
+    let batch = Batch { seq: *seq, file: Arc::clone(ctx), receipt_nanos: receipt, first_raw_id, ranges, receipts: Vec::new(), sources: Vec::new() };
     *seq += 1;
     // Depth counts batches handed to the channel and not yet taken by a worker. Counted
     // before the send and clamped to the capacity, so the high-water can never claim a
@@ -763,56 +971,13 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Em
         }
         hits.clear();
         hits.resize(pipeline.registry.len(), 0);
-        let bytes = batch.file.bytes();
         let mut out = Vec::with_capacity(batch.ranges.len() * 512);
         let mut counts = LocalCounts::default();
         // `Parsed` borrows the batch's bytes and the current registry, so it lives per batch
         let mut parsed = Parsed::default();
         let mut unknown: Vec<(u64, &[u8])> = Vec::new();
         let pipeline = &*pipeline;
-        for (i, range) in batch.ranges.iter().enumerate() {
-            let event = &bytes[range.clone()];
-            let outcome = pipeline.process(event, batch.first_raw_id + i as u64, &batch.file.name, batch.receipt_nanos, &mut hint, &mut scratch, &mut parsed, &mut out);
-            match outcome.parser {
-                Some(p) => {
-                    counts.detected += 1;
-                    hits[p] += 1;
-                }
-                None => {
-                    counts.no_parser += 1;
-                    unknown.push((batch.first_raw_id + i as u64, event));
-                }
-            }
-            if let Some(p) = outcome.parser {
-                match outcome.parse {
-                    Ok(()) => counts.parsed += 1,
-                    Err(f) => {
-                        counts.parse_failed(f);
-                        // a generated parser's signature is loose by construction (D45): a
-                        // line it claims but cannot parse is still an unknown line for inference
-                        if pipeline.registry.get(p).definition().matcher.priority < 0 {
-                            unknown.push((batch.first_raw_id + i as u64, event));
-                        }
-                    }
-                }
-            }
-            match outcome.sub {
-                SubStatus::Matched => counts.sub_matched += 1,
-                SubStatus::NoMatch => counts.sub_no_match += 1,
-                SubStatus::Uncovered => counts.sub_uncovered += 1,
-                SubStatus::NotApplicable => {}
-            }
-            if let Some(r) = outcome.time_error {
-                counts.time_error(r);
-            }
-            let s = outcome.stats;
-            counts.normalized += 1;
-            counts.time_from_receipt += s.time_from_receipt as u64;
-            counts.class_unknown += (s.class_uid == 0) as u64;
-            counts.enum_other += s.enum_other as u64;
-            counts.unmapped_fields += s.unmapped as u64;
-            counts.utf8_lossy += s.utf8_lossy as u64;
-        }
+        process_batch(pipeline, &batch, &mut scratch, &mut hint, &mut parsed, &mut out, &mut counts, &mut hits, &mut unknown);
         live.metrics.add(&counts);
         if !unknown.is_empty() {
             live.inference.offer_batch(&batch.file.name, &unknown, &live.metrics);

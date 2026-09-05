@@ -21,7 +21,7 @@ use futures_util::stream::Stream;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::engine::{Live, TracebackError};
+use crate::engine::{Live, ReplayError, TracebackError};
 use crate::pending::{Pending, ReviewError};
 use crate::tail::TailFrame;
 
@@ -111,6 +111,8 @@ fn router(app: App) -> axum::Router {
         .route("/api/pending/{id}/approve", post(pending_approve))
         .route("/api/pending/{id}/reject", post(pending_reject))
         .route("/api/events/{raw_id}", get(traceback))
+        .route("/api/replay", get(replay_get).post(replay_post))
+        .route("/api/replay/{version}/diff", get(replay_diff))
         .with_state(app)
 }
 
@@ -215,12 +217,30 @@ fn metrics_frame(live: &Live) -> Value {
         "sources": sources,
         "parsers": parsers_json(live),
         "pending_generation": live.pending_generation.load(Relaxed),
+        "replay": replay_summary(live),
         "server": {
             "sse_clients": live.sse_clients.load(Relaxed),
             "review_errors": live.review_errors.load(Relaxed),
             "uptime_secs": live.started.elapsed().as_secs_f64(),
         },
     })
+}
+
+fn replay_summary(live: &Live) -> Value {
+    let state = live.replay.lock().unwrap_or_else(|e| e.into_inner());
+    json!({
+        "running": state.running.as_ref().map(|(p, done)| json!({ "version": p.version, "done": done.load(Relaxed), "total": p.total, "started": p.started })),
+        "last_version": state.last.as_ref().map(|r| r.version),
+        "last_error": state.last_error,
+    })
+}
+
+fn replay_error(e: ReplayError) -> ApiError {
+    match e {
+        ReplayError::Running => ApiError::new(StatusCode::CONFLICT, "conflict", "a replay is already running"),
+        ReplayError::Invalid(m) => ApiError::new(StatusCode::UNPROCESSABLE_ENTITY, "invalid", m),
+        ReplayError::Io(m) => ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "io", m),
+    }
 }
 
 // ---- handlers -----------------------------------------------------------------------
@@ -336,6 +356,44 @@ async fn traceback(State(app): State<App>, Path(raw_id): Path<u64>) -> Result<Js
 
 // ---- stream -------------------------------------------------------------------------
 
+async fn replay_get(State(app): State<App>) -> Json<Value> {
+    let live = &app.live;
+    let versions = crate::replay::Versions::new(&live.output).list();
+    let state = live.replay.lock().unwrap_or_else(|e| e.into_inner());
+    Json(json!({
+        "versions": versions,
+        "running": state.running.as_ref().map(|(p, done)| json!({ "version": p.version, "done": done.load(Relaxed), "total": p.total, "started": p.started })),
+        "last": state.last,
+        "last_error": state.last_error,
+    }))
+}
+
+#[derive(Deserialize, Default)]
+struct ReplayBody {
+    schema: Option<String>,
+}
+
+async fn replay_post(State(app): State<App>, body: Option<Json<ReplayBody>>) -> Result<Json<Value>, ApiError> {
+    let body = body.map(|b| b.0).unwrap_or_default();
+    let (version, total) = app.live.start_replay(body.schema.as_deref()).map_err(replay_error)?;
+    Ok(Json(json!({ "version": version, "started": true, "total": total })))
+}
+
+#[derive(Deserialize)]
+struct DiffQuery {
+    after: Option<u64>,
+    limit: Option<usize>,
+    kind: Option<String>,
+}
+
+async fn replay_diff(State(app): State<App>, Path(version): Path<u64>, Query(q): Query<DiffQuery>) -> Result<Json<Value>, ApiError> {
+    let (entries, next_after) = app.live.replay_diff(version, q.after, q.limit.unwrap_or(100), q.kind.as_deref()).map_err(|e| match e {
+        ReplayError::Invalid(m) => ApiError::new(StatusCode::NOT_FOUND, "not_found", m),
+        other => replay_error(other),
+    })?;
+    Ok(Json(json!({ "entries": entries, "next_after": next_after })))
+}
+
 #[derive(Deserialize)]
 struct StreamQuery {
     tail: Option<usize>,
@@ -356,6 +414,7 @@ struct StreamState {
     queue: VecDeque<Event>,
     last_id: Option<u64>,
     pending_generation: u64,
+    replay_generation: u64,
     tick: u64,
     initial: usize,
 }
@@ -365,7 +424,7 @@ const TAIL_PER_TICK: usize = 200;
 
 async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<impl Stream<Item = Result<Event, Infallible>>> {
     app.live.sse_clients.fetch_add(1, Relaxed);
-    let state = StreamState { guard: ClientGuard(Arc::clone(&app.live)), queue: VecDeque::new(), last_id: None, pending_generation: app.live.pending_generation.load(Relaxed), tick: 0, initial: q.tail.unwrap_or(100).clamp(1, 500), app };
+    let state = StreamState { guard: ClientGuard(Arc::clone(&app.live)), queue: VecDeque::new(), last_id: None, pending_generation: app.live.pending_generation.load(Relaxed), replay_generation: app.live.replay_generation.load(Relaxed), tick: 0, initial: q.tail.unwrap_or(100).clamp(1, 500), app };
     let stream = futures_util::stream::unfold(state, |mut st| async move {
         loop {
             if let Some(ev) = st.queue.pop_front() {
@@ -397,6 +456,21 @@ async fn stream(State(app): State<App>, Query(q): Query<StreamQuery>) -> Sse<imp
                 st.pending_generation = generation;
                 let count = live.pending.as_ref().map(|p| p.ids().len()).unwrap_or(0);
                 st.queue.push_back(event("pending", &json!({ "generation": generation, "count": count })));
+            }
+            let rgen = live.replay_generation.load(Relaxed);
+            let running = live.replay_progress();
+            if rgen != st.replay_generation || (running.is_some() && st.tick % 2 == 0) {
+                st.replay_generation = rgen;
+                let state = live.replay.lock().unwrap_or_else(|e| e.into_inner());
+                let frame = match (&running, &state.last, &state.last_error) {
+                    (Some(p), _, _) => json!({ "version": p.version, "state": if p.done == 0 { "started" } else { "progress" }, "done": p.done, "total": p.total, "report": Value::Null, "error": Value::Null }),
+                    (None, _, Some(e)) => json!({ "version": Value::Null, "state": "failed", "done": 0, "total": 0, "report": Value::Null, "error": e }),
+                    (None, Some(r), None) => json!({ "version": r.version, "state": "done", "done": r.events, "total": r.events, "report": r, "error": Value::Null }),
+                    (None, None, None) => Value::Null,
+                };
+                if !frame.is_null() {
+                    st.queue.push_back(event("replay", &frame));
+                }
             }
         }
     });

@@ -104,6 +104,15 @@ enum Cmd {
         #[arg(long)]
         pending: Option<PathBuf>,
     },
+    /// Re-run every stored record through the current parsers and mappings into a new
+    /// output version, and diff it against the previous version.
+    Replay {
+        #[command(flatten)]
+        engine: EngineArgs,
+        /// Also write the replay report as JSON to this path.
+        #[arg(long)]
+        report_json: Option<PathBuf>,
+    },
     /// Recompute every digest in a raw store.
     Verify {
         #[arg(long, default_value = "ulpf.ulpf-store")]
@@ -190,6 +199,30 @@ fn print_report(report: &engine::Report) -> Result<()> {
     Ok(())
 }
 
+fn print_replay(r: &crate::replay::ReplayReport) -> Result<()> {
+    let mut err = std::io::stderr().lock();
+    let against = r.previous_version.map(|v| format!(" against v{v}")).unwrap_or_default();
+    writeln!(err, "replay v{}{}: {} events in {:.3} s ({:.0} events/s), schema {}, parsers generation {}", r.version, against, r.events, r.elapsed_secs, r.events_per_sec, r.schema, r.parsers_generation)?;
+    writeln!(err, "  counts: detected {}  no_parser {}  parsed {}  parse_failed {}  class_unknown {}", r.counts.detected, r.counts.no_parser, r.counts.parsed, r.counts.parse_failed, r.counts.class_unknown)?;
+    let s = &r.summary;
+    writeln!(err, "  events: unchanged {}  changed {}  only_in_new {}  only_in_old {}", s.unchanged, s.changed, s.only_in_new, s.only_in_old)?;
+    writeln!(err, "  fields: added {}  lost {}  changed {}", s.fields_added, s.fields_lost, s.fields_changed)?;
+    for p in s.parser_changes.iter().take(10) {
+        writeln!(err, "  parser: {} -> {}  ({} events)", p.from.as_deref().unwrap_or("none"), p.to.as_deref().unwrap_or("none"), p.events)?;
+    }
+    for f in s.by_field.iter().take(15) {
+        writeln!(err, "  field {:<40} added {:<6} lost {:<6} changed {}", f.path, f.added, f.lost, f.changed)?;
+    }
+    for w in &r.why {
+        writeln!(err, "  why: {w}")?;
+    }
+    writeln!(err, "  output: {}", r.output.display())?;
+    if let Some(d) = &r.diff {
+        writeln!(err, "  diff:   {}", d.display())?;
+    }
+    Ok(())
+}
+
 pub fn main() -> Result<()> {
     let cli = Cli::parse();
     match cli.cmd {
@@ -214,6 +247,34 @@ pub fn main() -> Result<()> {
             let report = engine::serve(&live, Duration::from_millis(poll_ms.max(50)));
             server.shutdown();
             print_report(&report?)
+        }
+        Cmd::Replay { engine: args, report_json } => {
+            anyhow::ensure!(args.output.as_os_str() != "-", "replay needs a file output (--output), not stdout");
+            let reader = ulpf_store::RawReader::open(&args.store).with_context(|| format!("opening store {}", args.store.display()))?;
+            let names = match reader.source_names() {
+                Ok(n) => n,
+                Err(e) => {
+                    eprintln!("ulpf: replay: {e} (a `serve` holds this store; replay it from the server with POST /api/replay)");
+                    std::process::exit(2);
+                }
+            };
+            let (pipeline, problems) = crate::pipeline::Pipeline::load(&args.parsers, &args.mappings, args.schema.as_deref(), parse_tz(&args.tz)?)?;
+            for p in problems {
+                eprintln!("load problem: {p}");
+            }
+            let versions = crate::replay::Versions::new(&args.output);
+            let version = versions.next();
+            let total = reader.len();
+            let threads = args.threads.unwrap_or_else(|| std::thread::available_parallelism().map(|n| n.get().saturating_sub(1).max(1)).unwrap_or(1));
+            let job = crate::replay::Job { versions, version, pipeline: std::sync::Arc::new(pipeline), threads, batch: args.batch, parsers_generation: 0, names, reader, total };
+            let progress = std::sync::atomic::AtomicU64::new(0);
+            let cancel = std::sync::atomic::AtomicBool::new(false);
+            let report = crate::replay::run(job, &progress, &cancel)?;
+            print_replay(&report)?;
+            if let Some(path) = report_json {
+                std::fs::write(&path, serde_json::to_string_pretty(&report)?).with_context(|| format!("writing {}", path.display()))?;
+            }
+            Ok(())
         }
         Cmd::Infer { file, pending, parsers, decisions } => {
             let bytes = std::fs::read(&file).with_context(|| format!("reading {}", file.display()))?;

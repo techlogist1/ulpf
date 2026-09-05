@@ -11,6 +11,9 @@ pub struct Pipeline {
     pub registry: Registry,
     pub mapping: Mapping,
     pub default_offset_secs: i32,
+    /// SHA-256 of every parser and mapping file this pipeline was loaded from, so a
+    /// replay can say which file changed between two outputs.
+    pub files: Vec<crate::replay::FileDigest>,
 }
 
 pub struct Outcome {
@@ -48,7 +51,9 @@ impl Pipeline {
             }
         };
         let mapping = maps.mappings.swap_remove(idx);
-        Ok((Pipeline { registry: Registry::new(parsers.parsers), mapping, default_offset_secs }, problems))
+        let mut files = crate::replay::digest_dir(parsers_dir);
+        files.extend(crate::replay::digest_dir(mappings_dir));
+        Ok((Pipeline { registry: Registry::new(parsers.parsers), mapping, default_offset_secs, files }, problems))
     }
 
     #[allow(clippy::too_many_arguments)]
