@@ -113,9 +113,14 @@ pub(crate) fn choose(app: &AppHandle, chosen: Intensity) {
         return toast(app, &format!("Cannot remember that setting: {e}"));
     }
     check_marks(app, chosen);
+    let cores = cores();
+    toast(app, &format!("Restarting the engine at {}: {} of {cores} cores, entity index {}", chosen.name(), chosen.threads(cores), on_off(chosen.pivot())));
     let data = app.state::<Engine>().data.lock().unwrap().clone();
     let app = app.clone();
     thread::spawn(move || {
+        // The notice goes on the page that is still up, because a restart on this machine
+        // finishes faster than the splash it navigates to can paint. Long enough to read.
+        thread::sleep(Duration::from_millis(900));
         stop(&app);
         start(&app, data, "Restarting");
     });
