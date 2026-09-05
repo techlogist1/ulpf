@@ -99,7 +99,7 @@ impl Cmds {
             verify: format!("./target/release/ulpf verify --store {d}/store"),
             attest: format!("./target/release/ulpf attest --store {d}/store --out {d}/attestation.json"),
             verify_att: format!("./target/release/ulpf verify --store {d}/store --attestation {d}/attestation.json"),
-            tamper: format!("printf 'X' | dd of={d}/store/raw.seg bs=1 seek=200 conv=notrunc 2>/dev/null"),
+            tamper: format!("printf 'X' | dd of={d}/store/raw.seg bs=1 seek=100 conv=notrunc 2>/dev/null"),
         }
     }
 
@@ -380,10 +380,29 @@ fn write_drift(repo: &Path, path: &Path) -> Result<()> {
 /// Rehearsal only: the store is thrown away by the reset that follows.
 fn tamper(seg: &Path) -> Result<()> {
     let mut f = std::fs::OpenOptions::new().read(true).write(true).open(seg).with_context(|| format!("opening {}", seg.display()))?;
-    f.seek(SeekFrom::Start(200))?;
+    // byte 100 is inside record 0's body whatever the first sample is (the segment and record
+    // headers end at 68); byte 200 landed in record 1's receipt time once cef.log sorted first,
+    // and the digest and chain cover the record bytes, not the header
+    f.seek(SeekFrom::Start(100))?;
     f.write_all(b"X")?;
     f.flush()?;
     Ok(())
+}
+
+/// A CLI approve writes the generated parser (`origin = "inferred"`, priority -1) into the
+/// repo's `parsers/`, and a demo copy or a bundle made after it knows the unseen format already,
+/// so the demo could not raise a proposal. The reset removes them before the copy is made.
+fn purge_generated(repo: &Path) -> Result<usize> {
+    let mut n = 0;
+    for p in logs_in(&repo.join("parsers"), "toml")? {
+        let text = std::fs::read_to_string(&p).with_context(|| format!("reading {}", p.display()))?;
+        let generated = text.lines().any(|l| l.trim_start().starts_with("origin") && l.contains("inferred"));
+        if generated {
+            std::fs::remove_file(&p).with_context(|| format!("removing {}", p.display()))?;
+            n += 1;
+        }
+    }
+    Ok(n)
 }
 
 fn play(a: &Args, bin: &Path, srv: &mut Option<Serve>) -> Result<()> {
@@ -396,6 +415,10 @@ fn play(a: &Args, bin: &Path, srv: &mut Option<Serve>) -> Result<()> {
     cmd(&c.reset);
     if d.exists() {
         std::fs::remove_dir_all(d).with_context(|| format!("removing {}", d.display()))?;
+    }
+    let purged = purge_generated(repo)?;
+    if purged > 0 {
+        hint(&format!("removed {purged} generated parser(s) from {}: nothing is approved from the CLI before a demo", repo.join("parsers").display()));
     }
 
     say(TITLES[1]);
@@ -412,11 +435,11 @@ fn play(a: &Args, bin: &Path, srv: &mut Option<Serve>) -> Result<()> {
     if !wait_http(&a.listen, 20) {
         bail!("the server did not answer GET /api/status on {} within 20 s", a.listen);
     }
-    hint(&format!("open http://{}  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)", a.listen));
+    hint(&format!("open http://{}  (0 Flow, 1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)", a.listen));
     next(a);
 
     say(TITLES[2]);
-    hint("watch Live while the twelve samples land one per second");
+    hint("watch Flow or Live while the fifteen samples land one per second");
     cmd(&c.samples);
     for p in logs_in(&repo.join("samples"), "log")? {
         let name = p.file_name().context("sample has no name")?.to_string_lossy().into_owned();
@@ -426,7 +449,7 @@ fn play(a: &Args, bin: &Path, srv: &mut Option<Serve>) -> Result<()> {
     cmd(&c.udp);
     let sent = send_udp(&repo.join("heldout").join("edgerouter.log"), &a.syslog)?;
     note(&format!("({sent} datagrams sent to {})", a.syslog));
-    hint("Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed");
+    hint("Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 15 sample sources parsed");
     next(a);
 
     say(TITLES[3]);
@@ -581,7 +604,8 @@ pub fn main(a: Args) -> Result<i32> {
         if a.dir.exists() {
             std::fs::remove_dir_all(&a.dir).with_context(|| format!("removing {}", a.dir.display()))?;
         }
-        println!("reset: {} removed", a.dir.display());
+        let purged = purge_generated(&a.repo)?;
+        println!("reset: {} removed, {purged} generated parser(s) removed from {}", a.dir.display(), a.repo.join("parsers").display());
         return Ok(0);
     }
     let bin = std::env::current_exe().context("finding this binary")?;

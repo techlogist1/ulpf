@@ -209,6 +209,7 @@ ulpf verify --store DIR [--attestation FILE]   # every digest and chain link; na
 ulpf attest --store DIR [--out FILE]           # the attestation a stranger re-verifies offline
 ulpf raw <ID> --store DIR       # exact bytes of one raw record (header on stderr)
 ulpf fixture samples/x.log      # fixture skeleton for review (never commit blind)
+ulpf demo [--auto] [--check] [--reset]   # the PROGRESS demo played from the binary (D67); scripts/demo.sh wraps it
 ```
 `run` and `serve` take `--receipt <RFC3339>` to pin the receipt time (reproducible output),
 `--schema ocsf|ecs`, `--pivot on|off` (the entity index: on by default in `serve`, off in `run`,

@@ -7,17 +7,25 @@ the server, terminal 2 everything else; paths are relative to the repo root. A s
 written before tonight is refused by name (the integrity chain changed the index): delete
 it and start over.
 
-### Runner (D67): `scripts/demo.sh`
-`scripts/demo.sh` plays steps 0-9 below from the repo root: it prints each command before
-running it and what to click next, Enter advances, and the server stays up for questions at
-the end (Enter again stops it and resets `demo/`). `scripts/demo.sh --auto` is the unattended
-rehearsal (fixed 3 s pauses, then stop and reset); `--check` proves every command in the
-runner appears verbatim in this section (run it after editing either); `--reset` stops a
-leftover server and removes `demo/`. Verified 2026-09-05 21:53 and 21:55 IST with `--auto`
-on the release build at 9d39679: the proposal for mikrotik appeared 0.9 s after the drop, approve returned
-`now_detected 250/250, parsers_loaded 13`, replay started v2 over 1,044 events, verify clean, the drift update proposal appeared 5.7 s after the new lines,
-attestation 2 of 2 checkpoints, the tamper named raw id 0 (digest) with exit 1, reset clean;
-the whole pass takes about two and a half minutes. Ports 7878 and 5514 must be free.
+### Runner (D67): `ulpf demo`
+`ulpf demo` plays steps 0-9 below from the repo root: it prints each command before running it
+and what to click next, Enter advances, and the server stays up for questions at the end (Enter
+again stops it and resets `demo/`). `ulpf demo --auto` is the unattended rehearsal (fixed 3 s
+pauses, then stop and reset); `--check` starts nothing and proves every step title and command
+in the runner appears verbatim in this section (run it after editing either; `cargo test` asserts
+the same); `--reset` stops a leftover server, removes `demo/` and removes any generated parser
+from the repo's `parsers/`. `scripts/demo.sh` is now a wrapper that finds `./target/release/ulpf`
+and hands the flags over, so anything that referenced it keeps working. The runner lives in the
+binary rather than in a shell script so the demo can be played where no shell exists; it has
+been played on macOS only, and the two Windows branches (`taskkill`, `tasklist`) are compiled by
+the `windows-latest` job of `.github/workflows/app.yml` and have not been executed, the same
+standing D74 records for the app. Lane D's verifier played it twice on the lane's binary at
+9c2b946 (04:00 and 04:02 IST, once through the wrapper): the proposal for mikrotik 0.6 s after
+the drop, approve `now_detected 250/250, parsers_loaded 13`, replay v2 over 1,044 events, verify
+clean, the drift update proposal 6.1 s after the new lines, attestation 2 of 2 checkpoints over
+2,694 records, the tamper named raw id 0 (digest) with exit 1, reset clean, 53 s end to end.
+The lead's pass on the merged binary is recorded under Verified state. Ports 7878 and 5514 must
+be free.
 
 **Nothing is approved from the CLI before the video is recorded.** A CLI approve writes the
 generated parser (`origin = "inferred"`, priority -1) into the repo's `parsers/`, and a bundle
@@ -33,6 +41,7 @@ cargo build --release                                      # ~1 min; binary targ
 
 # 0. reset between rehearsals (the server uses demo/parsers and demo/pending, so nothing lands in the repo)
 rm -rf demo
+#    the runner also removes any generated parser (origin = "inferred") a CLI approve left in parsers/
 
 # 1. server + UI (terminal 1): watches demo/watch, listens for syslog on UDP and TCP 5514
 mkdir -p demo/watch demo/parsers demo/pending && cp parsers/*.toml demo/parsers/
@@ -53,7 +62,7 @@ cp heldout/mikrotik.log demo/watch/
 
 # 4. approve (UI: `a` opens the confirmation, Enter approves, Esc backs out; or:)
 curl -s -X POST http://127.0.0.1:7878/api/pending/mikrotik/approve
-#    -> {"name":"mikrotik_inferred","now_detected":{"detected":250,"tested":250},"parsers_loaded":13,"path":"demo/parsers/mikrotik_inferred.toml","problems":[],"replaced_version":null}
+#    -> {"name":"mikrotik_inferred","now_detected":{"detected":250,"tested":250},"parsers_loaded":16,"path":"demo/parsers/mikrotik_inferred.toml","problems":[],"replaced_version":null}
 #    demo/parsers/mikrotik_inferred.toml carries origin = "inferred"; Live -> parsers: origin approved
 
 # 5. the same events take the fast path; the pivot sees them
@@ -98,7 +107,7 @@ EOF
 # 9. integrity: verify from the UI (Integrity -> Verify) or offline, and hand a stranger the attestation
 ./target/release/ulpf attest --store demo/store --out demo/attestation.json
 ./target/release/ulpf verify --store demo/store --attestation demo/attestation.json   # exit 0
-printf 'X' | dd of=demo/store/raw.seg bs=1 seek=200 conv=notrunc 2>/dev/null           # tamper one byte (rehearsal only!)
+printf 'X' | dd of=demo/store/raw.seg bs=1 seek=100 conv=notrunc 2>/dev/null           # tamper one byte of record 0 (rehearsal only!)
 ./target/release/ulpf verify --store demo/store                                        # names the record, exit 1
 
 # 10. a second output schema with zero parser changes
@@ -324,7 +333,15 @@ look at the captures and a grep of `ui/dist` for external references.
       outside the perimeter line, kept as evidence of extensibility.
 - [ ] L6. Branch `lane-6-index` pushed and described: the profile, what was removed, the
       numbers before and after, whether UDP loss falls with the index on.
-- [ ] L2P. (merged 04:12 IST as 2027391, 986154b, D81) `elapsed_ms` on every pivot page; the
+- [x] L2T. (merged 04:17 IST as 50b288f, `crates/ulpf/tests/v4_api.rs`) Four contract tests
+      against the merged main: queue depth and the windowed rate in the frame; `emitted_from`
+      tail then output on a five-event ring, `?bytes=0`, the bytes route byte-for-byte against
+      the sample's first line, 404 on both routes; the export as ndjson equal to the flushed
+      file, `from`/`to` inclusive, `q` case-insensitive against an independent count, the csv
+      header as D64's eleven columns with RFC 4180 quoting; pivot paging by the cursor pair
+      with `elapsed_ms` as five f64s. Not exercised: the trust-flags table, export's 404 on a
+      device output, `after` paging, the filename shape, `?values=N`.
+- [x] L2P. (merged 04:12 IST as 2027391, 986154b, D81; the lead's gate: 116 tests, clippy clean, demo check 18/18) `elapsed_ms` on every pivot page; the
       related scan on four connections without the SQLite mutex, through mmap, borrowed blobs, a
       bitset; pages byte-identical to before; the lead's gate on the merged tree.
 - [ ] LD. `ulpf demo` plays the PROGRESS demo from the binary with `--auto`, `--check`, `--reset`;
@@ -335,19 +352,52 @@ look at the captures and a grep of `ui/dist` for external references.
       abstractions, designed failure states, the smoke job that installs and launches, a new
       pre-release tag; the job object, the locked-store message, the bundle excluding generated
       parsers, `CARGO_TARGET_DIR`, which installer the job exercised.
-- [ ] LI. Intensity: Low / Balanced / Max with the machine's core count and the index state,
-      persisted, applied at sidecar start, a clean restart on change, the choice and live thread
-      count in the window chrome, screenshots at all three, the decision recorded.
+- [x] LI. (merged 04:17 IST as 20a66c2, eight commits 3e85c8a..f68781d, D84) Intensity: Low /
+      Balanced / Max with the machine's core count and the index state, persisted in
+      `app_config_dir/intensity`, applied at sidecar start, a clean restart on change with the
+      notice on the live page, the choice and live thread count in the title from `/api/status`,
+      seven captures indexed. The Fable verifier rebuilt the bundle and drove it: Low 2/off,
+      Balanced 4/on, Max 7/on in `/api/status` and on the child's command line, one serve child
+      after rapid Low-then-Balanced clicks, the title says `restarting` within 1.6 s when the
+      settings file disagrees with the engine, Quit leaves no `ulpf serve`; two findings closed
+      (app/README's Menus paragraph contradicted the new section; the captures were unindexed).
+      Not verified on Windows (the config path and TerminateProcess are named in comments).
 - [ ] LP. Profiles: `release` without LTO, `dist` with fat LTO for shipped binaries, installers,
       the Docker image and the harness; the harness re-run on the dist build in a quiet window;
       README and CI say which profile (lane 4B).
-- [ ] L3b. Branch `lane-3b-cef-leef` pushed and described: CEF `cef_severity` on its own scale,
-      the LEEF `0xHH` delimiter, tests, the twelve originals byte-identical.
+- [x] L3b. (pushed 04:30 IST, `origin/lane-3b-cef-leef` at c6e13ca, a9c8ac6 + 4, never merges
+      tonight) CEF's seventh header field is `cef_severity`, bucketed in both mappings on
+      ArcSight's own ranges (0-3 Low, 4-6 Medium, 7-8 High, 9-10 Very-High to Critical; 14 of 14
+      sample lines in the spec bucket, both schemas); LEEF 2.0's delimiter reads `xHH` and `0xHH`
+      in either case, and a prefix whose digits are not hex (`0xZZ`, `0x+5`) is a counted
+      `invalid_leef` instead of a fall back to tab (samples/leef.log line 17 carries `0x5E`,
+      17/17 parsed). 117 tests, clippy clean, the alloc test prints per-family numbers under
+      `--nocapture` (allocations equal materialised values in every family), the twelve original
+      samples byte-identical through main's binary and the branch's on both schemas. The Fable
+      verifier's one defect (the samples README row) closed in the fix round. Gaps recorded on the
+      branch: the string form `Very-High` is not in the Critical bucket; a multi-byte delimiter
+      without a prefix keeps its first byte (spec-undefined); a counted `invalid_leef` carries no
+      header fields (the pipeline's Err shape for every strategy). Merge after the demo: the
+      mapping additions are inside the severity enums, so the rebase onto main is trivial.
 - [ ] L8. Branch `lane-8-windows` pushed and described as ready for the owner's go: the three
       test names, the Windows test job URL, D82 on the branch.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 04:27 IST: gate at 97934a9 (the lane D follow-up): 122 tests 0 failed (116 + the four v4
+  contract tests + the runner's two), clippy clean, `ulpf check --pending pending` 15 parsers, 2
+  mappings, 0 problems, `ulpf demo --check` 39 ok, no external reference in `ui/dist`;
+  `scripts/isolation.sh run samples/cisco_asa.log` ISOLATION PASS (no socket observed).
+- 04:25 IST: the merged tree (lanes 3, 1, 2P, D, 2T, I on main, release binary 9,019,000
+  bytes rebuilt after the runner's tamper moved to byte 100): `ulpf demo --check` no drift
+  (39 ok), the runner's unit test green, `ulpf demo --auto` end to end in 56.6 s: 15 parsers
+  loaded, the mikrotik proposal 0.6 s after the drop, approve `now_detected 250/250,
+  parsers_loaded 16`, replay v2 over 1,089 events (the three new samples add 45 lines to the
+  1,044), verify clean, the drift update proposal 5.9 s after the new lines, attestation 2 of 2
+  checkpoints over 2,739 records, the tamper named raw id 0 with exit 1, reset clean (`demo/`
+  gone, no server left). The first pass at 04:20 had the tamper land in a header byte (see Tried
+  and abandoned). App crate: 7 tests green in `app/src-tauri` after clearing a stale tauri build
+  output that pointed at a removed worktree.
 - 04:02 IST: main at a9c8ac6 (lane 3 merged): gate 116 tests 0 failed, clippy clean, release
   binary 8,858,888 bytes (no Rust in the binary changed), `ulpf check --pending pending` 15
   parsers, 2 mappings, 0 problems, `scripts/demo.sh --check` 18 ok, no external reference in
@@ -358,12 +408,14 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
-- 04:10 IST: lane 1 merged (8dc1651), its gate running; lane 2P verified (986154b, pivot.rs
-  only, rebased on 94ba602; the lead read the diff) and merges next; lane 2U (UI plumbing,
-  Opus) building, rebases on lane 1 before merge; lane 2T (server tests, Opus Agent) polling
-  main for `elapsed_ms`; lane 4 (releases, Opus) building; lane 6 (index cost, branch) building;
-  lanes D, 7, I (Opus builders, Fable verifiers) building; lane 3b (CEF/LEEF engine defects,
-  branch only, Opus builder, Fable verifier) dispatched 04:03.
+- 04:27 IST: on main: lanes 3, 1, 2P, D, 2T, I (each through the gate). Building: lane 2U (UI
+  plumbing, Opus; rebases on the merged main before merge), lane 4 (releases, Opus), lane 6
+  (index cost, branch), lane 7 (Windows, Opus, Fable review), lane 3b (branch, dispatched 04:03),
+  lane P (profiles, Opus, dispatched 04:09), lane 8 (branch, Fable, dispatched 04:08). Queued
+  behind their parents: 4B (README Windows quick start, the contributed line, `samples/*.log`
+  in every documented command, the profile sentence and CI's `--profile dist`), 7B (job object,
+  locked-store message, bundle and first-run copy excluding generated parsers, `CARGO_TARGET_DIR`,
+  which installer the smoke job exercised, `ulpf demo --check` in the smoke job).
 
 ### Tried and abandoned (v4)
 - Lane 2P's headline "cut 4-8x": measured only at load 28-36. The controlled pair on a quiet
@@ -372,6 +424,12 @@ look at the captures and a grep of `ui/dist` for external references.
   recorded; 4-8x is the loaded end. The "500 ms" in the lane's name had no measurement behind
   it in the repo (docs/screens/README.md's pivot row carries no timing): the measured before was
   93 ms quiet, 239 ms at load 30.
+- The demo's tamper at byte 200 of `raw.seg`: once `cef.log` sorted first among the samples, byte
+  200 fell inside record 1's header (its receipt time), which the digest and the chain do not
+  cover, so `verify` said clean with exit 0 on the merged tree's first `--auto` pass (04:20 IST).
+  The tamper moved to byte 100, inside record 0's body whatever the first sample is (the segment
+  and record headers end at byte 68). Post-demo question for the owner, recorded not built:
+  whether the record header's receipt time belongs under the chain (a store-format change).
 
 ### Next action (if this session is cut off here)
 Main is clean at the last commit named in the verified state. Lanes in flight are in their own
