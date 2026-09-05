@@ -474,6 +474,7 @@ async fn pending_reject(State(app): State<App>, Path(id): Path<String>) -> Resul
 #[derive(Deserialize)]
 struct TraceQuery {
     bytes: Option<u8>,
+    values: Option<usize>,
 }
 
 fn trace_error(raw_id: u64, e: TracebackError) -> ApiError {
@@ -484,7 +485,12 @@ fn trace_error(raw_id: u64, e: TracebackError) -> ApiError {
 }
 
 async fn traceback(State(app): State<App>, Path(raw_id): Path<u64>, Query(q): Query<TraceQuery>) -> Result<Json<Value>, ApiError> {
-    let t = app.live.traceback_with(raw_id, q.bytes != Some(0)).map_err(|e| trace_error(raw_id, e))?;
+    let with_bytes = q.bytes != Some(0);
+    let t = match q.values {
+        Some(max) => app.live.traceback_cut(raw_id, with_bytes, max),
+        None => app.live.traceback_with(raw_id, with_bytes),
+    }
+    .map_err(|e| trace_error(raw_id, e))?;
     Ok(Json(serde_json::to_value(t).unwrap_or(Value::Null)))
 }
 

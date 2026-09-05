@@ -505,6 +505,13 @@ process (`--pivot`), beside `threads`: the two numbers a person quotes about the
   says how long the record is. A client that reads the bytes from the route below asks for
   this and is spared a JSON body six times the record's size.
 
+- `?values=N` cuts every string value longer than N bytes (at a character boundary) in
+  `now.fields`, `now.provenance`, `now.normalized` and `emitted`; a cut entry in `fields` or
+  `provenance` carries its full length in `"value_len": u64` (`null` when whole) and the
+  top-level `"values_cut": u64` counts the cuts (0: nothing was cut). A 4 MB single-line record
+  is one 4 MB `message` value repeated four times in the JSON; with `bytes=0&values=4096` the
+  body is kilobytes and the bytes route carries the record once.
+
 `GET /api/events/{raw_id}/bytes` → `application/octet-stream`, the record's exact bytes (what
 `ulpf raw <id>` prints), read through the writer's own lock like the JSON route;
 `Content-Length` is `bytes_len`. `404 not_found` with the JSON route's error body when the id

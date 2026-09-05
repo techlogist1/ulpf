@@ -263,6 +263,9 @@ pub struct Traceback {
     /// Where `emitted` came from: `tail` (the ring), `output` (the JSON Lines file the
     /// sink wrote, found by raw id), or `None` when the record has not reached the output.
     pub emitted_from: Option<&'static str>,
+    /// String values longer than the request's `values=N` that were cut, across
+    /// `fields`, `provenance`, `now.normalized` and `emitted`; 0 when nothing was.
+    pub values_cut: u64,
     pub now: NowParse,
 }
 
@@ -283,6 +286,8 @@ pub struct TraceField {
     pub key: String,
     pub value: String,
     pub span: Option<(u64, u64)>,
+    /// The value's full length when `values=N` cut it; `None` when it is whole.
+    pub value_len: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -292,6 +297,7 @@ pub struct TraceProvenance {
     pub span: Option<(u64, u64)>,
     pub canonical: bool,
     pub value: String,
+    pub value_len: Option<u64>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1087,6 +1093,50 @@ impl Live {
         self.traceback_with(id, true)
     }
 
+    /// `values=N`: every string value longer than `max` bytes in the fields, the
+    /// provenance, the normalized object and the emitted line is cut at a character
+    /// boundary; the entry keeps its full length in `value_len` and `values_cut` counts
+    /// them, so a 4 MB record's traceback is a few kilobytes plus the bytes route.
+    pub fn traceback_cut(&self, id: u64, with_bytes: bool, max: usize) -> Result<Traceback, TracebackError> {
+        let mut t = self.traceback_with(id, with_bytes)?;
+        let mut cut = 0u64;
+        let mut clip = |s: &mut String| -> Option<u64> {
+            if s.len() <= max {
+                return None;
+            }
+            let full = s.len() as u64;
+            let mut end = max;
+            while !s.is_char_boundary(end) {
+                end -= 1;
+            }
+            s.truncate(end);
+            cut += 1;
+            Some(full)
+        };
+        for f in &mut t.now.fields {
+            f.value_len = clip(&mut f.value);
+        }
+        for p in &mut t.now.provenance {
+            p.value_len = clip(&mut p.value);
+        }
+        fn walk(v: &mut serde_json::Value, clip: &mut dyn FnMut(&mut String) -> Option<u64>) {
+            match v {
+                serde_json::Value::String(s) => {
+                    clip(s);
+                }
+                serde_json::Value::Array(a) => a.iter_mut().for_each(|x| walk(x, clip)),
+                serde_json::Value::Object(o) => o.values_mut().for_each(|x| walk(x, clip)),
+                _ => {}
+            }
+        }
+        walk(&mut t.now.normalized, &mut clip);
+        if let Some(e) = &mut t.emitted {
+            walk(e, &mut clip);
+        }
+        t.values_cut = cut;
+        Ok(t)
+    }
+
     /// The record's exact bytes, read through the writer's own lock like the traceback.
     pub fn raw_bytes(&self, id: u64) -> Result<Vec<u8>, TracebackError> {
         let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
@@ -1142,7 +1192,7 @@ impl Live {
         let fields: Vec<TraceField> = parsed
             .fields
             .iter()
-            .map(|f| TraceField { key: String::from_utf8_lossy(&f.key).into_owned(), value: String::from_utf8_lossy(&f.value).into_owned(), span: span_in(&rec.bytes, &f.value) })
+            .map(|f| TraceField { key: String::from_utf8_lossy(&f.key).into_owned(), value: String::from_utf8_lossy(&f.value).into_owned(), span: span_in(&rec.bytes, &f.value), value_len: None })
             .collect();
         let provenance: Vec<TraceProvenance> = pipeline
             .mapping
@@ -1156,6 +1206,7 @@ impl Live {
                     span: f.and_then(|f| span_in(&rec.bytes, &f.value)),
                     canonical: p.canonical,
                     value: p.value,
+                    value_len: None,
                 }
             })
             .collect();
@@ -1194,6 +1245,7 @@ impl Live {
             chain_match: expected == chain,
             emitted,
             emitted_from,
+            values_cut: 0,
             now: NowParse { parser, parse_status, normalized, fields, provenance, time },
         })
     }
