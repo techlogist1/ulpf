@@ -2,6 +2,9 @@
 // unchanged; this crate starts it against an app-owned data directory, shows the page it
 // serves in the window and stops it on quit. Nothing here parses a log.
 
+mod ingest;
+mod menu;
+
 use std::fs;
 use std::io::{Read, Write};
 use std::net::{SocketAddr, TcpListener, TcpStream};
@@ -11,7 +14,7 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use tauri::{AppHandle, Manager, RunEvent};
+use tauri::{AppHandle, DragDropEvent, Manager, RunEvent, WindowEvent};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
@@ -26,19 +29,20 @@ const SPLASH: &str = "tauri://localhost/index.html";
 
 /// The one shared object: the data directory the engine runs against, the child, the
 /// server URL once it answered, and why the child died if it did.
-struct Engine {
-    data: Mutex<PathBuf>,
+pub(crate) struct Engine {
+    pub(crate) data: Mutex<PathBuf>,
     child: Mutex<Option<CommandChild>>,
     /// Bumped by every start and stop, so a poll or a Terminated event from an earlier
     /// child cannot touch the current one.
     generation: AtomicU64,
-    url: Mutex<Option<String>>,
+    pub(crate) url: Mutex<Option<String>>,
     down: Mutex<Option<String>>,
 }
 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             let handle = app.handle().clone();
             let data = configured_data_dir(&handle);
@@ -49,17 +53,26 @@ pub fn run() {
                 url: Mutex::new(None),
                 down: Mutex::new(None),
             });
+            menu::install(&handle)?;
             thread::spawn(move || start(&handle, data));
             Ok(())
+        })
+        .on_menu_event(|app, event| menu::action(app, event.id().as_ref()))
+        .on_window_event(|window, event| {
+            // A drop anywhere on the window; Tauri owns the drop when `dragDropEnabled`
+            // is set, on macOS and on Windows alike, so the served page never sees it.
+            if let WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) = event {
+                ingest::ingest_paths(window.app_handle(), paths);
+            }
         })
         .build(tauri::generate_context!())
         .expect("building the ULPF shell")
         .run(|app, event| match event {
             // Both fire on the way out (Cmd+Q, app.exit). Killing the engine outright
-            // (SIGKILL on macOS, TerminateProcess on Windows) is safe: the raw store is
-            // append-only, its SQLite lock dies with the process, and the next start
-            // completes the interrupted output from the store before it ingests anything
-            // new (D59, kill recovery).
+            // (std's Child::kill: SIGKILL on macOS, TerminateProcess on Windows) is safe:
+            // the raw store is append-only, its SQLite lock dies with the process, and the
+            // next start completes the interrupted output from the store before it ingests
+            // anything new (D59, kill recovery).
             RunEvent::ExitRequested { .. } | RunEvent::Exit => stop(app),
             _ => {}
         });
@@ -70,7 +83,7 @@ pub fn run() {
 /// The override the user chose, kept as one line in the app's config directory:
 /// macOS `~/Library/Application Support/dev.ulpf.desktop/data_dir`, Windows
 /// `%APPDATA%\dev.ulpf.desktop\data_dir` (both from Tauri's path resolver).
-fn config_file(app: &AppHandle) -> PathBuf {
+pub(crate) fn config_file(app: &AppHandle) -> PathBuf {
     app.path().app_config_dir().expect("app config dir").join("data_dir")
 }
 
@@ -116,7 +129,7 @@ fn is_toml(p: &Path) -> bool {
 /// Starts the sidecar against `data` on a free localhost port, waits for `/api/status`,
 /// records the URL in `<data>/server.url` and points the window at it. Runs on its own
 /// thread; every failure lands on the splash page and in the title.
-fn start(app: &AppHandle, data: PathBuf) {
+pub(crate) fn start(app: &AppHandle, data: PathBuf) {
     let engine = app.state::<Engine>();
     let generation = engine.generation.fetch_add(1, Relaxed) + 1;
     *engine.data.lock().unwrap() = data.clone();
@@ -217,7 +230,7 @@ fn fail(app: &AppHandle, generation: u64, why: &str, message: &str) {
     splash(app, message, true);
 }
 
-fn stop(app: &AppHandle) {
+pub(crate) fn stop(app: &AppHandle) {
     let Some(engine) = app.try_state::<Engine>() else { return };
     engine.generation.fetch_add(1, Relaxed);
     if let Some(child) = engine.child.lock().unwrap().take() {
@@ -229,7 +242,7 @@ fn stop(app: &AppHandle) {
 
 // ---- window ---------------------------------------------------------------------------
 
-fn set_title(app: &AppHandle, title: &str) {
+pub(crate) fn set_title(app: &AppHandle, title: &str) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.set_title(title);
     }
@@ -248,6 +261,26 @@ fn splash(app: &AppHandle, text: &str, error: bool) {
     navigate(app, &format!("{SPLASH}#{}{}", if error { "!" } else { "" }, percent_encode(text)));
 }
 
+/// A short-lived notice at the bottom of whatever page the window shows (the splash or the
+/// served UI): one element the shell injects, replaced by the next notice, gone after six
+/// seconds. The served UI is not restyled and does not know the shell exists.
+pub(crate) fn toast(app: &AppHandle, text: &str) {
+    let Some(w) = app.get_webview_window("main") else { return };
+    let Ok(text) = serde_json::to_string(text) else { return };
+    let js = format!(
+        "(function(){{var t=document.getElementById('ulpf-shell-toast');\
+         if(!t){{t=document.createElement('div');t.id='ulpf-shell-toast';\
+         t.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);max-width:72vw;\
+         padding:10px 16px;border-radius:8px;background:#20242b;color:#e8ebef;\
+         font:13px/1.45 -apple-system,\"Segoe UI\",system-ui,sans-serif;box-shadow:0 6px 24px rgba(0,0,0,.45);\
+         border:1px solid #333a44;z-index:2147483647;pointer-events:none;transition:opacity .3s;white-space:pre-wrap';\
+         document.body.appendChild(t);}}\
+         t.textContent={text};t.style.opacity='1';clearTimeout(t._h);\
+         t._h=setTimeout(function(){{t.style.opacity='0';}},6000);}})();"
+    );
+    let _ = w.eval(&js);
+}
+
 fn percent_encode(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for b in s.bytes() {
@@ -264,7 +297,7 @@ fn percent_encode(s: &str) -> String {
 /// One GET over loopback, body on 200. The server answers JSON with a Content-Length
 /// and honours Connection: close, which is all this needs.
 // ponytail: hand-rolled HTTP/1.1; switch to ureq if the server ever chunks a response.
-fn http_get(base: &str, path: &str) -> Option<String> {
+pub(crate) fn http_get(base: &str, path: &str) -> Option<String> {
     let addr: SocketAddr = base.trim_start_matches("http://").parse().ok()?;
     let mut s = TcpStream::connect_timeout(&addr, Duration::from_millis(500)).ok()?;
     s.set_read_timeout(Some(Duration::from_secs(3))).ok()?;
