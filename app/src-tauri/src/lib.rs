@@ -21,6 +21,13 @@ use tauri_plugin_shell::ShellExt;
 
 const START_TIMEOUT: Duration = Duration::from_secs(120);
 
+/// The engine beside the app: the bundler strips the target triple from
+/// `binaries/ulpf-<triple>[.exe]` when it copies it next to the executable.
+#[cfg(windows)]
+const SIDECAR: &str = "ulpf.exe";
+#[cfg(not(windows))]
+const SIDECAR: &str = "ulpf";
+
 /// The bundled splash page. Tauri serves `frontendDist` from its own scheme on macOS and
 /// Linux and from a localhost host on Windows (WebView2 has no custom-scheme origin).
 #[cfg(windows)]
@@ -156,10 +163,20 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf) {
         return fail(app, generation, "start failed", &format!("Cannot prepare {}: {e}", data.display()));
     }
     // Bind port 0, read the kernel's pick, release it, hand it to the engine. The engine
-    // reports the address it bound in its own stderr line.
-    let port = match TcpListener::bind("127.0.0.1:0").and_then(|l| l.local_addr()) {
+    // reports the address it bound in its own stderr line. ULPF_APP_PORT pins a port
+    // instead, which is how the port-in-use path is exercised.
+    let pinned = std::env::var("ULPF_APP_PORT").ok().and_then(|v| v.parse::<u16>().ok());
+    let port = match TcpListener::bind(("127.0.0.1", pinned.unwrap_or(0))).and_then(|l| l.local_addr()) {
         Ok(a) => a.port(),
-        Err(e) => return fail(app, generation, "start failed", &format!("No free localhost port: {e}")),
+        Err(e) => {
+            let asked = pinned.map_or_else(|| "a free port on 127.0.0.1".to_string(), |p| format!("port {p} on 127.0.0.1"));
+            return fail(
+                app,
+                generation,
+                "port in use",
+                &format!("ULPF could not take {asked}: {e}.\nQuit whatever is listening there, or start ULPF with ULPF_APP_PORT unset and it will pick a free port."),
+            );
+        }
     };
     let url = format!("http://127.0.0.1:{port}");
     let arg = |p: &str| data.join(p).to_string_lossy().into_owned();
@@ -191,22 +208,45 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf) {
         .and_then(|c| c.args(&args).spawn().map_err(|e| e.to_string()));
     let (mut rx, child) = match spawned {
         Ok(x) => x,
-        Err(e) => return fail(app, generation, "start failed", &format!("Cannot start the engine: {e}")),
+        Err(e) => {
+            return fail(
+                app,
+                generation,
+                "engine missing",
+                &format!("ULPF could not start its engine: {e}.\nThe engine ships beside the app as {SIDECAR}; reinstalling ULPF replaces it."),
+            )
+        }
     };
     *engine.child.lock().unwrap() = Some(child);
 
     let h = app.clone();
+    // This run's engine output, so a failure has a file to name. Truncated per start: the
+    // engine's own store and output are the durable record, this is the last words.
+    let log = data.join("engine.log");
+    let mut log_file = fs::File::create(&log).ok();
     tauri::async_runtime::spawn(async move {
+        let mut last = String::new();
         while let Some(event) = rx.recv().await {
             match event {
-                CommandEvent::Stderr(line) | CommandEvent::Stdout(line) => eprintln!("[ulpf] {}", String::from_utf8_lossy(&line).trim_end()),
+                CommandEvent::Stderr(line) | CommandEvent::Stdout(line) => {
+                    let text = String::from_utf8_lossy(&line);
+                    let text = text.trim_end();
+                    eprintln!("[ulpf] {text}");
+                    if let Some(f) = log_file.as_mut() {
+                        let _ = writeln!(f, "{text}");
+                    }
+                    if !text.is_empty() {
+                        last = text.to_string();
+                    }
+                }
                 CommandEvent::Terminated(t) => {
                     let why = match (t.code, t.signal) {
                         (Some(c), _) => format!("exit {c}"),
                         (None, Some(s)) => format!("signal {s}"),
                         _ => "exit unknown".to_string(),
                     };
-                    fail(&h, generation, &why, &format!("The engine stopped ({why}). Restart the app, or check {} for what it left behind.", h.state::<Engine>().data.lock().unwrap().display()));
+                    let said = if last.is_empty() { "It printed nothing.".to_string() } else { format!("Its last words: {last}") };
+                    fail(&h, generation, &why, &format!("The engine stopped ({why}). {said}\nThe whole of its output is in {}", log.display()));
                 }
                 _ => {}
             }
