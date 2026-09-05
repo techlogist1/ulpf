@@ -1,0 +1,68 @@
+# The desktop shell for macOS and Windows: the engine is built first and becomes the
+# sidecar, then tauri-action bundles the installer. Every push uploads the bundles as run
+# artifacts; a v* tag also attaches them to a draft release.
+name: app
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# A newer push to the same branch supersedes a run still going.
+concurrency:
+  group: app-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            app/src-tauri -> app/src-tauri/target
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: engine (the sidecar)
+        run: cargo build --release -p ulpf
+
+      # binaries/ulpf-<host triple>[.exe]; the same script a developer runs locally.
+      - name: name the sidecar for this target
+        shell: bash
+        run: app/scripts/sidecar.sh
+
+      - name: shell dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: app
+
+      - uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: app
+          uploadWorkflowArtifacts: true
+          # Empty tagName: build and upload only. On a v* tag: also a draft release.
+          tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
+          releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('ULPF {0}', github.ref_name) || '' }}
+          releaseDraft: true
