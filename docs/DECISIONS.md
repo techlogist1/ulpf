@@ -975,6 +975,23 @@ on a loaded laptop loses datagrams in the kernel; TCP or the file path loses not
 `caffeinate -i` now runs for the rest of the session so the host cannot suspend a measurement
 again.
 
+**Amendment (2026-09-05 22:58, run 5, the same command from a watcher that waited for a quiet
+machine).** Started at load 3.90 with no build running; two lanes then loaded the host for 54%
+of the run (peak load 17.07, sampled every 2 s), so this is a second loaded point, not the
+quiet run, and the host did not suspend (max SSE gap 0.55 s). 9,000,000 sent; `udp_rcvbuf`
+8,388,608 granted again; UDP 1,063,160 of 2,400,000 received (56% shortfall, 1,336,840)
+against `netstat -s -p udp` full-socket-buffer drops rising by 1,336,894: kernel drops, none an
+engine loss. File 4,200,000 and TCP 2,400,000 exact; framed = stored = emitted = verified
+7,663,160, chain ok. Queue 64/64 with 2,309 backpressure blocks: the engine ran at 5,950
+events/s over the run with the entity index on (`serve` default, D66) beside 16 syslog
+datagrams and a file feed, so the listener spent the run blocked on the queue and the kernel
+buffer filled at 8k/s in. RSS 16.6 to 930 MB, the in-flight backlog while the output thread
+was behind, 402 MB at the end. The demo warning stands until a run with nothing else on the
+host says otherwise: at 8k/s UDP on a loaded laptop the kernel drops; TCP and the file path
+lose nothing. The lesson for the soak itself: 26k/s aggregate with the index on is at the
+measured index-on rate (28-31k/s, D66), so the harness should either turn the index off or
+halve its rates when the question is socket loss rather than engine throughput.
+
 ## D63. Real captures fix parsers from vendor documentation, and stay in the samples
 **Decision.** Real captures (public sources with permissive licences, and captures
 generated locally from real Suricata, Squid, OpenVPN 2.4/2.5/2.6, nginx, HAProxy and Zeek

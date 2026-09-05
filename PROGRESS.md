@@ -52,9 +52,14 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
 - [~] A2. Socket soak re-run after the `SO_RCVBUF` negotiation (D62 amendment): run 4, loaded
       machine (load 11-49, host suspended 16 min mid-run), 9,000,000 sent; rcvbuf granted
       8 MiB; UDP 911,692/2,400,000 (62% kernel drops, netstat delta 1,488,318 vs shortfall
-      1,488,308), TCP exact, RSS 16.5-714 MB, PARTIAL. DEMO WARNING: UDP syslog on a loaded
-      laptop loses datagrams in the kernel; feed the demo device over TCP or a file. Quiet
-      re-run still owed (needs the workers' builds finished; `caffeinate -i` now prevents sleep).
+      1,488,308), TCP exact, RSS 16.5-714 MB, PARTIAL. Run 5 (22:58 IST, from the quiet-window
+      watcher: started at load 3.9, then the lanes loaded the host 54% of the run, peak 17):
+      UDP 1,063,160/2,400,000 received, shortfall 1,336,840 against a netstat drop delta of
+      1,336,894; file and TCP exact; framed = stored = emitted = verified 7,663,160, chain ok;
+      engine 5,950 events/s with the index on beside two listeners; RSS max 930 MB (backlog).
+      DEMO WARNING: UDP syslog on a loaded laptop loses datagrams in the kernel; feed the demo
+      device over TCP or a file. A run with nothing else on the host is still owed and is the
+      last measurement of the session, after every lane has finished.
 - [ ] A3. Honest throughput: -j 1, 2, 4, 7 (three runs at -j 7) on the 5M bench, load average
       recorded with each; every README/PROGRESS/demo-script sentence that could read as
       single-core states the thread count with the -j 1 figure beside it.
