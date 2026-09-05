@@ -153,8 +153,9 @@ round; same return format. It is a separate lane because it edits `lib.rs infer(
 A1 verifier reads A1's tree, and it merges only after A1 does.
 
 ### In flight
-- A1 verify, B, C running since 22:12 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`;
-  A1b since 22:14 in `.claude/worktrees/a1b`.
+- C running since 22:12 IST in `.claude/worktrees/wf_b664b6d7-603-1`; A1b since 22:14 in
+  `.claude/worktrees/a1b`; lane V (the Chrome-driven pass over the merged UI, captures under
+  `docs/screens/tool-*.png` in its own worktree) since 22:48. A1 and B are merged.
 - A2 and A3 run from a detached watcher started 22:21 IST (`quiet-measure.sh` in the session
   scratchpad, `pgrep -fl quiet-measure`): before each bench width and before the soak it waits
   for a quiet machine (1-min load under 4, no rustc/cargo/ld), samples the load every 2 s
@@ -456,7 +457,7 @@ cp heldout/mikrotik.log demo/watch/
 #    (key `src-mac` before the value; vocabulary `{ip}:{port}->{ip}:{port}` names src/dst ...);
 #    generic slots stay ip1/word2 and say why. Uncheck a template + Regenerate to drop it.
 
-# 4. approve (UI button, or):
+# 4. approve (UI: `a` opens the confirmation, Enter approves, Esc backs out; or:)
 curl -s -X POST http://127.0.0.1:7878/api/pending/mikrotik/approve
 #    -> {"name":"mikrotik_inferred","parsers_loaded":13,"now_detected":{"tested":250,"detected":250},"replaced_version":null}
 #    demo/parsers/mikrotik_inferred.toml carries origin = "inferred"; Live -> parsers: origin approved
@@ -471,6 +472,7 @@ cp heldout/mikrotik.log demo/watch/mikrotik-again.log
 curl -s http://127.0.0.1:7878/api/events/0 | python3 -m json.tool | head -40
 #    stored and recomputed SHA-256, chain and prev_chain with chain_match, every parsed field with its
 #    byte range, every normalized path with the field and bytes it came from; hover a normalized field
+#    (j/k walk them, Enter pins one, h = hex, Esc releases)
 #    in the UI and its bytes light up in the raw record.
 
 # 7. replay: a parser bug, the fix, every past event corrected, the store untouched
@@ -497,7 +499,7 @@ EOF
 #    Drift -> gw-drift.log tripped (window rate vs baseline; a partial window is judged after 5 s of
 #    quiet, D54); within ~10 s Review shows mikrotik_inferred v2 replacing the standalone proposal:
 #    the diff adds one pattern, the decisions start with "prior: `mikrotik_inferred` v1".
-#    Approve -> demo/parsers/mikrotik_inferred.toml is v2, demo/pending/approved/mikrotik_inferred.v1.toml kept.
+#    Approve (`a`, Enter) -> demo/parsers/mikrotik_inferred.toml is v2, demo/pending/approved/mikrotik_inferred.v1.toml kept.
 
 # 9. integrity: verify from the UI (Integrity -> Verify) or offline, and hand a stranger the attestation
 ./target/release/ulpf attest --store demo/store --out demo/attestation.json
