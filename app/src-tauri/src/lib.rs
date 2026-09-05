@@ -61,13 +61,19 @@ pub fn run() {
             thread::spawn(move || title::title_loop(&handle));
             Ok(())
         })
+        // Window menu and tray menu clicks both land here.
         .on_menu_event(|app, event| menu::action(app, event.id().as_ref()))
-        .on_window_event(|window, event| {
+        .on_window_event(|window, event| match event {
             // A drop anywhere on the window; Tauri owns the drop when `dragDropEnabled`
             // is set, on macOS and on Windows alike, so the served page never sees it.
-            if let WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) = event {
-                ingest::ingest_paths(window.app_handle(), paths);
+            WindowEvent::DragDrop(DragDropEvent::Drop { paths, .. }) => ingest::ingest_paths(window.app_handle(), paths),
+            // Closing the window hides it; the engine keeps ingesting and the tray brings
+            // the window back. Quit (menu, tray, Cmd+Q) is what stops the engine.
+            WindowEvent::CloseRequested { api, .. } => {
+                api.prevent_close();
+                let _ = window.hide();
             }
+            _ => {}
         })
         .build(tauri::generate_context!())
         .expect("building the ULPF shell")
@@ -78,6 +84,9 @@ pub fn run() {
             // next start completes the interrupted output from the store before it ingests
             // anything new (D59, kill recovery).
             RunEvent::ExitRequested { .. } | RunEvent::Exit => stop(app),
+            // macOS: a click on the dock icon while the window is hidden.
+            #[cfg(target_os = "macos")]
+            RunEvent::Reopen { .. } => menu::show(app),
             _ => {}
         });
 }

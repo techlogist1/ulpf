@@ -1,10 +1,12 @@
-// The window menu and every action behind it.
+// The window menu, the tray, and every action behind them.
 
 use std::fs;
 use std::path::PathBuf;
 use std::thread;
 
+use tauri::image::Image;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 use tauri_plugin_opener::OpenerExt;
@@ -49,10 +51,46 @@ pub(crate) fn install(app: &AppHandle) -> tauri::Result<()> {
     )?;
     app.set_menu(Menu::with_items(app, &[&app_menu, &file, &edit])?)?;
 
+    // The tray: the window can be closed and the engine keeps running; this is the way
+    // back, and Quit here is the same Quit as the menu's.
+    let tray_menu = Menu::with_items(
+        app,
+        &[
+            &item("show", "Show ULPF", None)?,
+            &item("open_output", "Open output folder", None)?,
+            &item("open_browser", "Open in browser", None)?,
+            &PredefinedMenuItem::separator(app)?,
+            &item("quit", "Quit ULPF", None)?,
+        ],
+    )?;
+    let tray = TrayIconBuilder::with_id("ulpf").menu(&tray_menu).show_menu_on_left_click(true).tooltip("ULPF");
+    // macOS: a template image (alpha only) in the menu bar, so the glyph follows the bar's
+    // light or dark style. Windows: the coloured app icon in the notification area.
+    #[cfg(target_os = "macos")]
+    let tray = tray.icon(glyph()).icon_as_template(true);
+    #[cfg(not(target_os = "macos"))]
+    let tray = tray.icon(app.default_window_icon().cloned().unwrap_or_else(glyph));
+    tray.build(app)?;
     Ok(())
 }
 
-/// Every menu action by id. The native pickers feed the same `ingest_paths` a
+/// The ULPF mark, three bars, as a 44 px RGBA image drawn here rather than shipped as a
+/// file: the shape is the splash page's `.mark`.
+fn glyph() -> Image<'static> {
+    const N: usize = 44;
+    let mut px = vec![0u8; N * N * 4];
+    for (y0, w) in [(10, 28), (20, 17), (30, 23)] {
+        for y in y0..y0 + 5 {
+            for x in 8..8 + w {
+                let i = (y * N + x) * 4;
+                px[i..i + 4].copy_from_slice(&[0, 0, 0, 255]);
+            }
+        }
+    }
+    Image::new_owned(px, N as u32, N as u32)
+}
+
+/// Every menu and tray action by id. The native pickers feed the same `ingest_paths` a
 /// drop does.
 pub(crate) fn action(app: &AppHandle, id: &str) {
     match id {
@@ -100,8 +138,17 @@ pub(crate) fn action(app: &AppHandle, id: &str) {
                 None => toast(app, "The engine is not serving yet."),
             }
         }
+        "show" => show(app),
         "quit" => app.exit(0),
         _ => {}
+    }
+}
+
+pub(crate) fn show(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        let _ = w.show();
+        let _ = w.unminimize();
+        let _ = w.set_focus();
     }
 }
 
