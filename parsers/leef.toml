@@ -1,0 +1,71 @@
+# IBM QRadar Log Event Extended Format (LEEF). Source: IBM QRadar DSM Configuration Guide,
+# "LEEF overview", "LEEF event components", "Predefined LEEF event attributes",
+# ibm.com/docs/en/dsm?topic=leef-overview (pages undated), fetched 2026-09-06. The
+# "Log Event Extended Format (LEEF) Version 2" PDF was fetched too but its text could not
+# be extracted here, so every rule below is from the HTML pages.
+# Header, verbatim: "LEEF:Version|Vendor|Product|Version|EventID|" for 1.0, and for 2.0
+# "LEEF:2.0|Vendor|Product|Version|EventID|^|" with the delimiter as a sixth field: "Use
+# the DelimiterCharacter in the LEEF 2.0 header to specify an alternate delimiter to the
+# attributes. You can use a single character or the hex value for that character. The hex
+# value can be represented by the prefix 0x or x" (IBM's examples: `^` and `x5E`). "Each
+# event attribute must be separated by tab or the delimiter character, but the order of
+# attributes is not enforced." Without a delimiter field LEEF 2.0 attributes are
+# tab-separated like 1.0. The engine reads the `xHH` form; the `0xHH` spelling is not read
+# and such a line splits on the literal `0`.
+# The strategy names leef_version, device_vendor, device_product, device_version,
+# event_id and emits every attribute key as written (the predefined ones: devTime,
+# devTimeFormat, src, dst, srcPort, dstPort, proto, usrName, sev, cat, identSrc,
+# srcBytes, dstBytes, srcPackets, dstPackets, url, srcMAC, dstMAC, srcPreNAT, dstPreNAT,
+# srcPostNAT, dstPostNAT, accountName, realm, role, policy, resource, domain,
+# isLoginEvent, isLogoutEvent, ...). Escapes are unescaped as in CEF (`\|` in the
+# header, `\\`, `\=`); the IBM pages state no escaping rule of their own.
+# Time: devTime, whose layout the event declares in devTimeFormat (Java SimpleDateFormat;
+# "required if your event log contains devTime", not needed for a 10-13 digit epoch).
+# Candidates cover, in order: epoch seconds or milliseconds; the 12-hour `MMM dd yyyy
+# hh:mm:ss a` (before `auto`, which would otherwise take `AM`/`PM` for a zone name);
+# `MMM dd yyyy HH:mm:ss` with an optional `.SSS` (via `auto`, which also reads ISO 8601
+# with T); `yyyy-MM-dd HH:mm:ss`; `MM/dd/yyyy HH:mm:ss`; `dd/MMM/yyyy:HH:mm:ss Z`. Any
+# other SimpleDateFormat layout (day-first `dd MMM yyyy`, day-of-year, a bare `HH:mm:ss`)
+# falls to the syslog header time when there is one, else to the receipt time, flagged
+# time_from_receipt. The declared devTimeFormat is kept as a field; it is not interpreted.
+# Priority 0 beside the vendor parsers (see parsers/cef.toml for the rule).
+
+[parser]
+name = "leef"
+vendor = "IBM"
+product = "Log Event Extended Format"
+description = "Generic LEEF 1.0 / 2.0 container: header fields plus every attribute as written"
+
+[match]
+contains = ["LEEF:"]
+regex = '^[^|]*LEEF:[12]\.0\|'
+
+[envelope]
+syslog = true
+
+[strategy]
+kind = "leef"
+
+[[timestamp]]
+field = "devTime"
+format = "epoch"
+
+[[timestamp]]
+field = "devTime"
+format = "%b %d %Y %I:%M:%S %p"
+
+[[timestamp]]
+field = "devTime"
+format = "auto"
+
+[[timestamp]]
+field = "devTime"
+format = "%Y-%m-%d %H:%M:%S"
+
+[[timestamp]]
+field = "devTime"
+format = "%m/%d/%Y %H:%M:%S"
+
+[[timestamp]]
+field = "devTime"
+format = "%d/%b/%Y:%H:%M:%S %z"
