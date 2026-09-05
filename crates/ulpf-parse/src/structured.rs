@@ -167,7 +167,8 @@ fn delimiter_byte(d: &[u8]) -> Result<u8, ParseFailure> {
         [b'0', b'x' | b'X', rest @ ..] | [b'x' | b'X', rest @ ..] => rest,
         [first, ..] => return Ok(*first),
     };
-    if !matches!(hex.len(), 1 | 2) {
+    // The digits must be hex digits: `from_str_radix` alone would read `0x+5` as byte 0x05.
+    if !matches!(hex.len(), 1 | 2) || !hex.iter().all(u8::is_ascii_hexdigit) {
         return Err(ParseFailure::InvalidLeef);
     }
     let text = std::str::from_utf8(hex).map_err(|_| ParseFailure::InvalidLeef)?;

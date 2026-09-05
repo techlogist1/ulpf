@@ -61,6 +61,7 @@ fn detect_and_parse_allocate_nothing_after_warm_up() {
             }
         }
         let mut detected = 0;
+        let (mut family_allocations, mut family_owned) = (0, 0);
         for (i, ev) in evs.iter().enumerate() {
             if reg.detect(ev, None) == Some(idx) {
                 detected += 1;
@@ -85,8 +86,15 @@ fn detect_and_parse_allocate_nothing_after_warm_up() {
                 "{family} event {}: {allocations} allocations, {owned} materialised values",
                 i + 1
             );
+            family_allocations += allocations;
+            family_owned += owned;
         }
         assert!(detected > 0, "{family}: nothing detected");
+        // `--nocapture` shows the number the invariant is about, per family, without instrumenting.
+        println!(
+            "{family}: {} events, {family_allocations} allocations, {family_owned} materialised values",
+            evs.len()
+        );
     }
 }
 
