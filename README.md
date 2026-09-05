@@ -207,7 +207,13 @@ SHA-256 and the integrity chain flushed per batch included. That is the number t
 It was produced by the neutral harness every tool is run through, not by a hand-timed
 loop: `eval/run.sh eval/tools/ulpf.toml`, scorecard committed at
 `eval/results/ulpf-20260905T140426Z-33371/scorecard.md`, 2026-09-05. Run-to-run variance
-is about ±10%.
+is about ±10% on a quiet machine, and that qualifier is load-bearing: re-run six times on
+the dist build on 2026-09-06 between 05:14 and 05:22 IST, with five other builds and test
+suites on the same laptop, the identical command gave 153,247 / 282,646 / 166,196 /
+192,197 / 221,180 / 308,528 events/s while the one-minute load moved between 5.9 and 21.6.
+The fastest of those (308,528, 16.2 s) beats the fastest run behind the headline (263,588,
+19.0 s), so the engine is not slower than the number says; the slow runs are the machine,
+not the code. Quote the figure with the machine state, or do not quote it.
 
 **Which build.** Every number in a scorecard is a `--profile dist` number: fat LTO, one
 codegen unit, and what CI ships, what the Docker image holds and what
