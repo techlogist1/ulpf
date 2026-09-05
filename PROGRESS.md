@@ -13,36 +13,36 @@ source document in hand; Haiku banned (D30). Baseline at a9d0dd8: 71 tests, clip
 260k events/s.
 
 ### Definition of done (each item checked only after running it)
-- [ ] 1. Field-level provenance: `GET /api/events/{id}` returns, per normalized field, the
+- [x] 1. (D57; `crates/ulpf/src/engine.rs` traceback; smoke-tested: 35 of 38 Check Point fields with spans) Field-level provenance: `GET /api/events/{id}` returns, per normalized field, the
       source field and the byte range in the raw record; the traceback view highlights it.
       Offsets come from the borrowed `Cow` spans (D15), computed only on the traceback path.
-- [ ] 2. Replay: `ulpf replay` (and `POST /api/replay`) re-runs the raw store through the
+- [x] 2. (D52; `crates/ulpf/tests/replay.rs`; rehearsed on the demo server: 260 corrected events, why names the file) Replay: `ulpf replay` (and `POST /api/replay`) re-runs the raw store through the
       current parsers and mappings into `out.v<N>.jsonl`, streams a diff against the previous
       version (events changed, fields added, fields lost) with a why line per change. Demo:
       parser bug -> run -> fix -> replay -> every past event corrected, store untouched.
-- [ ] 3. Pivot: entity index (src ip, dst ip, user, dst port, device) over normalized
+- [x] 3. (D55; `crates/ulpf/tests/pivot.rs`; smoke-tested: 203.0.113.9 across 11 devices, 41/41 lines) Pivot: entity index (src ip, dst ip, user, dst port, device) over normalized
       events, declared per mapping; `GET /api/pivot` and a timeline view across devices.
-- [ ] 4. Drift: per-source rolling match rate; an established source whose window trips
+- [x] 4. (D54; `crates/ulpf/tests/drift.rs` batch and serve modes; rehearsed: update v2 with diff in ~10 s) Drift: per-source rolling match rate; an established source whose window trips
       routes its misses into inference with the current parser as prior; a versioned update
       with a diff lands in `pending/`; a two-format source does not trip.
-- [ ] 5. Integrity chain: per-record chain value, `ulpf verify` names the first broken
+- [x] 5. (D56 and the store worker's tests; verify, attest, tamper at record N all exercised) Integrity chain: per-record chain value, `ulpf verify` names the first broken
       record, `ulpf attest` exports what a stranger needs to re-verify offline.
-- [ ] 6. Syslog UDP + TCP listeners in `serve`; soak >= 10M events over an appended file
+- [x] 6. (D60, D62; `crates/ulpf/tests/syslog.rs`; soak runs 10.0M and 15.0M PASS, burst saturates the queue at 300k/s with 537 blocks and zero loss; socket run reconciles TCP exactly and measures UDP kernel drops) Syslog UDP + TCP listeners in `serve`; soak >= 10M events over an appended file
       plus a live socket, UI open, RSS flat, counters reconciled; queue saturation recorded.
-- [ ] 7. Slot naming: kv keys, preceding-constant names, curated vocabulary
+- [x] 7. (D53; `docs/slot-vocabulary.md`; reasons visible on the review screen) Slot naming: kv keys, preceding-constant names, curated vocabulary
       (`docs/slot-vocabulary.md`); every name marked suggested with its reason in evidence.
-- [ ] 8. ECS: `mappings/ecs.toml` only plus `--schema ecs`; the diff touches mappings and
+- [x] 8. (D58; branch diff = `mappings/ecs.toml` + one test file) ECS: `mappings/ecs.toml` only plus `--schema ecs`; the diff touches mappings and
       the selector only.
 - [ ] 9. Multi-core: measured -j scaling before and after any change; single writer and one
       sequencer preserved; alloc and round-trip tests untouched; honest numbers recorded.
-- [ ] 10. Corpus: real captures (web, licence read) and locally generated captures (tool
+- [x] 10. (D63; `corpus/README.md`; six parsers fixed from vendor docs; unseen: nginx, HAProxy, Zeek, OpenVPN 2.6) Corpus: real captures (web, licence read) and locally generated captures (tool
       version + exact setup) replace synthetic samples where obtained; three unseen formats;
       the twelve parsers fixed against the real data.
-- [ ] 11. Harness: `docs/evaluation.md` scorecard + `eval/` scripts taking any tool's
+- [x] 11. (`docs/evaluation.md`, `eval/run.sh`; first scorecard committed; kill_recovery found D59; re-run on the final build pending) Harness: `docs/evaluation.md` scorecard + `eval/` scripts taking any tool's
       command template; ULPF's scorecard generated and committed.
-- [ ] 12. UI: live feed, review (merge/discard, naming reasons), traceback with provenance,
+- [x] 12. (D61; seven screens verified by the worker against a 400k-event live server and reviewed by the lead from captures) UI: live feed, review (merge/discard, naming reasons), traceback with provenance,
       pivot timeline, replay diff, drift alerts, integrity status; batched SSE; keyboard.
-- [ ] 13. Parquet output, only after 1-12 are green; crate and static build verified first.
+- [x] 13. (D64; `--parquet` on run and serve, rolled files, static image verified; 0.46x on the output thread when enabled, off by default) Parquet output, only after 1-12 are green; crate and static build verified first.
 - [ ] 14. Regression: full suite, clippy, alloc test, round-trip, isolation; bench within variance.
 - [ ] 15. `aposd-critique` pass, every finding fixed or closed with evidence.
 - [ ] 16. This file's demo script rewritten (commands, expected output, reset, 04:00
@@ -100,6 +100,16 @@ documentation (D30), promoting permissively licensed real lines into samples and
 The lead wires integrity and pivot into the engine and server, then fixes the harness's
 finding that `run` re-ingests from byte zero after a kill (double counting on restart),
 adds `--receipt` to `run`, then syslog listeners.
+
+### Fan-out 4 (19:35 IST): the review pass
+Seven Opus graders, one per crate group (store; parse+time; normalize+parquet; infer;
+engine+syslog+inference+metrics; replay+pivot+tail; server+pending+cli+contract), each
+running `aposd-critique` read-only and returning the graded table, ranked findings with
+file:line and the fix's risk tonight, which invariants are enforced by types or tests, and
+what to remove. Why seven: the crates are disjoint and a grader that reads 2,000 lines
+finds what one that reads 12,000 skims past. The lead merges, ranks by what hurts at
+04:00, fixes each real finding in its own commit with a DECISIONS entry, closes wrong ones
+with evidence, and defers only with a written revisit trigger.
 
 ### Verified state (16:05 IST; every line was run, not read)
 - main b0f4117: 102 tests, clippy clean, release build current. Replay (D52), naming (D53),
