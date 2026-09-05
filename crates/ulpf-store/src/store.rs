@@ -30,7 +30,43 @@
 use std::collections::HashMap;
 use std::fs::{File, OpenOptions};
 use std::io::{self, BufWriter, Read, Seek, SeekFrom, Write};
+#[cfg(unix)]
 use std::os::unix::fs::FileExt;
+/// Windows has no positional read that leaves the cursor alone: `seek_read` moves it, and
+/// the writers behind `BufWriter` rely on it. The shim reads at the offset and puts the
+/// cursor back; the store lock already serialises readers and the writer on one handle.
+#[cfg(windows)]
+trait FileExt {
+    fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()>;
+}
+#[cfg(windows)]
+impl FileExt for File {
+    fn read_exact_at(&self, mut buf: &mut [u8], mut offset: u64) -> io::Result<()> {
+        use std::os::windows::fs::FileExt as _;
+        let mut cursor: &File = self;
+        let saved = cursor.stream_position()?;
+        let mut result = Ok(());
+        while !buf.is_empty() {
+            match self.seek_read(buf, offset) {
+                Ok(0) => {
+                    result = Err(io::Error::new(io::ErrorKind::UnexpectedEof, "positional read past end of file"));
+                    break;
+                }
+                Ok(n) => {
+                    buf = &mut buf[n..];
+                    offset += n as u64;
+                }
+                Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+                Err(e) => {
+                    result = Err(e);
+                    break;
+                }
+            }
+        }
+        cursor.seek(SeekFrom::Start(saved))?;
+        result
+    }
+}
 use std::path::{Path, PathBuf};
 
 use memmap2::Mmap;

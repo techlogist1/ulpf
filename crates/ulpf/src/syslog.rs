@@ -98,7 +98,10 @@ impl PeerBuf {
 /// Asks for `RECV_BUFFER_BYTES`, halving until the kernel accepts (macOS refuses anything
 /// at or above `kern.ipc.maxsockbuf` and would otherwise leave the ~786 KB default in
 /// place without a word), and returns what was granted.
-fn set_recv_buffer(fd: std::os::fd::RawFd) -> u64 {
+#[cfg(unix)]
+fn set_recv_buffer(sock: &UdpSocket) -> u64 {
+    use std::os::fd::AsRawFd;
+    let fd = sock.as_raw_fd();
     let mut want = RECV_BUFFER_BYTES as libc::c_int;
     while want >= 65_536 {
         // SAFETY: a plain setsockopt/getsockopt on a socket this process owns.
@@ -117,13 +120,21 @@ fn set_recv_buffer(fd: std::os::fd::RawFd) -> u64 {
     got.max(0) as u64
 }
 
+/// Windows: std has no receive-buffer setter and the engine uses libc only for this one
+/// call on unix; the socket keeps the system default and reports 0 as the grant.
+#[cfg(windows)]
+fn set_recv_buffer(_sock: &UdpSocket) -> u64 {
+    0
+}
+
 /// The UDP listener thread: one datagram is one event, batched per peer.
 pub(crate) fn udp_listener(live: &Arc<Live>, addr: SocketAddr, tx: SyncSender<Batch>, in_flight: &AtomicI64) -> Result<()> {
-    use std::os::fd::AsRawFd;
     let sock = UdpSocket::bind(addr).with_context(|| format!("binding syslog udp {addr}"))?;
-    let rcvbuf = set_recv_buffer(sock.as_raw_fd());
+    let rcvbuf = set_recv_buffer(&sock);
     live.syslog_udp_rcvbuf.store(rcvbuf, Relaxed);
-    if rcvbuf < RECV_BUFFER_BYTES as u64 {
+    if cfg!(windows) {
+        eprintln!("ulpf: syslog udp: receive buffer left at the Windows default (asked {RECV_BUFFER_BYTES}, granted unknown, reported as 0)");
+    } else if rcvbuf < RECV_BUFFER_BYTES as u64 {
         eprintln!("ulpf: syslog udp: kernel granted a {rcvbuf} byte receive buffer (asked {RECV_BUFFER_BYTES}); raise kern.ipc.maxsockbuf / net.core.rmem_max for bursts");
     }
     sock.set_read_timeout(Some(FLUSH_AFTER))?;

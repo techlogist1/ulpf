@@ -1,0 +1,3 @@
+# The shell scripts run under Git Bash on the Windows CI runner, where autocrlf would
+# otherwise give them CRLF endings bash cannot read.
+*.sh text eol=lf
