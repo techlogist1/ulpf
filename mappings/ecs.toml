@@ -109,7 +109,7 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 
 # --- log / severity ----------------------------------------------------------------
 # The enum below carries the canonical bucket name; `event.severity` is its id.
-"log.level" = ["severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity", "log_level", "loglevel", "confidence_level", "rule_priority", "sev"]
+"log.level" = ["sev", "severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity", "log_level", "loglevel", "confidence_level", "rule_priority"]
 
 # --- observer: for perimeter devices the logging device is the observer, not the host
 "observer.hostname" = ["devname", "device_name", "hostname", "dvchost", "syslog_host", "device", "dvc_host", "node", "host", "origin", "cluster_name"]
@@ -291,7 +291,8 @@ id_field = "event.severity"
 other = { value = "unknown" }
 
 # Bare digits are the syslog scale; LEEF `sev` (1-10, 10 the most severe) is bucketed by
-# field. A CEF header severity arrives as `severity` and is read on the syslog scale.
+# field and listed first under [fields] so a syslog envelope's `syslog_severity` never
+# outranks the device's own value. A CEF header severity arrives as `severity` and is read on the syslog scale.
 [[enum.values]]
 value = "informational"
 id = 1
