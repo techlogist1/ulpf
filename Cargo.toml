@@ -6,6 +6,7 @@ members = [
     "crates/ulpf-parse",
     "crates/ulpf-normalize",
     "crates/ulpf-infer",
+    "crates/ulpf-parquet",
     "crates/ulpf",
 ]
 
@@ -30,6 +31,7 @@ anyhow = "1"
 axum = "0.8"
 tokio = { version = "1", features = ["rt-multi-thread", "net", "time", "macros", "signal", "sync"] }
 futures-util = "0.3"
+parquet = { version = "59.3.0", default-features = false, features = ["snap"] }
 
 [profile.release]
 lto = "fat"

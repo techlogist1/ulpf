@@ -15,6 +15,7 @@ ulpf-store = { path = "../ulpf-store" }
 ulpf-parse = { path = "../ulpf-parse" }
 ulpf-normalize = { path = "../ulpf-normalize" }
 ulpf-infer = { path = "../ulpf-infer" }
+ulpf-parquet = { path = "../ulpf-parquet" }
 memmap2.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -28,3 +29,4 @@ sha2.workspace = true
 
 [dev-dependencies]
 sha2.workspace = true
+parquet.workspace = true

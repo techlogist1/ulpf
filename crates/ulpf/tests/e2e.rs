@@ -33,6 +33,8 @@ fn config(inputs: Vec<PathBuf>, dir: &std::path::Path, threads: usize) -> Config
         pending: None,
         infer_threshold: 0,
         tail_capacity: 16,
+        parquet: None,
+        parquet_roll: None,
     }
 }
 

@@ -45,6 +45,8 @@ fn config(dir: &Path, inputs: Vec<PathBuf>, threshold: usize) -> Config {
         pending: Some(dir.join("pending")),
         infer_threshold: threshold,
         tail_capacity: 64,
+        parquet: None,
+        parquet_roll: None,
     }
 }
 

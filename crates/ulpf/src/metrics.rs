@@ -33,6 +33,11 @@ pub struct Metrics {
     pub utf8_lossy: AtomicU64,
     pub emitted: AtomicU64,
     pub output_bytes: AtomicU64,
+    /// The additional Parquet sink: rows pushed, files closed (a file is only readable
+    /// once closed), and writes that failed. A Parquet error never stops the run.
+    pub parquet_rows: AtomicU64,
+    pub parquet_files: AtomicU64,
+    pub parquet_errors: AtomicU64,
     pub batches: AtomicU64,
     pub queue_high_water: AtomicU64,
     /// Times the ingest thread found the queue full and had to wait.
@@ -141,6 +146,9 @@ impl Metrics {
             utf8_lossy: g(&self.utf8_lossy),
             emitted: g(&self.emitted),
             output_bytes: g(&self.output_bytes),
+            parquet_rows: g(&self.parquet_rows),
+            parquet_files: g(&self.parquet_files),
+            parquet_errors: g(&self.parquet_errors),
             batches: g(&self.batches),
             queue_high_water: g(&self.queue_high_water),
             queue_capacity: queue_capacity as u64,
@@ -187,6 +195,9 @@ pub struct Snapshot {
     pub utf8_lossy: u64,
     pub emitted: u64,
     pub output_bytes: u64,
+    pub parquet_rows: u64,
+    pub parquet_files: u64,
+    pub parquet_errors: u64,
     pub batches: u64,
     pub queue_high_water: u64,
     pub queue_capacity: u64,
@@ -230,6 +241,9 @@ impl std::fmt::Display for Snapshot {
             "signals: sub_matched {}  sub_no_match {}  sub_uncovered {}  time_from_receipt {}  time_error [{}]  class_unknown {}  enum_other {}  unmapped_fields {}  utf8_lossy {}",
             self.sub_matched, self.sub_no_match, self.sub_uncovered, self.time_from_receipt, by_reason(&self.time_error), self.class_unknown, self.enum_other, self.unmapped_fields, self.utf8_lossy
         )?;
+        if self.parquet_rows + self.parquet_files + self.parquet_errors > 0 {
+            writeln!(f, "parquet: rows {}  files closed {}  errors {}", self.parquet_rows, self.parquet_files, self.parquet_errors)?;
+        }
         writeln!(
             f,
             "queue: {} batches, high-water {}/{}, backpressure blocks {} (engaged: {})",

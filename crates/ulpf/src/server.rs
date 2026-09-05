@@ -215,6 +215,11 @@ fn metrics_frame(live: &Live) -> Value {
         "sources": sources,
         "parsers": parsers_json(live),
         "pending_generation": live.pending_generation.load(Relaxed),
+        "parquet": {
+            "rows": live.metrics.parquet_rows.load(Relaxed),
+            "files": live.metrics.parquet_files.load(Relaxed),
+            "errors": live.metrics.parquet_errors.load(Relaxed),
+        },
         "server": {
             "sse_clients": live.sse_clients.load(Relaxed),
             "review_errors": live.review_errors.load(Relaxed),
@@ -237,6 +242,9 @@ async fn status(State(app): State<App>) -> Json<Value> {
         "parsers_dir": live.parsers_dir,
         "pending_dir": live.pending.as_ref().map(|p| p.dir().to_path_buf()),
         "output": live.output,
+        // the JSON Lines file is always the output; parquet is an additional sink
+        "output_format": "jsonl",
+        "parquet": live.parquet,
         "watch": live.watch,
         "threads": live.threads,
         "queue_capacity": live.queue_cap,
