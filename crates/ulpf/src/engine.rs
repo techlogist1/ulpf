@@ -15,7 +15,7 @@
 //! buffers by batch sequence so the JSON Lines order equals raw id order.
 
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, VecDeque};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -250,8 +250,9 @@ pub struct Traceback {
     pub receipt: String,
     pub receipt_nanos: i64,
     pub bytes_len: u64,
-    pub text: String,
-    pub hex: String,
+    /// `None` when the client asked for `bytes=0` and reads them from the bytes route.
+    pub text: Option<String>,
+    pub hex: Option<String>,
     pub stored_sha256: String,
     pub recomputed_sha256: String,
     pub digest_match: bool,
@@ -259,6 +260,9 @@ pub struct Traceback {
     pub prev_chain: String,
     pub chain_match: bool,
     pub emitted: Option<serde_json::Value>,
+    /// Where `emitted` came from: `tail` (the ring), `output` (the JSON Lines file the
+    /// sink wrote, found by raw id), or `None` when the record has not reached the output.
+    pub emitted_from: Option<&'static str>,
     pub now: NowParse,
 }
 
@@ -379,6 +383,12 @@ pub struct Live {
     /// Batch sequence, assigned under the store lock so several producers (files, UDP,
     /// TCP) hand the output thread batches in raw id order.
     pub seq: AtomicU64,
+    /// Batches handed to the queue and not yet taken by a worker: the frame's queue depth
+    /// (the same counter the high-water mark is taken from).
+    pub in_flight: Arc<AtomicI64>,
+    /// (when, framed, emitted) samples the server took when it computed a frame, for the
+    /// windowed rate; at most the last ten seconds are kept (server state lives here, D41).
+    pub rate_samples: Mutex<VecDeque<(Instant, u64, u64)>>,
     pub syslog_udp: Option<std::net::SocketAddr>,
     pub syslog_tcp: Option<std::net::SocketAddr>,
     pub index_entities: bool,
@@ -704,6 +714,8 @@ impl Live {
             receipt_nanos: cfg.receipt_nanos,
             recovered: AtomicU64::new(0),
             seq: AtomicU64::new(0),
+            in_flight: Arc::new(AtomicI64::new(0)),
+            rate_samples: Mutex::new(VecDeque::new()),
             syslog_udp: cfg.syslog_udp,
             syslog_tcp: cfg.syslog_tcp,
             index_entities: cfg.pivot_index,
@@ -1072,6 +1084,31 @@ impl Live {
     /// One raw record with its stored and recomputed digest, the line as emitted (if
     /// still in the tail) and the same bytes through the current parsers.
     pub fn traceback(&self, id: u64) -> Result<Traceback, TracebackError> {
+        self.traceback_with(id, true)
+    }
+
+    /// The record's exact bytes, read through the writer's own lock like the traceback.
+    pub fn raw_bytes(&self, id: u64) -> Result<Vec<u8>, TracebackError> {
+        let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+        match store.get(RawId(id)).map_err(|e| TracebackError::Io(e.to_string()))? {
+            Some(r) => Ok(r.bytes),
+            None => Err(TracebackError::NotFound { store_len: store.len() }),
+        }
+    }
+
+    /// The emitted line for a raw id that is no longer in the tail ring: a binary search
+    /// over the output file the sink wrote, bounded to what was on disk when opened.
+    fn emitted_from_output(&self, id: u64) -> Option<serde_json::Value> {
+        if output_is_sink(&self.output) {
+            return None;
+        }
+        let line = crate::outfile::Output::open(&self.output).ok()?.find(id).ok()??;
+        serde_json::from_slice(&line).ok()
+    }
+
+    /// `with_bytes` false leaves `text` and `hex` out (a 4 MB record's JSON body is six
+    /// times its size with them); the bytes route serves them raw.
+    pub fn traceback_with(&self, id: u64, with_bytes: bool) -> Result<Traceback, TracebackError> {
         let (rec, names) = {
             let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
             let rec = store.get(RawId(id)).map_err(|e| TracebackError::Io(e.to_string()))?;
@@ -1134,21 +1171,29 @@ impl Live {
         };
         let mut receipt = String::new();
         ulpf_time::format_rfc3339(rec.receipt_nanos, &mut receipt);
+        let (emitted, emitted_from) = match self.tail.find(id) {
+            Some(l) => (serde_json::from_slice(&l).ok(), Some("tail")),
+            None => match self.emitted_from_output(id) {
+                Some(v) => (Some(v), Some("output")),
+                None => (None, None),
+            },
+        };
         Ok(Traceback {
             raw_id: id,
             source,
             receipt,
             receipt_nanos: rec.receipt_nanos,
             bytes_len: rec.bytes.len() as u64,
-            text: escape_text(&rec.bytes),
-            hex: hex(&rec.bytes),
+            text: with_bytes.then(|| escape_text(&rec.bytes)),
+            hex: with_bytes.then(|| hex(&rec.bytes)),
             stored_sha256: hex(&rec.sha256),
             recomputed_sha256: hex(&recomputed),
             digest_match: recomputed == rec.sha256,
             chain: hex(&chain),
             prev_chain: hex(&prev_chain),
             chain_match: expected == chain,
-            emitted: self.tail.find(id).and_then(|l| serde_json::from_slice(&l).ok()),
+            emitted,
+            emitted_from,
             now: NowParse { parser, parse_status, normalized, fields, provenance, time },
         })
     }
@@ -1179,7 +1224,7 @@ fn start<'scope, 'env: 'scope>(scope: &'scope std::thread::Scope<'scope, 'env>, 
     let (batch_tx, batch_rx) = sync_channel::<Batch>(live.queue_cap);
     let batch_rx = Arc::new(Mutex::new(batch_rx));
     let (out_tx, out_rx) = sync_channel::<Emitted>(live.queue_cap * 2);
-    let in_flight = Arc::new(AtomicI64::new(0));
+    let in_flight = Arc::clone(&live.in_flight);
     let writer = scope.spawn(move || output_thread(live, out_rx));
     let inference = scope.spawn(move || {
         if let Some(p) = &live.pending {
