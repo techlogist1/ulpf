@@ -110,9 +110,17 @@ first, commit each coherent piece, then finish. Same split, same return format, 
 fewer workers would not do (the three lanes touch disjoint trees: ulpf-infer, ui/, app/).
 New kill timers: B 01:15 IST (fix round 01:50); C CI pushed by 23:30, features and the five
 verifications by 00:45, report by 01:15.
+A fourth lane at 22:30 IST, A1b: A1's builder diagnosed the http.log explosion (40 templates at
+`template_cap`) as structural and named the fix (a header-carrying delimited file becomes one
+delimiter-strategy proposal, which `Strategy` already expresses) but did not start it inside
+its timer. A1b builds that in a worktree branched from A1's d3274dd (`.claude/worktrees/a1b`,
+branch `worktree-a1b`), forty minutes of building, hard stop 23:10, Opus verifier, one fix
+round; same return format. It is a separate lane because it edits `lib.rs infer()` while the
+A1 verifier reads A1's tree, and it merges only after A1 does.
 
 ### In flight
-- A1 verify, B, C running since 22:15 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`.
+- A1 verify, B, C running since 22:15 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`;
+  A1b since 22:30 in `.claude/worktrees/a1b`.
 - A2 quiet re-run owed (run 4 above was the loaded data point). Host sleep found by the soak
   report: `caffeinate -i -t 21600` started 21:56 IST.
 - A3 waits for a quiet machine (load recorded with every run; the bench script is ready); it
