@@ -38,7 +38,7 @@ Captured headlessly by `ui/capture.mjs` against a populated `ulpf serve` (0.1.0 
 | empty-pivot-value-1280.png | empty | 1280 | empty state: a pivot on a value no event carries |
 | reject-confirm-1280.png | reject | 1280 | review: x opens the reject confirmation, marked as the destructive one; Enter confirms, Esc cancels |
 | approve-1-1280.png | review | 1280 | keyboard approve 1: the digit 2 opens Review from anywhere |
-| approve-2-1280.png | review | 1280 | keyboard approve 2: j selects the proposal (haproxy) |
+| approve-2-1280.png | review | 1280 | keyboard approve 2: j selects the proposal (bench_slice) |
 | approve-3-1280.png | review | 1280 | keyboard approve 3: Enter opens it; the definition, the actions and the evidence |
 | approve-4-1280.png | review | 1280 | keyboard approve 4: a opens the confirmation; focus is on Approve, Esc would cancel |
 | approve-5-1280.png | review | 1280 | keyboard approve 5: Enter confirms; the result names the file, the parsers loaded and how many buffered lines the new parser now claims |

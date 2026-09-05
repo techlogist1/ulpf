@@ -17,6 +17,11 @@
   let box = $state(null)
   let wrapEl = $state(null)
   let width = $state(1200)
+  // The legend is two rows at most: a 113-key record must not push its bytes below the fold.
+  let legendEl = $state(null)
+  let legendAll = $state(false)
+  let legendMore = $state(false)
+  $effect(() => { width; colourOf; legendAll; if (legendEl) legendMore = legendAll || legendEl.scrollHeight > legendEl.clientHeight + 1 })
 
   async function load(rid) {
     if (rid === '' || rid == null) return
@@ -193,7 +198,7 @@
 
 {#if err}
   <div class="notice bad">
-    <b>{err.error}</b>
+    <b>{err.store_len != null ? String(err.error).replace(new RegExp(`\\b${err.store_len}\\b`), fmt.n(err.store_len)) : err.error}</b>
     <span class="muted">{err.reason}{#if err.status != null && err.status !== 404}, HTTP {err.status}{/if}</span>
     {#if err.store_len != null}<span>The store holds {fmt.n(err.store_len)} records, ids 0 to {fmt.n(Math.max(0, err.store_len - 1))}. Open one from Live, or enter an id in that range.</span>{/if}
   </div>
@@ -249,9 +254,12 @@
         </span>
       </div>
       {#if colourOf.size}
-        <div class="legend" style="margin-bottom:var(--s3)">
-          {#each [...colourOf] as [k, c] (k)}<span style="--c:{c}"><i class="sw"></i>{k}</span>{/each}
-          {#if timeSpan}<span style="--c:var(--fg-2)"><i class="sw" style="background:none;box-shadow:inset 0 -2px 0 var(--fg-2)"></i>timestamp</span>{/if}
+        <div class="bar" style="margin-bottom:var(--s3);align-items:flex-start">
+          <div class="legend" class:clip={!legendAll} bind:this={legendEl} style="flex:1 1 auto;min-width:0">
+            {#each [...colourOf] as [k, c] (k)}<span style="--c:{c}"><i class="sw"></i>{k}</span>{/each}
+            {#if timeSpan}<span style="--c:var(--fg-2)"><i class="sw" style="background:none;box-shadow:inset 0 -2px 0 var(--fg-2)"></i>timestamp</span>{/if}
+          </div>
+          {#if legendMore}<button class="btn" onclick={() => (legendAll = !legendAll)} aria-expanded={legendAll}>{legendAll ? 'Fewer keys' : `All ${fmt.n(colourOf.size)} keys`}</button>{/if}
         </div>
       {/if}
       <div class="bytes" class:hexmode={showHex} bind:this={wrapEl} style="--cols:7ch minmax(0,1fr){showHex ? ' auto' : ''}">

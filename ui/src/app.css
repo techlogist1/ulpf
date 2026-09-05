@@ -89,7 +89,7 @@ p { margin: 0; }
 .top .right button { background: none; border: 0; cursor: pointer; color: var(--fg-2); padding: 0; }
 .top .right button:hover { color: var(--fg); }
 
-main { max-width: var(--page-max); margin: 0 auto; padding: var(--s5) var(--gutter); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s6); align-content: start; }
+main { max-width: var(--page-max); margin: 0 auto; padding: var(--s5) var(--gutter) calc(var(--foot) + var(--s5)); display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s6); align-content: start; }
 
 .foot { position: fixed; bottom: 0; left: 0; right: 0; height: var(--foot); z-index: 5; display: flex; align-items: center; background: var(--bg-1); border-top: 1px solid var(--line); font: var(--t-1)/1 var(--mono); color: var(--fg-2); padding: 0 var(--gutter); gap: var(--s6); white-space: nowrap; overflow: hidden; }
 .foot b { font-weight: 400; color: var(--fg-1); }
@@ -114,7 +114,8 @@ main { max-width: var(--page-max); margin: 0 auto; padding: var(--s5) var(--gutt
 .split.review { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
 .split.sources { grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); }
 .split.pivot { grid-template-columns: minmax(0, 1fr) 26em; }
-@media (max-width: 1400px) { .split.sources { grid-template-columns: minmax(0, 1fr); } }
+/* the sources table is ten columns and about 1000 px with a long proposal id; beside the parsers it needs 1650 */
+@media (max-width: 1650px) { .split.sources { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 1100px) { .two, .split, .split.review, .split.pivot { grid-template-columns: minmax(0, 1fr); } }
 .panel { background: var(--bg-1); border: 1px solid var(--line); }
 .pad { padding: var(--s4); }
@@ -128,7 +129,7 @@ main { max-width: var(--page-max); margin: 0 auto; padding: var(--s5) var(--gutt
 .loading { color: var(--fg-2); padding: var(--s4) 0; font-size: var(--t0); }
 .loading::before { content: ""; display: inline-block; width: 8px; height: 8px; border: 1px solid var(--fg-2); border-right-color: transparent; border-radius: 50%; margin-right: var(--s3); vertical-align: -1px; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.notice { border-left: 2px solid var(--line-3); padding: var(--s3) var(--s4); background: var(--bg-1); font-size: var(--t0); display: grid; gap: var(--s2); }
+.notice { border-left: 2px solid var(--line-3); padding: var(--s3) var(--s4); background: var(--bg-1); font-size: var(--t0); display: grid; gap: var(--s2); scroll-margin-top: calc(var(--top) + var(--s4)); }
 .notice b { color: var(--fg); }
 .notice.bad { border-color: var(--bad); background: var(--bad-bg); }
 .notice.ok { border-color: var(--ok); background: var(--ok-bg); }
@@ -269,6 +270,7 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .bytes.hexmode .vr { gap: 0 var(--s5); }
 .bytes .vh { color: var(--fg-2); }
 .legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); font-size: var(--t0); }
+.legend.clip { max-height: calc(2 * 1.5em + var(--s2)); overflow: hidden; }
 .legend .sw { display: inline-block; width: 8px; height: 8px; background: var(--c); margin-right: var(--s2); vertical-align: 0; }
 .prov .vr { cursor: pointer; }
 .prov .vr.hot { background: var(--bg-2); }
@@ -356,7 +358,7 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .actions .hint { color: var(--fg-2); font-size: var(--t0); margin-left: auto; }
 .proof { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--s1) var(--s4); font-size: var(--t0); }
 .proof span { color: var(--fg-2); }
-.proof b { font-family: var(--mono); font-weight: 400; color: var(--fg); }
+.proof b { font-family: var(--mono); font-weight: 400; color: var(--fg); overflow-wrap: anywhere; }
 details summary { cursor: pointer; color: var(--fg-2); font-size: var(--t0); }
 .ol { margin: 0; padding-left: 1.8em; color: var(--fg-1); font-size: var(--t0); }
 .ol li { font-family: var(--mono); padding: 1px 0; }

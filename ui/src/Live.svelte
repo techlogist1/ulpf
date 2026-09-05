@@ -93,7 +93,7 @@
 <section>
   <div class="head">
     <h2>Tail</h2>
-    <span class="note">newest first, {filter.trim() ? `${fmt.n(rows.length)} of ${fmt.n(live.tail.length)}` : `${fmt.n(rows.length)}`} rows, Enter traces the selected event</span>
+    <span class="note">newest first, {filter.trim() ? `${fmt.n(rows.length)} of ${fmt.n(live.tail.length)}` : `${fmt.n(rows.length)}`} rows, click or Enter traces the event</span>
     <span class="push bar">
       <input type="search" bind:value={filter} bind:this={box} onkeydown={(ev) => { if (ev.key === 'Escape') { filter = ''; ev.currentTarget.blur() } }} placeholder="filter the tail  /" size="24" aria-label="Filter the tail" />
       {#if live.paused}<span class="tag warn">held, {fmt.n(live.held)} arrived</span>{/if}
