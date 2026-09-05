@@ -103,16 +103,19 @@ impl Inference {
     }
 
     /// Marks a source as drifted: its buffered lines are composed onto `prior` at the
-    /// next run. The buffer is emptied first so lines from before the trip (unknown for
-    /// unrelated reasons) do not shape the update. The prior stays until `clear`.
+    /// next run. The lines already buffered stay: they are the misses that tripped the
+    /// source, and the run with a prior excludes whatever the prior still parses. The
+    /// run counter is reset so the next quiet period clusters them. The prior stays until
+    /// `clear`.
     pub fn set_prior(&self, source: &str, prior: ParserDefinition) {
         let mut st = self.state.lock().unwrap_or_else(|e| e.into_inner());
         let threshold = self.threshold;
         let buf = st.sources.entry(source.to_string()).or_insert_with(|| Buffer { lines: Vec::new(), last_added: Instant::now(), next_run: threshold, ran_at: 0, prior: None });
-        buf.lines.clear();
         buf.ran_at = 0;
         buf.next_run = threshold;
+        buf.last_added = Instant::now();
         buf.prior = Some(prior);
+        self.wake.notify_one();
     }
 
     pub fn prior_of(&self, source: &str) -> Option<String> {

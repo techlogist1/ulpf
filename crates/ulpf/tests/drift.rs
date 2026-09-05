@@ -156,3 +156,61 @@ fn a_source_that_always_mixed_two_formats_never_trips() {
     let ids = pending.ids();
     assert!(ids.iter().all(|id| pending.get(id).unwrap().record.updates.is_none()), "{ids:?}");
 }
+
+#[test]
+fn in_serve_mode_a_quiet_source_with_a_partial_window_still_trips_and_gets_an_update() {
+    use std::io::Write;
+    use std::sync::Arc;
+    use std::time::{Duration, Instant};
+    let dir = tmp("serve");
+    let known = install_mikrotik(&dir);
+    std::fs::create_dir_all(dir.join("watch")).unwrap();
+    let cfg = Config { batch_events: 1024, ..config(&dir, vec![dir.join("watch")]) };
+    let live = Live::open(&cfg, true).unwrap();
+    let serve = {
+        let live = Arc::clone(&live);
+        std::thread::spawn(move || ulpf::engine::serve(&live, Duration::from_millis(50)))
+    };
+    // 1250 known lines, written at once (the poller batches them however it sees them)
+    let mut f = std::fs::File::create(dir.join("watch/gw.log")).unwrap();
+    for _ in 0..5 {
+        for l in &known {
+            f.write_all(l).unwrap();
+        }
+    }
+    f.flush().unwrap();
+    let start = Instant::now();
+    while live.sources.lock().unwrap().get("gw.log").map(|s| s.events).unwrap_or(0) < 1250 {
+        assert!(start.elapsed() < Duration::from_secs(20), "known lines not ingested");
+        std::thread::sleep(Duration::from_millis(50));
+    }
+    // then fewer drifted lines than a window holds, and silence
+    f.write_all(&new_shape(&known, 300)).unwrap();
+    f.flush().unwrap();
+    drop(f);
+    let start = Instant::now();
+    while live.metrics.drift_tripped.load(std::sync::atomic::Ordering::Relaxed) == 0 {
+        assert!(start.elapsed() < Duration::from_secs(30), "the quiet source never tripped: {:?}", live.sources.lock().unwrap().get("gw.log").map(|s| (s.events, s.no_parser, s.window_events, s.window_misses, s.baseline_events, s.drift)));
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    // the update proposal follows once the buffer has been quiet for the inference idle time
+    let pending = ulpf::pending::Pending::open(&dir.join("pending")).unwrap();
+    let id = ulpf::pending::Pending::id_for("gw.log");
+    let start = Instant::now();
+    loop {
+        if let Ok(d) = pending.get(&id)
+            && d.record.updates.is_some()
+        {
+            assert_eq!(d.record.updates.as_ref().unwrap().name, "mikrotik_inferred");
+            break;
+        }
+        assert!(start.elapsed() < Duration::from_secs(30), "no update proposal arrived");
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    let alerts = live.drift_alerts();
+    assert!(alerts.iter().any(|a| a.source == "gw.log" && a.state == DriftState::Proposed && a.proposed_version == Some(2)), "{alerts:?}");
+    live.stop();
+    let report = serve.join().unwrap().unwrap();
+    assert_eq!(report.snapshot.drift_tripped, 1);
+    assert_eq!(report.snapshot.drift_proposals, 1, "{}", report.snapshot);
+}

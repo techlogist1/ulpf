@@ -256,8 +256,9 @@ with open('demo/watch/gw-drift.log','ab') as f:
     for i in range(400):                                                     # a new message type
         f.write(hdr+b' interface,info ether%d link up (speed %dG, full duplex)\n' % (1+i%8, [1,10,25][i%3]))
 EOF
-#    Drift -> gw-drift.log tripped (window rate vs baseline), lines routed; within 5 s Review shows
-#    mikrotik_inferred v2: the diff adds one pattern, the decisions say "prior covers 0 of 114 lines".
+#    Drift -> gw-drift.log tripped (window rate vs baseline; a partial window is judged after 5 s of
+#    quiet, D54); within ~10 s Review shows mikrotik_inferred v2 replacing the standalone proposal:
+#    the diff adds one pattern, the decisions start with "prior: `mikrotik_inferred` v1".
 #    Approve -> parsers/mikrotik_inferred.toml is v2, pending/approved/mikrotik_inferred.v1.toml kept.
 
 # 9. integrity: verify from the UI (Integrity -> Verify) or offline, and hand a stranger the attestation

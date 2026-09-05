@@ -739,7 +739,10 @@ baseline events with a baseline rate under 0.2; it *trips* when a window has at 
 misses and a rate at least 0.25 above the baseline. The batch that completed the tripping
 window is judged, not routed; from the next batch on, every miss of the source (unknown
 lines and failures under the established parser alike) is offered to the inference buffer,
-which was emptied and given the established parser's definition as its prior. The next
+which keeps the unknown lines it already held (they are the misses that tripped the source)
+and is given the established parser's definition as its prior. A window that has not filled is
+judged once its source has been quiet for 5 s with at least 32 misses in it (the poller checks
+every tick), so a low-volume device gets a verdict within seconds, not after 512 more events. The next
 inference run composes an update: the prior's own parser is run over the lines first and
 what it covers is excluded; a pattern prior gets the new patterns appended after its own
 (first match wins, so old lines parse as before); a prior whose strategy still parses at
@@ -766,8 +769,8 @@ inference crate still cannot name a schema field). Define errors out of existenc
 tumbling window needs no timers and no per-event state beyond two counters; the baseline
 freezing on trip means a permanent change is one alert, not a flapping one. Observability
 as a design input: the window and baseline rates are on every source row. **Ruled out.**
-Routing the tripping window's own lines (they were already offered to inference as
-unknown lines and would shape the update twice); a rolling window with a ring of
+Emptying the inference buffer on a trip (the first version did; a source that trips on a
+quiet judgement has no later lines, so the update never came: found by the serve-mode test); a rolling window with a ring of
 outcomes (512 bytes per source for a number the tumbling window gives within one window
 of latency); comparing against a fixed absolute miss rate (a device that always had 15%
 unmodelled messages would alert forever); `sub_uncovered` as a miss (a new message id

@@ -116,6 +116,9 @@ pub const DRIFT_ESTABLISHED: u64 = 1024;
 pub const DRIFT_MIN_MISSES: u64 = 32;
 pub const DRIFT_DELTA: f64 = 0.25;
 pub const DRIFT_BASELINE_MAX: f64 = 0.2;
+/// A window that has not filled is judged anyway once its source has been quiet this long
+/// (a low-volume device would otherwise wait hundreds of events for a verdict).
+pub const DRIFT_QUIET: Duration = Duration::from_secs(5);
 
 impl SourceStats {
     pub fn established_parser(&self) -> Option<&str> {
@@ -132,6 +135,15 @@ impl SourceStats {
         self.window_events += events;
         self.window_misses += misses;
         if self.window_events < DRIFT_WINDOW {
+            return None;
+        }
+        self.judge()
+    }
+
+    /// Judges the window as it stands (full, or a quiet source's partial one) and starts
+    /// the next; returns the established parser when it trips.
+    fn judge(&mut self) -> Option<String> {
+        if self.window_events == 0 {
             return None;
         }
         let rate = self.window_misses as f64 / self.window_events as f64;
@@ -920,6 +932,38 @@ impl Live {
         Ok(moved)
     }
 
+    /// What happens when a source trips: its misses now go to inference with the parser as
+    /// prior (the buffer is emptied first, D54), and the counters and feed say so.
+    fn on_trip(&self, source: &str, parser: &str) {
+        let pipeline = self.pipeline();
+        if let Some(def) = pipeline.registry.index_of(parser).map(|i| pipeline.registry.get(i).definition().clone()) {
+            self.inference.set_prior(source, def);
+        }
+        self.metrics.drift_tripped.fetch_add(1, Relaxed);
+        self.drift_generation.fetch_add(1, Relaxed);
+    }
+
+    /// Judges the partial window of every source that has been quiet for `DRIFT_QUIET`
+    /// with at least the minimum misses in it; called by the poller each tick.
+    pub fn judge_quiet_sources(&self) {
+        let now = now_nanos();
+        let mut tripped = Vec::new();
+        {
+            let mut sources = self.sources.lock().unwrap_or_else(|e| e.into_inner());
+            for (name, s) in sources.iter_mut() {
+                let quiet = now.saturating_sub(s.last_seen_nanos) >= DRIFT_QUIET.as_nanos() as i64;
+                if quiet && s.window_misses >= DRIFT_MIN_MISSES && s.window_events > 0
+                    && let Some(parser) = s.judge()
+                {
+                    tripped.push((name.clone(), parser));
+                }
+            }
+        }
+        for (source, parser) in tripped {
+            self.on_trip(&source, &parser);
+        }
+    }
+
     /// A tripped source whose update was approved or rejected starts a fresh baseline.
     fn clear_drift(&self, source: &str) {
         let mut sources = self.sources.lock().unwrap_or_else(|e| e.into_inner());
@@ -1402,6 +1446,7 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
                 eprintln!("ulpf: reload: {p}");
             }
         }
+        live.judge_quiet_sources();
         std::thread::sleep(poll);
     }
     Ok(())
@@ -1582,11 +1627,7 @@ fn worker_thread(live: &Live, rx: Arc<Mutex<Receiver<Batch>>>, tx: SyncSender<Em
         if let Some(parser) = tripped {
             // the window that tripped is judged, not clustered: from here on the source's
             // misses (unknown and failed alike) go to inference with the parser as prior
-            if let Some(def) = pipeline.registry.index_of(&parser).map(|i| pipeline.registry.get(i).definition().clone()) {
-                live.inference.set_prior(&batch.file.name, def);
-            }
-            live.metrics.drift_tripped.fetch_add(1, Relaxed);
-            live.drift_generation.fetch_add(1, Relaxed);
+            live.on_trip(&batch.file.name, &parser);
         }
         if routing {
             if !failed.is_empty() {
