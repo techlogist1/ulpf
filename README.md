@@ -43,24 +43,32 @@ cargo build --release        # about one minute; binary at target/release/ulpf
 One command, on the samples in this repository:
 
 ```
-./target/release/ulpf run samples --store /tmp/s --output /tmp/out.jsonl
+./target/release/ulpf run samples/*.log --store /tmp/s --output /tmp/out.jsonl
 ```
 
 ```
 definitions: 15 parsers loaded, 0 file problems
-ulpf: 16 files (0 failed), 0.11 MB, 354 events in 0.005 s -> 66085 events/s, 19.8 MB/s, 7 worker threads
-stages: framed 354  stored 354  detected 313  no_parser 41  parsed 309  parse_failed 4  normalized 354  emitted 354 (442644 bytes)
-parse_failed by reason: pattern_no_match 3, invalid_json 1
-signals: sub_matched 204  sub_no_match 7  sub_uncovered 5  time_from_receipt 55  time_error [no_match 1]  class_unknown 106  enum_other 6  unmapped_fields 3036  utf8_lossy 13
-queue: 16 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
-inference: buffered 41 (buffer full 0)  runs 1  lines templated 0 unmatched 39  proposals written 0 replaced 0 skipped [no_templates 1]  approved 0  rejected 0  reloads 0
+ulpf: 15 files (0 failed), 0.10 MB, 309 events in 0.005 s -> 59345 events/s, 18.6 MB/s, 7 worker threads
+stages: framed 309  stored 309  detected 307  no_parser 2  parsed 305  parse_failed 2  normalized 309  emitted 309 (410361 bytes)
+parse_failed by reason: pattern_no_match 1, invalid_json 1
+signals: sub_matched 202  sub_no_match 7  sub_uncovered 4  time_from_receipt 10  time_error [no_match 1]  class_unknown 62  enum_other 4  unmapped_fields 3025  utf8_lossy 13
+queue: 15 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
+inference: buffered 2 (buffer full 0)  runs 0  lines templated 0 unmatched 0  proposals written 0 replaced 0 skipped [none]  approved 0  rejected 0  reloads 0
 drift: tripped 0  lines routed 0  update proposals 0  cleared 0
 syslog: udp datagrams 0 (0 bytes)  tcp connections 0 events 0 (0 bytes) partial 0 refused 0  errors 0
-pending: 0 proposals awaiting review (final inference pass 0.003 s)
+pending: 0 proposals awaiting review (final inference pass 0.000 s)
 ```
 
-(The `events/s` on that line is 354 events in five milliseconds — startup noise, not a
+(The `events/s` on that line is 309 events in five milliseconds — startup noise, not a
 throughput measurement. The measured figure is under "Honest numbers" below.)
+
+The input is `samples/*.log`, never the bare `samples` directory: the engine has no
+include filter yet, so a bare directory ingests `samples/README.md` as a log — 16 files,
+354 events, `no_parser` 41 and one junk proposal from a file that is documentation. A
+directory-level include or exclude is a post-demo decision (D83), so every documented
+command in this repository names its log files. The container command above is the one
+exception the shell cannot fix: the `scratch` image has no shell to expand a glob, so it
+takes the mounted directory and its counters carry those same 45 README lines.
 
 That block is the contract: when the output looks plausible but wrong, read it first.
 `no_parser` means the format was not recognised, `sub_uncovered` means a message id has no
@@ -83,7 +91,8 @@ Then open <http://127.0.0.1:7878> (key `0` for Flow, `1`-`7` for the screens beh
   reason its name was chosen, and the evidence behind every template. Approve activates it.
 - **Traceback** — one event's raw bytes, its stored and recomputed digest and chain link,
   and every normalized field lit up over the bytes it was read from.
-- **Pivot** — one IP, user, host, hash or port across every device, in one timeline.
+- **Pivot** — one entity across every device, in one timeline: a source or destination
+  IP, a user, a device hostname or a destination port (the five kinds the mapping names).
 - **Replay** — every stored event re-run through today's parsers, diffed against the last
   version, with the parser or mapping file whose digest changed named as the reason.
 - **Drift** — a device that changed its format mid-stream, its window miss rate against
@@ -226,20 +235,20 @@ then re-run the same line.
 **Isolation.** The binary makes no outbound connection: every socket the process holds is
 sampled twice a second over a whole run and classified, in three modes —
 `scripts/isolation.sh run bench/mixed-5000000.log`, `scripts/isolation.sh serve demo/watch 20`,
-and `scripts/isolation.sh docker ulpf:static samples` under `--network none`.
+and `scripts/isolation.sh docker ulpf:static samples/cisco_asa.log` under `--network none`.
 
 ## Quick start
 
 ```
 cargo build --release
 ./target/release/ulpf check
-./target/release/ulpf run samples --store /tmp/ulpf-store --output /tmp/out.jsonl --pivot on
+./target/release/ulpf run samples/*.log --store /tmp/ulpf-store --output /tmp/out.jsonl --pivot on
 ./target/release/ulpf verify --store /tmp/ulpf-store                      # every digest and chain link
 ./target/release/ulpf attest --store /tmp/ulpf-store --out /tmp/attest.json  # what a stranger re-verifies offline
 ./target/release/ulpf raw 3 --store /tmp/ulpf-store
 ./target/release/ulpf replay --store /tmp/ulpf-store --output /tmp/out.jsonl   # v2 beside v1, with a diff and why
 ./target/release/ulpf pivot src_ip 203.0.113.9 --output /tmp/out.jsonl --limit 5 # one entity across every device
-./target/release/ulpf run samples --store /tmp/ulpf-ecs --output /tmp/ecs.jsonl --schema ecs --parquet /tmp/ecs.parquet
+./target/release/ulpf run samples/*.log --store /tmp/ulpf-ecs --output /tmp/ecs.jsonl --schema ecs --parquet /tmp/ecs.parquet
 
 mkdir -p demo/watch && ./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl \
     --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514
