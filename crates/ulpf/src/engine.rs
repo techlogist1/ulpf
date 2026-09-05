@@ -365,6 +365,8 @@ pub struct Live {
     pub syslog_tcp: Option<std::net::SocketAddr>,
     /// The addresses the listeners actually bound (port 0 resolved), once they are up.
     pub syslog_bound: Mutex<(Option<std::net::SocketAddr>, Option<std::net::SocketAddr>)>,
+    /// The UDP receive buffer the kernel granted, in bytes (0 until the listener is up).
+    pub syslog_udp_rcvbuf: AtomicU64,
     /// The store id the live output's meta named before this process opened it: the
     /// output continues this store (recover), is fresh (nothing to recover) or belongs
     /// to another store (say so, recover nothing).
@@ -674,6 +676,7 @@ impl Live {
             syslog_udp: cfg.syslog_udp,
             syslog_tcp: cfg.syslog_tcp,
             syslog_bound: Mutex::new((None, None)),
+            syslog_udp_rcvbuf: AtomicU64::new(0),
             prior_output_store,
             parsers_signature: Mutex::new(parsers_signature(&cfg.parsers)),
             stop: AtomicBool::new(false),
@@ -1532,6 +1535,10 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
         };
         first_id.get_or_insert(RawId(batch_first));
         count += ranges.len() as u64;
+        // credited per batch, before the send that may block: the store already holds
+        // these records, so a live reader must never see emitted ahead of stored
+        live.metrics.framed.fetch_add(ranges.len() as u64, Relaxed);
+        live.metrics.stored.fetch_add(ranges.len() as u64, Relaxed);
         let ranges = std::mem::replace(&mut ranges, Vec::with_capacity(live.batch_events));
         send_batch(tx, &live.metrics, in_flight, live.queue_cap, seq, &ctx, receipt, batch_first, ranges, Vec::new())?;
         receipt = live.receipt_nanos.unwrap_or_else(now_nanos);
@@ -1539,8 +1546,6 @@ fn ingest_file(live: &Arc<Live>, path: &Path, name: &str, start: u64, eof: bool,
             break;
         }
     }
-    live.metrics.framed.fetch_add(count, Relaxed);
-    live.metrics.stored.fetch_add(count, Relaxed);
     if count > 0 {
         let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
         store.flush(false)?;

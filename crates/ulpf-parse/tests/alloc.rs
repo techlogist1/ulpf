@@ -62,12 +62,21 @@ fn detect_and_parse_allocate_nothing_after_warm_up() {
         }
         let mut detected = 0;
         for (i, ev) in evs.iter().enumerate() {
-            let before = ALLOCS.load(Relaxed);
             if reg.detect(ev, None) == Some(idx) {
                 detected += 1;
             }
-            let _ = p.parse(ev, &ctx, &mut scratch, &mut out);
-            let allocations = ALLOCS.load(Relaxed) - before;
+            // The counter is process-wide and the test runner has threads of its own, so
+            // one measurement can catch a stray allocation; the parse is deterministic,
+            // so a real per-event allocation shows in every attempt: take the minimum.
+            let allocations = (0..3)
+                .map(|_| {
+                    let before = ALLOCS.load(Relaxed);
+                    let _ = reg.detect(ev, None);
+                    let _ = p.parse(ev, &ctx, &mut scratch, &mut out);
+                    ALLOCS.load(Relaxed) - before
+                })
+                .min()
+                .unwrap_or(0);
             // The one documented allocation on a span-valued family: a quoted value with
             // an escape is unescaped into an owned buffer, one per such value.
             let owned = out.fields.iter().filter(|f| matches!(f.value, Cow::Owned(_))).count();
@@ -112,11 +121,18 @@ kind = "leef"
         cef.parse(cef_line, &ctx(), &mut scratch, &mut out).unwrap();
         leef.parse(leef_line, &ctx(), &mut scratch, &mut out).unwrap();
     }
-    let before = ALLOCS.load(Relaxed);
-    for _ in 0..100 {
-        cef.parse(cef_line, &ctx(), &mut scratch, &mut out).unwrap();
-        leef.parse(leef_line, &ctx(), &mut scratch, &mut out).unwrap();
-    }
-    assert_eq!(ALLOCS.load(Relaxed) - before, 0);
+    // minimum over three attempts: the runner's own threads may allocate once, the parser never
+    let allocations = (0..3)
+        .map(|_| {
+            let before = ALLOCS.load(Relaxed);
+            for _ in 0..100 {
+                cef.parse(cef_line, &ctx(), &mut scratch, &mut out).unwrap();
+                leef.parse(leef_line, &ctx(), &mut scratch, &mut out).unwrap();
+            }
+            ALLOCS.load(Relaxed) - before
+        })
+        .min()
+        .unwrap_or(0);
+    assert_eq!(allocations, 0);
     assert_field(&out, "usrName", b"jdoe");
 }

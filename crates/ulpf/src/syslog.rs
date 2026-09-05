@@ -95,19 +95,37 @@ impl PeerBuf {
     }
 }
 
-fn set_recv_buffer(fd: std::os::fd::RawFd) {
-    let size: libc::c_int = RECV_BUFFER_BYTES as libc::c_int;
-    // SAFETY: a plain setsockopt on a socket this process owns; the kernel validates the value.
-    unsafe {
-        libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVBUF, (&size as *const libc::c_int).cast(), std::mem::size_of::<libc::c_int>() as libc::socklen_t);
+/// Asks for `RECV_BUFFER_BYTES`, halving until the kernel accepts (macOS refuses anything
+/// at or above `kern.ipc.maxsockbuf` and would otherwise leave the ~786 KB default in
+/// place without a word), and returns what was granted.
+fn set_recv_buffer(fd: std::os::fd::RawFd) -> u64 {
+    let mut want = RECV_BUFFER_BYTES as libc::c_int;
+    while want >= 65_536 {
+        // SAFETY: a plain setsockopt/getsockopt on a socket this process owns.
+        let ok = unsafe { libc::setsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVBUF, (&want as *const libc::c_int).cast(), std::mem::size_of::<libc::c_int>() as libc::socklen_t) } == 0;
+        if ok {
+            break;
+        }
+        want /= 2;
     }
+    let mut got: libc::c_int = 0;
+    let mut len = std::mem::size_of::<libc::c_int>() as libc::socklen_t;
+    // SAFETY: as above; `got` is a valid out-pointer of the length passed.
+    unsafe {
+        libc::getsockopt(fd, libc::SOL_SOCKET, libc::SO_RCVBUF, (&mut got as *mut libc::c_int).cast(), &mut len);
+    }
+    got.max(0) as u64
 }
 
 /// The UDP listener thread: one datagram is one event, batched per peer.
 pub(crate) fn udp_listener(live: &Arc<Live>, addr: SocketAddr, tx: SyncSender<Batch>, in_flight: &AtomicI64) -> Result<()> {
     use std::os::fd::AsRawFd;
     let sock = UdpSocket::bind(addr).with_context(|| format!("binding syslog udp {addr}"))?;
-    set_recv_buffer(sock.as_raw_fd());
+    let rcvbuf = set_recv_buffer(sock.as_raw_fd());
+    live.syslog_udp_rcvbuf.store(rcvbuf, Relaxed);
+    if rcvbuf < RECV_BUFFER_BYTES as u64 {
+        eprintln!("ulpf: syslog udp: kernel granted a {rcvbuf} byte receive buffer (asked {RECV_BUFFER_BYTES}); raise kern.ipc.maxsockbuf / net.core.rmem_max for bursts");
+    }
     sock.set_read_timeout(Some(FLUSH_AFTER))?;
     let bound = sock.local_addr()?;
     live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).0 = Some(bound);

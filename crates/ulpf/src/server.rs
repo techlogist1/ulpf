@@ -287,7 +287,7 @@ async fn status(State(app): State<App>) -> Json<Value> {
             "entities": serde_json::to_value(pipeline.mapping.entities()).unwrap_or(Value::Null),
         },
         "output_format": "jsonl",
-        "syslog": { "udp": live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).0.map(|a| a.to_string()), "tcp": live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).1.map(|a| a.to_string()) },
+        "syslog": { "udp": live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).0.map(|a| a.to_string()), "tcp": live.syslog_bound.lock().unwrap_or_else(|e| e.into_inner()).1.map(|a| a.to_string()), "udp_rcvbuf": live.syslog_udp_rcvbuf.load(Relaxed) },
     }))
 }
 
