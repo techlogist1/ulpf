@@ -1,6 +1,7 @@
 # The desktop shell for macOS and Windows: the engine is built first and becomes the
 # sidecar, then tauri-action bundles the installer. Every push uploads the bundles as run
-# artifacts; a v* tag also attaches them to a draft release.
+# artifacts; a v* tag also attaches them to a draft release. The `cli` job builds the bare
+# binary for three targets and `release` puts it on that same draft.
 name: app
 
 on:
@@ -66,3 +67,188 @@ jobs:
           tagName: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || '' }}
           releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('ULPF {0}', github.ref_name) || '' }}
           releaseDraft: true
+
+  # The CLI a stranger downloads: one static Linux binary, one macOS binary, one Windows
+  # exe, from the same commit as the installers above.
+  cli:
+    name: cli (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            ext: ""
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            ext: ""
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: ".exe"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: cli-${{ matrix.target }}
+
+      # musl-gcc is what rusqlite's bundled SQLite compiles against; the Dockerfile's
+      # Alpine image gets the same compiler from build-base.
+      - name: musl C toolchain
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
+
+      - name: build
+        run: cargo build --release -p ulpf --target ${{ matrix.target }}
+
+      # The claim on the tin: one file, no loader, no libc on the host.
+      - name: prove the linux binary is static
+        run: |
+          bin=target/${{ matrix.target }}/release/ulpf
+          file "$bin"
+          ldd "$bin" || true
+          file "$bin" | grep -Eq 'static(-pie)? linked|statically linked'
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+
+      - name: name it for the release
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp target/${{ matrix.target }}/release/ulpf${{ matrix.ext }} \
+             dist/ulpf-${{ github.ref_name }}-${{ matrix.target }}${{ matrix.ext }}
+          ls -l dist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cli-${{ matrix.target }}
+          path: dist/*
+
+  # tauri-action creates the draft release, so this waits for the bundle job and adds the
+  # three CLI binaries and their checksums to that same draft: one release, one page.
+  release:
+    needs: [bundle, cli]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: cli-*
+          merge-multiple: true
+          path: dist
+
+      - name: checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: attach the CLI beside the installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "${{ github.ref_name }}" dist/* --clobber --repo "${{ github.repository }}"
+
+  # D74 said the Windows build had never been run on a Windows machine. This runs it:
+  # check, run, verify, and a live serve driven over HTTP. Every assertion exits 1.
+  smoke-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: smoke-windows
+
+      - name: build
+        run: cargo build --release -p ulpf
+
+      - name: check, run, verify
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $ulpf = '.\target\release\ulpf.exe'
+
+          $out = & $ulpf check 2>&1 | Out-String
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::check exited $LASTEXITCODE"; exit 1 }
+          if ($out -notmatch 'parsers')    { Write-Host "::error::check printed no 'parsers'"; exit 1 }
+          if ($out -notmatch '0 problems') { Write-Host "::error::check printed no '0 problems'"; exit 1 }
+
+          # Every non-empty line in samples/ is one event, except a continuation line a
+          # collector folded: samples/fortinet_fortigate.log has exactly one (see
+          # samples/README.md). 305 non-empty lines, 304 framed, on 2026-09-06.
+          $folded = 1
+          $lines = (Get-ChildItem samples -File | Get-Content | Where-Object { $_ -ne '' }).Count
+          $expect = $lines - $folded
+
+          $out = & $ulpf run samples --store s --output o.jsonl --infer-threshold 0 2>&1 | Out-String
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::run exited $LASTEXITCODE"; exit 1 }
+          if ($out -notmatch 'framed\s+(\d+)') { Write-Host "::error::no framed count in the counter block"; exit 1 }
+          $framed = [int]$Matches[1]
+          Write-Host "lines $lines - folded $folded = expected $expect, framed $framed"
+          if ($framed -ne $expect) { Write-Host "::error::framed $framed but expected $expect"; exit 1 }
+
+          $out = & $ulpf verify --store s 2>&1 | Out-String
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { Write-Host "::error::verify exited $LASTEXITCODE"; exit 1 }
+
+      - name: serve, fed a file over the watch directory
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          New-Item -ItemType Directory -Force -Path watch, pend | Out-Null
+          $p = Start-Process -FilePath '.\target\release\ulpf.exe' -PassThru `
+            -ArgumentList 'serve','watch','--store','s2','--output','o2.jsonl',
+                          '--parsers','parsers','--pending','pend','--listen','127.0.0.1:7878' `
+            -RedirectStandardOutput serve.out.log -RedirectStandardError serve.err.log
+          Write-Host "serve pid $($p.Id)"
+
+          $status = $null
+          for ($i = 0; $i -lt 60; $i++) {
+            try { $status = Invoke-RestMethod -Uri 'http://127.0.0.1:7878/api/status' -TimeoutSec 2 } catch { $status = $null }
+            if ($status -and $status.version) { break }
+            Start-Sleep -Milliseconds 500
+          }
+          if (-not ($status -and $status.version)) {
+            Write-Host "::error::/api/status never answered with a version in 30 s"
+            Get-Content serve.out.log, serve.err.log -ErrorAction SilentlyContinue | Write-Host
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            exit 1
+          }
+          Write-Host ($status | ConvertTo-Json -Depth 5)
+
+          $expect = (Get-Content samples\cisco_asa.log | Where-Object { $_ -ne '' }).Count
+          Copy-Item samples\cisco_asa.log watch\
+          $m = $null
+          $emitted = 0
+          for ($i = 0; $i -lt 60; $i++) {
+            try { $m = Invoke-RestMethod -Uri 'http://127.0.0.1:7878/api/metrics' -TimeoutSec 2 } catch { $m = $null }
+            if ($m) { $emitted = [int]$m.engine.emitted }
+            if ($emitted -ge $expect) { break }
+            Start-Sleep -Milliseconds 500
+          }
+          if ($m) { Write-Host ($m.engine | ConvertTo-Json -Depth 4) }
+          if ($emitted -lt $expect) {
+            Write-Host "::error::emitted $emitted after 30 s, expected at least $expect"
+            Get-Content serve.out.log, serve.err.log -ErrorAction SilentlyContinue | Write-Host
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            exit 1
+          }
+
+          Stop-Process -Id $p.Id -Force
+          Wait-Process -Id $p.Id -Timeout 15 -ErrorAction SilentlyContinue
+          if (Get-Process -Id $p.Id -ErrorAction SilentlyContinue) {
+            Write-Host "::error::serve pid $($p.Id) still alive after Stop-Process"
+            exit 1
+          }
+          Write-Host "serve stopped; emitted $emitted of at least $expect"
+          Get-Content serve.out.log, serve.err.log -ErrorAction SilentlyContinue | Write-Host
