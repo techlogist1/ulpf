@@ -10,7 +10,7 @@ use std::ops::Range;
 use ulpf_parse::{SlotKind, Template, Token};
 
 use crate::align::align;
-use crate::token::{Kind, Tok, ip_like, num_like, same_shape};
+use crate::token::{Kind, Tok, ip_like, num_like, same_shape, tokenize};
 
 pub struct Col {
     pub kind: Kind,
@@ -762,7 +762,7 @@ pub fn headers(bodies: &[&[u8]]) -> Vec<Header> {
     out
 }
 
-fn seps(text: &[u8], sep: u8) -> usize {
+pub fn seps(text: &[u8], sep: u8) -> usize {
     text.iter().filter(|b| **b == sep).count()
 }
 
@@ -1067,7 +1067,31 @@ fn push_const(tokens: &mut Vec<Token>, text: &str) {
     }
 }
 
-fn sanitize(key: &str) -> String {
+/// One delimited column as a slot column: every row has a value, typed by the tokenizer
+/// the way a pattern slot's values are (a cell that is more than one token is a word).
+pub fn column(values: &[&[u8]]) -> Col {
+    let values: Vec<(usize, Kind, Vec<u8>)> = values
+        .iter()
+        .enumerate()
+        .map(|(m, v)| {
+            let kind = match tokenize(v).as_slice() {
+                [t] => t.kind,
+                _ => Kind::Word,
+            };
+            (m, kind, v.to_vec())
+        })
+        .collect();
+    Col { kind: Kind::Word, text: Vec::new(), present: vec![true; values.len()], variable: true, region: false, values, optional: false }
+}
+
+/// The pattern path's typing for a column on its own (no key or `ip:` context, so an int
+/// is never a port); a column of nothing but the unset marker `-` is text, not a word.
+pub fn column_kind(c: &Col, rare: usize) -> SlotKind {
+    let k = slot_kind(c, std::slice::from_ref(c), 0, rare);
+    if k == SlotKind::Word && c.values.iter().all(|(_, _, v)| v == b"-") { SlotKind::Text } else { k }
+}
+
+pub fn sanitize(key: &str) -> String {
     let mut s: String = key.chars().map(|c| if c.is_ascii_alphanumeric() { c } else { '_' }).collect();
     if s.is_empty() || s.as_bytes()[0].is_ascii_digit() {
         s.insert(0, 'f');
