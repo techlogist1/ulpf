@@ -56,7 +56,9 @@ name = "ocsf"
 "status_code" = ["EventData.Status"]
 "status_detail" = ["EventData.SubStatus"]
 
-# Sysmon writes decimal pids; Security auditing writes hex (`0x44c`), which stays text.
+# Sysmon writes decimal pids; Security auditing writes hex (`0x44c`, "[Type = Pointer]:
+# hexadecimal Process ID" on the 4624 page); `int` reads a `0x` prefix as hexadecimal,
+# so both schemas carry one JSON type for the field.
 [types]
 int = ["process.pid", "process.parent_process.pid"]
 
