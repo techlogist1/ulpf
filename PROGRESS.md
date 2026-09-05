@@ -138,10 +138,13 @@ A1 verifier reads A1's tree, and it merges only after A1 does.
 ### In flight
 - A1 verify, B, C running since 22:12 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`;
   A1b since 22:14 in `.claude/worktrees/a1b`.
-- A2 quiet re-run owed (run 4 above was the loaded data point). Host sleep found by the soak
-  report: `caffeinate -i -t 21600` started 21:56 IST.
-- A3 waits for a quiet machine (load recorded with every run; the bench script is ready); it
-  runs after the lanes stop building.
+- A2 and A3 run from a detached watcher started 22:21 IST (`quiet-measure.sh` in the session
+  scratchpad, `pgrep -fl quiet-measure`): before each bench width and before the soak it waits
+  for a quiet machine (1-min load under 4, no rustc/cargo/ld), samples the load every 2 s
+  during the run and records before/after/peak beside every number; results land in
+  `<scratchpad>/a3/results.txt` and `<scratchpad>/a2/run5/` (soak.log, netstat before/after,
+  status-rcvbuf.txt). Host sleep found by the run-4 soak report: `caffeinate -i -t 21600`
+  started 21:56 IST.
 
 ### Tried and abandoned (v3)
 - (none yet)
