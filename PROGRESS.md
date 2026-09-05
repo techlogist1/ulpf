@@ -1,5 +1,140 @@
 # ULPF progress
 
+## Demo (10:00) and the 04:00 comparison: start here
+
+Everything below was run on 2026-09-05 on the M1 Pro from a clean checkout. Terminal 1 is
+the server, terminal 2 everything else; paths are relative to the repo root. A store
+written before tonight is refused by name (the integrity chain changed the index): delete
+it and start over.
+
+### Runner (D67): `scripts/demo.sh`
+`scripts/demo.sh` plays steps 0-9 below from the repo root: it prints each command before
+running it and what to click next, Enter advances, and the server stays up for questions at
+the end (Enter again stops it and resets `demo/`). `scripts/demo.sh --auto` is the unattended
+rehearsal (fixed 3 s pauses, then stop and reset); `--check` proves every command in the
+runner appears verbatim in this section (run it after editing either); `--reset` stops a
+leftover server and removes `demo/`. Verified 2026-09-05 21:53 and 21:55 IST with `--auto`
+on the release build at 9d39679: the proposal for mikrotik appeared 0.9 s after the drop, approve returned
+`now_detected 250/250, parsers_loaded 13`, replay started v2 over 1,044 events, verify clean, the drift update proposal appeared 5.7 s after the new lines,
+attestation 2 of 2 checkpoints, the tamper named raw id 0 (digest) with exit 1, reset clean;
+the whole pass takes about two and a half minutes. Ports 7878 and 5514 must be free.
+
+```
+cargo build --release                                      # ~1 min; binary target/release/ulpf
+./target/release/ulpf check --pending pending              # 12 parsers, 2 mappings (ocsf, ecs), 0 problems
+
+# 0. reset between rehearsals (the server uses demo/parsers and demo/pending, so nothing lands in the repo)
+rm -rf demo
+
+# 1. server + UI (terminal 1): watches demo/watch, listens for syslog on UDP and TCP 5514
+mkdir -p demo/watch demo/parsers demo/pending && cp parsers/*.toml demo/parsers/
+./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending demo/pending --parsers demo/parsers --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514 --infer-threshold 64
+#    -> ulpf: serving http://127.0.0.1:7878 ; watching demo/watch ; syslog udp 127.0.0.1:5514, syslog tcp 127.0.0.1:5514 ; 12 parsers loaded ; ctrl-c to stop
+#    open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)
+
+# 2. known formats and a live device: counters, sources and the tail move within 500 ms (one file a second, so the feed visibly moves)
+for f in samples/*.log; do cp "$f" demo/watch/; sleep 1; done
+python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);[s.sendto(l,('127.0.0.1',5514)) for l in open('heldout/edgerouter.log','rb').read().splitlines()]"
+#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed; syslog row: udp datagrams 250
+
+# 3. an unknown format from a file and from the socket: clustered at 64 lines, "Review (2)" appears
+cp heldout/mikrotik.log demo/watch/
+#    Review -> mikrotik: 14 templates; every slot has a name and the REASON it was chosen
+#    (key `src-mac` before the value; vocabulary `{ip}:{port}->{ip}:{port}` names src/dst ...);
+#    generic slots stay ip1/word2 and say why. Uncheck a template + Regenerate to drop it.
+
+# 4. approve (UI: `a` opens the confirmation, Enter approves, Esc backs out; or:)
+curl -s -X POST http://127.0.0.1:7878/api/pending/mikrotik/approve
+#    -> {"name":"mikrotik_inferred","now_detected":{"detected":250,"tested":250},"parsers_loaded":13,"path":"demo/parsers/mikrotik_inferred.toml","problems":[],"replaced_version":null}
+#    demo/parsers/mikrotik_inferred.toml carries origin = "inferred"; Live -> parsers: origin approved
+
+# 5. the same events take the fast path; the pivot sees them
+cp heldout/mikrotik.log demo/watch/mikrotik-again.log
+#    Live -> mikrotik-again.log detected 250. Pivot -> search src_ip -> pick 203.0.113.9:
+#    one attacker across OpenVPN, pfSense, ASA, Check Point, SRX, SonicWall in one lane-per-device timeline,
+#    "seen with" dst_ip 10.0.0.7, dst_port 22, user jdoe; click any related value to pivot again.
+
+# 6. traceback with provenance: click a tail row, or open http://127.0.0.1:7878/#/trace/0
+curl -s http://127.0.0.1:7878/api/events/0 | python3 -m json.tool | head -40
+#    stored and recomputed SHA-256, chain and prev_chain with chain_match, every parsed field with its
+#    byte range, every normalized path with the field and bytes it came from; hover a normalized field
+#    (j/k walk them, Enter pins one, h = hex, Esc releases)
+#    in the UI and its bytes light up in the raw record.
+
+# 7. replay: a parser bug, the fix, every past event corrected, the store untouched
+sed -i '' 's/{dst_ip:ip}/{dst_addr:ip}/g' demo/parsers/cisco_asa.toml     # the bug (reloads within 250 ms)
+cp samples/cisco_asa.log demo/watch/asa-under-the-bug.log                  # events written wrong
+cp parsers/cisco_asa.toml demo/parsers/                                     # the fix
+curl -s -X POST http://127.0.0.1:7878/api/replay                            # -> {"version":2,"started":true,"total":N}
+#    Replay -> v2 report: changed = the ASA events written under the bug, by_field dst_endpoint.ip added /
+#    unmapped.dst_addr lost, and the WHY box: "demo/parsers/cisco_asa.toml changed since v1 (sha256 .. -> ..)".
+./target/release/ulpf verify --store demo/store                             # exit 0: chain ok, nothing rewritten
+
+# 8. drift: a device changes its format mid-stream; the update proposal carries a diff
+python3 - <<'EOF'
+import time
+lines=open('heldout/mikrotik.log','rb').read().splitlines()
+hdr=b' '.join(lines[0].split()[:4])
+with open('demo/watch/gw-drift.log','ab') as f:
+    for _ in range(5):
+        for l in lines: f.write(l+b'\n')                                     # 1250 known lines: established
+    f.flush(); time.sleep(3)
+    for i in range(400):                                                     # a new message type
+        f.write(hdr+b' interface,info ether%d link up (speed %dG, full duplex)\n' % (1+i%8, [1,10,25][i%3]))
+EOF
+#    Drift -> gw-drift.log tripped (window rate vs baseline; a partial window is judged after 5 s of
+#    quiet, D54); within ~10 s Review shows mikrotik_inferred v2 replacing the standalone proposal:
+#    the diff adds one pattern, the decisions start with "prior: `mikrotik_inferred` v1".
+#    Approve (`a`, Enter) -> demo/parsers/mikrotik_inferred.toml is v2, demo/pending/approved/mikrotik_inferred.v1.toml kept.
+
+# 9. integrity: verify from the UI (Integrity -> Verify) or offline, and hand a stranger the attestation
+./target/release/ulpf attest --store demo/store --out demo/attestation.json
+./target/release/ulpf verify --store demo/store --attestation demo/attestation.json   # exit 0
+printf 'X' | dd of=demo/store/raw.seg bs=1 seek=200 conv=notrunc 2>/dev/null           # tamper one byte (rehearsal only!)
+./target/release/ulpf verify --store demo/store                                        # names the record, exit 1
+
+# 10. a second output schema with zero parser changes
+./target/release/ulpf run samples --store demo/ecs-store --output demo/ecs.jsonl --schema ecs --infer-threshold 0
+git log --oneline -1 -- mappings/ecs.toml ; git show --stat 5f7abd5 | tail -3         # mappings/ + one test file
+
+# 11. throughput (terminal 2, quiet machine; the bench file is gitignored, generate once, ~25 s, 1.5 GB)
+cargo run --release -p ulpf --example gen_bench -- 5000000 bench
+./target/release/ulpf run bench/mixed-5000000.log --store /tmp/ulpf-bench --output /dev/null --infer-threshold 0
+#    numbers: see "Verified state" below; never quote one you did not just measure
+#    say the thread count with the number: -j 7 is the default here (cores minus one): 337k events/s
+#    median with --output /dev/null, -j 1 68k on the same file (v3 A3); the harness figure with the
+#    JSON Lines output written is 258k at 7 threads
+
+# 12. kill recovery: kill -9 a run, restart it, same output id for id
+./target/release/ulpf run bench/mixed-5000000.log --store /tmp/kr --output /tmp/kr.jsonl --infer-threshold 0 & sleep 3; kill -9 $!
+./target/release/ulpf run bench/mixed-5000000.log --store /tmp/kr --output /tmp/kr.jsonl --infer-threshold 0
+#    -> "recovered: N stored records an interrupted run had not written to the output"; wc -l equals a clean run
+
+# 13. isolation and container
+scripts/isolation.sh run bench/mixed-5000000.log ; scripts/isolation.sh serve demo/watch 20
+docker build -t ulpf:static . && scripts/isolation.sh docker ulpf:static samples
+```
+
+### The 04:00 comparison (docs/evaluation.md, "The 04:00 procedure")
+Both tools, same machine, quiet (no soak, no builds, no Docker workloads), same bench file.
+`eval/tools/ulpf.toml` is ULPF's template; write `eval/tools/<other>.toml` for the other tool
+(build command, run/verify/raw_of templates, container, key map). Then, for each tool:
+`eval/run.sh eval/tools/<tool>.toml` (three runs of throughput inside; every raw output under
+`eval/results/<tool>-<timestamp>-<pid>/`). Compare the two `scorecard.md` files criterion by
+criterion; a criterion a tool cannot do reads "not measurable: reason", never pass. ULPF's own
+committed scorecard is `eval/results/ulpf-<timestamp>/scorecard.md`.
+
+### What to say when something looks wrong
+A proposal that looks wrong: the evidence panel shows `support` beside `verified`, the slot
+table with the reason for every name, `history`, `decisions` and `unmatched` by reason;
+`ulpf infer FILE --decisions` prints the same offline. A replay diff nobody expected: the
+WHY box names every parser or mapping file whose digest changed since the previous version,
+and says so explicitly when none did. A source that stopped parsing: Drift shows the window
+rate against the baseline and where its lines went. A record in doubt: Traceback shows the
+stored and recomputed digest, the chain link, and the same bytes through today's parsers.
+
+---
+
 ## v3 (2026-09-05 night session, autonomous): fixes, UI redesign, desktop app, demo runner
 
 Started 20:12 IST at 9d39679 (107 tests, clippy clean). The owner is away; this file and the
@@ -24,12 +159,12 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       |---|---|---|---|---|
       | json/conn.log | 1 | 40 (1 / 39) | 19 (19 / 0) | 5,096 of 5,120 (24 `no_template`) |
       | json/dns.log | 3 | 99 (3 / 96) | 42 (42 / 0) | 3,400 of 3,400 |
-      | conn.log (TSV) | 5 | 78 (16 / 62) | 78 (78 / 0) | 5,096 of 5,129 (header lines `below_support`) |
+      | conn.log (TSV) | 5 | 78 (16 / 62) | 78 (78 / 0) | 5,096 of 5,129 (9 header lines `below_support`, 24 `no_template`) |
       | http.log (TSV) | 40 | 541 (76 / 465) | 541 (540 / 1) | 100 of 1,545 (1,354 `template_cap`), unchanged |
 
       Names after: `ts uid id_orig_h id_orig_p id_resp_h id_resp_p proto service duration
       orig_bytes resp_bytes conn_state ...` (the device's own). Heldout grades byte-identical
-      before and after. 110 tests, clippy clean. Then lane A1b (D72; merged 22:52 IST as
+      before and after. 110 tests, clippy clean. Then lane A1b (D72; merged 22:54 IST as
       4d031ec, two commits, two Opus verifications reproducing every number): a headed
       delimited file whose every row fits the header is ONE `kind = "delimiter"` definition:
 
@@ -73,11 +208,11 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       | 7 | 314,691 / 337,471 / 345,153 (median 337,471) | 96-105 | 14.5-15.9 s | 3.4-3.9 / 5.0-9.5 |
 
       Against the 18:31 loaded run (66,827 / 118,038 / 218,391 / median 250,674) the single
-      thread is within 2%, the seven-thread median is 35% higher with `--output /dev/null` on a
+      thread is within 2.3%, the seven-thread median is 35% higher with `--output /dev/null` on a
       quieter host. README's throughput paragraph now carries this table's numbers with the
       thread count and the `-j 1` figure; item 9 below and the demo's step 11 comment say the
       thread count with every number.
-- [x] B. (D69-D71; merged 22:45 IST as b85c1c4, five commits 273d2d9..00062be, verified by an
+- [x] B. (D69-D71; merged 22:47 IST as b85c1c4, five commits 273d2d9..00062be, verified by an
       independent Opus pass: git surface ui/ + docs/design.md + docs/screens/ only, dist exactly
       three files with no runtime fetch, fonts real WOFF2 byte-identical to IBM's release with the
       OFL text, the contrast table reproduced, 44 captures all indexed both ways, the API paths
@@ -86,7 +221,7 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       default with light through tokens, AA everywhere (lowest 4.64:1), keyboard map with `?`
       overlay, one `VList` for every long list and the byte ruler (4 MB record: ruler in 1.3 s,
       24-30 DOM rows), one keyboard-reachable confirmation for approve/reject/replay/verify;
-      `docs/design.md`; `ui/capture.mjs` (CDP, no puppeteer) re-takes every capture; 44 PNGs at
+      `docs/design.md`; `ui/capture.mjs` (puppeteer-core over the installed Chrome's CDP, no bundled Chromium) re-takes every capture; 44 PNGs at
       1280 and 2560 under `docs/screens/` with README.md and index.json. Contract gaps the UI
       labels honestly rather than papering over (server unchanged tonight, follow-ups): no
       instantaneous queue depth in the metrics frame (high-water and blocks shown instead);
@@ -123,14 +258,19 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
       indexed. Not done: `engine down (exit N)` never provoked; the tray icon's glyph sits
       under this Mac's notch overlay so only its menu is captured.
 - [x] C-CI. (D74; `.github/workflows/app.yml`) macOS and Windows runners build the sidecar and
-      the shell and bundle installers; run on the final commit
-      https://github.com/techlogist1/ulpf/actions/runs/33980779377 green on both (macOS
+      the shell and bundle installers; the run on the lane branch's final commit cdb4d9b
+      (`worktree-wf_b664b6d7-603-1`; main was not pushed until the end of the session, so CI
+      had not yet built the merged tree; the run on main is in the verified state below),
+      https://github.com/techlogist1/ulpf/actions/runs/33980779377, green on both (macOS
       6m02s, Windows 9m13s); artifacts `windows-x64-nsis` 5,351,146 B, `windows-x64-msi`
       7,794,850 B, `darwin-aarch64-app` 7,855,749 B, `darwin-aarch64-dmg` 7,606,904 B. First
       push 22:22 IST, both green by 22:34; one red Windows job on the feature commit (E0521 in
       `menu.rs`, an app-handle borrow in the Windows tray branch), fixed in cdb4d9b, green at
       23:02, inside the sixty-minute rule. Windows shims: `#[cfg(windows)]` `FileExt` in the
-      store and a no-op `set_recv_buffer`, unix lines unchanged. The Windows build has NOT been
+      store (additions only, one `read_exact_at` over `seek_read`) and a no-op
+      `set_recv_buffer`; in `syslog.rs` the unix function now takes the socket instead of a raw
+      fd and the caller's warning branch reads `cfg!(windows)` first, behaviour unchanged (D74).
+      The Windows build has NOT been
       run on a Windows machine tonight; the five owner checks are in `app/README.md`: launch
       (window shows the live feed, `%APPDATA%\dev.ulpf.desktop\server.url`, `/api/status`
       answers), drop `samples/cisco_asa.log` (notice, events in the feed), drop
@@ -152,7 +292,8 @@ Fable worker with `frontend-design` in its own worktree owning `ui/`, `docs/desi
 `docs/screens/`; (C) the app, one Fable worker with `frontend-design` for the shell chrome only,
 in its own worktree owning `app/` and `.github/workflows/`, allowed `#[cfg(windows)]`-only
 shims where the sidecar does not compile on Windows (the unix code stays byte-identical, the
-lead diffs it at merge). The lead runs A2 (socket soak, backgrounded) and A3 (throughput,
+lead diffs it at merge; at merge the store was additions only and `syslog.rs`'s unix
+function signature and caller branch had changed with behaviour unchanged, D74). The lead runs A2 (socket soak, backgrounded) and A3 (throughput,
 backgrounded, load recorded) in the main tree, merges each lane by running the full suite and
 the build itself, and writes D after C. Why not fewer: the three lanes touch disjoint files, share
 no state, and each is one to three hours of wall-clock that the others need not wait for; one
@@ -229,8 +370,8 @@ A1 verifier reads A1's tree, and it merges only after A1 does.
 The Mac crashed and rebooted at about 00:57 IST with lanes P, V2 and K in flight (host up
 4 minutes at 01:01, load 42). Main was clean at 4f8f6ea. What survived: lane P's worktree
 holds one clean commit, 61a6a4c ("the nine Chrome-driven polish findings fixed in the UI
-alone", 27 files: Review/Pivot/Traceback/Live/api.js, the rebuilt dist, design.md, 20
-re-captured PNGs), unverified; lane V2's worktree holds only the launch capture (its own
+alone", 29 files: Review/Pivot/Traceback/Live/api.js, app.css, the rebuilt dist, capture.mjs,
+design.md, the screens index, 17 re-captured PNGs), unverified; lane V2's worktree holds only the launch capture (its own
 message: the display slept and the session locked two minutes in); lane K returned nothing.
 Wake lock for the rest of the session, started 01:04 IST: `caffeinate -d -i -m -s -u -t 28800`
 (display, idle, disk, system and a user-activity assertion for eight hours; `pmset -g
@@ -242,8 +383,11 @@ serve and docker modes, cold start, demo runner, quiet soak, verified state, com
 
 ### In flight
 - (P merged 01:15 IST; V2 and K relaunched on the merged build at 01:17; then the final sequence.)
-- Lane P since 23:27 IST (own worktree of main): the twelve minor findings from lane V's
-  Chrome-driven pass (scroll to the approve result, the written-to path overflow, repeated
+- Lane P since 23:27 IST (own worktree of main): nine of the twelve minor findings from lane
+  V's Chrome-driven pass, the nine the UI alone can fix (the other three are server-side and
+  deferred: the seen-with count wording against `related_over`, the one 608 ms frame while a
+  4 MB record renders after a 24 MB JSON fetch, `GET /api/pivot` at 500 ms for a 19k-event
+  entity) (scroll to the approve result, the written-to path overflow, repeated
   axis ticks, uninformative seen-with bars, an unformatted number, negative zero, the tail
   header wording, the sources table at 1512, the seven-row legend) fixed in the UI only, each
   verified over CDP and re-captured under the existing file names; 45-minute stop; Opus
@@ -261,13 +405,13 @@ serve and docker modes, cold start, demo runner, quiet soak, verified state, com
   (`docs/evaluation.md`: a fresh clone runs README's Quick start), one `scripts/demo.sh --auto`
   pass, then the push. Sequential by a quiet machine: the soak run with nothing else on the
   host, last. A1, A1b, B, C and V are merged; soak run 5 and the A3 bench are recorded.
-- A2 and A3 run from a detached watcher started 22:21 IST (`quiet-measure.sh` in the session
-  scratchpad, `pgrep -fl quiet-measure`): before each bench width and before the soak it waits
-  for a quiet machine (1-min load under 4, no rustc/cargo/ld), samples the load every 2 s
-  during the run and records before/after/peak beside every number; results land in
-  `<scratchpad>/a3/results.txt` and `<scratchpad>/a2/run5/` (soak.log, netstat before/after,
-  status-rcvbuf.txt). Host sleep found by the run-4 soak report: `caffeinate -i -t 21600`
-  started 21:56 IST.
+- A2 run 5 and A3 ran from a detached watcher started 22:21 IST (a `quiet-measure.sh` in the
+  session scratchpad): before each bench width and before the soak it waited for a quiet
+  machine (1-min load under 4, no rustc/cargo/ld), sampled the load every 2 s during the run
+  and recorded before/after/peak beside every number. Its records (`a3/results.txt`,
+  `a2/run5/soak.log`, the netstat and rcvbuf captures) lived under `/private/tmp` and did not
+  survive the 00:57 reboot; the numbers in A2, A3, D62 and README were transcribed from them
+  while they existed and are the only copy. The final quiet soak is run by hand at the end.
 
 ### Tried and abandoned (v3)
 - (none yet)
@@ -521,139 +665,6 @@ Started 2026-09-04. Single autonomous session building v0.1 from nothing.
       whether prefix-tree clustering produced usable templates.
 - [x] 8. CLAUDE.md, this file, and docs/DECISIONS.md (D1–D36, each with an anchor)
       current; every milestone committed and pushed to techlogist1/ulpf main.
-
-## Demo (10:00) and the 04:00 comparison: start here
-
-Everything below was run on 2026-09-05 on the M1 Pro from a clean checkout. Terminal 1 is
-the server, terminal 2 everything else; paths are relative to the repo root. A store
-written before tonight is refused by name (the integrity chain changed the index): delete
-it and start over.
-
-### Runner (D67): `scripts/demo.sh`
-`scripts/demo.sh` plays steps 0-9 below from the repo root: it prints each command before
-running it and what to click next, Enter advances, and the server stays up for questions at
-the end (Enter again stops it and resets `demo/`). `scripts/demo.sh --auto` is the unattended
-rehearsal (fixed 3 s pauses, then stop and reset); `--check` proves every command in the
-runner appears verbatim in this section (run it after editing either); `--reset` stops a
-leftover server and removes `demo/`. Verified 2026-09-05 21:53 and 21:55 IST with `--auto`
-on the release build at 9d39679: the proposal for mikrotik appeared 0.9 s after the drop, approve returned
-`now_detected 250/250, parsers_loaded 13`, replay started v2 over 1,044 events, verify clean, the drift update proposal appeared 5.7 s after the new lines,
-attestation 2 of 2 checkpoints, the tamper named raw id 0 (digest) with exit 1, reset clean;
-the whole pass takes about two and a half minutes. Ports 7878 and 5514 must be free.
-
-```
-cargo build --release                                      # ~1 min; binary target/release/ulpf
-./target/release/ulpf check --pending pending              # 12 parsers, 2 mappings (ocsf, ecs), 0 problems
-
-# 0. reset between rehearsals (the server uses demo/parsers and demo/pending, so nothing lands in the repo)
-rm -rf demo
-
-# 1. server + UI (terminal 1): watches demo/watch, listens for syslog on UDP and TCP 5514
-mkdir -p demo/watch demo/parsers demo/pending && cp parsers/*.toml demo/parsers/
-./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending demo/pending --parsers demo/parsers --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514 --infer-threshold 64
-#    -> ulpf: serving http://127.0.0.1:7878 ; syslog udp 127.0.0.1:5514, tcp 127.0.0.1:5514 ; 12 parsers loaded
-#    open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)
-
-# 2. known formats and a live device: counters, sources and the tail move within 500 ms (one file a second, so the feed visibly moves)
-for f in samples/*.log; do cp "$f" demo/watch/; sleep 1; done
-python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);[s.sendto(l,('127.0.0.1',5514)) for l in open('heldout/edgerouter.log','rb').read().splitlines()]"
-#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed; syslog row: udp datagrams 250
-
-# 3. an unknown format from a file and from the socket: clustered at 64 lines, "Review (2)" appears
-cp heldout/mikrotik.log demo/watch/
-#    Review -> mikrotik: 14 templates; every slot has a name and the REASON it was chosen
-#    (key `src-mac` before the value; vocabulary `{ip}:{port}->{ip}:{port}` names src/dst ...);
-#    generic slots stay ip1/word2 and say why. Uncheck a template + Regenerate to drop it.
-
-# 4. approve (UI: `a` opens the confirmation, Enter approves, Esc backs out; or:)
-curl -s -X POST http://127.0.0.1:7878/api/pending/mikrotik/approve
-#    -> {"name":"mikrotik_inferred","parsers_loaded":13,"now_detected":{"tested":250,"detected":250},"replaced_version":null}
-#    demo/parsers/mikrotik_inferred.toml carries origin = "inferred"; Live -> parsers: origin approved
-
-# 5. the same events take the fast path; the pivot sees them
-cp heldout/mikrotik.log demo/watch/mikrotik-again.log
-#    Live -> mikrotik-again.log detected 250. Pivot -> search src_ip -> pick 203.0.113.9:
-#    one attacker across OpenVPN, pfSense, ASA, Check Point, SRX, SonicWall in one lane-per-device timeline,
-#    "seen with" dst_ip 10.0.0.7, dst_port 22, user jdoe; click any related value to pivot again.
-
-# 6. traceback with provenance: click a tail row, or open http://127.0.0.1:7878/#/trace/0
-curl -s http://127.0.0.1:7878/api/events/0 | python3 -m json.tool | head -40
-#    stored and recomputed SHA-256, chain and prev_chain with chain_match, every parsed field with its
-#    byte range, every normalized path with the field and bytes it came from; hover a normalized field
-#    (j/k walk them, Enter pins one, h = hex, Esc releases)
-#    in the UI and its bytes light up in the raw record.
-
-# 7. replay: a parser bug, the fix, every past event corrected, the store untouched
-sed -i '' 's/{dst_ip:ip}/{dst_addr:ip}/g' demo/parsers/cisco_asa.toml     # the bug (reloads within 250 ms)
-cp samples/cisco_asa.log demo/watch/asa-under-the-bug.log                  # events written wrong
-cp parsers/cisco_asa.toml demo/parsers/                                     # the fix
-curl -s -X POST http://127.0.0.1:7878/api/replay                            # -> {"version":2,"started":true,"total":N}
-#    Replay -> v2 report: changed = the ASA events written under the bug, by_field dst_endpoint.ip added /
-#    unmapped.dst_addr lost, and the WHY box: "demo/parsers/cisco_asa.toml changed since v1 (sha256 .. -> ..)".
-./target/release/ulpf verify --store demo/store                             # exit 0: chain ok, nothing rewritten
-
-# 8. drift: a device changes its format mid-stream; the update proposal carries a diff
-python3 - <<'EOF'
-import time
-lines=open('heldout/mikrotik.log','rb').read().splitlines()
-hdr=b' '.join(lines[0].split()[:4])
-with open('demo/watch/gw-drift.log','ab') as f:
-    for _ in range(5):
-        for l in lines: f.write(l+b'\n')                                     # 1250 known lines: established
-    f.flush(); time.sleep(3)
-    for i in range(400):                                                     # a new message type
-        f.write(hdr+b' interface,info ether%d link up (speed %dG, full duplex)\n' % (1+i%8, [1,10,25][i%3]))
-EOF
-#    Drift -> gw-drift.log tripped (window rate vs baseline; a partial window is judged after 5 s of
-#    quiet, D54); within ~10 s Review shows mikrotik_inferred v2 replacing the standalone proposal:
-#    the diff adds one pattern, the decisions start with "prior: `mikrotik_inferred` v1".
-#    Approve (`a`, Enter) -> demo/parsers/mikrotik_inferred.toml is v2, demo/pending/approved/mikrotik_inferred.v1.toml kept.
-
-# 9. integrity: verify from the UI (Integrity -> Verify) or offline, and hand a stranger the attestation
-./target/release/ulpf attest --store demo/store --out demo/attestation.json
-./target/release/ulpf verify --store demo/store --attestation demo/attestation.json   # exit 0
-printf 'X' | dd of=demo/store/raw.seg bs=1 seek=200 conv=notrunc 2>/dev/null           # tamper one byte (rehearsal only!)
-./target/release/ulpf verify --store demo/store                                        # names the record, exit 1
-
-# 10. a second output schema with zero parser changes
-./target/release/ulpf run samples --store demo/ecs-store --output demo/ecs.jsonl --schema ecs --infer-threshold 0
-git log --oneline -1 -- mappings/ecs.toml ; git show --stat 5f7abd5 | tail -3         # mappings/ + one test file
-
-# 11. throughput (terminal 2, quiet machine; the bench file is gitignored, generate once, ~25 s, 1.5 GB)
-cargo run --release -p ulpf --example gen_bench -- 5000000 bench
-./target/release/ulpf run bench/mixed-5000000.log --store /tmp/ulpf-bench --output /dev/null --infer-threshold 0
-#    numbers: see "Verified state" below; never quote one you did not just measure
-#    say the thread count with the number: -j 7 is the default here (cores minus one): 337k events/s
-#    median with --output /dev/null, -j 1 68k on the same file (v3 A3); the harness figure with the
-#    JSON Lines output written is 258k at 7 threads
-
-# 12. kill recovery: kill -9 a run, restart it, same output id for id
-./target/release/ulpf run bench/mixed-5000000.log --store /tmp/kr --output /tmp/kr.jsonl --infer-threshold 0 & sleep 3; kill -9 $!
-./target/release/ulpf run bench/mixed-5000000.log --store /tmp/kr --output /tmp/kr.jsonl --infer-threshold 0
-#    -> "recovered: N stored records an interrupted run had not written to the output"; wc -l equals a clean run
-
-# 13. isolation and container
-scripts/isolation.sh run bench/mixed-5000000.log ; scripts/isolation.sh serve demo/watch 20
-docker build -t ulpf:static . && scripts/isolation.sh docker ulpf:static samples
-```
-
-### The 04:00 comparison (docs/evaluation.md, "The 04:00 procedure")
-Both tools, same machine, quiet (no soak, no builds, no Docker workloads), same bench file.
-`eval/tools/ulpf.toml` is ULPF's template; write `eval/tools/<other>.toml` for the other tool
-(build command, run/verify/raw_of templates, container, key map). Then, for each tool:
-`eval/run.sh eval/tools/<tool>.toml` (three runs of throughput inside; every raw output under
-`eval/results/<tool>-<timestamp>-<pid>/`). Compare the two `scorecard.md` files criterion by
-criterion; a criterion a tool cannot do reads "not measurable: reason", never pass. ULPF's own
-committed scorecard is `eval/results/ulpf-<timestamp>/scorecard.md`.
-
-### What to say when something looks wrong
-A proposal that looks wrong: the evidence panel shows `support` beside `verified`, the slot
-table with the reason for every name, `history`, `decisions` and `unmatched` by reason;
-`ulpf infer FILE --decisions` prints the same offline. A replay diff nobody expected: the
-WHY box names every parser or mapping file whose digest changed since the previous version,
-and says so explicitly when none did. A source that stopped parsing: Drift shows the window
-rate against the baseline and where its lines went. A record in doubt: Traceback shows the
-stored and recomputed digest, the chain link, and the same bytes through today's parsers.
 
 ## v1 (2026-09-05 session, autonomous): the visible half
 

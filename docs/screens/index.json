@@ -3,264 +3,469 @@
     "file": "live-1280.png",
     "screen": "live",
     "width": 1280,
-    "what": "live feed: rates, funnel, queue, tail, sources, parsers, every engine counter"
+    "what": "live feed: rates, funnel, queue, tail, sources, parsers, every engine counter",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "review-list-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "review: the pending proposals, kind, lines, templates, unmatched, problems"
+    "what": "review: the pending proposals, kind, lines, templates, unmatched, problems",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "review-detail-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "review: definition editor, actions, evidence with templates, slot names and the reason for each"
+    "what": "review: definition editor, actions, evidence with templates, slot names and the reason for each",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "review-update-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence"
+    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "trace-1280.png",
     "screen": "trace",
     "width": 1280,
-    "what": "traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance"
+    "what": "traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "trace-hover-1280.png",
     "screen": "trace",
     "width": 1280,
-    "what": "traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields"
+    "what": "traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "trace-hex-1280.png",
     "screen": "trace",
     "width": 1280,
-    "what": "traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns"
+    "what": "traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "trace-big-1280.png",
     "screen": "trace",
     "width": 1280,
-    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive"
+    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "pivot-search-1280.png",
     "screen": "pivot",
     "width": 1280,
-    "what": "pivot: kind selector and the entities with the most events"
+    "what": "pivot: kind selector and the entities with the most events",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "pivot-1280.png",
     "screen": "pivot",
     "width": 1280,
-    "what": "pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities"
+    "what": "pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "replay-1280.png",
     "screen": "replay",
     "width": 1280,
-    "what": "replay: why v2 differs, counters, parser changes, by field, versions, the diff entries"
+    "what": "replay: why v2 differs, counters, parser changes, by field, versions, the diff entries",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "drift-1280.png",
     "screen": "drift",
     "width": 1280,
-    "what": "drift: every established source with its window rate against the baseline; tripped and proposed first"
+    "what": "drift: every established source with its window rate against the baseline; tripped and proposed first",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "integrity-1280.png",
     "screen": "integrity",
     "width": 1280,
-    "what": "integrity: verdict of the last verify, records, store id, genesis and chain head"
+    "what": "integrity: verdict of the last verify, records, store id, genesis and chain head",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "live-2560.png",
     "screen": "live",
     "width": 2560,
-    "what": "live feed: rates, funnel, queue, tail, sources, parsers, every engine counter"
+    "what": "live feed: rates, funnel, queue, tail, sources, parsers, every engine counter",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "review-list-2560.png",
     "screen": "review",
     "width": 2560,
-    "what": "review: the pending proposals, kind, lines, templates, unmatched, problems"
+    "what": "review: the pending proposals, kind, lines, templates, unmatched, problems",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "review-detail-2560.png",
     "screen": "review",
     "width": 2560,
-    "what": "review: definition editor, actions, evidence with templates, slot names and the reason for each"
+    "what": "review: definition editor, actions, evidence with templates, slot names and the reason for each",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "review-update-2560.png",
     "screen": "review",
     "width": 2560,
-    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence"
+    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "trace-2560.png",
     "screen": "trace",
     "width": 2560,
-    "what": "traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance"
+    "what": "traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "trace-hover-2560.png",
     "screen": "trace",
     "width": 2560,
-    "what": "traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields"
+    "what": "traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "trace-hex-2560.png",
     "screen": "trace",
     "width": 2560,
-    "what": "traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns"
+    "what": "traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "trace-big-2560.png",
     "screen": "trace",
     "width": 2560,
-    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive"
+    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "pivot-search-2560.png",
     "screen": "pivot",
     "width": 2560,
-    "what": "pivot: kind selector and the entities with the most events"
+    "what": "pivot: kind selector and the entities with the most events",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "pivot-2560.png",
     "screen": "pivot",
     "width": 2560,
-    "what": "pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities"
+    "what": "pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "replay-2560.png",
     "screen": "replay",
     "width": 2560,
-    "what": "replay: why v2 differs, counters, parser changes, by field, versions, the diff entries"
+    "what": "replay: why v2 differs, counters, parser changes, by field, versions, the diff entries",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "drift-2560.png",
     "screen": "drift",
     "width": 2560,
-    "what": "drift: every established source with its window rate against the baseline; tripped and proposed first"
+    "what": "drift: every established source with its window rate against the baseline; tripped and proposed first",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "integrity-2560.png",
     "screen": "integrity",
     "width": 2560,
-    "what": "integrity: verdict of the last verify, records, store id, genesis and chain head"
+    "what": "integrity: verdict of the last verify, records, store id, genesis and chain head",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "keys-1280.png",
     "screen": "keys",
     "width": 1280,
-    "what": "the shortcut overlay (?)"
+    "what": "the shortcut overlay (?)",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "empty-trace-1280.png",
     "screen": "empty",
     "width": 1280,
-    "what": "empty state: traceback with no record chosen"
+    "what": "empty state: traceback with no record chosen",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "error-trace-1280.png",
     "screen": "error",
     "width": 1280,
-    "what": "error state: a trace of raw id 503741, which the store never issued"
+    "what": "error state: a trace of raw id 503741, which the store never issued",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "light-trace-1280.png",
     "screen": "light",
     "width": 1280,
-    "what": "the same traceback under the light theme (t)"
+    "what": "the same traceback under the light theme (t)",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "light-live-1280.png",
     "screen": "light",
     "width": 1280,
-    "what": "the live feed under the light theme (t)"
+    "what": "the live feed under the light theme (t)",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "empty-pivot-value-1280.png",
     "screen": "empty",
     "width": 1280,
-    "what": "empty state: a pivot on a value no event carries"
+    "what": "empty state: a pivot on a value no event carries",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "reject-confirm-1280.png",
     "screen": "reject",
     "width": 1280,
-    "what": "review: x opens the reject confirmation, marked as the destructive one; Enter confirms, Esc cancels"
+    "what": "review: x opens the reject confirmation, marked as the destructive one; Enter confirms, Esc cancels",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "approve-1-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "keyboard approve 1: the digit 2 opens Review from anywhere"
+    "what": "keyboard approve 1: the digit 2 opens Review from anywhere",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "approve-2-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "keyboard approve 2: j selects the proposal (bench_slice)"
+    "what": "keyboard approve 2: j selects the proposal (bench_slice)",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "approve-3-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "keyboard approve 3: Enter opens it; the definition, the actions and the evidence"
+    "what": "keyboard approve 3: Enter opens it; the definition, the actions and the evidence",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "approve-4-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "keyboard approve 4: a opens the confirmation; focus is on Approve, Esc would cancel"
+    "what": "keyboard approve 4: a opens the confirmation; focus is on Approve, Esc would cancel",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "approve-5-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "keyboard approve 5: Enter confirms; the result names the file, the parsers loaded and how many buffered lines the new parser now claims"
+    "what": "keyboard approve 5: Enter confirms; the result names the file, the parsers loaded and how many buffered lines the new parser now claims",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "empty-live-1280.png",
     "screen": "live",
     "width": 1280,
-    "what": "empty state: a fresh server with zero events: rates, funnel, queue and the tail say what will fill them"
+    "what": "empty state: a fresh server with zero events: rates, funnel, queue and the tail say what will fill them",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "empty-review-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "empty state: nothing to review: what makes a proposal appear"
+    "what": "empty state: nothing to review: what makes a proposal appear",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "empty-pivot-1280.png",
     "screen": "pivot",
     "width": 1280,
-    "what": "empty state: no entities indexed yet"
+    "what": "empty state: no entities indexed yet",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "empty-replay-1280.png",
     "screen": "replay",
     "width": 1280,
-    "what": "empty state: no output versions yet"
+    "what": "empty state: no output versions yet",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "empty-drift-1280.png",
     "screen": "drift",
     "width": 1280,
-    "what": "empty state: no source established yet: the thresholds in words"
+    "what": "empty state: no source established yet: the thresholds in words",
+    "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "empty-integrity-1280.png",
     "screen": "integrity",
     "width": 1280,
-    "what": "empty state: an empty store: the genesis is fixed, the head appears with the first record"
+    "what": "empty state: an empty store: the genesis is fixed, the head appears with the first record",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "tool-live-1280.png",
+    "screen": "live",
+    "width": 1280,
+    "what": "live feed while ~400 events/s arrive over syslog UDP: rates, funnel with the no_parser and parse_failed deficits, queue 45/64, the tail, sources and parsers; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-shortcuts-1280.png",
+    "screen": "keys",
+    "width": 1280,
+    "what": "the shortcut overlay opened with ? over the live feed; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-review-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "review of the edgerouter proposal reached by keyboard (2, j, Enter): definition, actions, template 1 with every slot name and the reason for it; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-review-confirm-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "a opens the approve confirmation for bench_slice_inferred, focus on Approve, Esc cancels, Tab reaches Cancel; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-review-approved-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "Enter confirmed: the result names the file written, 14 parsers loaded and 1,403 of 1,442 buffered lines now on the fast path (mikrotik was approved the same way first); tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-pivot-1280.png",
+    "screen": "pivot",
+    "width": 1280,
+    "what": "pivot of the busiest entity (user jdoe, 19,331 events over 8 devices): device lane, timeline, seen-with lists; clicking dst_ip 10.0.0.2 re-pivoted to #/pivot/dst_ip/10.0.0.2 with the trail in the breadcrumb; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-trace-1280.png",
+    "screen": "trace",
+    "width": 1280,
+    "what": "traceback of raw id 209334 (palo_alto_panos, 113 pairs): j walked to connection_info.protocol_name, its bytes (udp) lit in the raw record; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-trace-hex-1280.png",
+    "screen": "trace",
+    "width": 1280,
+    "what": "the same record after h: sixteen bytes per row, the lit field (75 64 70) carried into the hex and ascii columns; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-trace-big-1280.png",
+    "screen": "trace",
+    "width": 1280,
+    "what": "traceback of the 4,000,035-byte record scrolled into its raw view (virtualised rows, 157 bytes each), rendered 959 ms after navigation with one 608 ms frame, then 120 Hz smooth scrolling; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-trace-missing-1280.png",
+    "screen": "error",
+    "width": 1280,
+    "what": "error state: raw id 999999999, HTTP 404, the notice says the store holds 249,407 records; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-replay-1280.png",
+    "screen": "replay",
+    "width": 1280,
+    "what": "replay v2 after renaming squid's response_time slot: the three why lines verbatim (new parser, changed parser with digests, reloads during v1), counters, parser changes, by field; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-drift-1280.png",
+    "screen": "drift",
+    "width": 1280,
+    "what": "drift: two established sources watching, window misses against the baseline, excess; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-integrity-1280.png",
+    "screen": "integrity",
+    "width": 1280,
+    "what": "integrity after POST /api/integrity/verify: clean verdict over 249,407 records in 0.53 s, store id, genesis, head; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-live-1512.png",
+    "screen": "live",
+    "width": 1512,
+    "what": "the live feed at the widest window this 1512 px display allows: the tail and both lower tables use the width; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-pivot-1512.png",
+    "screen": "pivot",
+    "width": 1512,
+    "what": "the jdoe pivot at 1512: timeline and seen-with lists side by side, no empty band; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "app-launch.png",
+    "screen": "app",
+    "width": null,
+    "what": "first launch from a clean data directory: the title reads `ULPF \u00b7 engine ok \u00b7 0 events \u00b7 0 pending`, the served live feed inside the window, 12 parsers seeded",
+    "how": "`open ULPF.app`, screencapture"
+  },
+  {
+    "file": "app-add-files.png",
+    "screen": "app",
+    "width": null,
+    "what": "File > Add files\u2026 with samples/cisco_asa.log: the notice `Added 1 file to the watch folder: cisco_asa.log`, the source row and the title at 30 events",
+    "how": "tool-driven (computer use): Cmd+O, Cmd+Shift+G, path, Return"
+  },
+  {
+    "file": "app-drop.png",
+    "screen": "app",
+    "width": null,
+    "what": "samples/juniper_srx.log dragged from a Finder window onto the app: the notice and the source row at 16 events",
+    "how": "tool-driven (computer use): left_click_drag from Finder"
+  },
+  {
+    "file": "app-review.png",
+    "screen": "app",
+    "width": null,
+    "what": "heldout/mikrotik.log dropped: the title shows 1 pending and the Review screen inside the app shows the proposal's definition and evidence",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-approved.png",
+    "screen": "app",
+    "width": null,
+    "what": "the proposal approved inside the app: `Approved as mikrotik_inferred, written to \u2026/dev.ulpf.desktop/parsers/\u2026`, 0 pending",
+    "how": "tool-driven (computer use)"
+  },
+  {
+    "file": "app-tray.png",
+    "screen": "app",
+    "width": null,
+    "what": "the tray menu (Show ULPF, Open output folder, Open in browser, Quit ULPF) while the window is closed and the engine keeps ingesting; the icon itself sits under this Mac's notch overlay",
+    "how": "menu opened through Accessibility, screencapture"
+  },
+  {
+    "file": "app-output-folder.png",
+    "screen": "app",
+    "width": null,
+    "what": "File > Open output folder: Finder with out.jsonl selected in the app's data directory",
+    "how": "screencapture"
+  },
+  {
+    "file": "app-open-in-browser.png",
+    "screen": "app",
+    "width": null,
+    "what": "Open in browser: the same server session in Chrome after a relaunch, records 313",
+    "how": "screencapture"
   }
 ]

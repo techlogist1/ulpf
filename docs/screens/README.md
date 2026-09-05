@@ -1,6 +1,6 @@
 # Screen captures
 
-Captured headlessly by `ui/capture.mjs` against a populated `ulpf serve` (0.1.0 at http://127.0.0.1:7881). One line per file.
+The 44 `*-1280.png` / `*-2560.png` captures in the first table without a tool-driven marker were taken headlessly by `ui/capture.mjs` against a populated `ulpf serve` (0.1.0 at http://127.0.0.1:7881); the `tool-*` rows were driven through the real Chrome (its own server on 127.0.0.1:7885) and the `app-*` rows are `screencapture` of the built ULPF.app on its own sidecar port. One line per file.
 
 | file | screen | width | what it shows |
 |---|---|---|---|

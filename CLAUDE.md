@@ -235,8 +235,8 @@ means a gated sub ran and failed (or an ungated sub met a message you have not m
 input for any output line (`ulpf.raw_id`).
 
 ## Working files
-- `PROGRESS.md` — hackathon demo script first, then the v1 and v0.1 checklists, verified
-  state, tried and abandoned, next action.
+- `PROGRESS.md` — hackathon demo script first, then the v3, v2, v1 and v0.1 records (definition of
+  done, fan-outs, verified state, tried and abandoned, next action).
 - `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out (D1-D74).
 - `docs/api.md` — the HTTP and SSE contract the server and UI are built against.
 - `docs/parser-format.md` — the definition format reference for teammates.

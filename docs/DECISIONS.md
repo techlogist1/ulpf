@@ -983,8 +983,8 @@ quiet run, and the host did not suspend (max SSE gap 0.55 s). 9,000,000 sent; `u
 against `netstat -s -p udp` full-socket-buffer drops rising by 1,336,894: kernel drops, none an
 engine loss. File 4,200,000 and TCP 2,400,000 exact; framed = stored = emitted = verified
 7,663,160, chain ok. Queue 64/64 with 2,309 backpressure blocks: the engine ran at 5,950
-events/s over the run with the entity index on (`serve` default, D66) beside 16 syslog
-datagrams and a file feed, so the listener spent the run blocked on the queue and the kernel
+events/s over the run with the entity index on (`serve` default, D66) beside 16k/s of syslog
+(8k/s UDP and 8k/s TCP) and a 10k/s file feed, so the listener spent the run blocked on the queue and the kernel
 buffer filled at 8k/s in. RSS 16.6 to 930 MB, the in-flight backlog while the output thread
 was behind, 402 MB at the end. The demo warning stands until a run with nothing else on the
 host says otherwise: at 8k/s UDP on a loaded laptop the kernel drops; TCP and the file path
@@ -1205,7 +1205,7 @@ navigation with 24 to 30 rows in the DOM and scrolls to any offset; the SSE clie
 frames so a 400,000-event drop at the queue's high-water mark kept the tail and counters live
 with zero skipped frames. Navigation is in-app throughout (hash routes, breadcrumb trail,
 Backspace along the pivot trail, Esc to the list), nothing depends on browser back or a
-visible URL bar, so the same build runs in the desktop webview (D72). **Anchor.**
+visible URL bar, so the same build runs in the desktop webview (D73). **Anchor.**
 `ui/src/VList.svelte`, `ui/src/Traceback.svelte` (`starts`, `segments`),
 `ui/src/state.svelte.js` (`pushTrail`), `docs/design.md` "Under load". **Principle.**
 Performance is part of the design: a screen that freezes on the record a judge asks for is
@@ -1304,11 +1304,14 @@ names the sidecar per host triple through `app/scripts/sidecar.sh` (Git Bash on 
 and NSIS `.exe` + `.msi`, uploads them as run artifacts on every push and attaches them to a
 draft release on a tag; a concurrency group cancels a superseded run; `Swatinem/rust-cache`
 covers both workspaces. The engine compiles on Windows behind exactly the two shims the brief
-allowed: `crates/ulpf-store/src/store.rs` gains a `#[cfg(windows)]` local `FileExt` whose
-`read_at`/`write_at` loop over `seek_read`/`seek_write` and restore the cursor, with the unix
-import now `#[cfg(unix)]` and no unix line changed; `crates/ulpf/src/syslog.rs`'s
-`set_recv_buffer` is `#[cfg(windows)]` a no-op returning 0 with the asked/granted line saying
-so. First green run on both runners 22:34 IST, twelve minutes after the first push; the
+allowed: `crates/ulpf-store/src/store.rs` gains a `#[cfg(windows)]` local `FileExt` whose one
+method, `read_exact_at`, loops over `seek_read` and restores the cursor (the store appends
+through a `BufWriter`, so there is no positional write to shim), with the unix import now
+`#[cfg(unix)]` and no unix line of the store changed; `crates/ulpf/src/syslog.rs`'s
+`set_recv_buffer` now takes the socket instead of a raw fd (the `AsRawFd` import moved inside
+its `#[cfg(unix)]` body) and is `#[cfg(windows)]` a no-op returning 0 with the asked/granted
+line saying so, the caller's warning branch reading `cfg!(windows)` first; the unix behaviour
+is unchanged (the lane's verifier read the diff; the suite and soak run 5 ran on it). First green run on both runners 22:34 IST, twelve minutes after the first push; the
 feature commit's Windows job then failed once (`E0521` in `menu.rs`: the Windows-only tray
 branch borrowed the app handle through `default_window_icon().cloned()`), fixed by building
 an owned `Image`; the final run on cdb4d9b (`actions/runs/33980779377`) is green on both,

@@ -1,4 +1,7 @@
 #!/bin/zsh
+# --check uses zsh parameter indirection; under bash or sh the expansion error would skip the
+# exit and fall through into the live demo, so any other shell re-executes this file with zsh.
+[ -n "${ZSH_VERSION:-}" ] || exec /bin/zsh "$0" "$@"
 # Plays the demo in PROGRESS.md ("Demo ... start here"), one numbered step at a time, printing the
 # command it runs and what to click next. Existing subcommands and the watch directory only; the
 # server uses demo/parsers and demo/pending, so the repo's parsers/ and pending/ are never written.
