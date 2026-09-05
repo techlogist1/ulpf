@@ -78,17 +78,38 @@ longer than about four minutes (backgrounded and polled past that).
 - 20:18 IST: A4 done as above; `git worktree list` shows main only; `cargo build --release` at
   9d39679 up to date; `ulpf check --pending pending` 12 parsers, 2 mappings, 0 problems.
 
+### Fan-out 2 (21:00 IST): the same three lanes, resumed after the account limit
+The account's session limit cut all three builders at about 20:35 IST, nine to eleven minutes
+in (each had 35-60 tool calls done). Their worktrees kept the partial work uncommitted: A1 had
+edited cluster.rs, lib.rs, token.rs and docs/slot-vocabulary.md; B had tokens, fonts, a
+virtual list and the traceback under way with dist rebuilt; C had an `app/` scaffold and a
+built sidecar. The owner switched the session to low-priority mode and asked for the agents
+to be relaunched at the highest quality. Relaunched 21:00 IST with the same split, the same
+return format and the same verifier stage, each builder told to resume in its existing
+worktree: read every changed file first, keep what is coherent, revert what is not, say
+which. New kill timers: A1 22:25, C shell 22:25 (features and CI to about 23:40), B 23:55.
+
 ### In flight
-- A1, B, C dispatched 20:20 IST (kill timers 21:50, 23:20, 21:50). A2 soak running in the main
-  tree. A3 waits for the workers' builds to settle (load average is recorded with every run).
+- A1, B, C running since 21:00 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`.
+- A2 soak run 1 (started 20:24, 5 min at 10k file + 8k UDP + 8k TCP, burst 60 s x3): the
+  generator sent 9,000,000 and the server is draining a file backlog; the machine was at
+  load 11-49 throughout (three release builds), so this is the shared-machine data point, not
+  the quiet one; a quiet re-run follows when the workers stop building.
+- A3 waits for a quiet machine (load recorded with every run; `scratch` bench script ready).
+- D: `scripts/demo.sh` drafted (interactive, `--auto`, `--check`, `--reset`); its `--check`
+  proves every command is verbatim in this file's demo script (the demo commands here now use
+  `demo/pending` and paced sample drops so the runner and the script are one text); committed
+  only after one complete `--auto` pass, which needs the soak's ports back.
 
 ### Tried and abandoned (v3)
 - (none yet)
 
 ### Next action (if this session is cut off here)
-Merge whichever lane has landed on its branch (`git branch -a`), by running
-`cargo test --workspace --release` and `cargo clippy --workspace --all-targets -- -D warnings`
-on the merged tree before committing to main; then A2/A3 numbers into D62 and item 9; then D.
+Merge whichever lane has landed on its branch (`git branch -a`; the worktrees under
+`.claude/worktrees/` hold uncommitted work if a builder died again: inspect `git status` there
+before deleting anything), by running `cargo test --workspace --release` and
+`cargo clippy --workspace --all-targets -- -D warnings` on the merged tree before committing to
+main; then A2/A3 numbers into D62 and item 9; then `scripts/demo.sh --auto` once, then commit it.
 
 ---
 
@@ -341,18 +362,17 @@ it and start over.
 cargo build --release                                      # ~1 min; binary target/release/ulpf
 ./target/release/ulpf check --pending pending              # 12 parsers, 2 mappings (ocsf, ecs), 0 problems
 
-# 0. reset between rehearsals (approvals land in parsers/; every generated file goes)
-rm -rf demo pending/*.toml pending/*.json pending/*.lines pending/approved pending/rejected parsers/*_inferred.toml
+# 0. reset between rehearsals (the server uses demo/parsers and demo/pending, so nothing lands in the repo)
+rm -rf demo
 
 # 1. server + UI (terminal 1): watches demo/watch, listens for syslog on UDP and TCP 5514
-mkdir -p demo/watch demo/parsers && cp parsers/*.toml demo/parsers/
-./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending pending \
-    --parsers demo/parsers --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514 --infer-threshold 64
+mkdir -p demo/watch demo/parsers demo/pending && cp parsers/*.toml demo/parsers/
+./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending demo/pending --parsers demo/parsers --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514 --infer-threshold 64
 #    -> ulpf: serving http://127.0.0.1:7878 ; syslog udp 127.0.0.1:5514, tcp 127.0.0.1:5514 ; 12 parsers loaded
 #    open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)
 
-# 2. known formats and a live device: counters, sources and the tail move within 500 ms
-cp samples/*.log demo/watch/
+# 2. known formats and a live device: counters, sources and the tail move within 500 ms (one file a second, so the feed visibly moves)
+for f in samples/*.log; do cp "$f" demo/watch/; sleep 1; done
 python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);[s.sendto(l,('127.0.0.1',5514)) for l in open('heldout/edgerouter.log','rb').read().splitlines()]"
 #    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed; syslog row: udp datagrams 250
 
@@ -403,7 +423,7 @@ EOF
 #    Drift -> gw-drift.log tripped (window rate vs baseline; a partial window is judged after 5 s of
 #    quiet, D54); within ~10 s Review shows mikrotik_inferred v2 replacing the standalone proposal:
 #    the diff adds one pattern, the decisions start with "prior: `mikrotik_inferred` v1".
-#    Approve -> parsers/mikrotik_inferred.toml is v2, pending/approved/mikrotik_inferred.v1.toml kept.
+#    Approve -> demo/parsers/mikrotik_inferred.toml is v2, demo/pending/approved/mikrotik_inferred.v1.toml kept.
 
 # 9. integrity: verify from the UI (Integrity -> Verify) or offline, and hand a stranger the attestation
 ./target/release/ulpf attest --store demo/store --out demo/attestation.json
