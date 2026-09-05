@@ -26,6 +26,77 @@ pub struct MappingFile {
     pub class: Vec<ClassRule>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub default_class: Option<ClassRule>,
+    #[serde(default)]
+    pub entities: Entities,
+}
+
+/// The schema paths that carry the five pivot entity kinds. The mapping names the paths;
+/// the index and its API know only kinds, so no vendor field name can reach either.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Entities {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub src_ip: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dst_ip: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dst_port: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub device: Option<String>,
+}
+
+impl Entities {
+    pub fn path(&self, kind: EntityKind) -> Option<&str> {
+        match kind {
+            EntityKind::SrcIp => self.src_ip.as_deref(),
+            EntityKind::DstIp => self.dst_ip.as_deref(),
+            EntityKind::User => self.user.as_deref(),
+            EntityKind::DstPort => self.dst_port.as_deref(),
+            EntityKind::Device => self.device.as_deref(),
+        }
+    }
+}
+
+/// The five fixed pivot kinds. `as usize` is the index into `NormalizeStats::entities` and
+/// the integer stored in the pivot index, so this order is part of the on-disk format.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum EntityKind {
+    SrcIp = 0,
+    DstIp = 1,
+    User = 2,
+    DstPort = 3,
+    Device = 4,
+}
+
+impl EntityKind {
+    pub const ALL: [EntityKind; 5] = [EntityKind::SrcIp, EntityKind::DstIp, EntityKind::User, EntityKind::DstPort, EntityKind::Device];
+
+    pub fn name(self) -> &'static str {
+        match self {
+            EntityKind::SrcIp => "src_ip",
+            EntityKind::DstIp => "dst_ip",
+            EntityKind::User => "user",
+            EntityKind::DstPort => "dst_port",
+            EntityKind::Device => "device",
+        }
+    }
+
+    pub fn from_name(s: &str) -> Option<EntityKind> {
+        EntityKind::ALL.into_iter().find(|k| k.name() == s)
+    }
+
+    pub fn from_index(i: usize) -> Option<EntityKind> {
+        EntityKind::ALL.get(i).copied()
+    }
+}
+
+impl std::fmt::Display for EntityKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

@@ -143,4 +143,15 @@ fn merge(base: &mut MappingFile, add: MappingFile) {
     if base.default_class.is_none() {
         base.default_class = add.default_class;
     }
+    for (b, a) in [
+        (&mut base.entities.src_ip, add.entities.src_ip),
+        (&mut base.entities.dst_ip, add.entities.dst_ip),
+        (&mut base.entities.user, add.entities.user),
+        (&mut base.entities.dst_port, add.entities.dst_port),
+        (&mut base.entities.device, add.entities.device),
+    ] {
+        if b.is_none() {
+            *b = a;
+        }
+    }
 }

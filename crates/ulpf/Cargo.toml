@@ -25,6 +25,7 @@ axum.workspace = true
 tokio.workspace = true
 futures-util.workspace = true
 sha2.workspace = true
+rusqlite.workspace = true
 
 [dev-dependencies]
 sha2.workspace = true

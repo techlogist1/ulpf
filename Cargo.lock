@@ -985,6 +985,7 @@ dependencies = [
  "clap",
  "futures-util",
  "memmap2",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",
