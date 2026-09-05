@@ -34,7 +34,16 @@ futures-util = "0.3"
 libc = "0.2"
 parquet = { version = "59.3.0", default-features = false, features = ["snap"] }
 
+# Default profile: no LTO, default codegen units. A tester on any machine gets a
+# working binary in under a minute; fat LTO with one codegen unit needed several GB
+# of peak memory in the linker and failed on a 16 GB Windows box three times in four.
 [profile.release]
+lto = false
+debug = 1
+
+# What ships: the CI binaries and installers, the Docker image, and every throughput
+# number the harness reports. Exactly what [profile.release] carried before the split.
+[profile.dist]
+inherits = "release"
 lto = "fat"
 codegen-units = 1
-debug = 1

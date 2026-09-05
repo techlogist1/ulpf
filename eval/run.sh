@@ -61,7 +61,7 @@ ensure_bench_file() {
   log "bench file missing, regenerating per bench/README.md (~25s)..."
   local td=${EVAL_TARGET_DIR:-$RESULTS/.cargo-target}
   local rc=0
-  ( cd "$ROOT" && CARGO_TARGET_DIR="$td" cargo run --release -p ulpf --example gen_bench -- 5000000 bench \
+  ( cd "$ROOT" && CARGO_TARGET_DIR="$td" cargo run --profile dist -p ulpf --example gen_bench -- 5000000 bench \
       >"$RAW/gen_bench.stdout" 2>"$RAW/gen_bench.stderr" ) || rc=$?
   if [ "$rc" -ne 0 ] || [ ! -f "$BENCH_FILE" ]; then
     log "not measurable: bench file absent and regeneration failed (exit $rc); see raw/gen_bench.stderr"
@@ -487,6 +487,7 @@ resolve_bin
 log "# scorecard: $TOOLNAME ($TS)"
 log "tool config: $TOOLFILE"
 log "quick mode: $([ "$QUICK" -eq 1 ] && echo yes || echo no)"
+log "build declared by $TOOLFILE: $CFG_build_cmd"
 log "threads: $THREADS"
 
 HARNESS_BROKE=0
