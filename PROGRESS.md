@@ -214,6 +214,21 @@ branch `worktree-a1b`), forty minutes of building, hard stop 23:10, Opus verifie
 round; same return format. It is a separate lane because it edits `lib.rs infer()` while the
 A1 verifier reads A1's tree, and it merges only after A1 does.
 
+### Crash and restart (00:57 IST, 2026-09-06)
+The Mac crashed and rebooted at about 00:57 IST with lanes P, V2 and K in flight (host up
+4 minutes at 01:01, load 42). Main was clean at 4f8f6ea. What survived: lane P's worktree
+holds one clean commit, 61a6a4c ("the nine Chrome-driven polish findings fixed in the UI
+alone", 27 files: Review/Pivot/Traceback/Live/api.js, the rebuilt dist, design.md, 20
+re-captured PNGs), unverified; lane V2's worktree holds only the launch capture (its own
+message: the display slept and the session locked two minutes in); lane K returned nothing.
+Wake lock for the rest of the session, started 01:04 IST: `caffeinate -d -i -m -s -u -t 28800`
+(display, idle, disk, system and a user-activity assertion for eight hours; `pmset -g
+assertions` shows all four); stop it with `pkill -x caffeinate`. Order on the owner's go:
+verify 61a6a4c with a strongest-tier verifier against docs/design.md and the nine findings,
+merge through the full gate; then V2 and K rerun in parallel on the merged build; then the
+final sequence in order (rebuild, re-bundle with the sidecar SHA checked, isolation in run,
+serve and docker modes, cold start, demo runner, quiet soak, verified state, commit, push).
+
 ### In flight
 - Lane P since 23:27 IST (own worktree of main): the twelve minor findings from lane V's
   Chrome-driven pass (scroll to the approve result, the written-to path overflow, repeated
