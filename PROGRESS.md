@@ -21,7 +21,7 @@ the whole pass takes about two and a half minutes. Ports 7878 and 5514 must be f
 
 ```
 cargo build --release                                      # ~1 min; binary target/release/ulpf
-./target/release/ulpf check --pending pending              # 12 parsers, 2 mappings (ocsf, ecs), 0 problems
+./target/release/ulpf check --pending pending              # 15 parsers, 2 mappings (ocsf, ecs), 0 problems
 
 # 0. reset between rehearsals (the server uses demo/parsers and demo/pending, so nothing lands in the repo)
 rm -rf demo
@@ -29,13 +29,13 @@ rm -rf demo
 # 1. server + UI (terminal 1): watches demo/watch, listens for syslog on UDP and TCP 5514
 mkdir -p demo/watch demo/parsers demo/pending && cp parsers/*.toml demo/parsers/
 ./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending demo/pending --parsers demo/parsers --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514 --infer-threshold 64
-#    -> ulpf: serving http://127.0.0.1:7878 ; watching demo/watch ; syslog udp 127.0.0.1:5514, syslog tcp 127.0.0.1:5514 ; 12 parsers loaded ; ctrl-c to stop
+#    -> ulpf: serving http://127.0.0.1:7878 ; watching demo/watch ; syslog udp 127.0.0.1:5514, syslog tcp 127.0.0.1:5514 ; 15 parsers loaded ; ctrl-c to stop
 #    open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)
 
 # 2. known formats and a live device: counters, sources and the tail move within 500 ms (one file a second, so the feed visibly moves)
 for f in samples/*.log; do cp "$f" demo/watch/; sleep 1; done
 python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);[s.sendto(l,('127.0.0.1',5514)) for l in open('heldout/edgerouter.log','rb').read().splitlines()]"
-#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed; syslog row: udp datagrams 250
+#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 15 sample sources parsed; syslog row: udp datagrams 250
 
 # 3. an unknown format from a file and from the socket: clustered at 64 lines, "Review (2)" appears
 cp heldout/mikrotik.log demo/watch/
@@ -221,9 +221,28 @@ look at the captures and a grep of `ui/dist` for external references.
       counters and a rate-proportional pulse from the metrics frame, reduced-motion static
       diagram, empty/loading/error states, one key per station, motion pass over the seven
       screens, captures under `docs/screens/`, `docs/design.md` Motion section, DECISIONS.
-- [ ] L2a. API: `queue`, `rate`, `emitted_from` + `?bytes=0` + `/bytes`, pivot cursor and
-      `elapsed_ms`, the pivot's 500 ms named and reduced, the 24 MB traceback body reduced,
-      export route; server tests for every new field and route; timings before and after here.
+- [~] L2a. (18fab3e, D77, D78; the lead) API: `queue` and `rate` in the frame, `emitted_from`
+      with the output-file lookup (`crates/ulpf/src/outfile.rs`, a binary search on the raw id;
+      the file cut to its last terminator is the snapshot), `?bytes=0`, `GET /api/events/{id}/bytes`,
+      `GET /api/export` (jsonl verbatim, csv as the eleven Parquet columns, `from`/`to`/`q`),
+      `pivot_index` in status. Smoke on a live server (03:35 IST, `--tail 5`, twelve samples and a
+      4,000,001-byte line, load 40 from the lanes): id 0 evicted from the ring came back with
+      `emitted_from: output` and its own `raw_id`; the bytes route's body equals the dropped file
+      byte for byte with `Content-Length` = `bytes_len`; a never-issued id is the JSON 404 on both
+      routes; the export equals the output file (`cmp`), `from=5&to=9` gives ids 5..9,
+      `q=DENY+tcp` gives 6 lines against an independent count of 6, the csv header and RFC 4180
+      quoting hold, `format=xml` is 422. The 24 MB finding measured on the 4 MB record: the full
+      JSON is 28,001,835 bytes in 0.43 s (`emitted` now adds a fourth copy of the 4 MB value),
+      `bytes=0` 16,001,835 bytes in 0.06 s (the parsed `message` value still appears in
+      `fields`, `provenance`, `normalized` and `emitted`), the bytes route 4,000,001 bytes in
+      0.011 s; so `?values=N` was added (a cut per long string with `value_len`, `values_cut`)
+      and measured at 03:37 on the same record with the rebuilt binary: full JSON 28,001,884
+      bytes in 0.24 s; `bytes=0` 16,001,884 in 0.044 s; `bytes=0&values=4096` 18,274 bytes in
+      0.025 s (`values_cut` 4: the `raw_message` field, its provenance, `normalized.message`,
+      `emitted.message`, each with `value_len` 4,000,000); the bytes route 4,000,001 bytes in
+      0.0025 s; a small record with `values=4096` has `values_cut` 0 and every `value_len` null.
+      116 tests, clippy clean. The pivot's 500 ms and `elapsed_ms` are lane 2P's; the server
+      tests are lane 2T's (three of four green at 03:30 against 18fab3e).
 - [ ] L2b. UI plumbing: trust badges per tail row and a flagged-only key, live filter across
       every field, export link with the filter's terms, traceback over `/bytes`, seen-with
       wording, queue depth and windowed rate where the Live screen labelled the gaps.

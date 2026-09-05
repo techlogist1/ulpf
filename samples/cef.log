@@ -1,0 +1,14 @@
+Sep 3 08:26:10 host CEF:0|Security|threatmanager|1.0|100|worm successfully stopped|10|src=10.0.0.1 dst=2.1.2.2 spt=1232
+CEF:0|Vendor|Firewall|2.1|100|Connection denied|7|rt=1788516923123 src=203.0.113.9 spt=51234 dst=10.0.0.7 dpt=22 proto=TCP act=deny deviceDirection=0 dvchost=fw-edge-1 dvc=10.0.0.1 deviceInboundInterface=eth0 deviceOutboundInterface=eth1 in=0 out=0 cat=/Firewall/Access/Deny reason=policy msg=Denied by rule 12
+CEF:0|Security|threatmanager|1.0|100|worm successfully stopped|10|rt=Sep 03 2026 08:26:10 src=10.0.0.1 spt=1232 dst=2.1.2.2 dpt=445 proto=TCP act=blocked cat=attack cnt=3 dvchost=ips-1
+CEF:0|Vendor|VPN|4.2|200|VPN user login|3|rt=1788516935000 suser=jdoe src=203.0.113.9 dst=10.0.0.5 act=login outcome=success app=IPSec dvchost=vpn-1 shost=laptop-7 smac=00:0D:60:AF:1B:61
+CEF:0|Vendor|Proxy|6.0|300|Web request|2|rt=1788516940456 src=10.0.0.5 spt=51000 dst=203.0.113.50 dpt=443 proto=TCP requestMethod=GET request=https://www.example.com/index.html requestClientApplication=Mozilla/5.0 act=allow in=512 out=2048 app=HTTPS duser=asmith dhost=www.example.com
+CEF:0|Vendor\|Inc|Product\|Two|1.0|101|Name with a \| pipe|5|rt=1788516950000 src=10.0.0.1 dst=10.0.0.2 act=allow
+CEF:0|Vendor|Product|1.0|102|Equals test|5|rt=1788516960000 msg=a\=b and c\=d act=allow src=10.0.0.3 dst=10.0.0.4 cs1=C:\\path\\file.txt cs1Label=Path
+CEF:0|Vendor|Product|1.0|103|Heartbeat|1|
+<134>Sep  3 10:15:20 fw-edge-1 CEF:0|Vendor|Firewall|2.1|100|Connection denied|7|src=203.0.113.9 spt=51235 dst=10.0.0.7 dpt=22 proto=TCP act=deny
+<134>1 2026-09-03T10:15:21.000Z fw-edge-1 cef - - - CEF:0|Vendor|Firewall|2.1|100|Connection denied|7|rt=1788516970000 src=203.0.113.9 spt=51236 dst=10.0.0.7 dpt=22 proto=TCP act=deny
+CEF:0|Vendor|Relay|1.0|104|Forwarded event|3|rt=1788516980000 msg=upstream said LEEF:2.0|IBM|QRadar|7.5|100|^|src\=1.2.3.4 src=10.0.0.9 dst=10.0.0.10 act=allow
+CEF:0|Vendor|DLP|3.0|400|File transfer|6|rt=1788516990000 src=10.0.0.5 dst=203.0.113.80 dpt=443 proto=TCP act=allow deviceDirection=1 suser=jdoe fname=report.pdf fsize=104857 start=1788516985000 end=1788516990000
+CEF:0|Vendor|VPN|4.2|201|VPN user logout|3|rt=1788517000000 suser=jörg src=203.0.113.9 dst=10.0.0.5 act=logout outcome=success dvchost=vpn-1
+CEF:0|Vendor|Firewall|2.1|100|Connection denied|7|rt=1788517010000 src=203.0.113.9 spt=51237 dst=10.0.0.7 dpt=22 proto=TCP act=deny msg=Denied by ru

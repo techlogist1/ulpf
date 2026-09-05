@@ -490,6 +490,9 @@ query parameter; nothing that exists changes shape. The UI is built against this
   /api/metrics`), so the window covers the time a client was watching. `engine.events_per_sec`
   stays the run average since start, the number the counter block prints.
 
+`GET /api/status` gains `"pivot_index": bool`, whether the entity index is running in this
+process (`--pivot`), beside `threads`: the two numbers a person quotes about the machine.
+
 ## Traceback: the emitted line from the output, and the bytes on their own
 
 `GET /api/events/{raw_id}`:
@@ -501,6 +504,13 @@ query parameter; nothing that exists changes shape. The UI is built against this
 - `?bytes=0` leaves `text` and `hex` `null` and everything else as before; `bytes_len` still
   says how long the record is. A client that reads the bytes from the route below asks for
   this and is spared a JSON body six times the record's size.
+
+- `?values=N` cuts every string value longer than N bytes (at a character boundary) in
+  `now.fields`, `now.provenance`, `now.normalized` and `emitted`; a cut entry in `fields` or
+  `provenance` carries its full length in `"value_len": u64` (`null` when whole) and the
+  top-level `"values_cut": u64` counts the cuts (0: nothing was cut). A 4 MB single-line record
+  is one 4 MB `message` value repeated four times in the JSON; with `bytes=0&values=4096` the
+  body is kilobytes and the bytes route carries the record once.
 
 `GET /api/events/{raw_id}/bytes` → `application/octet-stream`, the record's exact bytes (what
 `ulpf raw <id>` prints), read through the writer's own lock like the JSON route;

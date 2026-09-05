@@ -57,33 +57,33 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 
 [fields]
 # --- source / destination: the ECS baseline for anything with an IP -----------------
-"source.ip" = ["srcip", "src_ip", "src", "sourceip", "attacker", "source_ip", "source_address", "source-address", "srcaddr", "SourceIP", "client_ip", "c-ip", "shost_ip", "remote_ip", "peer_ip", "peer_addr", "ip_src"]
-"source.port" = ["srcport", "src_port", "spt", "source_port", "source-port", "SourcePort", "sport", "s_port", "client_port", "peer_port", "src_port_num"]
-"source.mac" = ["srcmac", "src_mac", "smac", "srcMac", "source_mac"]
+"source.ip" = ["srcip", "src_ip", "src", "sourceip", "attacker", "source_ip", "source_address", "source-address", "srcaddr", "SourceIP", "client_ip", "c-ip", "shost_ip", "remote_ip", "peer_ip", "peer_addr", "ip_src", "sourceIPAddress", "id_orig_h"]
+"source.port" = ["srcport", "src_port", "spt", "source_port", "source-port", "SourcePort", "sport", "s_port", "client_port", "peer_port", "src_port_num", "srcPort", "id_orig_p"]
+"source.mac" = ["srcmac", "src_mac", "smac", "srcMac", "source_mac", "srcMAC"]
 "source.domain" = ["srcname", "src_host", "src_machine_name", "shost", "source_host", "client_name"]
-"source.nat.ip" = ["xlatesrc", "natsrc", "natSrc", "nat_src_ip", "tran_src_ip", "src_mapped_ip", "nat-source-address", "transip"]
-"source.nat.port" = ["xlatesport", "natsport", "nat_src_port", "tran_src_port", "src_mapped_port", "nat-source-port"]
+"source.nat.ip" = ["xlatesrc", "natsrc", "natSrc", "nat_src_ip", "tran_src_ip", "src_mapped_ip", "nat-source-address", "transip", "srcPostNAT"]
+"source.nat.port" = ["xlatesport", "natsport", "nat_src_port", "tran_src_port", "src_mapped_port", "nat-source-port", "srcPostNATPort"]
 "source.geo.country_name" = ["srccountry", "src_country", "srcloc", "SourceCountry"]
 "source.geo.country_iso_code" = ["src_country_code"]
-"source.bytes" = ["sentbyte", "bytes_sent", "bytes_out", "out", "sent", "sent_bytes", "bytes-from-client", "bytes_from_client", "outbound-bytes", "client_outbound_bytes", "flow.bytes_toserver", "client_bytes", "request_bytes", "cn_bytes_out"]
-"source.packets" = ["sentpkt", "packets_sent", "packets_out", "pkts_sent", "spkt", "packets-from-client", "packets_from_client", "outbound-packets", "flow.pkts_toserver", "sent_pkts"]
+"source.bytes" = ["sentbyte", "bytes_sent", "bytes_out", "out", "sent", "sent_bytes", "bytes-from-client", "bytes_from_client", "outbound-bytes", "client_outbound_bytes", "flow.bytes_toserver", "client_bytes", "request_bytes", "cn_bytes_out", "srcBytes", "orig_bytes"]
+"source.packets" = ["sentpkt", "packets_sent", "packets_out", "pkts_sent", "spkt", "packets-from-client", "packets_from_client", "outbound-packets", "flow.pkts_toserver", "sent_pkts", "srcPackets", "orig_pkts"]
 "source.user.name" = ["srcuser", "src_user_name", "src_user", "login_user", "session_owner"]
 
-"destination.ip" = ["dstip", "dst_ip", "dst", "victim", "destination_ip", "destination_address", "destination-address", "dstaddr", "DestinationIP", "server_ip", "dest_ip", "ip_dst", "assigned_ip", "remote_ip_dst"]
-"destination.port" = ["dstport", "dst_port", "dpt", "destination_port", "destination-port", "DestinationPort", "dport", "d_port", "server_port", "dest_port", "dst_port_num"]
-"destination.mac" = ["dstmac", "dst_mac", "dmac", "dstMac", "destination_mac"]
+"destination.ip" = ["dstip", "dst_ip", "dst", "victim", "destination_ip", "destination_address", "destination-address", "dstaddr", "DestinationIP", "server_ip", "dest_ip", "ip_dst", "assigned_ip", "remote_ip_dst", "id_resp_h"]
+"destination.port" = ["dstport", "dst_port", "dpt", "destination_port", "destination-port", "DestinationPort", "dport", "d_port", "server_port", "dest_port", "dst_port_num", "dstPort", "id_resp_p"]
+"destination.mac" = ["dstmac", "dst_mac", "dmac", "dstMac", "destination_mac", "dstMAC"]
 "destination.domain" = ["dstname", "dst_host", "dst_machine_name", "dhost", "destination_host", "server_host", "hostname_dst"]
-"destination.nat.ip" = ["xlatedst", "natdst", "natDst", "nat_dst_ip", "tran_dst_ip", "dst_mapped_ip", "nat-destination-address", "mapped_ip"]
-"destination.nat.port" = ["xlatedport", "natdport", "nat_dst_port", "tran_dst_port", "dst_mapped_port", "nat-destination-port", "mapped_port"]
+"destination.nat.ip" = ["xlatedst", "natdst", "natDst", "nat_dst_ip", "tran_dst_ip", "dst_mapped_ip", "nat-destination-address", "mapped_ip", "dstPostNAT"]
+"destination.nat.port" = ["xlatedport", "natdport", "nat_dst_port", "tran_dst_port", "dst_mapped_port", "nat-destination-port", "mapped_port", "dstPostNATPort"]
 "destination.geo.country_name" = ["dstcountry", "dst_country", "dstloc", "DestinationCountry"]
 "destination.geo.country_iso_code" = ["dst_country_code"]
-"destination.bytes" = ["rcvdbyte", "bytes_received", "bytes_in", "in", "rcvd", "rcvd_bytes", "bytes_recv", "recv_bytes", "bytes-from-server", "bytes_from_server", "inbound-bytes", "server_outbound_bytes", "flow.bytes_toclient", "server_bytes", "response_bytes", "cn_bytes_in"]
-"destination.packets" = ["rcvdpkt", "packets_received", "packets_in", "pkts_received", "rpkt", "packets-from-server", "packets_from_server", "inbound-packets", "flow.pkts_toclient", "rcvd_pkts"]
+"destination.bytes" = ["rcvdbyte", "bytes_received", "bytes_in", "in", "rcvd", "rcvd_bytes", "bytes_recv", "recv_bytes", "bytes-from-server", "bytes_from_server", "inbound-bytes", "server_outbound_bytes", "flow.bytes_toclient", "server_bytes", "response_bytes", "cn_bytes_in", "dstBytes", "resp_bytes"]
+"destination.packets" = ["rcvdpkt", "packets_received", "packets_in", "pkts_received", "rpkt", "packets-from-server", "packets_from_server", "inbound-packets", "flow.pkts_toclient", "rcvd_pkts", "dstPackets", "resp_pkts"]
 "destination.user.name" = ["dstuser", "duser", "dst_user_name", "recipient"]
 
 # --- network -----------------------------------------------------------------------
 "network.transport" = ["protocol", "proto", "Protocol", "protocol-id", "protocol-name", "protocol_id", "transport", "ip_proto", "proto_name", "IPProtocol", "protoid", "protocol_type"]
-"network.direction" = ["direction", "ifdir", "conn_direction", "Direction", "flow_direction", "dir_disp"]
+"network.direction" = ["direction", "ifdir", "conn_direction", "Direction", "flow_direction", "dir_disp", "deviceDirection"]
 "network.type" = ["ipversion", "address_family", "ip_version"]
 "network.protocol" = ["app_proto"]
 "network.application" = ["app", "application", "appi_name", "application_name", "application-name", "appName", "app_name", "service", "service_id", "service-name", "service_name", "nested-application", "nested_application", "tunneled_app", "dst_service", "src_service", "sproc", "dproc"]
@@ -94,15 +94,22 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 
 # --- event -------------------------------------------------------------------------
 # ECS: "not standardized", the source's own word. No enum, no canonicalisation.
-"event.action" = ["action", "act", "utmaction", "disposition", "Action", "verdict", "filter_action", "fw_action", "rule_action", "alert.action", "cache_status", "cache_result", "status", "connevent"]
-"event.outcome" = ["result", "auth_status", "aaa_status", "login_status", "result_action", "state"]
+"event.action" = ["action", "act", "utmaction", "disposition", "Action", "verdict", "filter_action", "fw_action", "rule_action", "alert.action", "cache_status", "cache_result", "status", "connevent", "eventName"]
+"event.outcome" = ["result", "auth_status", "aaa_status", "login_status", "result_action", "state", "outcome", "responseElements.ConsoleLogin"]
 "event.code" = ["msg_id", "logid", "event_id", "eventid", "message_id", "signature_id_header", "mnemonic", "log_id", "msgid", "m", "code_id", "syslog_msgid", "code"]
 "event.reason" = ["reason", "teardown_reason", "status_reason", "termination_reason", "note", "session_end_reason", "flow.reason", "justification"]
-"event.id" = ["uuid", "event_uid", "record_id", "eventuuid", "loguid", "transactionid", "incidentserialno"]
+"event.id" = ["uuid", "event_uid", "record_id", "eventuuid", "loguid", "transactionid", "incidentserialno", "eventID"]
+# --- cloud API audit records (the names a json strategy flattens with dots) ----------
+"event.provider" = ["eventSource"]
+"error.code" = ["errorCode"]
+"error.message" = ["errorMessage"]
+"cloud.region" = ["awsRegion"]
+"cloud.account.id" = ["recipientAccountId"]
+"user.id" = ["userIdentity.arn"]
 
 # --- log / severity ----------------------------------------------------------------
 # The enum below carries the canonical bucket name; `event.severity` is its id.
-"log.level" = ["severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity", "log_level", "loglevel", "confidence_level", "rule_priority"]
+"log.level" = ["sev", "severity", "level", "priority", "pri", "crlevel", "threat-severity", "alert.severity", "ipspri", "Severity", "syslog_severity", "log_level", "loglevel", "confidence_level", "rule_priority"]
 
 # --- observer: for perimeter devices the logging device is the observer, not the host
 "observer.hostname" = ["devname", "device_name", "hostname", "dvchost", "syslog_host", "device", "dvc_host", "node", "host", "origin", "cluster_name"]
@@ -117,7 +124,7 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 "observer.egress.zone" = ["dstzone", "dstZone", "dst_zone", "destination-zone-name", "outzone", "outzone_name", "dst_zone_name", "to_zone"]
 
 # --- user --------------------------------------------------------------------------
-"user.name" = ["user", "usrName", "usr", "suser", "user_name", "username", "userName", "login", "common_name", "cn", "auth_user", "remote_user", "admin", "process_user"]
+"user.name" = ["user", "usrName", "usr", "suser", "user_name", "username", "userName", "login", "common_name", "cn", "auth_user", "remote_user", "admin", "process_user", "userIdentity.userName"]
 "user.domain" = ["user_domain", "realm"]
 "user.group.name" = ["group", "group_name", "user_gp", "usergroupname", "dynusergroup_name"]
 
@@ -132,7 +139,7 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 "rule.description" = ["alert.metadata", "attack_info", "malware_action", "threat_desc", "vuln_desc"]
 
 # --- url / http / user agent -------------------------------------------------------
-"url.original" = ["url", "request_url", "requestUrl", "uri", "request_uri", "http.url", "resource", "cs-uri", "URL"]
+"url.original" = ["url", "request_url", "requestUrl", "uri", "request_uri", "http.url", "resource", "cs-uri", "URL", "request"]
 "url.domain" = ["http.hostname", "hostname_http", "http_host", "domain", "cs-host", "site", "request_host"]
 "url.scheme" = ["scheme"]
 "http.request.method" = ["method", "request_method", "requestMethod", "http_method", "cs-method", "http.http_method", "methods"]
@@ -141,7 +148,7 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 "http.response.bytes" = ["http.length"]
 "http.response.mime_type" = ["content_type", "contenttype", "mime_type", "http.http_content_type", "sc-content-type"]
 "http.version" = ["http.protocol"]
-"user_agent.original" = ["user_agent", "agent", "requestClientApplication", "cs(User-Agent)", "http.http_user_agent", "ua", "web_client_type"]
+"user_agent.original" = ["user_agent", "agent", "requestClientApplication", "cs(User-Agent)", "http.http_user_agent", "ua", "web_client_type", "userAgent"]
 
 # --- dns ---------------------------------------------------------------------------
 "dns.question.name" = ["qname", "dns.rrname", "dns.queries.0.rrname", "query", "dns_query", "domain_name", "qry_name"]
@@ -151,8 +158,8 @@ absent = ["", "-", "N/A", "n/a", "(none)", "(Not enabled)", "0.0.0.0"]
 "dns.type" = ["dns.type"]
 
 # --- tls ---------------------------------------------------------------------------
-"tls.version" = ["tls_version", "tls.version", "ssl_version"]
-"tls.cipher" = ["cipher"]
+"tls.version" = ["tls_version", "tls.version", "ssl_version", "tlsDetails.tlsVersion"]
+"tls.cipher" = ["cipher", "tlsDetails.cipherSuite"]
 "tls.client.server_name" = ["sni", "tls.sni", "server_name_indication", "server_name"]
 "tls.server.x509.subject.distinguished_name" = ["tls.subject", "cert_subject", "subject"]
 "tls.server.x509.issuer.distinguished_name" = ["tls.issuerdn", "issuer"]
@@ -261,10 +268,12 @@ other = { value = "unknown" }
 [[enum.values]]
 value = "inbound"
 raw = ["inbound", "in", "incoming", "ingress", "to_server", "toserver", "server", "server-to-client", "rx"]
+raw_by_field = { "deviceDirection" = ["0"] }
 
 [[enum.values]]
 value = "outbound"
 raw = ["outbound", "out", "outgoing", "egress", "to_client", "toclient", "client", "client-to-server", "tx"]
+raw_by_field = { "deviceDirection" = ["1"] }
 
 [[enum.values]]
 value = "internal"
@@ -281,34 +290,38 @@ field = "log.level"
 id_field = "event.severity"
 other = { value = "unknown" }
 
+# Bare digits are the syslog scale; LEEF `sev` (1-10, 10 the most severe) is bucketed by
+# field and listed first under [fields] so a syslog envelope's `syslog_severity` never
+# outranks the device's own value. A CEF header severity arrives as `severity` and is read on the syslog scale.
 [[enum.values]]
 value = "informational"
 id = 1
 raw = ["informational", "information", "info", "notice", "debug", "debugging", "6", "7", "5", "verbose", "low-info"]
-raw_by_field = { "alert.severity" = ["4"], "ipspri" = ["3"] }
+raw_by_field = { "alert.severity" = ["4"], "ipspri" = ["3"], "sev" = ["1", "2"] }
 
 [[enum.values]]
 value = "low"
 id = 2
 raw = ["low", "minor", "warning", "warn", "4"]
-raw_by_field = { "alert.severity" = ["3"], "ipspri" = ["2"] }
+raw_by_field = { "alert.severity" = ["3"], "ipspri" = ["2"], "sev" = ["3", "4"] }
 
 [[enum.values]]
 value = "medium"
 id = 3
 raw = ["medium", "med", "moderate", "error", "err", "3"]
-raw_by_field = { "alert.severity" = ["2"] }
+raw_by_field = { "alert.severity" = ["2"], "sev" = ["5", "6"] }
 
 [[enum.values]]
 value = "high"
 id = 4
 raw = ["high", "major", "critical-low", "2", "crit"]
-raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"] }
+raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"], "sev" = ["7", "8"] }
 
 [[enum.values]]
 value = "critical"
 id = 5
 raw = ["critical", "1", "alert", "severe"]
+raw_by_field = { "sev" = ["9", "10"] }
 
 [[enum.values]]
 value = "emergency"
@@ -344,6 +357,11 @@ when = [
   { msg = ["Administrator login allowed", "Administrator login denied due to bad credentials", "User login successful", "User login failed"] },
   { auth_status = ["*"] },
   { aaa_status = ["*"] },
+  { eventSource = ["signin.amazonaws.com"] },
+  { eventName = ["AssumeRole", "AssumeRoleWithSAML", "AssumeRoleWithWebIdentity", "AssumeRoot", "GetSessionToken", "GetFederationToken"] },
+  { isLoginEvent = ["true"] },
+  { isLogoutEvent = ["true"] },
+  { act = ["login", "logon", "logout", "logoff", "login-failed", "logon-failed", "auth-failed", "authentication"] },
 ]
 
 [[class]]
@@ -364,6 +382,10 @@ when = [
   { http_host = ["*"] },
   { log_component = ["HTTP", "HTTPS", "Web Filter"] },
   { msg = ["Web site hit", "Web site access denied", "Web site blocked"] },
+  { requestMethod = ["*"] },
+  { request = ["*"] },
+  { method = ["*"], uri = ["*"] },
+  { uri = ["*"], status_code = ["*"] },
 ]
 
 [[class]]
@@ -400,6 +422,7 @@ when = [
   { protection_name = ["*"] },
   { ipscat = ["*"] },
   { sid = ["*"] },
+  { cat = ["anomaly", "attack", "intrusion", "malware", "virus", "exploit", "ids", "ips", "threat"] },
   { msg_id = ["733100", "733101", "733102", "733103", "733104", "733105", "400000", "400001", "400002", "400003", "400004", "400005", "400006", "400007", "400008", "400009", "400010", "400011", "400012", "400013", "400014", "400015", "400016", "400017", "400018", "400019", "400020", "400021", "400022", "400023", "400024", "400025", "400026", "400027", "400028", "400029", "400030", "400031", "400032", "400033", "400034", "400035", "400036", "400037", "400038", "400039", "400040", "400041", "400042", "400043", "400044", "400045", "400046", "400047", "400048", "400049", "400050"] },
 ]
 
@@ -415,6 +438,7 @@ category_name = "network"
 constants = { "event.kind" = "event", "event.category" = ["network"], "event.type" = ["connection", "denied"] }
 when = [
   { action = ["deny", "denied", "drop", "dropped", "block", "blocked", "block-url", "block-continue", "reject", "rejected", "discard", "discarded", "refuse", "refused", "prevent", "prevented", "reset", "reset-both", "reset-client", "reset-server", "sinkhole"] },
+  { act = ["deny", "denied", "drop", "dropped", "block", "blocked", "reject", "rejected", "discard", "refuse", "refused", "reset"] },
   { fw_action = ["deny", "denied", "drop", "dropped", "block", "blocked", "reject", "rejected", "discard"] },
   { rule_action = ["deny", "denied", "drop", "dropped", "block", "blocked", "reject", "rejected", "discard"] },
   { utmaction = ["deny", "denied", "block", "blocked", "reset"] },
@@ -431,6 +455,7 @@ category_name = "network"
 constants = { "event.kind" = "event", "event.category" = ["network"], "event.type" = ["connection", "allowed"] }
 when = [
   { action = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "passed", "forward", "forwarded"] },
+  { act = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "passed", "forward", "forwarded"] },
   { fw_action = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "forward"] },
   { rule_action = ["accept", "accepted", "allow", "allowed", "permit", "permitted", "pass", "forward"] },
   { utmaction = ["allow", "allowed", "pass", "passed", "monitor"] },
@@ -459,8 +484,32 @@ when = [
   { source_ip = ["*"], destination_ip = ["*"] },
   { source_address = ["*"], destination_address = ["*"] },
   { "source-address" = ["*"], "destination-address" = ["*"] },
+  { id_orig_h = ["*"], id_resp_h = ["*"] },
   { proto = ["*"] },
   { protocol = ["*"] },
+]
+
+# Cloud API audit records: ECS category `api` (expected types include access and info).
+# `readOnly` is the record's own statement that the operation reads; a write is
+# creation, change or deletion and the record does not say which, so it is `info`.
+[[class]]
+uid = 8
+name = "api_access"
+category_uid = 8
+category_name = "api"
+constants = { "event.kind" = "event", "event.category" = ["api"], "event.type" = ["access"] }
+when = [
+  { readOnly = ["true"], eventSource = ["*"], eventName = ["*"] },
+]
+
+[[class]]
+uid = 9
+name = "api"
+category_uid = 9
+category_name = "api"
+constants = { "event.kind" = "event", "event.category" = ["api"], "event.type" = ["info"] }
+when = [
+  { eventSource = ["*"], eventName = ["*"] },
 ]
 
 # No category: ECS would rather have event.category absent than wrong.
