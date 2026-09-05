@@ -15,10 +15,23 @@ section 8 found nothing), so Phase A is the brief's own list. Tiers: lead and th
 workers on Fable, verifiers on Opus; Haiku banned (D30).
 
 ### Definition of done (each item checked only after running it)
-- [ ] A1. Inference uses the names it already has: JSON object keys become slot names (reason
-      `json key`, suggested), a `#fields` header names delimited columns (reason `header`).
-      Zeek json conn/dns and TSV conn re-graded, suggested-vs-typed-only counts beside the old.
-      TSV http.log explosion: 40 minutes at most. Kill timer 90 min from dispatch.
+- [x] A1. (D68; merged 22:20 IST) Inference uses the names it already has: JSON object keys
+      become slot names (reason `json key`), a `#fields` header names delimited columns (reason
+      `header`); `[[timestamp]]` follows the slot's name. Re-graded with `ulpf infer FILE
+      --pending SCRATCH --decisions` (before = main at 9d39679, after = the merged tree):
+
+      | Zeek file | templates | slots before (suggested / typed only) | slots after (suggested / typed only) | covered |
+      |---|---|---|---|---|
+      | json/conn.log | 1 | 40 (1 / 39) | 19 (19 / 0) | 5,096 of 5,120 (24 `no_template`) |
+      | json/dns.log | 3 | 99 (3 / 96) | 42 (42 / 0) | 3,400 of 3,400 |
+      | conn.log (TSV) | 5 | 78 (16 / 62) | 78 (78 / 0) | 5,096 of 5,129 (header lines `below_support`) |
+      | http.log (TSV) | 40 | 541 (76 / 465) | 541 (540 / 1) | 100 of 1,545 (1,354 `template_cap`), unchanged |
+
+      Names after: `ts uid id_orig_h id_orig_p id_resp_h id_resp_p proto service duration
+      orig_bytes resp_bytes conn_state ...` (the device's own). http.log's explosion is
+      structural (clustering on tabular data); the delimiter-strategy proposal path was
+      diagnosed in D68 and is a bounded follow-up, not started inside the 90-minute timer.
+      Heldout grades byte-identical before and after. 110 tests, clippy clean.
 - [x] A4. The nine stale `worktree-wf_*` branches and worktrees removed 20:18 IST after
       confirming each: eight were ancestors of main (515dc9ab, 9e3d885f, bad47452-1..5,
       fe15bb9f, all `merge-base --is-ancestor` yes, 0 commits ahead); `worktree-wf_d4c9a934-b72-1`
@@ -80,6 +93,10 @@ measurements with their commands. Nothing else: no logs, no transcripts. No work
 longer than about four minutes (backgrounded and polled past that).
 
 ### Verified state (v3, rolling; every line was run, not read)
+- 22:20 IST: A1 merged (42e5a1a): `cargo test --workspace` 110 passed, 0 failed, 2 ignored;
+  `cargo clippy --workspace --all-targets -- -D warnings` clean; `cargo build --release` 1m20s;
+  the merged binary's `ulpf infer corpus/generated/zeek/json/conn.log` gives 1 template, 19
+  slots, 19 suggested, names `ts uid id_orig_h ...` (the lead's own re-run, scratch pending dir).
 - 20:18 IST: A4 done as above; `git worktree list` shows main only; `cargo build --release` at
   9d39679 up to date; `ulpf check --pending pending` 12 parsers, 2 mappings, 0 problems.
 
@@ -94,7 +111,7 @@ return format and the same verifier stage, each builder told to resume in its ex
 worktree: read every changed file first, keep what is coherent, revert what is not, say
 which. New kill timers: A1 22:25, C shell 22:25 (features and CI to about 23:40), B 23:55.
 
-### Fan-out 3 (22:15 IST): the limit is lifted; the same lanes, resumed a second time
+### Fan-out 3 (22:12 IST): the limit is lifted; the same lanes, resumed a second time
 The limit cut B and C again at about 22:00 IST, after 54 and 59 tool uses (about an hour in).
 A1's builder landed on its branch (b637781, d3274dd; 110 tests, clippy clean; its measurements
 are in the run record) and its verifier died before running anything. Each worktree kept more
@@ -103,14 +120,14 @@ the traceback on a virtual byte ruler) plus six screens edited but uncommitted; 
 acd42c7 (the shell launches the sidecar on a free port and shows the served UI) plus the
 Windows cfg shims, the CI workflow, ingest/menu/title sources and captures uncommitted. The
 owner moved to a larger plan and asked for the agents to be relaunched with no quality cut.
-Relaunched 22:15 IST: A1 resumed from its run record so the cached build report goes straight
+Relaunched 22:12 IST: A1 resumed from its run record so the cached build report goes straight
 to a fresh Opus verifier; B and C resumed in their worktrees with the resume notice rewritten
 to name exactly what each commit and dirty file holds, told to judge the uncommitted work
 first, commit each coherent piece, then finish. Same split, same return format, same reason
 fewer workers would not do (the three lanes touch disjoint trees: ulpf-infer, ui/, app/).
 New kill timers: B 01:15 IST (fix round 01:50); C CI pushed by 23:30, features and the five
 verifications by 00:45, report by 01:15.
-A fourth lane at 22:30 IST, A1b: A1's builder diagnosed the http.log explosion (40 templates at
+A fourth lane at 22:14 IST, A1b: A1's builder diagnosed the http.log explosion (40 templates at
 `template_cap`) as structural and named the fix (a header-carrying delimited file becomes one
 delimiter-strategy proposal, which `Strategy` already expresses) but did not start it inside
 its timer. A1b builds that in a worktree branched from A1's d3274dd (`.claude/worktrees/a1b`,
@@ -119,8 +136,8 @@ round; same return format. It is a separate lane because it edits `lib.rs infer(
 A1 verifier reads A1's tree, and it merges only after A1 does.
 
 ### In flight
-- A1 verify, B, C running since 22:15 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`;
-  A1b since 22:30 in `.claude/worktrees/a1b`.
+- A1 verify, B, C running since 22:12 IST in `.claude/worktrees/wf_{c401bc9e,e0b28450,b664b6d7}-*`;
+  A1b since 22:14 in `.claude/worktrees/a1b`.
 - A2 quiet re-run owed (run 4 above was the loaded data point). Host sleep found by the soak
   report: `caffeinate -i -t 21600` started 21:56 IST.
 - A3 waits for a quiet machine (load recorded with every run; the bench script is ready); it

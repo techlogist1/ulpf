@@ -185,6 +185,10 @@ proposal's `Evidence` records every decision. Thresholds and their alternatives:
 The kill criterion in the brief did not fire: the four held-out files grade at 14/14,
 9/10 and 1 template(s) per format with every line covered, and a messy file isolates its
 junk by reason. Tune against `heldout/` and record the grades before changing a threshold.
+A name the input carries wins over the type (D68): in a line that opens with `{` the JSON keys
+are constant tokens and each value slot is named by its key (reason `json key`); a `#fields`
+header among the buffered lines names delimited columns by position (reason `header`); the
+generated `[[timestamp]]` follows the timestamp slot's own name (`ts`).
 
 ## CLI (what exists)
 ```
@@ -233,7 +237,7 @@ input for any output line (`ulpf.raw_id`).
 ## Working files
 - `PROGRESS.md` — hackathon demo script first, then the v1 and v0.1 checklists, verified
   state, tried and abandoned, next action.
-- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out (D1-D50).
+- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out (D1-D68).
 - `docs/api.md` — the HTTP and SSE contract the server and UI are built against.
 - `docs/parser-format.md` — the definition format reference for teammates.
 - `docs/timestamps.md` — timestamp survey, auto-detection order, zone table, policies.

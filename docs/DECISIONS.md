@@ -1106,3 +1106,34 @@ already differed in quoting from the script's, which is exactly the drift the ch
 for); adding engine behaviour for the demo (a `--demo` mode would be code nobody runs in
 production).
 
+## D68. A name the input already carries outranks every other naming rule
+**Decision.** The inference engine names a slot from the input's own vocabulary before it
+looks at the value's type: in a line that opens with `{`, a quoted string followed by `:` is a
+constant token (`Kind::Word`), not a quoted slot, so the naming rule reads `"key" :` before
+the slot and the slot is `key` with reason `json key` (a nested object gives its innermost key
+and the reason says so; a sanitised name says `written id_orig_h`); in a delimited file whose
+buffered lines include a `#fields<sep>...` header, a template every member of which has exactly
+the header's column count names each slot by the column its position falls in, reason
+`header` with the column number, and a slot whose value spans columns stays generic with that
+reason. Both rules are rule 0 of `docs/slot-vocabulary.md`. Consequence carried through: the
+generated definition's `[[timestamp]]` follows the timestamp slot's name (`ts` for Zeek) instead
+of assuming `timestamp`; `ulpf-parse` tries the candidates in order. Measured on the Zeek
+files: json/conn 40 slots (1 suggested) became 19 slots (19 suggested) because keys are no
+longer slots; json/dns 99 (3) became 42 (42); TSV conn 78 (16) became 78 (78); TSV http 541 (76)
+became 541 (540) with its 40 templates and 1,354 `template_cap` lines unchanged, which is a
+structural failure of clustering on tabular data, not a naming one. The four `heldout/` grades
+are byte-identical before and after. **Anchor.** `crates/ulpf-infer/src/token.rs` (`tokenize`,
+the `json` flag), `crates/ulpf-infer/src/cluster.rs` (`positional`, `json_keys`, `headers`,
+`header_for`, `header_columns`), `crates/ulpf-infer/src/lib.rs` (`ts_fields`),
+`docs/slot-vocabulary.md` rule 0. **Principle.** The device's vocabulary verbatim is the
+contract (the parser/mapping wall): a key the device wrote is better evidence than a type the
+engine guessed, and the mapping stage canonicalises. **Ruled out.** Naming the quoted key slot
+after itself and the value after the previous slot (keys stayed slots with `distinct=1` and
+cluttered every template and evidence file); joining nested key paths (`id_orig_h` from
+`{"id":{"orig_h":..}}` needs a key stack across aligned columns with optional groups; every
+Zeek log is flat); mapping header columns onto aligned columns (constants fold into pattern
+text so slot index is not column index; separators are counted in the raw seed line instead);
+lower-casing keys (case is the device's); raising `max_templates` for http.log (40 templates at
+cap is the shape of the data: every combination of method, status and mime type is a cluster;
+the fix is a delimiter-strategy proposal built from the header, which `Strategy` already
+expresses losslessly, a second proposal path, not a threshold).
