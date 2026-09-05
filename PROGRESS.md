@@ -266,7 +266,8 @@ workers on Fable, verifiers on Opus; Haiku banned (D30).
 - [x] C-CI. (D74; `.github/workflows/app.yml`) macOS and Windows runners build the sidecar and
       the shell and bundle installers; the run on the lane branch's final commit cdb4d9b
       (`worktree-wf_b664b6d7-603-1`; main was not pushed until the end of the session, so CI
-      had not yet built the merged tree; the run on main is in the verified state below),
+      had not yet built the merged tree; the run on main after the final push, 33990295166,
+      is green on both and is in the verified state below),
       https://github.com/techlogist1/ulpf/actions/runs/33980779377, green on both (macOS
       6m02s, Windows 9m13s); artifacts `windows-x64-nsis` 5,351,146 B, `windows-x64-msi`
       7,794,850 B, `darwin-aarch64-app` 7,855,749 B, `darwin-aarch64-dmg` 7,606,904 B. First
@@ -334,8 +335,11 @@ longer than about four minutes (backgrounded and polled past that).
   tamper at raw id 0 caught, reset clean); `scripts/demo.sh --check` 18 ok under zsh and
   under bash; the quiet soak run 6 as in A2 and D62; V2's nine computer-use captures and
   V's fifteen Chrome captures under `docs/screens/` with all 76 PNGs indexed both ways;
-  `git worktree list` main only. Pushed to origin/main at the end of this list's commit;
-  the CI run on main is recorded in the line below it once it finishes.
+  `git worktree list` main only. Pushed 02:02 IST as a78f1e3 (main == origin/main); the push's
+  CI run on main, https://github.com/techlogist1/ulpf/actions/runs/33990295166, green on both
+  runners (macOS 6m55s, Windows 12m06s): artifacts `windows-x64-nsis` 5,447,145 B,
+  `windows-x64-msi` 7,897,250 B, `darwin-aarch64-app` 7,961,464 B, `darwin-aarch64-dmg`
+  7,711,297 B, built from the merged tree.
 - 01:15 IST (06 Sep): P merged (8ccb8e5): `cargo test --workspace` 114 passed, 0 failed, 2
   ignored; clippy clean; release build 8,777,448 bytes embedding P's dist (the new strings are
   in the binary); the lead's grep of `ui/dist` finds no external reference.
