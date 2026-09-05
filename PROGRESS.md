@@ -7,35 +7,52 @@ the server, terminal 2 everything else; paths are relative to the repo root. A s
 written before tonight is refused by name (the integrity chain changed the index): delete
 it and start over.
 
-### Runner (D67): `scripts/demo.sh`
-`scripts/demo.sh` plays steps 0-9 below from the repo root: it prints each command before
-running it and what to click next, Enter advances, and the server stays up for questions at
-the end (Enter again stops it and resets `demo/`). `scripts/demo.sh --auto` is the unattended
-rehearsal (fixed 3 s pauses, then stop and reset); `--check` proves every command in the
-runner appears verbatim in this section (run it after editing either); `--reset` stops a
-leftover server and removes `demo/`. Verified 2026-09-05 21:53 and 21:55 IST with `--auto`
-on the release build at 9d39679: the proposal for mikrotik appeared 0.9 s after the drop, approve returned
-`now_detected 250/250, parsers_loaded 13`, replay started v2 over 1,044 events, verify clean, the drift update proposal appeared 5.7 s after the new lines,
-attestation 2 of 2 checkpoints, the tamper named raw id 0 (digest) with exit 1, reset clean;
-the whole pass takes about two and a half minutes. Ports 7878 and 5514 must be free.
+### Runner (D67): `ulpf demo`
+`ulpf demo` plays steps 0-9 below from the repo root: it prints each command before running it
+and what to click next, Enter advances, and the server stays up for questions at the end (Enter
+again stops it and resets `demo/`). `ulpf demo --auto` is the unattended rehearsal (fixed 3 s
+pauses, then stop and reset); `--check` starts nothing and proves every step title and command
+in the runner appears verbatim in this section (run it after editing either; `cargo test` asserts
+the same); `--reset` stops a leftover server, removes `demo/` and removes any generated parser
+from the repo's `parsers/`. `scripts/demo.sh` is now a wrapper that finds `./target/release/ulpf`
+and hands the flags over, so anything that referenced it keeps working. The runner lives in the
+binary rather than in a shell script so the demo can be played where no shell exists; it has
+been played on macOS only, and the two Windows branches (`taskkill`, `tasklist`) are compiled by
+the `windows-latest` job of `.github/workflows/app.yml` and have not been executed, the same
+standing D74 records for the app. Lane D's verifier played it twice on the lane's binary at
+9c2b946 (04:00 and 04:02 IST, once through the wrapper): the proposal for mikrotik 0.6 s after
+the drop, approve `now_detected 250/250, parsers_loaded 13`, replay v2 over 1,044 events, verify
+clean, the drift update proposal 6.1 s after the new lines, attestation 2 of 2 checkpoints over
+2,694 records, the tamper named raw id 0 (digest) with exit 1, reset clean, 53 s end to end.
+The lead's pass on the merged binary is recorded under Verified state. Ports 7878 and 5514 must
+be free.
+
+**Nothing is approved from the CLI before the video is recorded.** A CLI approve writes the
+generated parser (`origin = "inferred"`, priority -1) into the repo's `parsers/`, and a bundle
+or a demo copy built after it knows mikrotik already, so the unseen-format demo cannot raise a
+proposal; the demo's reset removes any generated parser from `parsers/` before the copy is made,
+and the bundle step and the app's first-run copy exclude them (a Windows tester hit this against
+14d3b0c). Every documented command names the log files (`samples/*.log`), never the bare
+`samples` directory, which would ingest `samples/README.md` as a log.
 
 ```
 cargo build --release                                      # ~1 min; binary target/release/ulpf
-./target/release/ulpf check --pending pending              # 12 parsers, 2 mappings (ocsf, ecs), 0 problems
+./target/release/ulpf check --pending pending              # 15 parsers, 2 mappings (ocsf, ecs), 0 problems
 
 # 0. reset between rehearsals (the server uses demo/parsers and demo/pending, so nothing lands in the repo)
 rm -rf demo
+#    the runner also removes any generated parser (origin = "inferred") a CLI approve left in parsers/
 
 # 1. server + UI (terminal 1): watches demo/watch, listens for syslog on UDP and TCP 5514
 mkdir -p demo/watch demo/parsers demo/pending && cp parsers/*.toml demo/parsers/
 ./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl --pending demo/pending --parsers demo/parsers --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514 --infer-threshold 64
-#    -> ulpf: serving http://127.0.0.1:7878 ; watching demo/watch ; syslog udp 127.0.0.1:5514, syslog tcp 127.0.0.1:5514 ; 12 parsers loaded ; ctrl-c to stop
-#    open http://127.0.0.1:7878  (1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)
+#    -> ulpf: serving http://127.0.0.1:7878 ; watching demo/watch ; syslog udp 127.0.0.1:5514, syslog tcp 127.0.0.1:5514 ; 15 parsers loaded ; ctrl-c to stop
+#    open http://127.0.0.1:7878  (0 Flow, 1 Live, 2 Review, 3 Traceback, 4 Pivot, 5 Replay, 6 Drift, 7 Integrity; ? = keys)
 
 # 2. known formats and a live device: counters, sources and the tail move within 500 ms (one file a second, so the feed visibly moves)
 for f in samples/*.log; do cp "$f" demo/watch/; sleep 1; done
 python3 -c "import socket;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);[s.sendto(l,('127.0.0.1',5514)) for l in open('heldout/edgerouter.log','rb').read().splitlines()]"
-#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 12 sample sources parsed; syslog row: udp datagrams 250
+#    Live -> sources: udp/127.0.0.1 (250 events, no parser yet), 15 sample sources parsed; syslog row: udp datagrams 250
 
 # 3. an unknown format from a file and from the socket: clustered at 64 lines, "Review (2)" appears
 cp heldout/mikrotik.log demo/watch/
@@ -45,7 +62,7 @@ cp heldout/mikrotik.log demo/watch/
 
 # 4. approve (UI: `a` opens the confirmation, Enter approves, Esc backs out; or:)
 curl -s -X POST http://127.0.0.1:7878/api/pending/mikrotik/approve
-#    -> {"name":"mikrotik_inferred","now_detected":{"detected":250,"tested":250},"parsers_loaded":13,"path":"demo/parsers/mikrotik_inferred.toml","problems":[],"replaced_version":null}
+#    -> {"name":"mikrotik_inferred","now_detected":{"detected":250,"tested":250},"parsers_loaded":16,"path":"demo/parsers/mikrotik_inferred.toml","problems":[],"replaced_version":null}
 #    demo/parsers/mikrotik_inferred.toml carries origin = "inferred"; Live -> parsers: origin approved
 
 # 5. the same events take the fast path; the pivot sees them
@@ -90,7 +107,7 @@ EOF
 # 9. integrity: verify from the UI (Integrity -> Verify) or offline, and hand a stranger the attestation
 ./target/release/ulpf attest --store demo/store --out demo/attestation.json
 ./target/release/ulpf verify --store demo/store --attestation demo/attestation.json   # exit 0
-printf 'X' | dd of=demo/store/raw.seg bs=1 seek=200 conv=notrunc 2>/dev/null           # tamper one byte (rehearsal only!)
+printf 'X' | dd of=demo/store/raw.seg bs=1 seek=100 conv=notrunc 2>/dev/null           # tamper one byte of record 0 (rehearsal only!)
 ./target/release/ulpf verify --store demo/store                                        # names the record, exit 1
 
 # 10. a second output schema with zero parser changes
@@ -132,6 +149,276 @@ WHY box names every parser or mapping file whose digest changed since the previo
 and says so explicitly when none did. A source that stopped parsing: Drift shows the window
 rate against the baseline and where its lines went. A record in doubt: Traceback shows the
 stored and recomputed digest, the chain link, and the same bytes through today's parsers.
+
+---
+
+## v4 (2026-09-06, 02:50-09:30 IST, autonomous): the demo morning
+
+Started 02:50 IST at 14d3b0c (main == origin/main, 114 tests, clippy clean, CI green on both
+runners). Two clocks: main freezes at 08:30 (nothing merges after); 08:30-09:30 is the final
+sequence (rebuild with the final dist, re-bundle the app with the sidecar SHA checked,
+isolation in run, serve and docker modes, cold start, two demo-runner passes, the verified
+state with its timestamp, commit, push, main == origin/main); the report by 09:30. A lane not
+merged by 08:30 stays on its branch, verified and described here; that is not a failure.
+The wake lock from last night (`caffeinate`, pid 6054) is left running.
+Skills: `software-design-philosophy` loaded by the lead for every interface decision; no
+`prompting-practices` skill on this machine (its requirements carried from the brief: clean
+lead context, five-line structured worker returns, kill timers, every claim run before it is
+believed); `example-skills:frontend-design` is loaded by the UI workers, not the lead; the
+skills-audit manifest is `~/Documents/dev/skills-audit/MANIFEST.md`; no `aposd` pass. Tiers:
+lead and every builder that touches design, `parsers/`, `mappings/`, server state or an
+engine crate on Fable; Opus for verifiers and for writing to a spec the lead holds (CI YAML,
+README, the measurement script); Haiku banned (D30).
+Kabir's LogLens repository with its labelled corpus is NOT reachable from this machine:
+searched 02:55 IST with `mdfind -name loglens`, `find / -maxdepth 5 -iname "*loglens*"`,
+`~/Documents/dev`, `~/Desktop`, `~/Downloads`, and the git remotes (origin only, plus one stale
+lane branch). The comparison is blocked on the corpus location; the owner supplies it as an
+addendum and `scripts/coverage.sh <dir>` (lane 4) then grades detection per file against the
+directory-name vendor. Nothing is fabricated in its place.
+The stale data directory `~/Library/Application Support/dev.ulpf.app` (first bundle
+identifier, dead data) was deleted 03:05 IST; `dev.ulpf.desktop` is the live one.
+
+### Fan-out (03:10 IST): five worker lanes, the lead on lane 2
+Every lane is one Workflow: a builder in its own git worktree, an independent Opus verifier
+that re-runs every claim, one fix round in the same worktree. Lanes start together; the only
+sequencing is named below. Return format (schema-enforced, nothing else): worktree, branch,
+commits, files, tests with the exact commands and pass/fail counts, clippy, decisions (each
+with the alternative ruled out and its anchor, for DECISIONS), contract gaps, uncertainties
+verified with their source, measurements with their commands, not done and why, and at most
+twenty-five lines for this file. No worker command over about four minutes (backgrounded and
+polled past that). Every worker claim is a claim until the lead has run it.
+
+| lane | owns (in its worktree) | tier | kill timer (IST) | merges tonight |
+|---|---|---|---|---|
+| 1 Flow screen and motion | `ui/`, `docs/design.md`, `docs/screens/` | Fable + frontend-design | 05:50 committed and captured, hard stop 06:00 | yes, after the lead looks at the captures |
+| 2 server truthfulness (lead) then UI plumbing | `crates/ulpf/src/{server,engine,pivot}.rs` additively, `docs/api.md`, tests; then `ui/` for badges, filter, export, bytes route | Fable (lead); Opus for the UI plumbing against the committed contract | API by 04:30; UI plumbing 04:30-06:15 | yes |
+| 3 CEF, LEEF, CloudTrail definitions; the Zeek http class rule | `parsers/`, `samples/`, `fixtures/`, `mappings/` (class rules and field lists, additive), `samples/README.md`, `docs/parser-format.md` (one line), the alloc test's family list only | Fable | 05:30 | yes |
+| 4 releases, README, measurement | `.github/workflows/`, `README.md`, `scripts/coverage.sh`, `docs/coverage.md` | Opus (the lead reviews every number) | 05:30 (the tag run may finish later) | yes |
+| 5 xml strategy + Windows Event | branch `lane-5-xml` only: `crates/ulpf-parse`, `parsers/windows_event.toml`, sample, fixture, `docs/parser-format.md`, `docs/DECISIONS.md` on the branch | Fable | 06:20, then push and stop | never (owner's go after the demo) |
+| 6 entity index cost | branch `lane-6-index` only: `crates/ulpf/src/pivot.rs`, `engine.rs` output thread, `docs/DECISIONS.md` on the branch | Fable | 05:20, then push and stop | never (owner's go after the demo) |
+
+Why not fewer: the six lanes touch disjoint trees (`ui/`; the server routes; `parsers/` with
+`mappings/`; CI and docs; a branch of `ulpf-parse`; a branch of the index), share no state,
+and each is two to three hours of wall-clock the others need not wait for; a builder doing
+two of them in sequence would put either the front door (lane 1) or the honest numbers
+(lane 4) after the freeze. Why not more: PROGRESS, DECISIONS and CLAUDE.md are lead-owned
+(workers return text, the lead writes it), the demo path is frozen, and a seventh lane would
+contend for the eight cores the measurements in lanes 4 and 6 need.
+Sequencing named: lane 2's UI plumbing starts only after the lead's API commit (it builds
+against `docs/api.md` v4, committed 03:10 before any dispatch); lane 4's coverage table is
+regenerated by the lead after lane 3 merges (the Zeek http class rule and three new families
+change the numbers); lane 1 merges before lane 2's UI plumbing, which is rebased on it (both
+edit `App.svelte` and append their own section to `app.css`). Ports: lane 1 7891-7895, lane 2
+7896-7899, lane 3 7901, lane 4 7902-7905, lane 6 7906-7910, the demo 7878 untouched.
+Clarifications folded in at 03:25 and 03:40 IST (no restart): every kill timer is a ceiling, not a
+schedule, and the aim is every lane through the gate well before 06:00, then a second adversarial
+pass over the merged tree and rehearsal; three tiers (Fable: design, merges, review of worker
+output, server state, the API contract, engine crates, the store; Opus: most implementation;
+Sonnet: mechanical work to a spec the lead holds; Haiku banned). The lanes already running keep
+their tiers (a restart was ruled out); every new dispatch follows the three-tier rule. Added lanes:
+lane 2 split into 2P (the pivot's 500 ms, Fable, ceiling 05:00), 2T (the v4 server tests against
+the contract, Opus, ceiling 05:15) and 2U (UI plumbing, Opus, ceiling 05:45); lane D (the demo
+runner as `ulpf demo`, Opus builder, Fable review, ceiling 05:30: orchestration of existing
+subcommands and the watch mechanism, same steps in the same order as the demo script, `--check`
+and `--reset`, `scripts/demo.sh` a thin wrapper); lane 7 (Windows as a first-class target, Opus
+builder, Fable review, ceiling 06:00: the installer reachable from the pre-release page, SmartScreen
+named, the webview runtime bundled offline where the framework offers it, sidecar and data
+directory through the platform abstractions, designed failure states, verified prerequisites,
+a Windows CI job that installs and launches the app or falls back to the sidecar and the demo's
+check mode, a new pre-release tag). Addition folded in at 04:07 IST (a Windows tester's report
+against 14d3b0c; the tester's machine has a hardware fault, so random access violations there are
+not engine evidence; the items below reproduce deterministically): on main through the full gate,
+the release profile without LTO and a `dist` profile with fat LTO for the shipped binaries,
+installers, Docker image and the harness (lane P, Opus builder, Fable verifier, dispatched 04:09,
+owns Cargo.toml, the Dockerfile and `eval/`; README and CI lines applied by lane 4B), the Windows
+quick start and the tester's contributed throughput line in README (lane 4B, after lane 4 merges),
+the sidecar in a Windows job object, the locked-store message naming the holder, the bundle and
+first-run copy excluding generated parsers, the packaging script honouring `CARGO_TARGET_DIR`,
+which installer the smoke job exercised (lane 7B, after lane 7 merges), the demo reset purging
+generated parsers and every documented command naming `samples/*.log` (the lead at lane D's
+merge; a directory-level include or exclude for the engine is a post-demo decision, D83
+reserved); on a branch, lane 8 (`lane-8-windows`, Fable builder and verifier, dispatched 04:08,
+ceiling 07:05): the store reopen that truncates a torn tail under a live mapping (Windows refuses
+it), the parquet watch-mode teardown handle, the null output device's stray metadata file and
+wrong count, a Windows CI test job running the whole suite on the branch; and lane 3b
+(`lane-3b-cef-leef`, Opus builder, Fable verifier, dispatched 04:03) for the two CEF/LEEF engine
+defects lane 3 found. Dependencies named: lane 7 edits `.github/workflows/app.yml`
+only after lane 4's YAML is on main (it merges main first); the smoke job's `ulpf demo --check`
+step is lane 7's after lane D merges; lane 2T's tests pass only once the lead's `v4:` commits land.
+Merge gate for every lane: `cargo test --workspace`, `cargo clippy --workspace --all-targets
+-- -D warnings`, `cargo build --release`, `ulpf check --pending pending`, `scripts/demo.sh
+--check`, `scripts/isolation.sh run` on the merged binary, and for a UI lane the lead's own
+look at the captures and a grep of `ui/dist` for external references.
+
+### Definition of done (each item checked only after running it)
+- [x] L1. (merged 04:04 IST as 8dc1651, seven commits b86a434..0d4f424, D79) Flow screen: home
+      (`#/` and `#/flow`, key 0, Esc from any top-level screen), six stations, inference branch,
+      pending tray, chain head, live counters and a rate-proportional pulse from the metrics
+      frame (the server's `rate`/`queue` when the frame carries them, else the delta between
+      frames, labelled), reduced-motion static diagram, empty/loading/error states as sentences,
+      one key per station (i s d r p n e), motion pass over the seven screens, captures under
+      `docs/screens/`, `docs/design.md` Motion section. The Opus verifier reproduced on 7893: the
+      six station numbers equal `/api/metrics` exactly (514/514/262/260/514/514), the tray badge
+      equals the length of `/api/pending`, reduced motion gives `document.getAnimations().length`
+      0 with the numbers still on screen (6 animations without it), every station key and click
+      lands on its documented screen, Esc and 0 return to Flow, the empty state names the watch
+      path, all seven screens render with zero console errors and the longest record's traceback
+      included, `pnpm build` gives three files with the committed dist byte-identical and the
+      served `app.css`/`app.js` hashes equal to the files. Two findings closed in the fix round
+      (7efc5d8: Drift's `seen` was not `$state`, so `pnpm build` warned; the station eased its
+      border colour on hover, which design.md forbids: the transition is gone and the selection
+      snaps everywhere). The lead viewed flow, flow-reduced, empty-flow and keys at 1280 and the
+      reconnecting capture. Recorded, not done: the 14 `tool-*` and 17 `app-*` captures of the
+      desktop app still show the pre-Flow top bar (one index row says so; re-shot if lane 7 or I
+      re-captures); `crates/ulpf/tests/replay.rs:154` raced once under load 30 (the first replay
+      finished before the second was asked; passes alone and in the full rerun).
+- [~] L2a. (18fab3e, D77, D78; the lead) API: `queue` and `rate` in the frame, `emitted_from`
+      with the output-file lookup (`crates/ulpf/src/outfile.rs`, a binary search on the raw id;
+      the file cut to its last terminator is the snapshot), `?bytes=0`, `GET /api/events/{id}/bytes`,
+      `GET /api/export` (jsonl verbatim, csv as the eleven Parquet columns, `from`/`to`/`q`),
+      `pivot_index` in status. Smoke on a live server (03:35 IST, `--tail 5`, twelve samples and a
+      4,000,001-byte line, load 40 from the lanes): id 0 evicted from the ring came back with
+      `emitted_from: output` and its own `raw_id`; the bytes route's body equals the dropped file
+      byte for byte with `Content-Length` = `bytes_len`; a never-issued id is the JSON 404 on both
+      routes; the export equals the output file (`cmp`), `from=5&to=9` gives ids 5..9,
+      `q=DENY+tcp` gives 6 lines against an independent count of 6, the csv header and RFC 4180
+      quoting hold, `format=xml` is 422. The 24 MB finding measured on the 4 MB record: the full
+      JSON is 28,001,835 bytes in 0.43 s (`emitted` now adds a fourth copy of the 4 MB value),
+      `bytes=0` 16,001,835 bytes in 0.06 s (the parsed `message` value still appears in
+      `fields`, `provenance`, `normalized` and `emitted`), the bytes route 4,000,001 bytes in
+      0.011 s; so `?values=N` was added (a cut per long string with `value_len`, `values_cut`)
+      and measured at 03:37 on the same record with the rebuilt binary: full JSON 28,001,884
+      bytes in 0.24 s; `bytes=0` 16,001,884 in 0.044 s; `bytes=0&values=4096` 18,274 bytes in
+      0.025 s (`values_cut` 4: the `raw_message` field, its provenance, `normalized.message`,
+      `emitted.message`, each with `value_len` 4,000,000); the bytes route 4,000,001 bytes in
+      0.0025 s; a small record with `values=4096` has `values_cut` 0 and every `value_len` null.
+      116 tests, clippy clean. The pivot's 500 ms and `elapsed_ms` are lane 2P's; the server
+      tests are lane 2T's (three of four green at 03:30 against 18fab3e).
+- [ ] L2b. UI plumbing: trust badges per tail row and a flagged-only key, live filter across
+      every field, export link with the filter's terms, traceback over `/bytes`, seen-with
+      wording, queue depth and windowed rate where the Live screen labelled the gaps.
+- [x] L3. (merged 04:01 IST as a9c8ac6, 360faec + 59c9ea8, D80) `cef.toml`, `leef.toml`,
+      `cloudtrail.toml` from the specifications (cited in each header) with samples and fixtures;
+      class rules and field lists in both mappings, additive (the lead checked the 51 replaced
+      lines: each old list is a subset of its replacement); Zeek http rows classify once a
+      proposal names the columns (1,531 HTTP Activity, 5 Network Activity, `class_unknown` 9 =
+      the header lines, both schemas; conn 5,120 Network Activity); no JSON catch-all; nginx and
+      Apache the first post-demo addition; Postfix held. The Opus verifier reproduced the gates
+      (cef 14/14 parse_failed 0, leef 16/16, cloudtrail 15/15, both schemas; 12 original samples
+      byte-identical through old and new mappings) and found two mapping defects closed in the
+      fix round (a LEEF `sev` behind a syslog `<pri>` lost to `syslog_severity`; CloudTrail
+      writes without `readOnly` carried no `activity_id`, which the schema requires: now 0
+      Unknown) and two engine defects outside the lane, confirmed and dispatched at 04:03 to
+      branch `lane-3b-cef-leef` (Opus builder, Fable review): CEF's header severity is named
+      `severity`, the syslog scale's name, so 10 -> Other and 1 -> Critical; a LEEF 2.0 delimiter
+      written `0xHH` splits on the literal `0` with no counted failure. Lead's gate at a9c8ac6:
+      116 tests, clippy clean, 15 parsers 0 problems, demo check 18/18.
+- [ ] L4. Tag builds the static CLI for Linux musl, macOS and Windows beside the installers; a
+      Windows smoke job runs `ulpf.exe` over the samples and reads `/api/status`; pre-release
+      tag pushed and green with the run URL and artifact names; README front door; one
+      headline number; `scripts/coverage.sh` and `docs/coverage.md` from the counter block.
+- [x] L5. (pushed 03:59 IST, `origin/lane-5-xml` at 1b8aa19, D75 on the branch) Coherent, all
+      of it: the seventh strategy `xml` on `xmlparser` 0.13.6 (MIT/Apache-2.0, zero deps; quick-xml
+      measured at 23 allocations per parse and ruled out), values borrowed, entity-bearing values
+      the one materialisation, dotted keys from a pool so a plain line allocates nothing after
+      warm-up; `parsers/windows_event.toml` from the 4624/4625/4720 and Sysmon pages, a 14-line
+      sample and reviewed fixture, mapping fragments for both schemas, 118 tests, clippy clean,
+      every other sample byte-identical against main's binary. The Opus verifier found three
+      defects, closed on the branch: the `parse_failed` counters were sized by hand at 6, so the
+      seventh failure reason panicked a worker (now sized from `ParseFailure::ALL` in
+      `crates/ulpf/src/metrics.rs`, an engine file outside the lane, named in D75 for the
+      merge); a quadratic allocation on repeated unnamed elements (now on the stack, asserted by
+      the alloc test); a hexadecimal `ProcessId` under an `int` field (`as_int` reads `0x`,
+      `crates/ulpf-normalize/src/mapping.rs`). Not merged tonight by rule: endpoint telemetry
+      outside the perimeter line, kept as evidence of extensibility.
+- [ ] L6. Branch `lane-6-index` pushed and described: the profile, what was removed, the
+      numbers before and after, whether UDP loss falls with the index on.
+- [x] L2T. (merged 04:17 IST as 50b288f, `crates/ulpf/tests/v4_api.rs`) Four contract tests
+      against the merged main: queue depth and the windowed rate in the frame; `emitted_from`
+      tail then output on a five-event ring, `?bytes=0`, the bytes route byte-for-byte against
+      the sample's first line, 404 on both routes; the export as ndjson equal to the flushed
+      file, `from`/`to` inclusive, `q` case-insensitive against an independent count, the csv
+      header as D64's eleven columns with RFC 4180 quoting; pivot paging by the cursor pair
+      with `elapsed_ms` as five f64s. Not exercised: the trust-flags table, export's 404 on a
+      device output, `after` paging, the filename shape, `?values=N`.
+- [x] L2P. (merged 04:12 IST as 2027391, 986154b, D81; the lead's gate: 116 tests, clippy clean, demo check 18/18) `elapsed_ms` on every pivot page; the
+      related scan on four connections without the SQLite mutex, through mmap, borrowed blobs, a
+      bitset; pages byte-identical to before; the lead's gate on the merged tree.
+- [ ] LD. `ulpf demo` plays the PROGRESS demo from the binary with `--auto`, `--check`, `--reset`;
+      `scripts/demo.sh` the wrapper; the reset purges generated parsers from `parsers/`; a full
+      `--auto` pass on the merged binary; the Windows smoke job runs `--check` (lane 7B).
+- [ ] L7. Windows first-class (lane 7, then 7B for the 04:07 items): installer from the release
+      page, SmartScreen sentence, webview runtime, sidecar and data directory through the platform
+      abstractions, designed failure states, the smoke job that installs and launches, a new
+      pre-release tag; the job object, the locked-store message, the bundle excluding generated
+      parsers, `CARGO_TARGET_DIR`, which installer the job exercised.
+- [x] LI. (merged 04:17 IST as 20a66c2, eight commits 3e85c8a..f68781d, D84) Intensity: Low /
+      Balanced / Max with the machine's core count and the index state, persisted in
+      `app_config_dir/intensity`, applied at sidecar start, a clean restart on change with the
+      notice on the live page, the choice and live thread count in the title from `/api/status`,
+      seven captures indexed. The Fable verifier rebuilt the bundle and drove it: Low 2/off,
+      Balanced 4/on, Max 7/on in `/api/status` and on the child's command line, one serve child
+      after rapid Low-then-Balanced clicks, the title says `restarting` within 1.6 s when the
+      settings file disagrees with the engine, Quit leaves no `ulpf serve`; two findings closed
+      (app/README's Menus paragraph contradicted the new section; the captures were unindexed).
+      Not verified on Windows (the config path and TerminateProcess are named in comments).
+- [ ] LP. Profiles: `release` without LTO, `dist` with fat LTO for shipped binaries, installers,
+      the Docker image and the harness; the harness re-run on the dist build in a quiet window;
+      README and CI say which profile (lane 4B).
+- [ ] L3b. Branch `lane-3b-cef-leef` pushed and described: CEF `cef_severity` on its own scale,
+      the LEEF `0xHH` delimiter, tests, the twelve originals byte-identical.
+- [ ] L8. Branch `lane-8-windows` pushed and described as ready for the owner's go: the three
+      test names, the Windows test job URL, D82 on the branch.
+- [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
+
+### Verified state (v4, rolling; every line was run, not read)
+- 04:25 IST: the merged tree (lanes 3, 1, 2P, D, 2T, I on main, release binary 9,019,000
+  bytes rebuilt after the runner's tamper moved to byte 100): `ulpf demo --check` no drift
+  (39 ok), the runner's unit test green, `ulpf demo --auto` end to end in 56.6 s: 15 parsers
+  loaded, the mikrotik proposal 0.6 s after the drop, approve `now_detected 250/250,
+  parsers_loaded 16`, replay v2 over 1,089 events (the three new samples add 45 lines to the
+  1,044), verify clean, the drift update proposal 5.9 s after the new lines, attestation 2 of 2
+  checkpoints over 2,739 records, the tamper named raw id 0 with exit 1, reset clean (`demo/`
+  gone, no server left). The first pass at 04:20 had the tamper land in a header byte (see Tried
+  and abandoned). App crate: 7 tests green in `app/src-tauri` after clearing a stale tauri build
+  output that pointed at a removed worktree.
+- 04:02 IST: main at a9c8ac6 (lane 3 merged): gate 116 tests 0 failed, clippy clean, release
+  binary 8,858,888 bytes (no Rust in the binary changed), `ulpf check --pending pending` 15
+  parsers, 2 mappings, 0 problems, `scripts/demo.sh --check` 18 ok, no external reference in
+  `ui/dist`.
+- 03:05 IST: main at 14d3b0c, `cargo build --release` up to date (8,777,448 bytes), `ulpf
+  check --pending pending` 12 parsers, 2 mappings, 0 problems (plus one uncommitted scratch
+  proposal in `pending/` from last night's bench, not loaded by the registry); `cargo test
+  --workspace` 114 passed, 0 failed.
+
+### In flight
+- 04:27 IST: on main: lanes 3, 1, 2P, D, 2T, I (each through the gate). Building: lane 2U (UI
+  plumbing, Opus; rebases on the merged main before merge), lane 4 (releases, Opus), lane 6
+  (index cost, branch), lane 7 (Windows, Opus, Fable review), lane 3b (branch, dispatched 04:03),
+  lane P (profiles, Opus, dispatched 04:09), lane 8 (branch, Fable, dispatched 04:08). Queued
+  behind their parents: 4B (README Windows quick start, the contributed line, `samples/*.log`
+  in every documented command, the profile sentence and CI's `--profile dist`), 7B (job object,
+  locked-store message, bundle and first-run copy excluding generated parsers, `CARGO_TARGET_DIR`,
+  which installer the smoke job exercised, `ulpf demo --check` in the smoke job).
+
+### Tried and abandoned (v4)
+- Lane 2P's headline "cut 4-8x": measured only at load 28-36. The controlled pair on a quiet
+  machine (two serves over identical copies of one index, five alternating calls, load 4.3) is
+  2.6-3.3x (jdoe 93 -> 29 ms, dst_port 443 89 -> 33, src_ip 74 -> 28), and that is the number
+  recorded; 4-8x is the loaded end. The "500 ms" in the lane's name had no measurement behind
+  it in the repo (docs/screens/README.md's pivot row carries no timing): the measured before was
+  93 ms quiet, 239 ms at load 30.
+- The demo's tamper at byte 200 of `raw.seg`: once `cef.log` sorted first among the samples, byte
+  200 fell inside record 1's header (its receipt time), which the digest and the chain do not
+  cover, so `verify` said clean with exit 0 on the merged tree's first `--auto` pass (04:20 IST).
+  The tamper moved to byte 100, inside record 0's body whatever the first sample is (the segment
+  and record headers end at byte 68). Post-demo question for the owner, recorded not built:
+  whether the record header's receipt time belongs under the chain (a store-format change).
+
+### Next action (if this session is cut off here)
+Main is clean at the last commit named in the verified state. Lanes in flight are in their own
+worktrees under `.claude/worktrees/`; `git worktree list` names them; each branch is described
+above. The demo runs from main as before: `cargo build --release && scripts/demo.sh`.
 
 ---
 

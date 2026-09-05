@@ -1,55 +1,65 @@
 # Screen captures
 
-The 44 `*-1280.png` / `*-2560.png` captures in the first table without a tool-driven marker were taken headlessly by `ui/capture.mjs` against a populated `ulpf serve` (0.1.0 at http://127.0.0.1:7881); the `tool-*` rows were driven through the real Chrome (its own server on 127.0.0.1:7885) and the `app-*` rows are `screencapture` of the built ULPF.app on its own sidecar port. One line per file.
+The `*-1280.png` / `*-2560.png` rows in the first table without a tool-driven marker were taken headlessly by `ui/capture.mjs` against a populated `ulpf serve` (0.1.0 at http://127.0.0.1:7891); the `tool-*` rows were driven through the real Chrome and are kept from the previous index. One line per file.
 
 | file | screen | width | what it shows |
 |---|---|---|---|
+| flow-1280.png | flow | 1280 | flow, the front door, under a drop: six stations with their counters and losses, the pulses at the real rate, the queue, the chain, the inference branch and the tray |
+| flow-reduced-1280.png | flow | 1280 | flow under prefers-reduced-motion: the same numbers as a still diagram, no pulse, no transition |
 | live-1280.png | live | 1280 | live feed: rates, funnel, queue, tail, sources, parsers, every engine counter |
 | review-list-1280.png | review | 1280 | review: the pending proposals, kind, lines, templates, unmatched, problems |
 | review-detail-1280.png | review | 1280 | review: definition editor, actions, evidence with templates, slot names and the reason for each |
-| review-update-1280.png | review | 1280 | review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence |
 | trace-1280.png | trace | 1280 | traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance |
 | trace-hover-1280.png | trace | 1280 | traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields |
 | trace-hex-1280.png | trace | 1280 | traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns |
-| trace-big-1280.png | trace | 1280 | traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive |
 | pivot-search-1280.png | pivot | 1280 | pivot: kind selector and the entities with the most events |
-| pivot-1280.png | pivot | 1280 | pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities |
-| replay-1280.png | replay | 1280 | replay: why v2 differs, counters, parser changes, by field, versions, the diff entries |
+| pivot-1280.png | pivot | 1280 | pivot of the busiest entity (user jdoe): device lanes on a time axis, the timeline, the related entities |
+| replay-1280.png | replay | 1280 | replay: why v? differs, counters, parser changes, by field, versions, the diff entries |
 | drift-1280.png | drift | 1280 | drift: every established source with its window rate against the baseline; tripped and proposed first |
 | integrity-1280.png | integrity | 1280 | integrity: verdict of the last verify, records, store id, genesis and chain head |
+| flow-2560.png | flow | 2560 | flow, the front door, under a drop: six stations with their counters and losses, the pulses at the real rate, the queue, the chain, the inference branch and the tray |
+| flow-reduced-2560.png | flow | 2560 | flow under prefers-reduced-motion: the same numbers as a still diagram, no pulse, no transition |
 | live-2560.png | live | 2560 | live feed: rates, funnel, queue, tail, sources, parsers, every engine counter |
 | review-list-2560.png | review | 2560 | review: the pending proposals, kind, lines, templates, unmatched, problems |
 | review-detail-2560.png | review | 2560 | review: definition editor, actions, evidence with templates, slot names and the reason for each |
-| review-update-2560.png | review | 2560 | review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence |
 | trace-2560.png | trace | 2560 | traceback: verdicts, the byte ruler with every field lit, parser fields and normalized provenance |
 | trace-hover-2560.png | trace | 2560 | traceback: j walks the normalized fields, the selected field is lit in the bytes and the parser fields |
 | trace-hex-2560.png | trace | 2560 | traceback: the same record in hex, sixteen bytes per row, the lit field carried into the hex and ascii columns |
-| trace-big-2560.png | trace | 2560 | traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive |
 | pivot-search-2560.png | pivot | 2560 | pivot: kind selector and the entities with the most events |
-| pivot-2560.png | pivot | 2560 | pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities |
-| replay-2560.png | replay | 2560 | replay: why v2 differs, counters, parser changes, by field, versions, the diff entries |
+| pivot-2560.png | pivot | 2560 | pivot of the busiest entity (user jdoe): device lanes on a time axis, the timeline, the related entities |
+| replay-2560.png | replay | 2560 | replay: why v? differs, counters, parser changes, by field, versions, the diff entries |
 | drift-2560.png | drift | 2560 | drift: every established source with its window rate against the baseline; tripped and proposed first |
 | integrity-2560.png | integrity | 2560 | integrity: verdict of the last verify, records, store id, genesis and chain head |
 | keys-1280.png | keys | 1280 | the shortcut overlay (?) |
+| flow-keys-1-1280.png | flow | 1280 | keyboard 1: 0 opens Flow from any screen (here from Live) |
+| flow-keys-2-1280.png | flow | 1280 | keyboard 2: l moves the selection along the line to preserve; the station shows it |
+| flow-keys-3-1280.png | flow | 1280 | keyboard 3: s opens Integrity, the screen behind the preserve station (Enter on the selection does the same) |
+| flow-keys-4-1280.png | flow | 1280 | keyboard 4: Esc from a top-level screen returns to Flow |
 | empty-trace-1280.png | empty | 1280 | empty state: traceback with no record chosen |
-| error-trace-1280.png | error | 1280 | error state: a trace of raw id 503741, which the store never issued |
+| error-trace-1280.png | error | 1280 | error state: a trace of raw id 1597505, which the store never issued |
 | light-trace-1280.png | light | 1280 | the same traceback under the light theme (t) |
 | light-live-1280.png | light | 1280 | the live feed under the light theme (t) |
 | empty-pivot-value-1280.png | empty | 1280 | empty state: a pivot on a value no event carries |
 | reject-confirm-1280.png | reject | 1280 | review: x opens the reject confirmation, marked as the destructive one; Enter confirms, Esc cancels |
 | approve-1-1280.png | review | 1280 | keyboard approve 1: the digit 2 opens Review from anywhere |
-| approve-2-1280.png | review | 1280 | keyboard approve 2: j selects the proposal (bench_slice) |
+| approve-2-1280.png | review | 1280 | keyboard approve 2: j selects the proposal (drip) |
 | approve-3-1280.png | review | 1280 | keyboard approve 3: Enter opens it; the definition, the actions and the evidence |
 | approve-4-1280.png | review | 1280 | keyboard approve 4: a opens the confirmation; focus is on Approve, Esc would cancel |
 | approve-5-1280.png | review | 1280 | keyboard approve 5: Enter confirms; the result names the file, the parsers loaded and how many buffered lines the new parser now claims |
+| empty-flow-1280.png | flow | 1280 | empty state: a fresh server with zero events: every station at zero, the chain at genesis, the tray empty, and the sentence naming the watched directory that fills them |
 | empty-live-1280.png | live | 1280 | empty state: a fresh server with zero events: rates, funnel, queue and the tail say what will fill them |
 | empty-review-1280.png | review | 1280 | empty state: nothing to review: what makes a proposal appear |
 | empty-pivot-1280.png | pivot | 1280 | empty state: no entities indexed yet |
 | empty-replay-1280.png | replay | 1280 | empty state: no output versions yet |
 | empty-drift-1280.png | drift | 1280 | empty state: no source established yet: the thresholds in words |
 | empty-integrity-1280.png | integrity | 1280 | empty state: an empty store: the genesis is fixed, the head appears with the first record |
+| review-update-1280.png | review | 1280 | review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence |
+| trace-big-1280.png | trace | 1280 | traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive |
+| review-update-2560.png | review | 2560 | review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence |
+| trace-big-2560.png | trace | 2560 | traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive |
+| flow-under-load.gif | flow | 1512 | Flow under load, eight frames recorded in the real Chrome while a 10,000 events/s drip and the capture's 30 MB drops went through the engine: the pulses on every link, the queue at its high-water tick, the chain's newest mark lit, the tray badge climbing from 5 to 8 proposals, the selection moved along the line with l and h; tool-driven (Chrome MCP gif_creator) |
 | tool-live-1280.png | live | 1280 | live feed while ~400 events/s arrive over syslog UDP: rates, funnel with the no_parser and parse_failed deficits, queue 45/64, the tail, sources and parsers; tool-driven (Chrome MCP) |
-| tool-shortcuts-1280.png | keys | 1280 | the shortcut overlay opened with ? over the live feed; tool-driven (Chrome MCP) |
+| tool-shortcuts-1280.png | keys | 1280 | the shortcut overlay opened with ? over the live feed; taken before the Flow screen, so it lacks the 0 and Esc rows keys-1280.png shows; tool-driven (Chrome MCP) |
 | tool-review-1280.png | review | 1280 | review of the edgerouter proposal reached by keyboard (2, j, Enter): definition, actions, template 1 with every slot name and the reason for it; tool-driven (Chrome MCP) |
 | tool-review-confirm-1280.png | review | 1280 | a opens the approve confirmation for bench_slice_inferred, focus on Approve, Esc cancels, Tab reaches Cancel; tool-driven (Chrome MCP) |
 | tool-review-approved-1280.png | review | 1280 | Enter confirmed: the result names the file written, 14 parsers loaded and 1,403 of 1,442 buffered lines now on the fast path (mikrotik was approved the same way first); tool-driven (Chrome MCP) |
@@ -63,6 +73,7 @@ The 44 `*-1280.png` / `*-2560.png` captures in the first table without a tool-dr
 | tool-integrity-1280.png | integrity | 1280 | integrity after POST /api/integrity/verify: clean verdict over 249,407 records in 0.53 s, store id, genesis, head; tool-driven (Chrome MCP) |
 | tool-live-1512.png | live | 1512 | the live feed at the widest window this 1512 px display allows: the tail and both lower tables use the width; tool-driven (Chrome MCP) |
 | tool-pivot-1512.png | pivot | 1512 | the jdoe pivot at 1512: timeline and seen-with lists side by side, no empty band; tool-driven (Chrome MCP) |
+| tool-flow-reconnecting-1512.png | flow | 1512 | error state: the server behind this tab was stopped; Flow says the stream dropped and when it retries, keeps the last frame's numbers with their time, and the pulses stop; tool-driven (Chrome MCP) |
 
 ## The desktop app (lane C, `app/`)
 
@@ -87,3 +98,10 @@ Captured with `screencapture -x` of the real ULPF.app window built from the bran
 | app-tool-datadir-panel.png | File > Choose data directory…: the native folder panel, cancelled without changing anything | tool-driven (computer use) |
 | app-tool-tray.png | the tray menu (Show ULPF, Open output folder, Open in browser, Quit ULPF) with the window closed and the engine still serving; this Mac's notch utility covers the icon, so the menu was opened through Accessibility | tool-driven (computer use) |
 | app-tool-relaunch.png | after Quit and a second launch: a new port answers, the store keeps its 280 records and out.jsonl its 280 lines, and the parsers table carries mikrotik_inferred with origin `approved` | tool-driven (computer use) |
+| app-intensity-menu.png | File > Intensity open on the running app: the three items carry this Mac's own numbers (`Low · 2 of 8 cores · entity index off`, `Balanced · 4 of 8 cores · entity index on`, `Max · 7 of 8 cores · entity index on`) and Balanced is check-marked; the title behind the menu already reads `· Balanced · 4 of 8 cores · index on` | tool-driven (computer use): the menu clicked, screencapture |
+| app-intensity-low.png | Low: the title `ULPF · engine ok · 30 events · 0 pending · Low · 2 of 8 cores · index off`, the engine on its new port 127.0.0.1:57460 after the restart, asa-low.log's 30 events through the whole funnel | tool-driven (computer use), screencapture |
+| app-intensity-balanced.png | Balanced (the default a fresh install gets): the title `· Balanced · 4 of 8 cores · index on`, port 55619, asa-balanced.log at 30 events | tool-driven (computer use), screencapture |
+| app-intensity-max.png | Max: the title `· Max · 7 of 8 cores · index on`, port 57192, asa-max.log at 30 events; `/api/status` reported threads 7 and pivot_index true | tool-driven (computer use), screencapture |
+| app-intensity-restart.png | the restart notice on the page that is up, not on the splash: `Restarting the engine at Low: 2 of 8 cores, entity index off` while the title still carries the old Max | tool-driven (computer use), screencapture |
+| app-intensity-ready.png | the same restart finished: `Engine ready at Low · 2 of 8 cores · entity index off` over the fresh session (0 events, 13 parsers, mikrotik_inferred still approved), title `· Low · 2 of 8 cores · index off` | screencapture |
+| app-intensity-title-restarting.png | the title's `restarting` branch, forced by writing a different word into `<config dir>/intensity` while the engine ran: `ULPF · engine ok · 0 events · 0 pending · restarting` for as long as the setting and `/api/status` disagree | screencapture of the title bar |

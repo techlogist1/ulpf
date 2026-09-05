@@ -21,7 +21,10 @@ use futures_util::stream::Stream;
 use serde::Deserialize;
 use serde_json::{Value, json};
 
-use crate::engine::{DriftState, IntegrityError, Live, ReplayError, TracebackError};
+use axum::body::{Body, Bytes};
+
+use crate::engine::{DriftState, IntegrityError, Live, ReplayError, TracebackError, output_is_sink};
+use crate::outfile::{Output, line_id};
 use crate::pivot::{Order, PivotQuery};
 use ulpf_normalize::EntityKind;
 use crate::pending::{Pending, ReviewError};
@@ -113,6 +116,8 @@ fn router(app: App) -> axum::Router {
         .route("/api/pending/{id}/approve", post(pending_approve))
         .route("/api/pending/{id}/reject", post(pending_reject))
         .route("/api/events/{raw_id}", get(traceback))
+        .route("/api/events/{raw_id}/bytes", get(traceback_bytes))
+        .route("/api/export", get(export))
         .route("/api/replay", get(replay_get).post(replay_post))
         .route("/api/drift", get(drift))
         .route("/api/integrity", get(integrity))
@@ -228,6 +233,8 @@ fn metrics_frame(live: &Live) -> Value {
         .collect();
     json!({
         "engine": live.snapshot(),
+        "queue": { "depth": live.in_flight.load(Relaxed).clamp(0, live.queue_cap as i64), "capacity": live.queue_cap },
+        "rate": rate_json(live),
         "sources": sources,
         "parsers": parsers_json(live),
         "pending_generation": live.pending_generation.load(Relaxed),
@@ -247,6 +254,24 @@ fn metrics_frame(live: &Live) -> Value {
             "uptime_secs": live.started.elapsed().as_secs_f64(),
         },
     })
+}
+
+/// Framed and emitted per second over the frames computed in the last ten seconds: one
+/// sample per fresh frame (the cache makes that at most five a second), the oldest kept
+/// sample is the window's start, so `over_secs` says what the rate is over.
+fn rate_json(live: &Live) -> Value {
+    let now = std::time::Instant::now();
+    let framed = live.metrics.framed.load(Relaxed);
+    let emitted = live.metrics.emitted.load(Relaxed);
+    let mut s = live.rate_samples.lock().unwrap_or_else(|e| e.into_inner());
+    s.push_back((now, framed, emitted));
+    while s.front().is_some_and(|(t, _, _)| now.duration_since(*t) > Duration::from_secs(10)) {
+        s.pop_front();
+    }
+    let (t0, f0, e0) = s.front().copied().unwrap_or((now, framed, emitted));
+    let secs = now.duration_since(t0).as_secs_f64();
+    let per_sec = |then: u64, now_v: u64| if secs > 0.0 { now_v.saturating_sub(then) as f64 / secs } else { 0.0 };
+    json!({ "over_secs": secs, "framed_per_sec": per_sec(f0, framed), "emitted_per_sec": per_sec(e0, emitted) })
 }
 
 fn replay_summary(live: &Live) -> Value {
@@ -286,6 +311,7 @@ async fn status(State(app): State<App>) -> Json<Value> {
         "parquet": live.parquet,
         "watch": live.watch,
         "threads": live.threads,
+        "pivot_index": live.index_entities,
         "queue_capacity": live.queue_cap,
         "tail_capacity": live.tail.capacity(),
         "infer_threshold": live.inference.threshold,
@@ -445,12 +471,166 @@ async fn pending_reject(State(app): State<App>, Path(id): Path<String>) -> Resul
     Ok(Json(json!({ "id": id, "moved_to": moved })))
 }
 
-async fn traceback(State(app): State<App>, Path(raw_id): Path<u64>) -> Result<Json<Value>, ApiError> {
-    match app.live.traceback(raw_id) {
-        Ok(t) => Ok(Json(serde_json::to_value(t).unwrap_or(Value::Null))),
-        Err(TracebackError::NotFound { store_len }) => Err(ApiError { status: StatusCode::NOT_FOUND, reason: "not_found", error: format!("raw id {raw_id} was never issued (store holds {store_len})"), extra: json!({ "store_len": store_len }) }),
-        Err(TracebackError::Io(e)) => Err(ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "io", e)),
+#[derive(Deserialize)]
+struct TraceQuery {
+    bytes: Option<u8>,
+    values: Option<usize>,
+}
+
+fn trace_error(raw_id: u64, e: TracebackError) -> ApiError {
+    match e {
+        TracebackError::NotFound { store_len } => ApiError { status: StatusCode::NOT_FOUND, reason: "not_found", error: format!("raw id {raw_id} was never issued (store holds {store_len})"), extra: json!({ "store_len": store_len }) },
+        TracebackError::Io(e) => ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "io", e),
     }
+}
+
+async fn traceback(State(app): State<App>, Path(raw_id): Path<u64>, Query(q): Query<TraceQuery>) -> Result<Json<Value>, ApiError> {
+    let with_bytes = q.bytes != Some(0);
+    let t = match q.values {
+        Some(max) => app.live.traceback_cut(raw_id, with_bytes, max),
+        None => app.live.traceback_with(raw_id, with_bytes),
+    }
+    .map_err(|e| trace_error(raw_id, e))?;
+    Ok(Json(serde_json::to_value(t).unwrap_or(Value::Null)))
+}
+
+async fn traceback_bytes(State(app): State<App>, Path(raw_id): Path<u64>) -> Result<Response, ApiError> {
+    let bytes = app.live.raw_bytes(raw_id).map_err(|e| trace_error(raw_id, e))?;
+    Ok(([(header::CONTENT_TYPE, "application/octet-stream")], bytes).into_response())
+}
+
+// ---- export ---------------------------------------------------------------------------
+
+#[derive(Deserialize)]
+struct ExportQuery {
+    format: Option<String>,
+    from: Option<u64>,
+    to: Option<u64>,
+    q: Option<String>,
+}
+
+/// The eleven Parquet columns (D64), in order; the five entity columns come from the
+/// schema's own entity paths, so the CSV means the same thing under ocsf and ecs.
+const CSV_HEADER: &str = "raw_id,time,parser,source,class_uid,normalized,src_ip,dst_ip,user,device,dst_port\n";
+
+fn csv_cell(out: &mut Vec<u8>, v: Option<&Value>) {
+    let text = match v {
+        None | Some(Value::Null) => String::new(),
+        Some(Value::String(s)) => s.clone(),
+        Some(other) => other.to_string(),
+    };
+    csv_text(out, &text);
+}
+
+fn csv_text(out: &mut Vec<u8>, text: &str) {
+    if text.bytes().any(|b| matches!(b, b'"' | b',' | b'\n' | b'\r')) {
+        out.push(b'"');
+        out.extend_from_slice(text.replace('"', "\"\"").as_bytes());
+        out.push(b'"');
+    } else {
+        out.extend_from_slice(text.as_bytes());
+    }
+}
+
+fn csv_row(out: &mut Vec<u8>, line: &[u8], paths: &[Option<String>; 5]) {
+    let v: Value = match serde_json::from_slice(line) {
+        Ok(v) => v,
+        Err(_) => return,
+    };
+    let at = |path: &str| path.split('.').try_fold(&v, |o, k| o.get(k));
+    let entity = |i: usize| paths[i].as_deref().and_then(at);
+    let source = at("metadata.log_name");
+    csv_cell(out, at("ulpf.raw_id"));
+    out.push(b',');
+    csv_cell(out, at("time"));
+    out.push(b',');
+    csv_cell(out, at("ulpf.parser"));
+    out.push(b',');
+    csv_cell(out, source);
+    out.push(b',');
+    csv_cell(out, at("class_uid"));
+    out.push(b',');
+    csv_text(out, std::str::from_utf8(line).unwrap_or(""));
+    out.push(b',');
+    csv_cell(out, entity(0));
+    out.push(b',');
+    csv_cell(out, entity(1));
+    out.push(b',');
+    csv_cell(out, entity(2));
+    out.push(b',');
+    csv_cell(out, entity(4).or(source));
+    out.push(b',');
+    csv_cell(out, entity(3));
+    out.push(b'\n');
+}
+
+/// Streams the live output from the file the sink wrote (docs/api.md, Export): never the
+/// tail, never a re-parse, never the whole file in memory; bounded to what was on disk
+/// and terminated when the request began.
+async fn export(State(app): State<App>, Query(q): Query<ExportQuery>) -> Result<Response, ApiError> {
+    let live = Arc::clone(&app.live);
+    if output_is_sink(&live.output) {
+        return Err(ApiError::new(StatusCode::NOT_FOUND, "not_found", format!("the output {} is a device; there is no file to export", live.output.display())));
+    }
+    let csv = match q.format.as_deref() {
+        None | Some("jsonl") => false,
+        Some("csv") => true,
+        Some(other) => return Err(ApiError::new(StatusCode::UNPROCESSABLE_ENTITY, "invalid", format!("unknown format `{other}`; jsonl or csv"))),
+    };
+    let mut out = Output::open(&live.output).map_err(|e| ApiError::new(StatusCode::NOT_FOUND, "not_found", format!("output {}: {e}", live.output.display())))?;
+    let terms: Vec<Vec<u8>> = q.q.as_deref().unwrap_or("").split_whitespace().map(|t| t.to_lowercase().into_bytes()).collect();
+    let paths: [Option<String>; 5] = {
+        let e = live.pipeline().mapping.entities().clone();
+        [e.src_ip, e.dst_ip, e.user, e.dst_port, e.device]
+    };
+    let (from, to) = (q.from, q.to);
+    let stem = live.output.file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or_else(|| "out".into());
+    let name = format!("{stem}-{}-{}.{}", from.map(|f| f.to_string()).unwrap_or_else(|| "first".into()), to.map(|t| t.to_string()).unwrap_or_else(|| "last".into()), if csv { "csv" } else { "jsonl" });
+    let (tx, rx) = tokio::sync::mpsc::channel::<Bytes>(4);
+    tokio::task::spawn_blocking(move || {
+        let mut chunk: Vec<u8> = Vec::with_capacity(1 << 18);
+        if csv {
+            chunk.extend_from_slice(CSV_HEADER.as_bytes());
+        }
+        let mut at = match from {
+            Some(f) => match out.lower_bound(f) {
+                Ok(a) => a,
+                Err(_) => return,
+            },
+            None => 0,
+        };
+        while let Ok(Some(line)) = out.line_at(at) {
+            at += line.len() as u64;
+            if let (Some(t), Some(i)) = (to, line_id(&line))
+                && i > t
+            {
+                break;
+            }
+            if !terms.is_empty() {
+                let lower = line.to_ascii_lowercase();
+                if !terms.iter().all(|t| memchr::memmem::find(&lower, t).is_some()) {
+                    continue;
+                }
+            }
+            if csv {
+                csv_row(&mut chunk, &line[..line.len() - 1], &paths);
+            } else {
+                chunk.extend_from_slice(&line);
+            }
+            if chunk.len() >= 1 << 18 && tx.blocking_send(Bytes::from(std::mem::take(&mut chunk))).is_err() {
+                return;
+            }
+        }
+        if !chunk.is_empty() {
+            let _ = tx.blocking_send(Bytes::from(chunk));
+        }
+    });
+    let stream = futures_util::stream::unfold(rx, |mut rx| async move { rx.recv().await.map(|c| (Ok::<Bytes, Infallible>(c), rx)) });
+    let headers = [
+        (header::CONTENT_TYPE, if csv { "text/csv; charset=utf-8".to_string() } else { "application/x-ndjson".to_string() }),
+        (header::CONTENT_DISPOSITION, format!("attachment; filename=\"{name}\"")),
+    ];
+    Ok((headers, Body::from_stream(stream)).into_response())
 }
 
 // ---- stream -------------------------------------------------------------------------

@@ -1344,3 +1344,221 @@ nobody ran is a build, not a verification; say which is which. **Ruled out.** Po
 writes for the store on every platform (changes unix behaviour); making `libc` unix-only
 (it compiles unused on Windows); one workflow per OS or a hand-written bundling step
 (tauri-action already names the bundles per target and handles the release).
+
+## D75, D76: reserved for the two branches of the demo morning
+D75 is the xml strategy and the Windows Event definition (branch `lane-5-xml`, written on that
+branch); D76 is the entity index cost (branch `lane-6-index`, written on that branch). Neither
+merges before the demo; their entries arrive with their branches.
+
+## D77. Trust flags are the per-event form of the counters, never a score
+**Decision.** A tail row shows, as a compact list of outlined marks, the stages that did not
+reach their outcome for that event, read from fields the emitted line already carries:
+`ulpf.parse_status` (`no_parser`, or a failure reason), `ulpf.sub_status` (`uncovered`,
+`no_match`), `ulpf.time_policies` containing `receipt_fallback`, `ulpf.time_error`,
+`class_uid == 0`, the key count of `unmapped`, `ulpf.utf8_lossy`. Nothing is computed on the
+hot path and nothing is added to the line: the normalizer has written every one of these since
+v0.1, so summing a flag over an output file equals the counter block's number for it
+(`no_parser`, `parse_failed`, `sub_uncovered`, `sub_no_match`, `time_from_receipt`,
+`time_error`, `class_unknown`, `unmapped_fields`, `utf8_lossy`), which is the test of the
+table in `docs/api.md`. One key (`f`) filters the tail to flagged rows. **Anchor.**
+`docs/api.md` "Trust flags", `ui/src/state.svelte.js` (`row`), `ui/src/Flags.svelte`,
+`crates/ulpf-normalize/src/mapping.rs` (the `ulpf` object). **Principle.** Errors as values
+(CLAUDE.md): each outcome is a counted fact with a reason, and a fact is shown as itself.
+**Ruled out.** A confidence score (a number ULPF cannot justify: the engine knows which stage
+failed, not a probability that the output is right; a score would invite the reader to trust
+0.8 more than 0.7 with no basis); a server-side `flags` array on the line (a hot-path
+allocation for a derivation the client does in constant time per row); colouring rows by
+flag count (a row is tinted because it is in a state, not because it is interesting, D69).
+
+## D78. The emitted line and the export are read from the output file, by raw id, through a snapshot
+**Decision.** `GET /api/events/{id}` finds `emitted` in the tail ring first and then in the
+JSON Lines output the sink wrote, by a binary search over line starts on the raw id in each
+line's `ulpf` object (`crates/ulpf/src/outfile.rs`); `emitted_from` says which. `GET
+/api/export` streams the same file from the first line at or after `from` to the last at or
+before `to`, filtered by terms with the rule the Live screen's filter uses, as JSON Lines
+verbatim or as the eleven Parquet columns in CSV (D64; the five entity columns come from the
+schema's entity paths, so the CSV means the same thing under ocsf and ecs). Both open the
+file read-only and bound every read to the bytes on disk when they opened it, cut to the
+last line terminator, so a line the writer is mid-way through is never returned; the store
+is never opened (D42) and the tail is never the source of an export (its ring holds the
+newest thousand lines). The output is in raw id order by construction (D60), which is what
+turns a lookup into a binary search. The line's raw id is read from `"ulpf":{...,"raw_id":N}`
+with two substring searches rather than a JSON parse, because a search reads about twenty
+lines and one of them may be 4 MB. `?bytes=0` on the traceback leaves `text` and `hex` null
+and `GET /api/events/{id}/bytes` serves the record's exact bytes as an octet stream: a client
+that renders the raw record from bytes (the byte ruler already does) fetches the record's own
+size instead of a JSON body six times larger. **Anchor.** `crates/ulpf/src/outfile.rs`,
+`Live::traceback_with`, `Live::raw_bytes`, `Live::emitted_from_output`, the `export` and
+`traceback_bytes` handlers in `crates/ulpf/src/server.rs`, `docs/api.md` v4. **Principle.**
+Raw before understanding and one writer: a read never touches the writer's handle or the
+store; the file the sink wrote is the record of what was emitted, and reading it is cheaper
+and more honest than re-parsing. **Ruled out.** Re-parsing the stored record through the
+current parsers to reconstruct `emitted` (that is `now`, a different answer whenever a parser
+changed); a line-offset index beside the output (a second derived file to keep in step, for a
+lookup that is already logarithmic); serving the export from the tail ring (bounded to a
+thousand lines) or from a re-run of the pipeline (re-parsing, and a second pass over the
+store); a per-event `flags` field for the export filter (the filter is a substring rule over
+the line text, the same on both sides).
+
+## D80. Three definitions on existing strategies, no JSON catch-all, the containers at priority 0
+**Decision.** `parsers/cef.toml`, `parsers/leef.toml` and `parsers/cloudtrail.toml` are written
+from their specifications (ArcSight CEF, IBM LEEF v2, AWS CloudTrail record contents; each
+header cites the page and the fetch date) on the cef, leef and json strategies the engine
+already had; `mappings/ocsf.toml` and `mappings/ecs.toml` gain their source names, an `API
+Activity` class (6003, activity Read when the record says `readOnly = true`, else 0 Unknown,
+because the record does not say whether a write is Create, Update or Delete and the schema
+marks `activity_id` required), and the alternatives that classify Zeek's http and conn rows
+once a proposal names their columns. The samples are the specifications' own examples, and
+`samples/README.md` says so. **Anchor.** The three definitions, the two mappings' `[fields]`
+and `[[class]]` additions, `fixtures/{cef,leef,cloudtrail}.expected.jsonl`,
+`crates/ulpf-parse/tests/alloc.rs` (cef and leef in the zero-allocation list). **Principle.**
+A parser is written from the format's own document; a mapping is additive; the wall holds
+(no schema name in a definition, no vendor in a mapping). **Ruled out.** A generic JSON
+catch-all (`json_generic` at priority -2 claiming any `{` line): it would detect the Zeek
+JSON files that are the live inference demo instead of proposing them, and a parsed but
+unnamed JSON event teaches the mapping nothing; only cloudtrail (matched on its five
+never-null top-level keys) and suricata_eve claim JSON lines. Priority -1 for cef and leef
+(where D45 puts generated parsers): a generated parser named before `cef` with the `.`
+fallback matcher would take CEF lines, and no CEF line could take the hinted fast path; the
+containers sit at 0 with matchers that require the format's own header before any pipe,
+which no vendor sample carries (the fixture test proves every existing sample still detects
+as itself), and a vendor definition for a CEF-speaking device declares `priority = 1`.
+Inferring the CloudTrail activity from the `eventName` verb (an open-ended per-service
+vocabulary in the mapping). nginx and Apache definitions: the first post-demo addition,
+because nginx is named as an unseen format for the live inference demo and a hand-written
+parser hours before it would remove the demo's unknown input. Postfix: held, no mail
+vocabulary in either schema and not a perimeter device. `sev` heads the `severity` and
+`log.level` source lists so a LEEF line behind a syslog `<pri>` keeps the device's own
+severity (first-present wins; no existing parser emits `sev`, and the twelve original samples
+are byte-identical through the old and new mappings). Two engine defects the lane found and
+could not fix in a definition are on branch `lane-3b-cef-leef` (CEF's header severity is
+named `severity`, the syslog scale's name, so its 0-10 scale is canonicalised backwards; a
+LEEF 2.0 delimiter written `0xHH` splits on the literal `0` with no counted failure); they
+are named in the two headers and merge after the demo.
+
+## D79. Motion shows the truth of the system or it does not exist
+**Decision.** Motion is allowed exactly where it reports a state change or the movement of
+data through the machine, and forbidden as decoration. Flow (`ui/src/Flow.svelte`, `#/` and
+`#/flow`, key `0`, Esc from any top-level screen) draws the six stations on one line with
+the inference branch and the pending tray under detect and the chain under preserve; every
+number is a value the API returned and every motion is driven by one. The pulse on a link is
+one element (a repeating 6 px dash every 32 px) moved by one Web Animations translate, looped;
+each 500 ms frame sets its playback rate from that link's own rate as `px/s = 16·log10(1 +
+events/s)` (1/s crawls at 5 px/s, 100/s at 32, 10,000/s at 64, 400,000/s at 90), so six moving
+elements cover any rate and a speed change never jumps; at rate 0 the dashes fade over `--d2`
+and the track stays. The rate is that stage's counter delta between the last two frames over
+their interval, or the server's `rate`/`queue` window when the frame carries one, and the
+label under the number says which. Tokens: `--d1` 120 ms (a value or badge changed), `--d2`
+240 ms (a screen arrived, a result replaced a confirmation, the queue bar, a chain mark, the
+branch lighting), `--ease cubic-bezier(.2,0,0,1)`, `--pulse` 6 px, `--pitch` 32 px. A
+screen fades in over `--d2` only after the first hash change; a count badge pops over `--d1`
+by a keyed re-mount, gated so the first frame's counts and a screen's opening state appear
+still; the approve result, a verify verdict that lands after the screen opened and a drift
+state that changes get the same one change. A selection moving (h/l on Flow, j/k on a list)
+is the reader's own action and reports nothing, so it snaps everywhere. `prefers-reduced-motion`
+turns every transition and animation off in one stylesheet rule and stops the script
+animations from being created: the diagram stands with the same numbers. Station to screen:
+ingest opens Live, preserve opens Integrity, detect opens Drift (detection is per source),
+the branch and the tray open Review (nothing is parsed until a human approves), parse opens
+the newest record's Traceback, normalize opens Pivot (the entity index is built from
+normalized paths), emit opens Replay (emit writes v1, Replay the next version). **Anchor.**
+`ui/src/Flow.svelte`, `ui/src/keys.js` (`stations()`, `reduced()`), the `/* ---- flow ---- */`
+section of `ui/src/app.css`, `docs/design.md` Motion section, `docs/screens/flow-*`.
+**Principle.** The counters are the product; a screen that moves when nothing changed is
+lying about the machine (D69: no decoration). **Ruled out.** One DOM element per event
+(400,000 events in 25 s is 16,000 nodes a second; a visible tab drops frames and a hidden one
+queues them); a canvas particle system (a second rendering model beside the DOM, script per
+frame on the main thread, no tokens, invisible to reduced-motion and the theme); motion on
+hover (reports nothing that changed; the station's border-colour transition was removed for
+this reason); a selection ease (the same property as hover, and every other selection in the
+app snaps); a hero animation on load (decoration by definition, and the first frame's counts
+would move without having changed).
+
+## D81. A pivot names the cost of each part of its answer, and `related` reads the index the way the input is read
+**Decision.** Every pivot page carries `elapsed_ms { header, timeline, related, lines, total }`
+(`crates/ulpf/src/pivot.rs`, `Elapsed`), so a slow pivot says which part was slow instead of
+being "about 500 ms" (a figure the record had never measured: on a 233,854-event slice the
+busiest user answered in 93 ms quiet and 239 ms at load 30, and `related` was 78-98% of it).
+The read side opens its connections with `SQLITE_OPEN_NO_MUTEX` and `mmap_size` 1 GiB
+(`open_reader`): rusqlite's `Connection` is not `Sync`, so SQLite's serialized mode bought
+nothing and cost a fifth of a scan in mutex calls, and the 2 MB page cache re-read every page
+of a 30 MB scan through `pread` and a copy. `related` scans the four other kinds on four
+read-only connections opened once, under `std::thread::scope` (a panicked scan is an error
+value); blobs and values are borrowed from the row and a value is copied only on a hit;
+membership in the window is one bit per id over the window's span. Pages are byte-identical
+to before (eleven pages over six entities, every second page through the cursor, `cmp`), and
+the controlled pair on a quiet machine reads 2.6-3.3x (jdoe 93 -> 29 ms, dst_port 443 89 ->
+33, src_ip 74 -> 28); the loaded end (load 28-36) read 4-8x because the old path's mutex and
+`pread` lose more under contention. **Anchor.** `open_reader`, `PivotIndex::open`,
+`related`, `scan_related` in `crates/ulpf/src/pivot.rs`; `docs/api.md` v4 (`elapsed_ms`).
+**Principle.** Inputs are memory-mapped and read without copies (CLAUDE.md); the index is an
+input on the read side. A number on screen is measured, and a slow answer names its cause.
+**Ruled out.** A larger `cache_size` (heap per connection, still a copy per page); a thread
+pool or async for the four scans (the query already runs under `Live`'s index mutex; four
+scoped threads cost about 100 µs); `HashSet<u64>` membership (SipHash and two allocations per
+row, 15% of the profile) or a sorted `Vec` with binary search (fourteen compares against one
+shift); a covering index `(kind, first_id, last_id, value, blob)` or a `WITHOUT ROWID` table
+clustered by `(kind, first_id)`, which would remove the table seek per posting row that is
+now 55% of the scan's CPU but doubles the writer's work (D66: the index thread is `serve`'s
+throughput cap) and changes the layout of a file older serves still open; a
+`first_id..last_id` pre-check before decoding (98% of rows hold one posting on the bench,
+so the extra column read costs more than the decodes it saves); RELATED_WINDOW and
+RELATED_ROW_BUDGET unchanged, because changing them changes `related_over`.
+
+## D82, D83: reserved
+D82 is lane 8's design for the store reopen under a live mapping, the stop path's handles and
+the null output device (branch `lane-8-windows`, written on that branch, merges after the demo
+on the owner's go). D83 is the post-demo decision on a directory-level include or exclude for
+the engine's inputs (tonight every documented command names `samples/*.log`; a bare `samples`
+directory ingests `samples/README.md` as a log).
+
+## D67, amended: the runner is a subcommand
+`ulpf demo [--auto] [--check] [--reset] [--dir demo] [--listen 127.0.0.1:7878] [--syslog
+127.0.0.1:5514] [--repo .]` (`crates/ulpf/src/demo.rs`) plays the demo section of PROGRESS.md
+from the binary, and `scripts/demo.sh` is a wrapper that finds the binary and hands the flags
+over, because the team records on a Windows machine where no shell runs the script and a demo
+that plays on one laptop is one laptop away from not happening. It adds no engine behaviour:
+it spawns `current_exe() serve` with `--parsers demo/parsers --pending demo/pending`, copies
+files into the watch directory, speaks HTTP/1.1 to localhost over a `TcpStream` (the shape of
+`crates/ulpf/tests/server.rs`, so the binary gains no HTTP client), runs verify and attest as
+children, and kills the server at the end because a killed run restarts to the same output
+and store as an uninterrupted one (D59). `--check` keeps and widens the old grep: the ten step
+headings and the seventeen command strings are constants the runner prints, and each must
+appear verbatim in the demo section (the inputs and both ports are checked too); `cargo test`
+asserts the same, so drift fails the suite. Requests the demo makes on stage (approve,
+traceback, replay) print their failure where the answer would go instead of aborting; setup
+failures stop with a reason and exit 1. The reset also removes any generated parser (`origin =
+"inferred"`) from the repo's `parsers/`: a CLI approve writes it there, and a demo copy or a
+bundle made after it knows the unseen format already, so the demo cannot raise a proposal (a
+Windows tester hit exactly this). **Ruled out.** A PowerShell twin of the script (two runners
+drift, which is the failure D67 exists to prevent); a `--demo` flag on `serve` (engine
+behaviour for the demo's sake); shelling out to `sh -c` for the copies (the same portability
+hole one level down); `?` on every request (correct for a script, wrong for a stage);
+loosening the check to a fuzzy match (a match that tolerates an edit proves nothing).
+
+## D84. One Intensity setting with three named choices, applied by restarting the engine
+**Decision.** The desktop app exposes the engine's `-j` and `--pivot` as one setting with
+three choices whose labels carry this machine's own numbers from `available_parallelism`:
+`Low · 2 of 8 cores · entity index off` (one core under four cores, else two), `Balanced ·
+4 of 8 cores · entity index on` (half; the default a fresh install and an unreadable settings
+file both get), `Max · 7 of 8 cores · entity index on` (all but one, the engine's own
+default). The choice becomes `-j N --pivot on|off` on the serve line and is kept as one word
+in `app_config_dir/intensity` beside the `data_dir` override. Changing it restarts the
+sidecar: the child is killed as Quit kills it (D59 makes it safe), a fresh free port, the
+same store; the page that is up says `Restarting the engine at Low: 2 of 8 cores, entity
+index off` and then `Engine ready at ...` (1.18 s end to end on this Mac). The title quotes
+the running engine, not the file: `ULPF · engine ok · N events · M pending · Balanced · 4 of
+8 cores · index on` from `/api/status` (`threads`, `pivot_index`), and `restarting` when the
+two disagree. **Anchor.** `app/src-tauri/src/intensity.rs`, the `Intensity` submenu in
+`app/src-tauri/src/menu.rs`, `intensity_part` in `app/src-tauri/src/title.rs`, the Intensity
+section of `app/README.md`, `docs/screens/app-intensity-*.png`. **Principle.** A number a
+person quotes is the number the machine is running; a setting names what it costs on this
+machine. **Ruled out.** Two independent controls (a typed thread count with the index left
+on is a machine at full tilt at a tenth of its throughput, D66, and a number typed by someone
+who does not know the core count); Max as the default (right for a headless run, wrong for a
+demo machine also driving a browser and a recording); a live change (the engine fixes its
+worker count when it builds the pool and takes the index switch at start by design, D40,
+D60, D66, so a live control would lie or the engine would grow the reconfiguration path the
+one-sequencer design exists to avoid); printing the setting in the title (it would claim 7
+cores during the second the old 2-core engine still answers); a tray copy of the submenu
+(two sets of check marks for one choice).

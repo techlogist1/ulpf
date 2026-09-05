@@ -1,5 +1,19 @@
 [
   {
+    "file": "flow-1280.png",
+    "screen": "flow",
+    "width": 1280,
+    "what": "flow, the front door, under a drop: six stations with their counters and losses, the pulses at the real rate, the queue, the chain, the inference branch and the tray",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "flow-reduced-1280.png",
+    "screen": "flow",
+    "width": 1280,
+    "what": "flow under prefers-reduced-motion: the same numbers as a still diagram, no pulse, no transition",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
     "file": "live-1280.png",
     "screen": "live",
     "width": 1280,
@@ -18,13 +32,6 @@
     "screen": "review",
     "width": 1280,
     "what": "review: definition editor, actions, evidence with templates, slot names and the reason for each",
-    "how": "headless (ui/capture.mjs)"
-  },
-  {
-    "file": "review-update-1280.png",
-    "screen": "review",
-    "width": 1280,
-    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence",
     "how": "headless (ui/capture.mjs)"
   },
   {
@@ -49,13 +56,6 @@
     "how": "headless (ui/capture.mjs)"
   },
   {
-    "file": "trace-big-1280.png",
-    "screen": "trace",
-    "width": 1280,
-    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive",
-    "how": "headless (ui/capture.mjs)"
-  },
-  {
     "file": "pivot-search-1280.png",
     "screen": "pivot",
     "width": 1280,
@@ -66,14 +66,14 @@
     "file": "pivot-1280.png",
     "screen": "pivot",
     "width": 1280,
-    "what": "pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities",
+    "what": "pivot of the busiest entity (user jdoe): device lanes on a time axis, the timeline, the related entities",
     "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "replay-1280.png",
     "screen": "replay",
     "width": 1280,
-    "what": "replay: why v2 differs, counters, parser changes, by field, versions, the diff entries",
+    "what": "replay: why v? differs, counters, parser changes, by field, versions, the diff entries",
     "how": "headless (ui/capture.mjs)"
   },
   {
@@ -88,6 +88,20 @@
     "screen": "integrity",
     "width": 1280,
     "what": "integrity: verdict of the last verify, records, store id, genesis and chain head",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "flow-2560.png",
+    "screen": "flow",
+    "width": 2560,
+    "what": "flow, the front door, under a drop: six stations with their counters and losses, the pulses at the real rate, the queue, the chain, the inference branch and the tray",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "flow-reduced-2560.png",
+    "screen": "flow",
+    "width": 2560,
+    "what": "flow under prefers-reduced-motion: the same numbers as a still diagram, no pulse, no transition",
     "how": "headless (ui/capture.mjs)"
   },
   {
@@ -112,13 +126,6 @@
     "how": "headless (ui/capture.mjs)"
   },
   {
-    "file": "review-update-2560.png",
-    "screen": "review",
-    "width": 2560,
-    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence",
-    "how": "headless (ui/capture.mjs)"
-  },
-  {
     "file": "trace-2560.png",
     "screen": "trace",
     "width": 2560,
@@ -140,13 +147,6 @@
     "how": "headless (ui/capture.mjs)"
   },
   {
-    "file": "trace-big-2560.png",
-    "screen": "trace",
-    "width": 2560,
-    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive",
-    "how": "headless (ui/capture.mjs)"
-  },
-  {
     "file": "pivot-search-2560.png",
     "screen": "pivot",
     "width": 2560,
@@ -157,14 +157,14 @@
     "file": "pivot-2560.png",
     "screen": "pivot",
     "width": 2560,
-    "what": "pivot of the busiest entity (dst_port 443): device lanes on a time axis, the timeline, the related entities",
+    "what": "pivot of the busiest entity (user jdoe): device lanes on a time axis, the timeline, the related entities",
     "how": "headless (ui/capture.mjs)"
   },
   {
     "file": "replay-2560.png",
     "screen": "replay",
     "width": 2560,
-    "what": "replay: why v2 differs, counters, parser changes, by field, versions, the diff entries",
+    "what": "replay: why v? differs, counters, parser changes, by field, versions, the diff entries",
     "how": "headless (ui/capture.mjs)"
   },
   {
@@ -189,6 +189,34 @@
     "how": "headless (ui/capture.mjs)"
   },
   {
+    "file": "flow-keys-1-1280.png",
+    "screen": "flow",
+    "width": 1280,
+    "what": "keyboard 1: 0 opens Flow from any screen (here from Live)",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "flow-keys-2-1280.png",
+    "screen": "flow",
+    "width": 1280,
+    "what": "keyboard 2: l moves the selection along the line to preserve; the station shows it",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "flow-keys-3-1280.png",
+    "screen": "flow",
+    "width": 1280,
+    "what": "keyboard 3: s opens Integrity, the screen behind the preserve station (Enter on the selection does the same)",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "flow-keys-4-1280.png",
+    "screen": "flow",
+    "width": 1280,
+    "what": "keyboard 4: Esc from a top-level screen returns to Flow",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
     "file": "empty-trace-1280.png",
     "screen": "empty",
     "width": 1280,
@@ -199,7 +227,7 @@
     "file": "error-trace-1280.png",
     "screen": "error",
     "width": 1280,
-    "what": "error state: a trace of raw id 503741, which the store never issued",
+    "what": "error state: a trace of raw id 1597505, which the store never issued",
     "how": "headless (ui/capture.mjs)"
   },
   {
@@ -241,7 +269,7 @@
     "file": "approve-2-1280.png",
     "screen": "review",
     "width": 1280,
-    "what": "keyboard approve 2: j selects the proposal (bench_slice)",
+    "what": "keyboard approve 2: j selects the proposal (drip)",
     "how": "headless (ui/capture.mjs)"
   },
   {
@@ -263,6 +291,13 @@
     "screen": "review",
     "width": 1280,
     "what": "keyboard approve 5: Enter confirms; the result names the file, the parsers loaded and how many buffered lines the new parser now claims",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "empty-flow-1280.png",
+    "screen": "flow",
+    "width": 1280,
+    "what": "empty state: a fresh server with zero events: every station at zero, the chain at genesis, the tray empty, and the sentence naming the watched directory that fills them",
     "how": "headless (ui/capture.mjs)"
   },
   {
@@ -308,6 +343,41 @@
     "how": "headless (ui/capture.mjs)"
   },
   {
+    "file": "review-update-1280.png",
+    "screen": "review",
+    "width": 1280,
+    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "trace-big-1280.png",
+    "screen": "trace",
+    "width": 1280,
+    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "review-update-2560.png",
+    "screen": "review",
+    "width": 2560,
+    "what": "review: a drift update proposal, the unified diff against the parser on disk above the definition and the evidence",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "trace-big-2560.png",
+    "screen": "trace",
+    "width": 2560,
+    "what": "traceback of the 4 MB single-line record: the byte ruler virtualises the text, the page stays responsive",
+    "how": "headless (ui/capture.mjs)"
+  },
+  {
+    "file": "flow-under-load.gif",
+    "screen": "flow",
+    "width": 1512,
+    "what": "Flow under load, eight frames recorded in the real Chrome while a 10,000 events/s drip and the capture's 30 MB drops went through the engine: the pulses on every link, the queue at its high-water tick, the chain's newest mark lit, the tray badge climbing from 5 to 8 proposals, the selection moved along the line with l and h; tool-driven (Chrome MCP gif_creator)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
     "file": "tool-live-1280.png",
     "screen": "live",
     "width": 1280,
@@ -318,7 +388,7 @@
     "file": "tool-shortcuts-1280.png",
     "screen": "keys",
     "width": 1280,
-    "what": "the shortcut overlay opened with ? over the live feed; tool-driven (Chrome MCP)",
+    "what": "the shortcut overlay opened with ? over the live feed; taken before the Flow screen, so it lacks the 0 and Esc rows keys-1280.png shows; tool-driven (Chrome MCP)",
     "how": "tool-driven (Chrome MCP)"
   },
   {
@@ -410,6 +480,13 @@
     "screen": "pivot",
     "width": 1512,
     "what": "the jdoe pivot at 1512: timeline and seen-with lists side by side, no empty band; tool-driven (Chrome MCP)",
+    "how": "tool-driven (Chrome MCP)"
+  },
+  {
+    "file": "tool-flow-reconnecting-1512.png",
+    "screen": "flow",
+    "width": 1512,
+    "what": "error state: the server behind this tab was stopped; Flow says the stream dropped and when it retries, keeps the last frame's numbers with their time, and the pulses stop; tool-driven (Chrome MCP)",
     "how": "tool-driven (Chrome MCP)"
   },
   {

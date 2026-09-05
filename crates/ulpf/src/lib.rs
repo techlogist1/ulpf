@@ -4,10 +4,12 @@
 //! engine workers and the fixture harness.
 
 pub mod cli;
+pub mod demo;
 pub mod engine;
 pub mod fixture;
 pub mod inference;
 pub mod metrics;
+pub mod outfile;
 pub mod pending;
 pub mod pipeline;
 pub mod pivot;

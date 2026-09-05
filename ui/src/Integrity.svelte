@@ -35,6 +35,9 @@
   }))
 
   const v = $derived(data?.last_verify)
+  // The verdict on screen when this screen opened; a later one arrives with motion, that one does not.
+  let seen = $state(null)
+  $effect(() => { if (data && seen === null) seen = data.last_verify?.at ?? '' })
 </script>
 
 <section>
@@ -73,11 +76,13 @@
             <div class="meter busy"><i></i></div>
           </div>
         {:else if v}
-          <div class="verdict" class:ok={v.ok} class:bad={!v.ok}>
+          {#key v.at}
+          <div class="verdict" class:ok={v.ok} class:bad={!v.ok} class:arrive={seen !== null && v.at !== seen}>
             <b>{v.ok ? `Clean: ${fmt.n(v.records)} records recomputed, every chain value follows` : `Broken at raw id ${fmt.n(v.first_bad)}: the ${v.reason} does not match`}</b>
             <span class="lab">{fmt.stamp(v.at)}, {fmt.f(v.elapsed_secs, 2)}s, {fmt.n(v.corrupt)} corrupt, {v.against_attestation ? 'checked against the attestation document' : 'store-only check'}</span>
             {#if !v.ok}<span><a href="#/trace/{v.first_bad}">Trace record {fmt.n(v.first_bad)}</a> to read the stored bytes beside the digest that disagrees.</span>{/if}
           </div>
+          {/key}
         {:else}
           <div class="verdict">
             <b>No verify has run in this session</b>

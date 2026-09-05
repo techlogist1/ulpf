@@ -5,7 +5,7 @@
 //   [--empty <base of a second server with zero events>]
 // Writes README.md beside the PNGs, one line per capture. Needs Chrome on this machine.
 import puppeteer from 'puppeteer-core'
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs'
+import { mkdirSync, writeFileSync, readFileSync, copyFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? process.argv[i + 1] : d }
@@ -54,8 +54,16 @@ async function shot(name, width, height, url, what, prepare) {
 }
 const key = async (page, k, wait = 350) => { await page.keyboard.press(k); await new Promise((r) => setTimeout(r, wait)) }
 
+// Flow under load: --load <file> is copied into --watch <dir> two seconds before the shot, so the
+// pulses, the queue and the rate are the drop in flight; without it the resting screen is captured.
+const load = arg('load', null)
+const watch = arg('watch', null)
+const dropping = async () => { if (load && watch) { copyFileSync(load, join(watch, `flow-${Date.now()}.log`)); await new Promise((r) => setTimeout(r, 2000)) } }
+
 for (const width of [1280, 2560]) {
   const height = width === 1280 ? 800 : 1440
+  await shot('flow', width, height, '#/flow', load ? 'flow, the front door, under a drop: six stations with their counters and losses, the pulses at the real rate, the queue, the chain, the inference branch and the tray' : 'flow, the front door at rest: six stations with their counters and losses, the queue, the chain, the inference branch and the tray', dropping)
+  await shot('flow-reduced', width, height, '#/flow', 'flow under prefers-reduced-motion: the same numbers as a still diagram, no pulse, no transition', async (p) => { const c = await p.createCDPSession(); await c.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] }); await p.reload({ waitUntil: 'domcontentloaded' }); await p.waitForFunction(() => document.querySelector('.flow .line')); await dropping(); await new Promise((r) => setTimeout(r, 1200)) })
   await shot('live', width, height, '#/live', 'live feed: rates, funnel, queue, tail, sources, parsers, every engine counter')
   await shot('review-list', width, height, '#/review', 'review: the pending proposals, kind, lines, templates, unmatched, problems')
   await shot('review-detail', width, height, `#/review/${encodeURIComponent(reviewId)}`, 'review: definition editor, actions, evidence with templates, slot names and the reason for each')
@@ -71,6 +79,11 @@ for (const width of [1280, 2560]) {
   await shot('integrity', width, height, '#/integrity', 'integrity: verdict of the last verify, records, store id, genesis and chain head')
 }
 await shot('keys', 1280, 800, '#/live', 'the shortcut overlay (?)', async (p) => { await key(p, 'Shift'); await p.keyboard.type('?'); await new Promise((r) => setTimeout(r, 300)) })
+// The keyboard traversal from the front door: 0 opens Flow, a station key opens its screen, Esc comes back.
+await shot('flow-keys-1', 1280, 800, '#/live', 'keyboard 1: 0 opens Flow from any screen (here from Live)', async (p) => { await key(p, '0', 700) })
+await shot('flow-keys-2', 1280, 800, '#/flow', 'keyboard 2: l moves the selection along the line to preserve; the station shows it', async (p) => { await key(p, 'l'); await key(p, 'l') })
+await shot('flow-keys-3', 1280, 800, '#/flow', 'keyboard 3: s opens Integrity, the screen behind the preserve station (Enter on the selection does the same)', async (p) => { await key(p, 's', 700) })
+await shot('flow-keys-4', 1280, 800, '#/integrity', 'keyboard 4: Esc from a top-level screen returns to Flow', async (p) => { await key(p, 'Escape', 700) })
 await shot('empty-trace', 1280, 800, '#/trace', 'empty state: traceback with no record chosen')
 await shot('error-trace', 1280, 800, `#/trace/${missing}`, `error state: a trace of raw id ${missing}, which the store never issued`)
 await shot('light-trace', 1280, 800, `#/trace/${traceId}`, 'the same traceback under the light theme (t)', async (p) => { await key(p, 't') })
@@ -103,7 +116,7 @@ if (approveId && wanted('approve')) {
 // A second, fresh server with zero events (--empty <base>): every screen's empty state.
 const empty = arg('empty', null)
 if (empty) {
-  for (const [route, what] of [['live', 'a fresh server with zero events: rates, funnel, queue and the tail say what will fill them'], ['review', 'nothing to review: what makes a proposal appear'], ['pivot', 'no entities indexed yet'], ['replay', 'no output versions yet'], ['drift', 'no source established yet: the thresholds in words'], ['integrity', 'an empty store: the genesis is fixed, the head appears with the first record']]) {
+  for (const [route, what] of [['flow', 'a fresh server with zero events: every station at zero, the chain at genesis, the tray empty, and the sentence naming the watched directory that fills them'], ['live', 'a fresh server with zero events: rates, funnel, queue and the tail say what will fill them'], ['review', 'nothing to review: what makes a proposal appear'], ['pivot', 'no entities indexed yet'], ['replay', 'no output versions yet'], ['drift', 'no source established yet: the thresholds in words'], ['integrity', 'an empty store: the genesis is fixed, the head appears with the first record']]) {
     const page = await browser.newPage()
     await page.setViewport({ width: 1280, height: 800, deviceScaleFactor: 1 })
     await page.goto(`${empty}/#/${route}`, { waitUntil: 'domcontentloaded' })
@@ -119,7 +132,14 @@ if (empty) {
 await browser.close()
 if (only) { console.log(`${index.length} captures re-shot in ${out}; README.md and index.json untouched`); process.exit(0) }
 
-const lines = ['# Screen captures', '', `Captured headlessly by \`ui/capture.mjs\` against a populated \`ulpf serve\` (${status.version ?? 'ulpf'} at ${base}). One line per file.`, '', '| file | screen | width | what it shows |', '|---|---|---|---|', ...index.map((i) => `| ${i.file} | ${i.screen} | ${i.width} | ${i.what} |`)]
-writeFileSync(join(out, 'README.md'), lines.join('\n') + '\n')
-writeFileSync(join(out, 'index.json'), JSON.stringify(index, null, 2))
-console.log(`${index.length} captures in ${out}`)
+// Rows this run did not shoot (the tool-driven and desktop-app captures, indexed by hand) are
+// kept from the previous index.json, and README.md keeps everything from its first "## " on.
+const prev = existsSync(join(out, 'index.json')) ? JSON.parse(readFileSync(join(out, 'index.json'), 'utf8')) : []
+const mine = new Set(index.map((i) => i.file))
+const merged = [...index.map((i) => ({ ...i, how: 'headless (ui/capture.mjs)' })), ...prev.filter((p) => !mine.has(p.file))]
+const old = existsSync(join(out, 'README.md')) ? readFileSync(join(out, 'README.md'), 'utf8') : ''
+const rest = old.includes('\n## ') ? old.slice(old.indexOf('\n## ')) : '\n'
+const lines = ['# Screen captures', '', `The \`*-1280.png\` / \`*-2560.png\` rows in the first table without a tool-driven marker were taken headlessly by \`ui/capture.mjs\` against a populated \`ulpf serve\` (${status.version ?? 'ulpf'} at ${base}); the \`tool-*\` rows were driven through the real Chrome and are kept from the previous index. One line per file.`, '', '| file | screen | width | what it shows |', '|---|---|---|---|', ...merged.filter((i) => !i.file.startsWith('app-')).map((i) => `| ${i.file} | ${i.screen} | ${i.width} | ${i.what} |`)]
+writeFileSync(join(out, 'README.md'), lines.join('\n') + '\n' + rest)
+writeFileSync(join(out, 'index.json'), JSON.stringify(merged, null, 2) + '\n')
+console.log(`${index.length} captures in ${out}, ${merged.length - index.length} rows kept from the previous index`)
