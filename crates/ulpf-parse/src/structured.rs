@@ -1,7 +1,10 @@
 //! Self-describing formats. JSON goes through `serde_json::Value` and therefore
 //! allocates (ponytail: acceptable while JSON sources are a minority; a streaming
 //! flattener is the upgrade if they dominate the throughput file). CEF and LEEF are
-//! scanned in place; their two position buffers live in `StructuredScratch`.
+//! scanned in place; their two position buffers live in `StructuredScratch`. XML is
+//! tokenized by `xmlparser` (pull tokenizer over the event, zero allocation, measured
+//! in D75): values are spans of the event, keys are dotted paths from the pool in
+//! `Parsed`, and only a value with an entity reference is materialised.
 
 use std::borrow::Cow;
 use std::ops::Range;
@@ -13,6 +16,8 @@ use crate::{ParseFailure, Parsed};
 pub(crate) struct StructuredScratch {
     parts: Vec<Range<usize>>,
     eqs: Vec<(usize, usize)>,
+    /// xml: the attributes of the start tag being read, (name, value) spans.
+    attrs: Vec<(Range<usize>, Range<usize>)>,
 }
 
 pub(crate) fn apply_json<'a>(text: &'a [u8], out: &mut Parsed<'a>) -> Result<(), ParseFailure> {
@@ -202,4 +207,184 @@ pub(crate) fn apply_leef<'a>(text: &'a [u8], scratch: &mut StructuredScratch, ou
         }
     }
     Ok(())
+}
+
+/// Elements nest into dotted keys the way json keys do; the root element is the
+/// document and is not part of any key (`<Event><System><EventID>` is `System.EventID`,
+/// `<Provider Name=..>` under it is `System.Provider.Name`). Namespace prefixes are
+/// stripped from names and `xmlns` attributes are not fields. An element whose only
+/// attribute is `Name` and which carries text is a named value: `<Data Name="X">v</Data>`
+/// is `EventData.X`, the Windows `EventData` shape. A key already present in this
+/// event gets a counter (`EventData.Data`, `EventData.Data2`, ...). Whitespace-only text
+/// between elements (pretty-printed input) is not a field.
+pub(crate) fn apply_xml<'a>(text: &'a [u8], scratch: &mut StructuredScratch, out: &mut Parsed<'a>) -> Result<(), ParseFailure> {
+    use xmlparser::{ElementEnd, Token};
+    let Ok(s) = std::str::from_utf8(text) else { return Err(ParseFailure::InvalidXml) };
+    let mark = out.fields.len();
+    // `parts` is the element stack: the span each open element contributes to a key.
+    let StructuredScratch { parts: stack, attrs, .. } = scratch;
+    stack.clear();
+    attrs.clear();
+    let mut elements = 0usize;
+    // Inside a start tag: the tokenizer ends silently on `<Event` cut before its `>`.
+    let mut in_tag = false;
+    // The `Name` of an open element whose only attribute it was; its text takes it.
+    let mut pending: Option<Range<usize>> = None;
+    for token in xmlparser::Tokenizer::from(s) {
+        match token {
+            Ok(Token::ElementStart { local, .. }) => {
+                stack.push(local.start()..local.end());
+                attrs.clear();
+                pending = None;
+                elements += 1;
+                in_tag = true;
+            }
+            Ok(Token::Attribute { prefix, local, value, .. }) => {
+                if prefix.as_str() != "xmlns" && local.as_str() != "xmlns" {
+                    attrs.push((local.start()..local.end(), value.start()..value.end()));
+                }
+            }
+            Ok(Token::ElementEnd { end, .. }) => {
+                in_tag = false;
+                let open = matches!(end, ElementEnd::Open);
+                if open && attrs.len() == 1 && &text[attrs[0].0.clone()] == b"Name" {
+                    pending = Some(attrs[0].1.clone());
+                } else {
+                    for (k, v) in attrs.iter() {
+                        push_xml_field(text, stack, Some(k.clone()), &text[v.clone()], true, mark, out);
+                    }
+                }
+                attrs.clear();
+                if !open {
+                    stack.pop();
+                    pending = None;
+                }
+            }
+            Ok(Token::Text { text: t }) => {
+                let v = &text[t.start()..t.end()];
+                if v.iter().all(u8::is_ascii_whitespace) {
+                    continue;
+                }
+                if let (Some(name), Some(top)) = (pending.take(), stack.last_mut()) {
+                    *top = name;
+                }
+                push_xml_field(text, stack, None, v, true, mark, out);
+            }
+            Ok(Token::Cdata { text: t, .. }) => {
+                if let (Some(name), Some(top)) = (pending.take(), stack.last_mut()) {
+                    *top = name;
+                }
+                push_xml_field(text, stack, None, &text[t.start()..t.end()], false, mark, out);
+            }
+            Ok(_) => {}
+            Err(_) => {
+                out.fields.truncate(mark);
+                return Err(ParseFailure::InvalidXml);
+            }
+        }
+    }
+    if elements == 0 || in_tag {
+        out.fields.truncate(mark);
+        return Err(ParseFailure::InvalidXml);
+    }
+    Ok(())
+}
+
+fn push_xml_field<'a>(text: &'a [u8], stack: &[Range<usize>], leaf: Option<Range<usize>>, value: &'a [u8], decode: bool, mark: usize, out: &mut Parsed<'a>) {
+    let mut key = out.take_key();
+    for (i, r) in stack.iter().enumerate().skip(1) {
+        if i > 1 {
+            key.push(b'.');
+        }
+        key.extend_from_slice(&text[r.clone()]);
+    }
+    if let Some(r) = leaf {
+        if !key.is_empty() {
+            key.push(b'.');
+        }
+        key.extend_from_slice(&text[r]);
+    }
+    if key.is_empty() {
+        out.give_back_key(key);
+        return;
+    }
+    // ponytail: O(fields) scan per key for a repeated sibling; an event has tens of
+    // fields and equal-length keys are few, so a map would cost more than it saves.
+    let base = key.len();
+    let mut n = 1u32;
+    while out.fields[mark..].iter().any(|f| *f.key == *key) {
+        n += 1;
+        key.truncate(base);
+        push_decimal(&mut key, n);
+    }
+    let value = if decode { decode_entities(value) } else { Cow::Borrowed(value) };
+    out.push(Cow::Owned(key), value);
+}
+
+// The sibling counter on the stack: `to_string` was one allocation per repeated unnamed
+// element, quadratic over an unnamed `<Data>` list.
+fn push_decimal(key: &mut Vec<u8>, mut n: u32) {
+    let mut buf = [0u8; 10];
+    let mut i = buf.len();
+    loop {
+        i -= 1;
+        buf[i] = b'0' + (n % 10) as u8;
+        n /= 10;
+        if n == 0 {
+            break;
+        }
+    }
+    key.extend_from_slice(&buf[i..]);
+}
+
+/// `&amp; &lt; &gt; &quot; &apos; &#N; &#xN;`; anything else after `&` is kept as
+/// written (an entity cut off at the end of input, an unknown name). Borrowed when the
+/// value has no `&` at all: the one materialisation the xml strategy makes.
+fn decode_entities(raw: &[u8]) -> Cow<'_, [u8]> {
+    if !raw.contains(&b'&') {
+        return Cow::Borrowed(raw);
+    }
+    let mut v = Vec::with_capacity(raw.len());
+    let mut i = 0;
+    while i < raw.len() {
+        if raw[i] == b'&'
+            && let Some(semi) = memchr::memchr(b';', &raw[i..]).map(|p| i + p)
+            && entity(&raw[i + 1..semi], &mut v)
+        {
+            i = semi + 1;
+            continue;
+        }
+        v.push(raw[i]);
+        i += 1;
+    }
+    Cow::Owned(v)
+}
+
+/// Appends the reference's bytes; false leaves `out` untouched for an unknown one.
+fn entity(name: &[u8], out: &mut Vec<u8>) -> bool {
+    let byte = match name {
+        b"amp" => Some(b'&'),
+        b"lt" => Some(b'<'),
+        b"gt" => Some(b'>'),
+        b"quot" => Some(b'"'),
+        b"apos" => Some(b'\''),
+        _ => None,
+    };
+    if let Some(b) = byte {
+        out.push(b);
+        return true;
+    }
+    let Some(digits) = name.strip_prefix(b"#") else { return false };
+    let code = match digits.strip_prefix(b"x").or_else(|| digits.strip_prefix(b"X")) {
+        Some(hex) => std::str::from_utf8(hex).ok().and_then(|h| u32::from_str_radix(h, 16).ok()),
+        None => std::str::from_utf8(digits).ok().and_then(|d| d.parse::<u32>().ok()),
+    };
+    match code.and_then(char::from_u32) {
+        Some(c) => {
+            let mut buf = [0u8; 4];
+            out.extend_from_slice(c.encode_utf8(&mut buf).as_bytes());
+            true
+        }
+        None => false,
+    }
 }

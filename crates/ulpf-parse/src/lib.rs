@@ -50,11 +50,26 @@ pub struct Parsed<'a> {
     /// Buffer a multi-field timestamp is joined into; handed out as `timestamp_text` and
     /// taken back by `clear`, so the join never allocates after the first event.
     spare: Vec<u8>,
+    /// Key buffers recycled across events. A dotted xml path (`System.Provider.Name`)
+    /// exists nowhere in the event, so those keys are owned; taken from here and given
+    /// back by `clear`, they allocate nothing after warm-up. `pooled` marks an event that
+    /// took one, so every other family keeps the plain `clear`.
+    keys: Vec<Vec<u8>>,
+    pooled: bool,
 }
 
 impl<'a> Parsed<'a> {
     pub fn clear(&mut self) {
-        self.fields.clear();
+        if self.pooled {
+            for f in self.fields.drain(..) {
+                if let Cow::Owned(k) = f.key {
+                    self.keys.push(k);
+                }
+            }
+            self.pooled = false;
+        } else {
+            self.fields.clear();
+        }
         self.timestamp = None;
         if let Some(Cow::Owned(v)) = self.timestamp_text.take() {
             self.spare = v;
@@ -72,6 +87,22 @@ impl<'a> Parsed<'a> {
 
     pub(crate) fn give_back(&mut self, v: Vec<u8>) {
         self.spare = v;
+    }
+
+    /// An empty key buffer from the pool (64 bytes on first use; a longer key keeps the
+    /// capacity it grew to). Push it as `Cow::Owned` and `clear` takes it back.
+    pub(crate) fn take_key(&mut self) -> Vec<u8> {
+        self.pooled = true;
+        let mut k = self.keys.pop().unwrap_or_default();
+        k.clear();
+        if k.capacity() < 64 {
+            k.reserve(64);
+        }
+        k
+    }
+
+    pub(crate) fn give_back_key(&mut self, k: Vec<u8>) {
+        self.keys.push(k);
     }
 
     #[inline]

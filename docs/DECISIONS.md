@@ -1345,10 +1345,104 @@ writes for the store on every platform (changes unix behaviour); making `libc` u
 (it compiles unused on Windows); one workflow per OS or a hand-written bundling step
 (tauri-action already names the bundles per target and handles the release).
 
-## D75: reserved for the xml branch of the demo morning
-D75 is the xml strategy and the Windows Event definition (branch `lane-5-xml`, written on that
-branch); it does not merge before the demo and its entry arrives with the branch. D76 is below,
-written on `lane-6-index`.
+## D75. A seventh strategy, `xml`, tokenized by `xmlparser` with pooled keys; Windows Event Log as its family
+**Scope.** Windows Event Log XML is endpoint telemetry, outside the sponsor's perimeter
+line (firewalls, IDS/IPS, proxies, VPN concentrators, edge routers). It is in the tree as
+evidence of extensibility, not as scope creep: a new self-describing format arrived, and
+the wall, the zero-copy rule and the counting allocator absorbed it without a change to
+any existing parser, mapping, engine crate, store format or API. The branch `lane-5-xml`
+carries it for the owner's go after the demo; nothing on `main` depends on it.
+**Decision.** `kind = "xml"` is the seventh `StrategyKind`. Elements nest into dotted keys
+like `json` (`System.EventID`, `System.Provider.Name`, `System.TimeCreated.SystemTime`),
+attributes are fields under their element, an element whose only attribute is `Name` and
+which carries text is a named value (`<Data Name="X">v</Data>` is `EventData.X`), an
+unnamed repeat is numbered (`EventData.Data`, `EventData.Data2`), namespace prefixes are
+stripped and `xmlns` is not a field; `docs/parser-format.md` "XML" has the rules. The
+zero-copy approach: the event is tokenized in place by `xmlparser` 0.13.6 (MIT/Apache-2.0,
+zero dependencies, `Tokenizer::from(&str)` yielding spans), every attribute value and text
+node is `Cow::Borrowed` into the event, and a value with an entity reference is decoded
+into an owned buffer, the one materialisation, counted like a JSON value or an unescaped
+quoted value (CLAUDE.md's documented exceptions). Keys are dotted paths that exist nowhere
+in the event, so they are owned, but `Parsed` keeps a pool of key buffers (`take_key`,
+returned by `clear`, 64 bytes on first use; the join buffer for multi-field timestamps
+was the precedent) and after warm-up a key costs nothing. The measurement, the same
+counting-allocator pattern as `crates/ulpf-parse/tests/alloc.rs` over the 4624 example
+line (1,282 bytes), minimum of three runs of 100 parses: `quick-xml` 0.41.0
+`Reader::from_str` + `read_event` allocates 23 times per parse with or without
+unescaping (its reader state and attribute iteration), 4 per parse on a 1 MB text node;
+`xmlparser` 0.13.6 allocates 0 per parse in all three cases. `quick-xml` therefore fails
+the constraint before any strategy code is written; `xmlparser` passes and is the
+dependency (`cargo tree -p ulpf-parse` gains one leaf, no transitive crates). The alloc
+test now covers eleven families unchanged, `windows_event` among them, and
+`xml_allocates_only_for_entity_bearing_values_after_warm_up` asserts 0 allocations per
+parse of a plain line and exactly 1 per parse of a line with one entity-bearing value.
+Non-UTF-8 input is a counted `invalid_xml` failure (the tokenizer needs `&str`; the check
+is std's), as are an unterminated tag, a stray `<` and no element at all; a document cut
+before its closing tags still yields the fields it carried; an entity cut off at the end
+of input is kept as written. The family `windows_event` is written from Microsoft's own
+pages (4624, 4625, 4720 with their Event XML examples, Sysmon 1/3/11, the Event Schema),
+matches on the schema URI in either quote style, takes the time from
+`System.TimeCreated.SystemTime` (RFC 3339, seven fractional digits) and adds the documented
+event name, audit subcategory or Sysmon task and S/F result as sub constants gated on
+`System.EventID` and `System.Provider.Name`; the mappings are two fragments
+(`mappings/ocsf.windows.toml`, `mappings/ecs.windows.toml`) merged by schema name, so
+`ocsf.toml` and `ecs.toml` are untouched: Authentication (3002) and Network Activity
+(4001) gain alternatives, Account Change (3001), Process Activity (1007) and File System
+Activity (1001) are new with their uids and activities cited from schema.ocsf.io 1.3.0,
+the ECS classes `iam`, `process`, `file` cite the event.category reference, and
+`logon_type` is an enum with OCSF's own ids. **Anchor.** `crates/ulpf-parse/src/structured.rs`
+(`apply_xml`, `decode_entities`), `crates/ulpf-parse/src/lib.rs` (`take_key`, `clear`),
+`crates/ulpf-parse/src/compile.rs` (`ParseFailure::InvalidXml`, `CompiledStrategy::Xml`),
+`crates/ulpf-parse/tests/strategies.rs` (the three `xml_*` tests),
+`crates/ulpf-parse/tests/alloc.rs`, `parsers/windows_event.toml`,
+`samples/windows_event.log`, `fixtures/windows_event.expected.jsonl`,
+`mappings/ocsf.windows.toml`, `mappings/ecs.windows.toml`, `docs/parser-format.md` (XML).
+**Principle.** The wall and the allocation budget are the design; a new format must fit
+them, not stretch them. Verify a crate against the constraint before hand-rolling, and
+record the number that decided it. **Ruled out.** `quick-xml` (23 allocations per event,
+measured); a DOM-building parser (`roxmltree`, `minidom`, `xmltree`: a tree per event is
+the JSON path's cost again, and JSON is already the documented exception); a hand-rolled
+tokenizer (the crate is zero-allocation by design, has no dependencies and handles the
+declaration, comments, CDATA and both quote styles; hand-rolling would have been written
+at 4 a.m. for no measured gain); owned keys per event (twenty-odd allocations per event,
+the reason `json` is an exception); borrowing keys from a per-parser interner (a lock or
+unsafe lifetime laundering on the hot path); treating `Name` as naming its element
+everywhere (`<Provider Name=.. Guid=../>` would lose `System.Provider.Name`, which the
+brief and the gates need); an enum on `status` (the base file feeds it as text from a
+dozen vendor fields and an enum would reclassify them: not additive); `observer.hostname`
+for `System.Computer` in ECS (an endpoint's own events are about the host). **Not done.**
+Real captures (no Windows host tonight: the sample's lines 1, 4 and 7 are Microsoft's
+documented examples, the rest built from the same pages); `UserData`-shaped providers
+and `RenderingInfo` are parsed by the general rules but have no family, sub or mapping;
+UTF-16 input. The branch merged after the demo (2026-09-07); the demo did not show it.
+**Fix round (03:47-, three findings, all closed).** (1) The seventh `ParseFailure` variant
+panicked a worker on every `invalid_xml` line: `Metrics.parse_failed` and
+`LocalCounts.parse_failed` in `crates/ulpf/src/metrics.rs` were `[_; 6]` by hand, so the
+index `ALL.position(InvalidXml)` = 6 was out of bounds, and the summary zip would have
+dropped the reason even without the panic. Both arrays are now `[_; ParseFailure::ALL.len()]`,
+so a variant added in the parser crate sizes the counters by construction; the engine test
+`malformed_xml_is_counted_and_emitted_never_a_panic` (`crates/ulpf/tests/e2e.rs`) drives an
+unterminated tag, a stray `<` and a non-UTF-8 value through `run` and asserts
+`parse_failed = [("invalid_xml", 3)]`, four of four emitted. (2) The sibling counter for a
+repeated unnamed element was `n.to_string()` inside the collision loop, N(N-1)/2 allocations
+per event over an unnamed `<Data>` list (a provider without a manifest template renders
+EventData that way, and the family's `[match]` claims it); `push_decimal` formats the
+counter into a stack buffer, and the alloc test's xml case now parses twenty unnamed
+siblings at 0 allocations (`EventData.Data` ... `EventData.Data20`). No new exception was
+needed. (3) `process.pid` was declared `int` in both fragments but the Security-auditing
+`ProcessId` is "[Type = Pointer]: hexadecimal Process ID" (the 4624 page), and `as_int` kept
+the string when `parse::<i64>` failed, so one output file carried `"0x44c"` and `6228` under
+one field. The verifier offered dropping the field from `int` (every pid a string under a
+field both schemas declare integer: fourteen wrong instead of six) or unmapping `ProcessId`
+(loses the decimal Sysmon pids); neither is a canonicalisation. `as_int`
+(`crates/ulpf-normalize/src/mapping.rs`) now reads a `0x`/`0X` prefix as hexadecimal, which
+is the mapping stage's job (a value the vendor rendered in hex is still the integer), and the
+fixture's six logon rows assert `process.pid` 1100, 0, 1016, 444, 0, 1016. The base `int`
+lists (ports, bytes, packets, codes, uids, duration) never carry a `0x` prefix in any sample
+or fixture, and the twelve other families' outputs are byte-identical between main's binary
+and this one. Two files outside the lane's list were touched for these fixes,
+`crates/ulpf/src/metrics.rs` and `crates/ulpf-normalize/src/mapping.rs`; both are a few lines
+and are named here for the merge.
 
 ## D76. The entity index's cost was SQLite's page cache, not the per-value upsert: 64 MiB of cache and one transaction per queue-full
 **Decision.** The pivot writer opens its connection with `PRAGMA cache_size = -65536` (64 MiB,

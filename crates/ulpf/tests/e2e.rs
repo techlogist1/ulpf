@@ -151,3 +151,30 @@ fn single_thread_and_many_threads_produce_identical_output() {
     std::fs::remove_dir_all(&a).unwrap();
     std::fs::remove_dir_all(&b).unwrap();
 }
+
+/// Every `ParseFailure` reaches the counters through the engine: the metrics arrays are
+/// sized from `ParseFailure::ALL`, so a variant added to the parser crate cannot index
+/// past them (an unterminated xml tag panicked a worker before this test existed).
+#[test]
+fn malformed_xml_is_counted_and_emitted_never_a_panic() {
+    let dir = temp("bad-xml");
+    let head = "<Event xmlns=\"http://schemas.microsoft.com/win/2004/08/events/event\"><System><EventID>4624</EventID><TimeCreated SystemTime=\"2015-11-12T00:24:35.079785200Z\"/></System>";
+    let mut bad = Vec::new();
+    bad.extend_from_slice(format!("{head}<EventData><Data Name=\"X\n").as_bytes()); // unterminated tag
+    bad.extend_from_slice(format!("{head}<EventData>a < b</EventData></Event>\n").as_bytes()); // stray <
+    bad.extend_from_slice(format!("{head}<EventData><Data Name=\"X\">").as_bytes());
+    bad.extend_from_slice(b"\xff\xfe</Data></EventData></Event>\n"); // not UTF-8
+    bad.extend_from_slice(format!("{head}<EventData><Data Name=\"X\">ok</Data></EventData></Event>\n").as_bytes());
+    let input = dir.join("bad.log");
+    std::fs::write(&input, &bad).unwrap();
+    let report = run(&config(vec![input], &dir, 2)).unwrap();
+    let s = &report.snapshot;
+    assert_eq!(s.framed, 4);
+    assert_eq!(s.detected, 4, "windows_event claims every line by its schema URI");
+    assert_eq!(s.parsed, 1);
+    assert_eq!(s.parse_failed, vec![("invalid_xml", 3)]);
+    assert_eq!(s.emitted, 4, "a parse failure is an output line, not a drop");
+    let out = std::fs::read_to_string(dir.join("out.jsonl")).unwrap();
+    assert_eq!(out.lines().filter(|l| l.contains("\"parse_status\":\"invalid_xml\"")).count(), 3);
+    std::fs::remove_dir_all(&dir).unwrap();
+}

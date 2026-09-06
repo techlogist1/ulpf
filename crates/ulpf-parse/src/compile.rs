@@ -24,12 +24,15 @@ pub enum ParseFailure {
     InvalidJson,
     InvalidCef,
     InvalidLeef,
+    /// Not UTF-8, no element, or the tokenizer stopped (unterminated tag, stray `<`).
+    InvalidXml,
 }
 
 impl ParseFailure {
-    pub const ALL: [ParseFailure; 6] = [
+    pub const ALL: [ParseFailure; 7] = [
         ParseFailure::PatternNoMatch, ParseFailure::NoPairs, ParseFailure::NoColumns,
         ParseFailure::InvalidJson, ParseFailure::InvalidCef, ParseFailure::InvalidLeef,
+        ParseFailure::InvalidXml,
     ];
     pub fn reason(self) -> &'static str {
         match self {
@@ -39,6 +42,7 @@ impl ParseFailure {
             ParseFailure::InvalidJson => "invalid_json",
             ParseFailure::InvalidCef => "invalid_cef",
             ParseFailure::InvalidLeef => "invalid_leef",
+            ParseFailure::InvalidXml => "invalid_xml",
         }
     }
 }
@@ -65,6 +69,7 @@ pub(crate) enum CompiledStrategy {
     Cef,
     Leef,
     Pattern(Vec<CompiledPattern>),
+    Xml,
 }
 
 impl CompiledStrategy {
@@ -83,6 +88,7 @@ impl CompiledStrategy {
             StrategyKind::Json => CompiledStrategy::Json,
             StrategyKind::Cef => CompiledStrategy::Cef,
             StrategyKind::Leef => CompiledStrategy::Leef,
+            StrategyKind::Xml => CompiledStrategy::Xml,
             StrategyKind::Pattern => {
                 let anchor = s.anchor.unwrap_or(Anchor::Start);
                 let mut compiled = Vec::new();
@@ -112,6 +118,7 @@ impl CompiledStrategy {
             CompiledStrategy::Json => structured::apply_json(text, out),
             CompiledStrategy::Cef => structured::apply_cef(text, &mut scratch.structured, out),
             CompiledStrategy::Leef => structured::apply_leef(text, &mut scratch.structured, out),
+            CompiledStrategy::Xml => structured::apply_xml(text, &mut scratch.structured, out),
             CompiledStrategy::Pattern(list) => {
                 for p in list {
                     if p.apply(text, scratch.locs(p), out) {

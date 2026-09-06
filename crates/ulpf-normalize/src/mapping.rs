@@ -449,10 +449,17 @@ fn lossy<'b>(bytes: &'b [u8], stats: &mut NormalizeStats) -> std::borrow::Cow<'b
 
 fn as_int(v: Value) -> Value {
     match &v {
-        Value::String(s) => match s.parse::<i64>() {
-            Ok(n) => Value::from(n),
-            Err(_) => v,
-        },
+        Value::String(s) => {
+            // `0x` is hexadecimal: Windows Security auditing writes pids and logon ids that way.
+            let n = match s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
+                Some(hex) => i64::from_str_radix(hex, 16),
+                None => s.parse::<i64>(),
+            };
+            match n {
+                Ok(n) => Value::from(n),
+                Err(_) => v,
+            }
+        }
         _ => v,
     }
 }
