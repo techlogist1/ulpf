@@ -267,6 +267,8 @@ fn start_server(a: &Args, bin: &Path) -> Result<Serve> {
         .arg(d.join("pending"))
         .arg("--parsers")
         .arg(d.join("parsers"))
+        .arg("--mappings")
+        .arg(a.repo.join("mappings"))
         .arg("--syslog-udp")
         .arg(a.syslog.to_string())
         .arg("--syslog-tcp")
@@ -411,7 +413,6 @@ fn play(a: &Args, bin: &Path, srv: &mut Option<Serve>) -> Result<()> {
     let watch = d.join("watch");
     let repo = &a.repo;
 
-    refuse_busy_ports(&a.listen, &a.syslog)?;
     say(TITLES[0]);
     cmd(&c.reset);
     if d.exists() {
@@ -600,7 +601,18 @@ fn check(a: &Args) -> Result<i32> {
     for (i, title) in TITLES.iter().enumerate() {
         ok &= item(&format!("step {i} title"), section.contains(&format!("# {title}")), title);
     }
-    for (i, text) in Cmds::new(a).all().iter().enumerate() {
+    // PROGRESS documents the commands with the default directory and ports; a --check run with
+    // other flags compares those, not its own, so a rehearsal elsewhere is not reported as drift.
+    let documented = Args {
+        auto: a.auto,
+        check: a.check,
+        reset: a.reset,
+        dir: PathBuf::from("demo"),
+        listen: "127.0.0.1:7878".parse().expect("literal"),
+        syslog: "127.0.0.1:5514".parse().expect("literal"),
+        repo: a.repo.clone(),
+    };
+    for (i, text) in Cmds::new(&documented).all().iter().enumerate() {
         ok &= item(&format!("command {i}"), section.contains(text), text);
     }
     for text in ANCHORS {
@@ -615,21 +627,35 @@ pub fn main(a: Args) -> Result<i32> {
         return check(&a);
     }
     if a.reset {
+        // Only a server this runner started (its pid in <dir>/serve.pid) is stopped; a port
+        // still held afterwards belongs to someone else, and their store is not removed.
         kill_leftover(&a.dir);
-        if a.dir.exists() {
+        if let Err(e) = refuse_busy_ports(&a.listen, &a.syslog) {
+            eprintln!("ulpf demo: {e:#}");
+            return Ok(1);
+        }
+        let existed = a.dir.exists();
+        if existed {
             std::fs::remove_dir_all(&a.dir).with_context(|| format!("removing {}", a.dir.display()))?;
         }
         let purged = purge_generated(&a.repo)?;
-        println!("reset: {} removed, {purged} generated parser(s) removed from {}", a.dir.display(), a.repo.join("parsers").display());
+        let what = if existed { "removed" } else { "was not there" };
+        println!("reset: {} {what}, {purged} generated parser(s) removed from {}", a.dir.display(), a.repo.join("parsers").display());
         return Ok(0);
     }
     let bin = std::env::current_exe().context("finding this binary")?;
-    for rel in ["samples", "heldout/mikrotik.log", "heldout/edgerouter.log", "parsers", "PROGRESS.md"] {
+    for rel in ["samples", "heldout/mikrotik.log", "heldout/edgerouter.log", "parsers", "mappings/ocsf.toml", "PROGRESS.md"] {
         if !a.repo.join(rel).exists() {
             bail!("{} not found: run from the repository root or pass --repo", a.repo.join(rel).display());
         }
     }
     kill_leftover(&a.dir);
+    // Refused before anything is touched: the cleanup below would otherwise remove the
+    // directory under a server the presenter started by hand (PROGRESS step 1).
+    if let Err(e) = refuse_busy_ports(&a.listen, &a.syslog) {
+        eprintln!("ulpf demo: {e:#}");
+        return Ok(1);
+    }
     let mut srv = None;
     let result = play(&a, &bin, &mut srv);
     if let Some(s) = &mut srv {

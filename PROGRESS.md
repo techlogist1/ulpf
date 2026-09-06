@@ -532,6 +532,32 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 07:04 IST: the adversarial review's runner findings closed on main (lead; demo.rs and one clap
+  attribute in cli.rs). The review (five Opus finders, three Sonnet skeptics per finding, 80 agents,
+  06:04-06:55) confirmed 19 findings and refuted 6; the demo-breaking one was the lead's own
+  06:59 port guard: `refuse_busy_ports` sat inside `play`, and `main` removed `<dir>` after any
+  error, so `ulpf demo` typed while a hand-started server (PROGRESS step 1) held the port deleted
+  `demo/` under that server (verify then said "No such file", replay 500). Now the refusal is the
+  first act of both the run and the `--reset` paths, before the leftover kill and before any
+  removal; `--reset` stops only a server this runner started (`serve.pid`) and refuses a port held
+  by anyone else; the server is spawned with `--mappings <repo>/mappings` so `--repo` works away
+  from the root (the preflight names `mappings/ocsf.toml`); `--check` compares the commands as
+  PROGRESS documents them (default dir and ports) whatever the live flags; reset says `was not
+  there` when there was nothing; `--pivot`'s help shows `<on|off>` instead of clap's true/false.
+  Repro on scratch ports 7923-7928: a refused run and a refused reset both leave the directory and
+  its marker, the server answers 200 afterwards, then reset removes it and a second reset says
+  so; `--check --dir /tmp/pf/x --listen 127.0.0.1:7925 ...` no drift, 39 ok; a full `--auto` pass
+  through `--repo` from /tmp (06:59:46-07:00:42, exit 0, proposal 0.6 s, drift 6.1 s); the default
+  pass 07:01:38-07:02:34 exit 0. Gate: unit tests 3 of 3, clippy clean, release binary 12,095,064
+  bytes (06:59), `check` 15 parsers 0 problems, `demo --check` 39 ok, no external reference. The
+  suite at load 16 (four lanes building): 122 passed, 1 failed, the pivot paging test
+  (`v4_api.rs:557`, "saw 29 of 32"), which alone failed once then passed twice; unrelated to this
+  change and named below. Review findings routed elsewhere: the tail counter's `skipped` (lane U),
+  the Review confirmation naming `parsers/` regardless of the server's directories and three
+  design-doc mismatches (a UI lane after U), seven documentation sentences (lane DOCS), and one
+  engine finding that stays post-demo: a tampered `raw.idx` header is reported as a pre-chain
+  store and `verify` refuses to run instead of naming the rewrite (crates/ulpf-store/src/store.rs
+  `pre_chain`; the segment's magic could tell the two apart).
 - 06:18 IST: gate at the 4B fix round (main, records only: two markdown files, no Rust and no
   `ui/`, so the release binary is still the 05:31 one the 05:34 entry drove through `--auto`):
   `cargo test --workspace --release` 123 passed 0 failed rc 0 (the second run; the first hit the

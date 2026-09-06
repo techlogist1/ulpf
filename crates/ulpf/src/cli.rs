@@ -56,7 +56,7 @@ struct EngineArgs {
     /// (bulk throughput; `ulpf pivot --rebuild` builds it afterwards) and `on` for `serve`
     /// (the UI pivots live). Measured 2026-09-05: the index thread caps a run at ~27k
     /// events/s on this machine, one tenth of the pipeline without it.
-    #[arg(long, value_parser = clap::builder::BoolishValueParser::new())]
+    #[arg(long, value_name = "on|off", value_parser = clap::builder::BoolishValueParser::new(), hide_possible_values = true)]
     pivot: Option<bool>,
     /// Also write the normalized events to this Parquet file (an additional sink; the
     /// JSON Lines output is always written). A Parquet file is unreadable until closed.
