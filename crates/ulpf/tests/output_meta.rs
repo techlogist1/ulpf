@@ -1,4 +1,4 @@
-//! The version meta beside the output agrees with the run (D101): an output that is the
+//! The version meta beside the output agrees with the run (D82): an output that is the
 //! null device leaves no meta, no index and nothing in the working directory, and
 //! `out.v1.meta.json` counts the lines the file holds, which is what the run emitted when
 //! the file started empty.

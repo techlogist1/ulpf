@@ -364,7 +364,7 @@ impl std::ops::DerefMut for StoreGuard<'_> {
 pub struct Live {
     pub metrics: Metrics,
     pipeline: RwLock<Arc<Pipeline>>,
-    /// `None` once `run`/`serve` returned: stop closes every file the engine opened (D101).
+    /// `None` once `run`/`serve` returned: stop closes every file the engine opened (D82).
     store: Mutex<Option<RawStore>>,
     pub tail: Tail,
     pub sources: Mutex<BTreeMap<String, SourceStats>>,
@@ -1191,7 +1191,7 @@ impl Live {
 
     /// The record's exact bytes, read through the writer's own lock like the traceback.
     pub fn raw_bytes(&self, id: u64) -> Result<Vec<u8>, TracebackError> {
-        let mut store = self.store.lock().unwrap_or_else(|e| e.into_inner());
+        let mut store = self.store().map_err(|e| TracebackError::Io(e.to_string()))?;
         match store.get(RawId(id)).map_err(|e| TracebackError::Io(e.to_string()))? {
             Some(r) => Ok(r.bytes),
             None => Err(TracebackError::NotFound { store_len: store.len() }),
@@ -1557,7 +1557,7 @@ pub fn run(cfg: &Config) -> Result<Report> {
         finish(&live, t, ingest_result)
     });
     // Whatever happened downstream, every appended record reaches disk before we report,
-    // and every file the engine opened is closed before we return (D101).
+    // and every file the engine opened is closed before we return (D82).
     let result = (|| {
         live.store()?.flush(true)?;
         let (elapsed, inference) = timing?;

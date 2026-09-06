@@ -1,4 +1,4 @@
-//! Stop means stopped (D101): once `serve` returns, no file under the store, the output or
+//! Stop means stopped (D82): once `serve` returns, no file under the store, the output or
 //! the pending directory is still open in this process. Unix tolerates a leaked handle;
 //! Windows refuses to remove the directory while one exists, which is where a Windows
 //! tester found this.
