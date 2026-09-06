@@ -470,6 +470,11 @@ impl PivotIndex {
 
     pub fn query(&self, q: &PivotQuery<'_>) -> Result<PivotPage> {
         let started = std::time::Instant::now();
+        // One request, one snapshot. The writer commits a batch's `entities` counts and its
+        // posting rows in one transaction, so reading them in one read transaction is what
+        // makes `total` the count of the very rows the timeline pages over; in autocommit a
+        // commit landing between the two statements answers from two different indexes.
+        let snapshot = self.conn.unchecked_transaction()?;
         let ms = |t: std::time::Instant| t.elapsed().as_secs_f64() * 1e3;
         let kind = q.kind as u8;
         let (total, first_time, last_time): (u64, Option<i64>, Option<i64>) = self
@@ -505,6 +510,7 @@ impl PivotIndex {
             })
             .collect();
         let lines = ms(t);
+        drop(snapshot); // rollback: the connection is read-only, nothing to commit
         let elapsed_ms = Elapsed { header, timeline, related: related_ms, lines, total: ms(started) };
         Ok(PivotPage {
             kind: q.kind.name(),
@@ -604,9 +610,13 @@ impl PivotIndex {
         let mut stmt = self.conn.prepare_cached(sql)?;
         let mut rows = stmt.query(rusqlite::params![q.kind as u8, q.value])?;
         let limit = q.limit.clamp(1, 500);
-        // ponytail: the posting list is ordered by raw id, so a page is the newest
-        // candidates re-sorted by device time. A device whose clock disagrees with arrival
-        // order by more than this many events would need a time-ordered index.
+        // The posting list is ordered by raw id and the page by device time, so every entry
+        // the scan reads is a candidate: keeping only the first `candidates` of them skipped
+        // an event whose device clock ran behind the others, because it sorted onto the page
+        // but arrived outside that window and the cursor then paged past it for good.
+        // `candidates` ends the scan (with `window`, below); it no longer drops an entry.
+        // ponytail: exact over the rows the scan reads; an entity longer than
+        // PAGE_ROW_BUDGET rows would need a time-ordered index.
         let candidates = limit.saturating_mul(4).clamp(limit, 2000);
         let mut window: Vec<Entry> = Vec::new();
         let mut page: Vec<Entry> = Vec::new();
@@ -635,7 +645,7 @@ impl PivotIndex {
                         None => e.time_ms > a,
                     })
                 };
-                if wanted && page.len() < candidates {
+                if wanted {
                     page.push(e);
                 }
             }
