@@ -1345,10 +1345,142 @@ writes for the store on every platform (changes unix behaviour); making `libc` u
 (it compiles unused on Windows); one workflow per OS or a hand-written bundling step
 (tauri-action already names the bundles per target and handles the release).
 
-## D75, D76: reserved for the two branches of the demo morning
+## D75: reserved for the xml branch of the demo morning
 D75 is the xml strategy and the Windows Event definition (branch `lane-5-xml`, written on that
-branch); D76 is the entity index cost (branch `lane-6-index`, written on that branch). Neither
-merges before the demo; their entries arrive with their branches.
+branch); it does not merge before the demo and its entry arrives with the branch. D76 is below,
+written on `lane-6-index`.
+
+## D76. The entity index's cost was SQLite's page cache, not the per-value upsert: 64 MiB of cache and one transaction per queue-full
+**Decision.** The pivot writer opens its connection with `PRAGMA cache_size = -65536` (64 MiB,
+was SQLite's default 2 MiB) and joins everything queued at the moment it wakes into one
+transaction (in practice a group is about a queue-full, 64 batches in the engine and in
+`rebuild`; draining unblocks the producer, so the group is bounded by relative speed, not
+by the channel's capacity; was 8 per transaction, `COMMIT_BATCHES`). Nothing else changed: same tables, same indexes, same
+routes, same `ulpf pivot --rebuild`, same single writer, and the proof that the contract
+held is byte equality: main's binary and this branch's ran the same slice with `--receipt`
+pinned (outputs identical, 643,727,851 bytes), then `ulpf pivot KIND VALUE --output out
+--limit 20` for `src_ip fe80::1` (2,225 events), `user jdoe` (52,569 events, 6 devices) and
+`dst_port 443` (52,398 events, 9 devices) answered the same header and the same 20 lines from
+each binary over its own index, and this branch's `--rebuild` over main's output (1,339,677
+postings, 6.78 s) answered the same three again.
+**What the profile named (2026-09-06 03:12, `sample <pid> 15` on main's binary at 28,311
+events/s, load 13).** The `pivot` thread was busy for every one of its 8,491 samples: 2,332
+in the postings `INSERT`, 1,904 and 1,661 in the `entities` and `entity_devices` upserts,
+2,117 in `commit`. Inside the inserts the frames were `sqlite3BtreeInsert` →
+`sqlite3BtreeIndexMoveto` → `getPageNormal` → `pagerStress` (a dirty page evicted from the
+cache is written to the WAL, `pwrite`) and `readDbPage` (the page evicted a moment ago is
+read back, `pread`); inside commit, `sqlite3WalCheckpoint` (921 `pwrite`, 374 `pread`: the
+auto-checkpoint copying the WAL into the main file after every commit) and
+`CommitPhaseOne` (430 `pwrite`, 224 `pread`). About 7,900 of the 8,491 samples, 93%, were
+in `pwrite`/`pread`; record comparison, cursor moves, page balancing, parameter binding
+and the group `HashMap` together were under 7%. The dictionary lookups the brief suspected
+are already `HashMap`s (`Writer::devices`, `Writer::parsers`); the entity upsert is already
+one per distinct `(kind, value)` per group; the blob is one `Vec` per group. The arithmetic
+behind the profile: the slice holds 713,921 distinct `(kind, value)` pairs over 1,339,677
+postings (1.5 new values per event, the worst case `gen_bench` builds, D66), three of the
+index's B-trees are keyed by value (`postings_kv`, `entities`, `entity_devices`), and a
+group of 8 batches lands ~70,000 inserts spread over trees whose leaves run to tens of
+thousands of 4 KiB pages, against a 500-page cache: every page is spilled and re-read
+several times per transaction, then copied once more by the checkpoint. The sys time said
+the same from outside: 8.6 s of a 15 s run.
+**Numbers (this Mac, five lanes building alongside; the one-minute load is beside every
+number; slice = the first 150,000,000 bytes of `bench/mixed-5000000.log`, 467,982 events;
+`ulpf run slice --store S --output out.jsonl --pivot on|off --infer-threshold 0`, fresh store
+and output each run, three runs, medians).** Main's binary, index on, load 6.8-13.8:
+19,367 / 31,118 / 31,455 events/s (median 31,118; wall 24.2 / 15.1 / 14.9 s; sys 10.5 / 8.7 /
+8.6 s; RSS 512-542 MB; index 149 MB). Index off, load 12.6-13.0: 205,591 / 199,118 / 143,040
+(median 199,118; wall 2.3-3.4 s): on/off 6.4x, D66's number reproduced. This branch,
+index on, load 16.6-18.0 (256 MiB cache, the first cut): 65,981 / 60,491 / 62,802 (median
+62,802, 2.0x; wall 8.5 / 7.8 / 7.6 s, the extra second past the counter is the writer
+draining its last, larger group; sys 1.2 s; RSS 660-691 MB, the cache). 64 MiB cache, load
+18.8-20.9: 49,500 / 60,768 / 49,735 (median 49,735; RSS 664-682 MB, the same, so 64 MiB is
+what the slice's dirty set needs and 256 MiB bought nothing here). Back to back at the same
+load so the loaded host is not the difference: main 9,497 events/s (load 33-36, sys 15.9 s),
+this branch 48,424 (load 29, sys 1.4 s), 5.1x. The realistic case, `corpus/generated/squid/
+access.log` x30 (495,000 events, entities repeat): main on 325,109 / 371,248 / 381,554
+(median 371,248, load 18.8), main off 392,330 / 396,199 / 411,624 (median 396,199), this
+branch on 336,208 / 334,223 / 329,235 (median 334,223, load 15.9): the index costs 6-16%
+of a run whose entities repeat, before and after, inside the noise of a host at load 16-19.
+**Attribution.** The commit group alone, with the default cache (load 39.6-44.0): 5,519 /
+5,032 / 6,317 events/s, sys 15-18 s, worse than main at any load measured: a larger
+transaction against a 2 MiB cache spills each page more often, not less. That is why D66's
+commit-group tuning found nothing and concluded the cost was cardinality; the cache is
+the enabling change; the larger group's own share is measured below (attribution closed). **What remains (profile of this branch, 4 s from 2 s in,
+load 17 with a `cargo test` beside it).** The pivot thread is still the bottleneck and still
+100% busy, now in CPU: 884 samples in the postings insert (`sqlite3BtreeIndexMoveto`,
+record compares, page fetches that hit the cache), 549 and 525 in the two upserts, 351 in
+commit, `pwrite`/`pread` gone from the tree. That is three value-keyed B-tree inserts per
+distinct `(kind, value)` per group, and the per-distinct-value upsert is the contract (D55:
+the entity summary and its device breakdown are queryable while the run is in flight). The
+next cut is a schema change, folding `entities` into `entity_devices` and summing at read
+time (~17% of the thread by this sample); not taken tonight.
+**Anchor.** `CACHE_KIB`, `open_writer` and the drain loop in `PivotWriter::start`,
+`crates/ulpf/src/pivot.rs`; `rebuild` passes 64. **Principle.** Profile, then remove what is
+unearned (D23, D66): the cost the design earns is one upsert per distinct value; the cost
+it did not earn was rewriting every page of three trees several times per transaction.
+**Ruled out.** `journal_mode = MEMORY|OFF` (readers need WAL to page while the writer
+appends, D55); `mmap_size` (the reads vanished with the cache; nothing left for it to
+serve); dropping `postings_k` (append-ordered, cheap, and `related` needs it); a
+second writer thread (one SQLite writer per file, D66); the schema change above (a
+contract-preserving 17%, deferred so this branch stays two knobs and a proof).
+**Amendment (2026-09-06 03:47-04:35, the large case and the soak; the branch merged main at
+04:20 so its reader is D81's, its writer unchanged).** The cache is a fix for an index that
+fits and a knob for one that does not. The 5M bench (`bench/mixed-5000000.log`, 1,526 MB,
+never-repeating values, `ulpf run --pivot on --infer-threshold 0`, fresh store, one run each
+because a run is 8-12 minutes; index 1.57 GB at the end) with the 64 MiB cache: 5,000,000
+events in 700.1 s, 7,142 events/s, sys 181 s, RSS 1,389 MB, load before 17.3, peak 25.5; with
+256 MiB: 499.8 s, 10,005 events/s, sys 127 s, RSS 1,676 MB, load before 6.4, peak 15.0; main's
+binary (2 MiB): 1,187,840 events in 228 s, 5,210 events/s, when it was stopped at load 24 (started at
+12.2) with this branch's merge build beside it; the run would not have ended before the timer. The output's growth during the 256 MiB run names the shape: 16 MB/s
+(~11,800 events/s) in the first minutes, 6 MB/s (~4,500) in the last. The arithmetic: a
+queue-full group of ~64 batches lands ~100,000 inserts into each of three value-keyed trees; while a
+tree has fewer leaves than that, the group's dirty set is the tree and fits the cache (the
+slice: 149 MB index, 0.6 s of sys); once each tree runs to tens of thousands of leaves,
+every random insert dirties its own page, the group's dirty set is the index, and each
+commit spills it to the WAL and the checkpoint copies it again: one `pread` and two
+`pwrite`s per insert per tree, whatever the cache, until the cache holds the whole index.
+**The merged tree (04:20, main's D81 reader over this writer), proof and numbers.** The
+merged binary answers `pivot src_ip fe80::1`, `user jdoe` and `dst_port 443` (`--limit 20`)
+with the same 20 lines and the same header over main's 03:18 index, this writer's index,
+this branch's rebuild of main's output, and the 03:19 answers from each binary (`cmp`). On
+the slice at load 29-37 (the workspace tests running beside it): index on 24,345 / 29,637 /
+68,602 events/s (median 29,637), off 148,135 / 132,213 / 138,373 (median 138,373); the
+ratio at that load is the host's, the best run (68,602, 2.0x) is the branch's.
+**The soak, run 6's shape, on this branch (03:55-04:11, `scripts/soak.sh --bin
+<branch> --minutes 5 --file-rate 10000 --udp 127.0.0.1:7907 --udp-rate 8000 --tcp
+127.0.0.1:7908 --tcp-rate 8000 --listen 127.0.0.1:7906 --out /tmp/l6/soak1`, five lanes
+building beside it: load 7.2 at the start, mean 8.7, peak 19.6; run 6 was a quiet host, mean
+4.1 peak 8.6).** 9,000,000 sent; UDP 1,431,220 of 2,400,000 received, shortfall 968,780
+against a `netstat -s -p udp` full-socket-buffer delta of 968,825 (1,333,308 -> 2,302,133):
+kernel drops, none an engine loss; file and TCP exact; framed = stored = emitted = verified
+8,031,220, chain ok; engine 8,791 events/s over 913.6 s with 2,454 backpressure blocks (run
+6: 7,736 and 2,980); RSS max 899 MB (run 6: 986); index 2.58 GB at the end. Against run 6's
+shortfall of 1,332,667 the loss fell by 363,887 datagrams, 27%, on a busier host, and no
+further: the metrics frames say why. The engine emitted 25,289 events/s in the first minute
+(the whole 26k/s aggregate, queue high-water 3), 19,419 in the second (high-water 64 from
+here on), 13,450, 10,166, 9,010, 6,767 in the third to sixth, and 3,300-5,500 through the
+403 s drain: the cliff above, reached at about 1.5 million events, a few hundred MB of
+index. Every datagram lost was lost after the second minute. **What this settles.** D66's
+"cardinality, not commits" was right about the large case for the wrong reason: the cost
+is not the per-distinct-value upsert's CPU (the slice's profile above, once the cache holds
+the pages, is three B-tree inserts on cached pages) but the page traffic that random keys
+into disk-resident B-trees cost, which no cache below the index's size removes. A writer that
+never blocks the pipeline is a different feed, not a knob: stage postings in memory as
+sorted runs and merge them (an LSM under the same tables and routes), or feed the index
+from the output file the way `rebuild` does so that it lags, reports its lag on
+`/api/status`, and the pipeline runs at index-off speed (a UDP listener behind it then
+keeps up, D62). Either changes D55's "fed per batch by copied values"; neither is tonight's.
+The demo rule in PROGRESS A2 stands (TCP or the file path for a device that must keep up,
+`serve --pivot off` when it is UDP). **Also ruled out.** `wal_autocheckpoint` raised or off
+(saves the checkpoint's copy, at most half the writes in the spill regime, and moves the
+index into a WAL of GBs that the D81 reader cannot `mmap`); a cache the size of the index
+(2 GB of RSS on a laptop for a cliff moved, not removed); `page_size` 64 KiB (fewer pages,
+the same bytes spilled). **Attribution closed (04:31).** The cache alone with the old group of 8 (a variant binary,
+`/tmp/l6/ulpf-cache8`, the slice, load 15-17): 59,568 / 55,325 / 58,611 events/s (median
+58,611, sys 2.4-2.7 s) against 62,802 (sys 1.1-1.5 s) with the group at queue-full: the
+cache is the gain, the larger group halves what sys time is left and adds a few percent.
+**The gap left.** One run per 5M point is one run, and the load is beside every number
+for that reason.
 
 ## D77. Trust flags are the per-event form of the counters, never a score
 **Decision.** A tail row shows, as a compact list of outlined marks, the stages that did not
