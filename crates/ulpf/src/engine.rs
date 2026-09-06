@@ -668,8 +668,8 @@ pub struct Filter {
     pub exclude: Vec<String>,
 }
 
-/// Applied when no `--exclude` is given: documentation, dotfiles and test ground truth
-/// are not logs. Any `--exclude` replaces the whole list; `--exclude ''` empties it.
+/// In force under any `--exclude`: documentation, dotfiles and test ground truth are not
+/// logs, and one more pattern must not open `.git` to the store. `--exclude ''` drops them.
 pub const DEFAULT_EXCLUDES: [&str; 5] = ["*.md", "README*", ".*", "*.truth.tsv", "*.expected.jsonl"];
 
 impl Default for Filter {

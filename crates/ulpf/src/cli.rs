@@ -70,9 +70,9 @@ struct EngineArgs {
     include: Vec<String>,
     /// Never ingest files under an input directory whose relative path (or, for a pattern
     /// with no `/`, name at any depth) matches; a directory that matches is not descended
-    /// (repeatable). Any --exclude replaces the default `*.md`, `README*`, `.*`,
-    /// `*.truth.tsv`, `*.expected.jsonl`; `--exclude ''` ingests everything. A file named
-    /// on the command line itself is always taken.
+    /// (repeatable). The defaults `*.md`, `README*`, `.*`, `*.truth.tsv`, `*.expected.jsonl`
+    /// stay in force under any --exclude; `--exclude ''` drops them and ingests everything.
+    /// A file named on the command line itself is always taken.
     #[arg(long, value_name = "PATTERN")]
     exclude: Vec<String>,
 }
@@ -285,15 +285,21 @@ impl EngineArgs {
             parquet_roll: self.parquet.as_ref().and(parquet_roll),
             filter: engine::Filter {
                 include: self.include.iter().filter(|p| !p.is_empty()).cloned().collect(),
-                exclude: if self.exclude.is_empty() {
-                    engine::Filter::default().exclude
-                } else {
-                    self.exclude.iter().filter(|p| !p.is_empty()).cloned().collect()
-                },
+                exclude: excludes(&self.exclude),
             },
         })
     }
 }
+
+/// The exclude list for the `--exclude` patterns given: the defaults stay under any of them,
+/// since one more pattern must not open `.git` to an append-only store; the empty pattern is
+/// the one way to drop them.
+fn excludes(given: &[String]) -> Vec<String> {
+    let mut out = if given.iter().any(String::is_empty) { Vec::new() } else { engine::Filter::default().exclude };
+    out.extend(given.iter().filter(|p| !p.is_empty()).cloned());
+    out
+}
+
 
 fn print_report(report: &engine::Report) -> Result<()> {
     let mut err = std::io::stderr().lock();
@@ -643,5 +649,20 @@ pub fn main() -> Result<()> {
             }
             Ok(())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn an_exclude_adds_to_the_defaults_and_only_the_empty_pattern_drops_them() {
+        assert_eq!(excludes(&[]), engine::Filter::default().exclude);
+        let one = excludes(&["*.gz".to_string()]);
+        assert!(one.iter().any(|p| p == ".*"), "--exclude '*.gz' keeps the dotfile guard: {one:?}");
+        assert_eq!(one.last().map(String::as_str), Some("*.gz"));
+        assert!(excludes(&[String::new()]).is_empty(), "--exclude '' ingests everything");
+        assert_eq!(excludes(&[String::new(), "*.gz".to_string()]), vec!["*.gz".to_string()]);
     }
 }

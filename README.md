@@ -65,8 +65,8 @@ throughput measurement. The measured figure is under "Honest numbers" below.)
 The input is written `samples/*.log`, but the bare `samples` directory gives the same
 counts: a directory input skips documentation, dotfiles and fixture ground
 truth by default and names every file it kept out under the counter block (`excluded:
-samples/README.md (*.md)`, D83). `--include '*.log'` and `--exclude` change that list —
-any `--exclude` replaces the defaults, `--exclude ''` ingests everything — and a file named
+samples/README.md (*.md)`, D83). `--include '*.log'` narrows that, `--exclude` adds to the
+defaults (`--exclude ''` drops them and ingests everything), and a file named
 on the command line itself is always taken. That is also why the container command above
 can take the mounted directory.
 

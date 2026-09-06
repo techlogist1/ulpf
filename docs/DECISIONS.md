@@ -1840,8 +1840,9 @@ at all (`.git` costs one entry, not one per file under it). A file is ingested w
 matches at least one include (or there are none) and no exclude. With no `--exclude` the
 defaults are `*.md`, `README*`, `.*`, `*.truth.tsv`, `*.expected.jsonl`, so `ulpf run
 samples` no longer ingests `samples/README.md` and `ulpf run corpus` no longer ingests the
-24 `PROVENANCE.md` and `SETUP.md` files under it; giving any `--exclude` replaces that whole
-list and `--exclude ''` empties it. Because a filtered file is invisible in the output, silence is
+24 `PROVENANCE.md` and `SETUP.md` files under it; an `--exclude` adds to that list rather than
+replacing it (one more pattern must not open `.git` to an append-only store, which nothing
+undoes) and `--exclude ''` is the one way to empty it. Because a filtered file is invisible in the output, silence is
 not acceptable: every one is counted in `files_excluded` (the counter block's files line
 reads `16 files (0 failed, 1 excluded)`, and `/api/metrics`' `engine` carries the same
 number) and the first ten are listed under the block as `excluded: samples/README.md
