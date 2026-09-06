@@ -187,7 +187,7 @@
       <span>{terms.length ? 'Esc clears the filter.' : flaggedOnly ? 'f shows every event again.' : 'The tail fills the moment the engine emits: drop a file into a watched directory or send syslog to the listener in the status line.'}</span>
     </div>
   {:else}
-    <div class="tail" style="--cols:6em 11em 13em 12em 6em 14em 7em minmax(0,1fr)">
+    <div class="tail" style="--cols:6em 12em 13em 12em 6em 14em 7em minmax(0,1fr)">
       <VList items={rows} max={Math.max(330, innerHeight - 420)} {sel}>
         {#snippet header()}
           <div class="vh"><span class="num">raw</span><span>time</span><span>parser</span><span>class</span><span>action</span><span>device</span><span title="the stages that did not reach their outcome; hover a mark for the flag">flags</span><span>summary</span></div>
