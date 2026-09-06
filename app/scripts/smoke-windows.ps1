@@ -1,8 +1,12 @@
 # Installs the NSIS installer this repo built, launches the installed app, and proves the
 # window and the engine came up together. If the runner cannot host a webview, the engine
 # the installer put on disk is driven directly instead; the last line says which path ran.
-# Usage: pwsh app\scripts\smoke-windows.ps1 -Installer <path to *-setup.exe>
-param([Parameter(Mandatory = $true)][string]$Installer)
+# Usage: pwsh app\scripts\smoke-windows.ps1 -Installer <path to *-setup.exe> [-Repo <checkout>]
+param(
+  [Parameter(Mandatory = $true)][string]$Installer,
+  # What `demo --check` reads: samples/, heldout/, parsers/, mappings/ and PROGRESS.md.
+  [string]$Repo = (Get-Location).Path
+)
 
 $ErrorActionPreference = 'Continue'
 $data = Join-Path $env:APPDATA 'dev.ulpf.desktop'
@@ -33,6 +37,14 @@ Get-ChildItem $dir -Recurse | ForEach-Object { Write-Host ("  {0,10} {1}" -f $_.
 # The sidecar must be beside the executable, not at a dev path (D73).
 if (-not (Test-Path $engine)) { Fail 'the sidecar ulpf.exe is not beside the installed app' }
 
+# The demo's own check mode, run on the installed engine: the inputs, the ports and every
+# title and command in PROGRESS.md's demo section. It starts nothing and exits 0 or 1, so it
+# belongs here, before the app is launched. This is the shipped binary checking the demo the
+# hackathon will run, on Windows, out of the installer.
+$out = & $engine demo --check --repo $Repo 2>&1 | Out-String
+Write-Host $out
+if ($LASTEXITCODE -ne 0) { Fail "the installed engine's demo --check exited $LASTEXITCODE" }
+
 # The installer may have started it already; this job owns the instance it launches.
 Get-Process -Name 'ulpf-app', 'ulpf' -ErrorAction SilentlyContinue | Stop-Process -Force
 Remove-Item $urlFile -ErrorAction SilentlyContinue
@@ -62,18 +74,27 @@ if ($url) {
   Write-Host "window pid $($window.Id), engine pid $($child.Id)"
 
   # A hard kill of the window process is NOT the tray's Quit (that runs the shell's exit
-  # handler, which kills the child). Windows does not take a child down with its parent, so
-  # an orphan here is the expected result of the kill, not a fault in D73's kill-on-exit;
-  # the tray path stays a human check. The orphan is reported, then cleaned up.
+  # handler, which kills the child). It is the shape a tester hit: End task on the window
+  # left the engine running and the store locked. The job object with
+  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE (app/src-tauri/src/job.rs) makes the kernel reap the
+  # engine when the app's handles close, however the app died, so an orphan here is now a
+  # failure and not a note.
   Stop-Process -Id $proc.Id -Force
-  Start-Sleep -Seconds 5
-  $left = Get-Process -Name 'ulpf' -ErrorAction SilentlyContinue
-  if ($left) {
-    Write-Host "orphan: ulpf.exe pid $($left.Id) outlived a Stop-Process of the window (expected on Windows; the tray's Quit is what kills it)"
-    Stop-Process -Id $left.Id -Force
-  } else {
-    Write-Host 'no ulpf.exe left after the window process was killed'
+  $left = $null
+  for ($i = 0; $i -lt 10; $i++) {
+    Start-Sleep -Milliseconds 500
+    $left = Get-Process -Name 'ulpf' -ErrorAction SilentlyContinue
+    if (-not $left) { break }
   }
+  if ($left) {
+    $left | ForEach-Object { Write-Host "orphan: ulpf.exe pid $($_.Id) outlived a Stop-Process of the window" }
+    $left | Stop-Process -Force
+    Fail 'the engine outlived a force kill of the window: the kill-on-job-close job did not reap it'
+  }
+  # The loop breaks on the first empty poll, so say when it was actually empty; 5 s is the
+  # ceiling the assertion allows, not the measurement.
+  $ms = ($i + 1) * 500
+  Write-Host "no ulpf.exe left $ms ms after the window process was force-killed (ceiling 5 s): the job object reaped it"
   Write-Host 'SMOKE PATH: app'
   exit 0
 }
@@ -86,13 +107,6 @@ Get-Content (Join-Path $data 'engine.log') -ErrorAction SilentlyContinue | Write
 $out = & $engine check 2>&1 | Out-String
 Write-Host $out
 if ($LASTEXITCODE -ne 0) { Fail "the installed engine's check exited $LASTEXITCODE" }
-
-# lane D's subcommand when it is there, nothing when it is not.
-if ((& $engine --help 2>&1 | Out-String) -match '(?m)^\s+demo\b') {
-  $out = & $engine demo --check 2>&1 | Out-String
-  Write-Host $out
-  if ($LASTEXITCODE -ne 0) { Write-Host "::warning::demo --check exited $LASTEXITCODE on Windows" }
-}
 
 $out = & $engine run samples --store smoke-store --output smoke-out.jsonl 2>&1 | Out-String
 Write-Host $out

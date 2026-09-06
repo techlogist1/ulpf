@@ -2,8 +2,10 @@
 // unchanged; this crate starts it against an app-owned data directory, shows the page it
 // serves in the window and stops it on quit. Nothing here parses a log.
 
+mod holder;
 mod ingest;
 mod intensity;
+mod job;
 mod menu;
 mod title;
 
@@ -21,6 +23,11 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
 const START_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// The engine's own words when a second writer meets a store another process holds
+/// (`store <dir> is in use by another process`, crates/ulpf-store/src/store.rs). Matched on
+/// the middle of the sentence so neither path in it has to be reconstructed here.
+const STORE_IN_USE: &str = "is in use by another process";
 
 /// The engine beside the app: the bundler strips the target triple from
 /// `binaries/ulpf-<triple>[.exe]` when it copies it next to the executable.
@@ -46,6 +53,8 @@ pub(crate) struct Engine {
     generation: AtomicU64,
     pub(crate) url: Mutex<Option<String>>,
     down: Mutex<Option<String>>,
+    /// The pid the splash page's one button stops: the writer holding this store.
+    holder: Mutex<Option<u32>>,
 }
 
 pub fn run() {
@@ -53,6 +62,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        // The one command, for the splash page's one button.
+        .invoke_handler(tauri::generate_handler![stop_holder])
         .setup(|app| {
             let handle = app.handle().clone();
             let data = configured_data_dir(&handle);
@@ -62,6 +73,7 @@ pub fn run() {
                 generation: AtomicU64::new(0),
                 url: Mutex::new(None),
                 down: Mutex::new(None),
+                holder: Mutex::new(None),
             });
             menu::install(&handle)?;
             let h = handle.clone();
@@ -121,8 +133,9 @@ fn configured_data_dir(app: &AppHandle) -> PathBuf {
 /// The app-owned layout: watch/, pending/, parsers/ and mappings/ seeded from the bundled
 /// `parsers/*.toml` and `mappings/*.toml` when they hold no definition yet. The engine
 /// creates store/ itself. Resources live in `Contents/Resources` on macOS and beside the
-/// executable on Windows; `resource_dir` knows which.
-fn prepare(app: &AppHandle, data: &Path) -> std::io::Result<()> {
+/// executable on Windows; `resource_dir` knows which. A generated parser is never seeded:
+/// see `is_generated`.
+fn prepare(app: &AppHandle, data: &Path, notes: &mut Vec<String>) -> std::io::Result<()> {
     for d in ["watch", "pending", "parsers", "mappings"] {
         fs::create_dir_all(data.join(d))?;
     }
@@ -132,10 +145,20 @@ fn prepare(app: &AppHandle, data: &Path) -> std::io::Result<()> {
         if fs::read_dir(&dst)?.flatten().any(|e| is_toml(&e.path())) {
             continue;
         }
+        let mut skipped = Vec::new();
         for entry in fs::read_dir(resources.join(d))?.flatten() {
-            if is_toml(&entry.path()) {
-                fs::copy(entry.path(), dst.join(entry.file_name()))?;
+            let src = entry.path();
+            if !is_toml(&src) {
+                continue;
             }
+            if is_generated(&src) {
+                skipped.push(entry.file_name().to_string_lossy().into_owned());
+                continue;
+            }
+            fs::copy(&src, dst.join(entry.file_name()))?;
+        }
+        if !skipped.is_empty() {
+            notes.push(format!("shell: {} generated definition(s) not copied into {}: {}", skipped.len(), dst.display(), skipped.join(", ")));
         }
     }
     Ok(())
@@ -143,6 +166,15 @@ fn prepare(app: &AppHandle, data: &Path) -> std::io::Result<()> {
 
 fn is_toml(p: &Path) -> bool {
     p.extension().is_some_and(|x| x == "toml")
+}
+
+/// A parser the inference engine wrote, `origin = "inferred"` and priority -1. It is never
+/// copied into the data directory: a bundle built after someone approved a proposal would
+/// otherwise arrive already knowing the unseen format, and the app could raise no proposal
+/// of its own. The same test the engine uses in `ulpf demo --reset` (crates/ulpf/src/demo.rs),
+/// on the text and not the parsed TOML so a file this shell cannot parse is still caught.
+fn is_generated(p: &Path) -> bool {
+    fs::read_to_string(p).is_ok_and(|t| t.lines().any(|l| l.trim_start().starts_with("origin") && l.contains("inferred")))
 }
 
 // ---- engine lifecycle -----------------------------------------------------------------
@@ -162,7 +194,9 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     set_title(app, "ULPF · starting engine…");
     splash(app, &format!("{verb} the engine at {}: {} of {cores} cores, entity index {}", chosen.name(), chosen.threads(cores), intensity::on_off(chosen.pivot())), false);
 
-    if let Err(e) = prepare(app, &data) {
+    // Lines the shell wants in engine.log; written once the file exists, below.
+    let mut notes: Vec<String> = Vec::new();
+    if let Err(e) = prepare(app, &data, &mut notes) {
         return fail(app, generation, "start failed", &format!("Cannot prepare {}: {e}", data.display()));
     }
     // Bind port 0, read the kernel's pick, release it, hand it to the engine. The engine
@@ -224,13 +258,28 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
             )
         }
     };
+    // The kernel's net under the clean-quit path: whatever happens to this process, the
+    // engine goes with it (job.rs; no-op off Windows). A failure here is not fatal, so it
+    // is a line in the log and nothing else.
+    if let Err(e) = job::adopt(child.pid()) {
+        notes.push(format!("shell: the engine is not in a kill-on-close job ({e}); a force kill of the window can leave it running"));
+    }
     *engine.child.lock().unwrap() = Some(child);
 
     let h = app.clone();
+    let store = data.join("store");
     // This run's engine output, so a failure has a file to name. Truncated per start: the
     // engine's own store and output are the durable record, this is the last words.
     let log = data.join("engine.log");
     let mut log_file = fs::File::create(&log).ok();
+    // What the shell did before the engine printed anything, in the same file, so the one
+    // log a user is told to read holds both halves.
+    for note in &notes {
+        eprintln!("[shell] {note}");
+        if let Some(f) = log_file.as_mut() {
+            let _ = writeln!(f, "{note}");
+        }
+    }
     tauri::async_runtime::spawn(async move {
         let mut last = String::new();
         while let Some(event) = rx.recv().await {
@@ -252,6 +301,14 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
                         (None, Some(s)) => format!("signal {s}"),
                         _ => "exit unknown".to_string(),
                     };
+                    // One writer at a time: the engine refuses a store another process
+                    // holds and says so. That is not a broken install, it is a process to
+                    // stop, so it gets its own sentence and a button rather than the
+                    // generic "the engine stopped" with the refusal buried in it.
+                    if last.contains(STORE_IN_USE) {
+                        locked(&h, generation, &store, &log);
+                        continue;
+                    }
                     let said = if last.is_empty() { "It printed nothing.".to_string() } else { format!("Its last words: {last}") };
                     fail(&h, generation, &why, &format!("The engine stopped ({why}). {said}\nThe whole of its output is in {}", log.display()));
                 }
@@ -280,6 +337,32 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
 /// Records why the engine is not serving, if this is still the current engine, and shows
 /// the reason on the splash page.
 fn fail(app: &AppHandle, generation: u64, why: &str, message: &str) {
+    down(app, generation, why, message, false);
+}
+
+/// The store is held by another writer. Names the process, offers to stop it, and names
+/// the log; the button is what `stop_holder` acts on. If the holder cannot be found (it
+/// exited between the refusal and the look, or `ps` said nothing) the sentence says so and
+/// there is nothing to press but the retry.
+fn locked(app: &AppHandle, generation: u64, store: &Path, log: &Path) {
+    let holder = holder::find(store);
+    if let Some(pid) = holder {
+        *app.state::<Engine>().holder.lock().unwrap() = Some(pid);
+    }
+    let offer = match holder {
+        Some(pid) => format!("is held by ulpf (pid {pid}). Stop it and start again?"),
+        None => "is held by another writer that is no longer running. Start again?".to_string(),
+    };
+    down(
+        app,
+        generation,
+        "store in use",
+        &format!("The engine's store at {} {offer}\nThe whole of its output is in {}", store.display(), log.display()),
+        true,
+    );
+}
+
+fn down(app: &AppHandle, generation: u64, why: &str, message: &str, button: bool) {
     let engine = app.state::<Engine>();
     if engine.generation.load(Relaxed) != generation {
         return;
@@ -288,7 +371,25 @@ fn fail(app: &AppHandle, generation: u64, why: &str, message: &str) {
     *engine.url.lock().unwrap() = None;
     let _ = fs::remove_file(engine.data.lock().unwrap().join("server.url"));
     set_title(app, &format!("ULPF · engine down ({why})"));
-    splash(app, message, true);
+    splash_with(app, message, true, button);
+}
+
+/// The splash page's one button: stop the process holding the store, then start again
+/// through the ordinary start path. Reachable from the bundled splash page only -- the
+/// served UI is a remote origin, and Tauri's ACL gives a remote origin no command at all.
+#[tauri::command]
+fn stop_holder(app: AppHandle) -> Result<(), String> {
+    let engine = app.state::<Engine>();
+    let holder = engine.holder.lock().unwrap().take();
+    let data = engine.data.lock().unwrap().clone();
+    if let Some(pid) = holder {
+        holder::kill(pid).map_err(|e| format!("Could not stop pid {pid}: {e}"))?;
+        // The OS drops the SQLite lock when the process goes, but not before it has gone.
+        thread::sleep(Duration::from_millis(400));
+    }
+    let app = app.clone();
+    thread::spawn(move || start(&app, data, "Starting"));
+    Ok(())
 }
 
 pub(crate) fn stop(app: &AppHandle) {
@@ -319,7 +420,13 @@ fn navigate(app: &AppHandle, url: &str) {
 /// travels in the URL fragment, so it is there when the page loads and a fragment change
 /// on a page already showing updates it in place without a reload.
 fn splash(app: &AppHandle, text: &str, error: bool) {
-    navigate(app, &format!("{SPLASH}#{}{}", if error { "!" } else { "" }, percent_encode(text)));
+    splash_with(app, text, error, false);
+}
+
+/// `*` after the `!` asks the page for its recovery button (`stop_holder`).
+fn splash_with(app: &AppHandle, text: &str, error: bool, button: bool) {
+    let flags = format!("{}{}", if error { "!" } else { "" }, if button { "*" } else { "" });
+    navigate(app, &format!("{SPLASH}#{flags}{}", percent_encode(text)));
 }
 
 /// A short-lived notice at the bottom of whatever page the window shows (the splash or the
@@ -371,6 +478,41 @@ pub(crate) fn http_get(base: &str, path: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
+    /// The predicate that keeps a generated parser out of the bundle's first-run copy, on
+    /// the three shapes that matter: the engine's own output, a hand-written parser with a
+    /// slot called `origin`, and a hand-written one whose prose says "inferred".
+    #[test]
+    fn only_the_engines_own_parsers_read_as_generated() {
+        let dir = std::env::temp_dir().join(format!("ulpf-app-generated-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let write = |name: &str, text: &str| {
+            let p = dir.join(name);
+            fs::write(&p, text).unwrap();
+            p
+        };
+        let generated = write("mikrotik_inferred.toml", "[parser]\nname = \"mikrotik_inferred\"\norigin = \"inferred\"\npriority = -1\n");
+        let named_origin = write("cisco_ios.toml", "[parser]\nname = \"cisco_ios\"\npatterns = [\n  '{origin:word}: {message:rest}',\n]\n");
+        let says_inferred = write("prose.toml", "[parser]\nname = \"prose\"\ndescription = \"the fields are not inferred, they are documented\"\n");
+        assert!(super::is_generated(&generated));
+        assert!(!super::is_generated(&named_origin));
+        assert!(!super::is_generated(&says_inferred));
+        assert!(!super::is_generated(&dir.join("no-such-file.toml")));
+        let _ = fs::remove_dir_all(&dir);
+
+        // And no false positive on what the repo actually ships, read where it lives.
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../parsers");
+        let mut seen = 0;
+        for e in fs::read_dir(&repo).expect("the repo's parsers/").flatten() {
+            if super::is_toml(&e.path()) {
+                seen += 1;
+                assert!(!super::is_generated(&e.path()), "{} reads as generated", e.path().display());
+            }
+        }
+        assert!(seen >= 12, "only {seen} parsers found in {}", repo.display());
+    }
+
     #[test]
     fn percent_encoding_keeps_unreserved_and_escapes_the_rest() {
         assert_eq!(super::percent_encode("Starting the engine"), "Starting%20the%20engine");
