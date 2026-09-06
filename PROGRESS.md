@@ -446,7 +446,8 @@ look at the captures and a grep of `ui/dist` for external references.
       because the engine takes files and not patterns); a second fence deliberately, because
       `eval/run.sh`'s cold_start `eval`s every line of the FIRST fence under "## Quick start" in
       a fresh clone, so a PowerShell line inside it would fail the criterion - the extraction is
-      1090 bytes before and after, and `docs/evaluation.md` holds no command list to diff
+      1090 bytes on both sides of that commit (1078 before the lane opened; the two `/*.log`
+      suffixes are the 12), and `docs/evaluation.md` holds no command list to diff
       against (0 bytes), the README fence being the single source `eval/tools/ulpf.toml`'s
       `[cold_start]` reads. "Which build" now claims only what it can grep: dist is the Docker
       image and `eval/tools/ulpf.toml`, not CI, which builds every asset with `cargo build
@@ -531,6 +532,25 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 06:18 IST: gate at the 4B fix round (main, records only: two markdown files, no Rust and no
+  `ui/`, so the release binary is still the 05:31 one the 05:34 entry drove through `--auto`):
+  `cargo test --workspace --release` 123 passed 0 failed rc 0 (the second run; the first hit the
+  known `pivot_pages_by_the_cursor_pair_and_reports_its_timings` flake, re-measured and re-recorded
+  under Tried and abandoned), clippy rc 0 with 0 warnings, `cargo build --release` Finished in
+  0.13 s (up to date), binary 12,094,216 bytes Sep 6 05:31, `ulpf check --pending pending` 15
+  parsers, 2 mappings, 0 problems, `ulpf demo --check` 39 ok (rc 0), and `ULPF_BIN=./target/
+  release/ulpf scripts/isolation.sh run samples/cisco_asa.log` ISOLATION PASS (no network socket
+  observed in any sample, sampler lsof, 0 distinct sockets). No fetchable external reference in
+  `ui/dist`: the only external host in it is `svelte.dev`, and every occurrence is inside a
+  `console.warn`/`Error()` message body (Svelte's error-code links), with no `src=`, `href=`,
+  `url(` or `from"` naming an external host. GATE GREEN. Closed: D89's forward reference, which
+  read "the fact 7B's job object (D91) answers" and pointed at the samples/*.log rule after the
+  records commit gave D91 that number; it now names the lane instead of a number not yet
+  assigned, so no entry was renumbered (90 `## D` headings before and after) and lane 7C is free
+  to take D92. Also corrected: the L4B item's "1090 bytes before and after", which is true of the
+  Windows-fence commit (5dd5236) but not of the merge - the fence is 1078 bytes at d6d5a77, 1090
+  from d0af71d on, the two `/*.log` suffixes being the 12; `eval/run.sh`'s cold_start reads the
+  first fence only, so the criterion is untouched either way.
 - 06:02 IST: gate at the lane 4B merge (main 87877a4; the merge is two markdown files, so no Rust
   changed and the release binary is the 05:31 one the 05:34 entry verified): 123 tests 0 failed,
   clippy rc 0, `cargo build --release` Finished in 0.17 s (up to date), binary 12,094,216 bytes,
@@ -612,10 +632,10 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
-- 06:02 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7, 4B (each through the gate; the four
+- 06:18 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7, 4B (each through the gate; the four
   before 4B under one gate, 05:07; the binary re-verified 05:11; 4B's own gate is GATE GREEN in
-  Verified state above). Branches pushed: lane-5-xml,
-  lane-6-index, lane-3b-cef-leef, lane-8-windows. Running: 7C (`lane-7b-app`, Opus builder, Fable
+  Verified state above, and its fix round's gate GATE GREEN in the 06:18 entry). Branches
+  pushed: lane-5-xml, lane-6-index, lane-3b-cef-leef, lane-8-windows. Running: 7C (`lane-7b-app`, Opus builder, Fable
   verifier, ceiling 07:10, dispatched 05:16 on main at f57e652) alone; 4B (`lane-4b-readme`,
   Opus, Fable, dispatched 05:05, nine commits) is merged and recorded above. 7B (dispatched 05:05) was
   stopped at 05:19: its worktree had been created at 14d3b0c, before lane 7's merge, so its
@@ -645,9 +665,14 @@ look at the captures and a grep of `ui/dist` for external references.
   and record headers end at byte 68). Post-demo question for the owner, recorded not built:
   whether the record header's receipt time belongs under the chain (a store-format change).
 - A flake, not fixed tonight: `crates/ulpf/tests/v4_api.rs` `pivot_pages_by_the_cursor_pair_and_
-  reports_its_timings` failed once at load 37 on lane 6's worktree ("saw 31 of 32") and passed
-  three times alone and in the full run. Mechanism (read from `walk` in pivot.rs, main's read
-  path): a page takes the first `limit*4` entries past the cursor in raw-id order and re-sorts
+  reports_its_timings` failed once at load 37 on lane 6's worktree ("saw 31 of 32"). Re-measured
+  on main at 06:12-06:14 IST (load 7.45-8.62, the fix round's own gate): it is commoner than that
+  entry said. It failed the full `cargo test --workspace --release` once, then 3 of 11 runs of the
+  `v4_api` binary alone, always the same "saw 31 of 32"; it passes 3 of 3 when named on the command
+  line by itself, and the gate's next full run was 123 passed 0 failed. So the frequency is load,
+  not the tree, and a hand-run gate before the demo may need a second run: the criterion is a green
+  full run, and this test failing alone is the known flake, not a regression. Mechanism (read
+  from `walk` in pivot.rs, main's read path): a page takes the first `limit*4` entries past the cursor in raw-id order and re-sorts
   by device time, so an event whose device time disagrees with arrival order by more than that
   window is skipped; the test copies every sample into a watch directory and the poll's
   interleaving under load sets the order. Post-demo: widen the candidate window or make the
