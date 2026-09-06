@@ -27,7 +27,11 @@ against a claim.
   `https://github.com/techlogist1/ulpf/releases` (README, "Get it"). Numbers you measure on
   a downloaded binary are `--release` numbers too: the workflow's release assets are built
   with `cargo build --release` and override no profile (`.github/workflows/app.yml`, the
-  `cli` job; README, "Which build").
+  `cli` job; README, "Which build"). **(with lane 7C)** that changes: both the `cli` and the
+  `bundle` job move to `cargo build --profile dist`, which is `release` plus fat LTO, so a
+  downloaded binary is then the profile the throughput numbers were measured on
+  (`git show lane-7b-app:.github/workflows/app.yml`, both jobs; the `[profile.dist]` comment
+  in `Cargo.toml` names the move). Record which of the two you tested on.
 
 **The desktop app.** From the release page, not from a CI artifact.
 
@@ -44,12 +48,20 @@ ticked) or download while logged in. The tags are `v0.1.0-rc1`, `v0.1.0-rc2`, �
 
 **Nothing in this repository's `parsers/` may carry `origin = "inferred"` when a bundle is
 built.** A generated parser inside the installer means the unseen format is recognised on
-first run and no proposal is ever raised. Two gates catch it: the sidecar step refuses to
-run and names the files (`app/scripts/sidecar.sh`, `app/scripts/sidecar.ps1`) and the app's
-first-run copy skips them **(with lane 7C)** (`seed_dir` in `app/src-tauri/src/guard.rs`).
-`ulpf demo --reset` removes them (`purge_generated` in `crates/ulpf/src/demo.rs`). So:
-approve nothing from the CLI before the installers are built or the video is recorded
-(PROGRESS, demo section, "Nothing is approved from the CLI").
+first run and no proposal is ever raised. **On main nothing catches this** — the two sidecar
+scripts (`app/scripts/sidecar.sh`, sixteen lines, and `app/scripts/sidecar.ps1`, twelve) check
+only that the engine binary exists — so on main the rule is yours to keep by hand. **(with lane
+7C)** two gates appear. Both sidecar scripts test each `parsers/*.toml` for a line matching
+`^\s*origin.*inferred` as their first command, name the offending files one per line and
+refuse: `sidecar.sh: the bundle would carry a generated parser:` then `sidecar.sh: remove the
+N of them with: ulpf demo --reset`, and on Windows `sidecar.ps1: the bundle would carry a
+generated parser (listed above); remove it with: ulpf demo --reset`. And the app's first-run
+copy skips such a file rather than copying it (`git show lane-7b-app:app/scripts/sidecar.sh`
+lines 20-35, and `sidecar.ps1` lines 11-18; `prepare()` and `is_generated()` in
+`git show lane-7b-app:app/src-tauri/src/lib.rs`). Either way `ulpf demo --reset` removes
+them (`purge_generated` in `crates/ulpf/src/demo.rs`) — that is the command to run before a
+bundle, on both branches. So: approve nothing from the CLI before the installers are built
+or the video is recorded (PROGRESS, demo section, "Nothing is approved from the CLI").
 
 **The binaries are unsigned.** There is no signing or notarization step anywhere in
 `.github/workflows/app.yml` and no signing identity in `app/src-tauri/tauri.conf.json`. On
@@ -111,7 +123,8 @@ block out of the README and re-runs it in a fresh clone (README, "Quick start").
 
 **Always name the log files, never the bare `samples` directory.** The engine has no include
 filter, so `samples` ingests `samples/README.md` as a log: 16 files and 354 events instead
-of 15 and 309, `no_parser` 41 instead of 2 (README, "Run it"; D83).
+of 15 and 309, `no_parser` 41 instead of 2 (README, "Run it"; D91, the rule; D83 reserves the
+post-demo decision on whether a directory-level filter should exist at all).
 
 | # | Command | Expected |
 |---|---|---|
@@ -123,7 +136,7 @@ of 15 and 309, `no_parser` 41 instead of 2 (README, "Run it"; D83).
 | M5 | `./target/release/ulpf verify --store $S/store` | `store <hex> genesis <hex>`, then `verified 309 records, 0 corrupt`, then `chain ok (head <hex>)`; exit 0 (`Cmd::Verify` in `cli.rs`). |
 | M6 | `./target/release/ulpf raw 0 --store $S/store` | On **stderr**: `raw id 0  source <file>  received <rfc3339>  <N> bytes  sha256 <hex>`. On **stdout**: the exact original bytes, line terminator included (`Cmd::Raw` in `cli.rs`). The header is on stderr so that redirecting stdout gives you the bytes alone. |
 | M7 | `./target/release/ulpf attest --store $S/store --out $S/att.json`, then `./target/release/ulpf verify --store $S/store --attestation $S/att.json` | Both exit 0; the second checks the store against the document a stranger would re-verify offline (README, "Quick start"; PROGRESS step 9). |
-| M8 | **A second writer is refused.** Terminal 1: `./target/release/ulpf serve $S/watch --store $S/store2 --output $S/o2.jsonl --parsers parsers --pending $S/pend`. Terminal 2, same store: `./target/release/ulpf run samples/cisco_asa.log --store $S/store2 --output $S/o3.jsonl` | Terminal 2 fails with `store <dir> is in use by another process` and writes nothing (`open_catalog` in `crates/ulpf-store/src/store.rs`, and its "One writer at a time" module note). This is the invariant, not a fault: the store takes one writer and the lock dies with the process. |
+| M8 | **A second writer is refused.** Terminal 1: `./target/release/ulpf serve $S/watch --store $S/store2 --output $S/o2.jsonl --parsers parsers --pending $S/pend --listen 127.0.0.1:7979`. Terminal 2, same store: `./target/release/ulpf run samples/cisco_asa.log --store $S/store2 --output $S/o3.jsonl` | Terminal 2 fails with `store <dir> is in use by another process` and writes nothing (`open_catalog` in `crates/ulpf-store/src/store.rs`, and its "One writer at a time" module note). This is the invariant, not a fault: the store takes one writer and the lock dies with the process. **Then ctrl-c terminal 1 before M9.** The `--listen` is not optional and neither is stopping it: `serve` without `--listen` binds `127.0.0.1:7878` (the clap default in `cli.rs`), and `demo --check` tests `port 127.0.0.1:7878 free` as one of its items and prints `demo --check: DRIFT` with exit 1 on any failed item (`check()` in `demo.rs`) — so a server left running here makes M9 fail for a reason that has nothing to do with drift, and M10 and M11 cannot run at all. |
 | M9 | `./target/release/ulpf demo --check` | A list of `ok    <label>` lines — the samples, the two held-out files, `mappings/ocsf.toml`, `parsers/*.toml`, both ports, then every step title and every command — ending `demo --check: no drift`; exit 0. A `DRIFT` line means the runner and `PROGRESS.md` no longer read the same text (`check()` in `demo.rs`). The gate has been seeing 39 ok lines (PROGRESS v4, 05:34 IST). |
 | M10 | **The busy-port refusal.** With something on the port (`python3 -m http.server 7878`), run `./target/release/ulpf demo --auto` | Exits 1 **at once** with `port 127.0.0.1:7878 is in use (a server from an earlier rehearsal?): stop whatever holds it (...) and run again`, naming `lsof -nP -i :7878` for macOS, and leaves no `demo/` (`refuse_busy_ports` in `demo.rs`; PROGRESS v4, 05:34 IST). Free the port before continuing. |
 | M11 | `./target/release/ulpf demo` (interactive; 7878 and 5514 must be free) | Fourteen numbered steps, Enter between them, each printing the shell command before it runs it. Step 0 removes `demo/` and any generated parser; step 1 copies `parsers/` into `demo/parsers`, starts the server and prints the URL with the key map; step 2 copies the fifteen samples in one per second and sends `heldout/edgerouter.log` over UDP; step 3 drops `heldout/mikrotik.log` and prints `(proposal mikrotik after N s)`; step 4 waits for you to approve in the UI and otherwise POSTs the approve itself; step 5 re-drops the file so it parses; step 6 prints 40 lines of `/api/events/0`; step 7 breaks `demo/parsers/cisco_asa.toml`, feeds events under the bug, restores it and replays; step 8 writes `gw-drift.log` and waits for the update proposal; step 9 attests, verifies, tampers one byte and verifies again — **the non-zero exit and the record it names are the point**; steps 10-13 are printed, not played. At the end the server stays up for questions and one more Enter stops it and removes `demo/` (`play()` and `main()` in `demo.rs`; PROGRESS, demo section). |
@@ -151,7 +164,7 @@ arguments, not patterns (README, "On Windows").
 | W5 | `.\target\release\ulpf.exe verify --store $env:TEMP\ulpf-store` | As M5, exit 0. CI runs this on Windows and fails the job on a non-zero exit (`app.yml`, `smoke-windows`). |
 | W6 | `.\target\release\ulpf.exe raw 0 --store $env:TEMP\ulpf-store` | As M6: header on stderr, exact bytes on stdout. |
 | W7 | `.\target\release\ulpf.exe attest --store $env:TEMP\ulpf-store --out $env:TEMP\attest.json`, then the same `verify` with `--attestation $env:TEMP\attest.json` | Both exit 0 (README, "On Windows"). |
-| W8 | **A second writer is refused.** `serve` in one PowerShell against a store, `run` in another against the same store | `store <dir> is in use by another process` (`store.rs`). Same invariant, same message: the lock is SQLite's, and the OS releases it when the holder dies. |
+| W8 | **A second writer is refused.** `serve` in one PowerShell against a store **with `--listen 127.0.0.1:7979`**, `run` in another against the same store | `store <dir> is in use by another process` (`store.rs`). Same invariant, same message: the lock is SQLite's, and the OS releases it when the holder dies. Then ctrl-c the `serve`, for the reason M8 gives: without `--listen` it holds `127.0.0.1:7878` and W9 fails on the port item, not on drift (`cli.rs`; `check()` in `demo.rs`). |
 | W9 | `.\target\release\ulpf.exe demo --check` | As M9. |
 | W10 | `.\target\release\ulpf.exe demo` | As M11, from PowerShell with no shell involved — the runner is a subcommand precisely so the demo plays where no shell exists (D67; README, "On Windows"). **Two of its Windows branches have never been executed**: `taskkill` (`kill_pid`) and `tasklist` (`is_ulpf_serve`) are compiled by the `windows-latest` job and have not run (PROGRESS, Runner section). They fire only when an earlier rehearsal left a server behind, so provoke it: start `demo`, close the PowerShell window on it, start `demo` again, and record whether it prints `stopping the server left by an earlier run (pid N)`. |
 | | | Bold is off on Windows (`BOLD` is empty under `cfg(windows)` in `demo.rs`), so the step titles are plain text. Expected, not a rendering fault. |
