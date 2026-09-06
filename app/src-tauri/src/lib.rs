@@ -2,6 +2,7 @@
 // unchanged; this crate starts it against an app-owned data directory, shows the page it
 // serves in the window and stops it on quit. Nothing here parses a log.
 
+mod holder;
 mod ingest;
 mod intensity;
 mod job;
@@ -22,6 +23,11 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
 const START_TIMEOUT: Duration = Duration::from_secs(120);
+
+/// The engine's own words when a second writer meets a store another process holds
+/// (`store <dir> is in use by another process`, crates/ulpf-store/src/store.rs). Matched on
+/// the middle of the sentence so neither path in it has to be reconstructed here.
+const STORE_IN_USE: &str = "is in use by another process";
 
 /// The engine beside the app: the bundler strips the target triple from
 /// `binaries/ulpf-<triple>[.exe]` when it copies it next to the executable.
@@ -47,6 +53,8 @@ pub(crate) struct Engine {
     generation: AtomicU64,
     pub(crate) url: Mutex<Option<String>>,
     down: Mutex<Option<String>>,
+    /// The pid the splash page's one button stops: the writer holding this store.
+    holder: Mutex<Option<u32>>,
 }
 
 pub fn run() {
@@ -54,6 +62,8 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        // The one command, for the splash page's one button.
+        .invoke_handler(tauri::generate_handler![stop_holder])
         .setup(|app| {
             let handle = app.handle().clone();
             let data = configured_data_dir(&handle);
@@ -63,6 +73,7 @@ pub fn run() {
                 generation: AtomicU64::new(0),
                 url: Mutex::new(None),
                 down: Mutex::new(None),
+                holder: Mutex::new(None),
             });
             menu::install(&handle)?;
             let h = handle.clone();
@@ -236,6 +247,7 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     *engine.child.lock().unwrap() = Some(child);
 
     let h = app.clone();
+    let store = data.join("store");
     // This run's engine output, so a failure has a file to name. Truncated per start: the
     // engine's own store and output are the durable record, this is the last words.
     let log = data.join("engine.log");
@@ -269,6 +281,14 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
                         (None, Some(s)) => format!("signal {s}"),
                         _ => "exit unknown".to_string(),
                     };
+                    // One writer at a time: the engine refuses a store another process
+                    // holds and says so. That is not a broken install, it is a process to
+                    // stop, so it gets its own sentence and a button rather than the
+                    // generic "the engine stopped" with the refusal buried in it.
+                    if last.contains(STORE_IN_USE) {
+                        locked(&h, generation, &store, &log);
+                        continue;
+                    }
                     let said = if last.is_empty() { "It printed nothing.".to_string() } else { format!("Its last words: {last}") };
                     fail(&h, generation, &why, &format!("The engine stopped ({why}). {said}\nThe whole of its output is in {}", log.display()));
                 }
@@ -297,6 +317,32 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
 /// Records why the engine is not serving, if this is still the current engine, and shows
 /// the reason on the splash page.
 fn fail(app: &AppHandle, generation: u64, why: &str, message: &str) {
+    down(app, generation, why, message, false);
+}
+
+/// The store is held by another writer. Names the process, offers to stop it, and names
+/// the log; the button is what `stop_holder` acts on. If the holder cannot be found (it
+/// exited between the refusal and the look, or `ps` said nothing) the sentence says so and
+/// there is nothing to press but the retry.
+fn locked(app: &AppHandle, generation: u64, store: &Path, log: &Path) {
+    let holder = holder::find(store);
+    if let Some(pid) = holder {
+        *app.state::<Engine>().holder.lock().unwrap() = Some(pid);
+    }
+    let offer = match holder {
+        Some(pid) => format!("is held by ulpf (pid {pid}). Stop it and start again?"),
+        None => "is held by another writer that is no longer running. Start again?".to_string(),
+    };
+    down(
+        app,
+        generation,
+        "store in use",
+        &format!("The engine's store at {} {offer}\nThe whole of its output is in {}", store.display(), log.display()),
+        true,
+    );
+}
+
+fn down(app: &AppHandle, generation: u64, why: &str, message: &str, button: bool) {
     let engine = app.state::<Engine>();
     if engine.generation.load(Relaxed) != generation {
         return;
@@ -305,7 +351,25 @@ fn fail(app: &AppHandle, generation: u64, why: &str, message: &str) {
     *engine.url.lock().unwrap() = None;
     let _ = fs::remove_file(engine.data.lock().unwrap().join("server.url"));
     set_title(app, &format!("ULPF · engine down ({why})"));
-    splash(app, message, true);
+    splash_with(app, message, true, button);
+}
+
+/// The splash page's one button: stop the process holding the store, then start again
+/// through the ordinary start path. Reachable from the bundled splash page only -- the
+/// served UI is a remote origin, and Tauri's ACL gives a remote origin no command at all.
+#[tauri::command]
+fn stop_holder(app: AppHandle) -> Result<(), String> {
+    let engine = app.state::<Engine>();
+    let holder = engine.holder.lock().unwrap().take();
+    let data = engine.data.lock().unwrap().clone();
+    if let Some(pid) = holder {
+        holder::kill(pid).map_err(|e| format!("Could not stop pid {pid}: {e}"))?;
+        // The OS drops the SQLite lock when the process goes, but not before it has gone.
+        thread::sleep(Duration::from_millis(400));
+    }
+    let app = app.clone();
+    thread::spawn(move || start(&app, data, "Starting"));
+    Ok(())
 }
 
 pub(crate) fn stop(app: &AppHandle) {
@@ -336,7 +400,13 @@ fn navigate(app: &AppHandle, url: &str) {
 /// travels in the URL fragment, so it is there when the page loads and a fragment change
 /// on a page already showing updates it in place without a reload.
 fn splash(app: &AppHandle, text: &str, error: bool) {
-    navigate(app, &format!("{SPLASH}#{}{}", if error { "!" } else { "" }, percent_encode(text)));
+    splash_with(app, text, error, false);
+}
+
+/// `*` after the `!` asks the page for its recovery button (`stop_holder`).
+fn splash_with(app: &AppHandle, text: &str, error: bool, button: bool) {
+    let flags = format!("{}{}", if error { "!" } else { "" }, if button { "*" } else { "" });
+    navigate(app, &format!("{SPLASH}#{flags}{}", percent_encode(text)));
 }
 
 /// A short-lived notice at the bottom of whatever page the window shows (the splash or the

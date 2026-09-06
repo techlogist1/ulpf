@@ -32,6 +32,15 @@
   @keyframes pulse { 0%, 100% { opacity: .25 } 50% { opacity: 1 } }
   @media (prefers-reduced-motion: reduce) { .pulse { animation: none; opacity: .7 } }
   .hint { margin-top: 28px; font-size: 13px; color: #6f7883; }
+  /* The one recovery button: shown only when the shell asks for it (a store another
+     writer holds). Nothing else on this page is clickable. */
+  #act { display: none; margin: 18px auto 0; padding: 8px 18px; border-radius: 7px;
+    border: 1px solid #4a545f; background: #262b33; color: #f2f4f7; font: inherit; font-size: 14px;
+    cursor: pointer; }
+  #act:hover { background: #2e343d; }
+  #act:focus-visible { outline: 2px solid #f0b46b; outline-offset: 2px; }
+  #act:disabled { opacity: .5; cursor: default; }
+  #act.on { display: block; }
 </style>
 </head>
 <body>
@@ -39,20 +48,40 @@
   <div class="mark" aria-hidden="true"><i></i><i></i><i></i></div>
   <h1>ULPF</h1>
   <p id="msg">Starting the engine<span class="pulse"></span></p>
+  <button id="act" type="button">Stop it and start again</button>
   <p class="hint">Drop log files or folders anywhere in this window once the feed is up.</p>
 </main>
 <script>
-  // The shell puts the status line in the URL fragment: "#text", or "#!text" for an error.
+  // The shell puts the status line in the URL fragment: "#text", "#!text" for an error, and
+  // "#!*text" for an error the recovery button can act on (a store another writer holds).
   // A fragment change on the loaded page updates it in place, so no reload and no race.
   function show() {
     var h = decodeURIComponent(location.hash.slice(1));
     if (!h) return;
     var err = h[0] === '!';
+    if (err) h = h.slice(1);
+    var act = h[0] === '*';
+    if (act) h = h.slice(1);
     var m = document.getElementById('msg');
-    m.textContent = err ? h.slice(1) : h;
+    m.textContent = h;
     m.className = err ? 'err' : '';
     if (!err) { var s = document.createElement('span'); s.className = 'pulse'; m.appendChild(s); }
+    var b = document.getElementById('act');
+    b.className = act ? 'on' : '';
+    b.disabled = false;
   }
+  // The shell's one command. It stops the process holding the store and starts the engine
+  // again through the ordinary start path, which navigates this page onward when it answers.
+  document.getElementById('act').addEventListener('click', function () {
+    var b = this;
+    b.disabled = true;
+    b.textContent = 'Stopping…';
+    window.__TAURI__.core.invoke('stop_holder').catch(function (e) {
+      b.disabled = false;
+      b.textContent = 'Stop it and start again';
+      document.getElementById('msg').textContent = String(e);
+    });
+  });
   addEventListener('hashchange', show);
   show();
 </script>
