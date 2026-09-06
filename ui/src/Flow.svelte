@@ -113,7 +113,9 @@
         <span class="name">ingest<kbd>i</kbd></span>
         <b class="num">{fmt.n(e.framed)}</b>
         <span class="lab">framed</span>
-        <span class="sub">{fmt.n(m.sources?.length ?? 0)} source{m.sources?.length === 1 ? '' : 's'}, {fmt.n(e.files)} file{e.files === 1 ? '' : 's'}{#if m.syslog?.udp_datagrams || m.syslog?.tcp_events}, syslog {fmt.n((m.syslog.udp_datagrams ?? 0) + (m.syslog.tcp_events ?? 0))}{/if}</span>
+        <span class="sub" title="sources that produced an event since this run started">{fmt.n(m.sources?.length ?? 0)} source{m.sources?.length === 1 ? '' : 's'} this run</span>
+        <span class="sub" title="files found in the watched directories, whether or not this run read from them (plus one per syslog listener)">{fmt.n(e.files)} file{e.files === 1 ? '' : 's'} watched</span>
+        {#if m.syslog?.udp_datagrams || m.syslog?.tcp_events}<span class="sub">syslog {fmt.n((m.syslog.udp_datagrams ?? 0) + (m.syslog.tcp_events ?? 0))} received</span>{/if}
       </a>
       <span class="link" class:idle={!(rates.d.stored > 0)}><i class="pulse" data-k="stored" data-axis="x" {@attach pulse}></i></span>
       <!-- preserve -->
@@ -164,14 +166,18 @@
           {#if qdepth != null}<i style="width:{qcap ? Math.min(100, (100 * qdepth) / qcap) : 0}%"></i>{/if}
           <i class="hw" style="width:{qcap ? Math.min(100, (100 * qhw) / qcap) : 0}%"></i>
         </span>
-        <span class="n" class:is-warn={e.backpressure_blocks > 0}>high-water {fmt.n(qhw)} of {fmt.n(qcap)}{qdepth == null ? ', depth unreported' : ''}{e.backpressure_blocks > 0 ? `, producer blocked ${fmt.n(e.backpressure_blocks)} times` : `, ${fmt.n(e.batches)} batches, never full`}</span>
+        <span class="n" class:is-warn={e.backpressure_blocks > 0} title="the deepest the queue has been since this run started, against its capacity">high-water {fmt.n(qhw)}</span>
+        <span class="n" class:is-warn={e.backpressure_blocks > 0} title="the ingest thread blocks when the queue is full: nothing is ever dropped">{e.backpressure_blocks > 0 ? `blocked ${fmt.n(e.backpressure_blocks)} times` : qdepth == null ? 'depth unreported' : 'never full'}</span>
       </div>
 
       <!-- under preserve: the chain growing -->
       <a class="under chain" style="grid-column: 3" href="#/integrity">
         <span class="lab"><span>chain</span><span class="mono">{live.integrity?.head ? fmt.hex(live.integrity.head) : 'genesis'}</span></span>
         <span class="marks" class:grew>{#each { length: marks } as _, i}<i class:new={i === marks - 1}></i>{/each}{#if marks === 0}<i class="none"></i>{/if}</span>
-        <span class="n">{fmt.n(live.integrity?.records ?? e.stored)} records{live.integrity?.running ? ', verifying' : live.integrity?.last_verify ? `, verify ${live.integrity.last_verify.ok ? 'clean' : `broken at ${fmt.n(live.integrity.last_verify.first_bad)}`}` : ''}</span>
+        <span class="n">{fmt.n(live.integrity?.records ?? e.stored)} records</span>
+        {#if live.integrity?.running || live.integrity?.last_verify}
+          <span class="n">{live.integrity.running ? 'verifying' : live.integrity.last_verify.ok ? 'verify clean' : `broken at ${fmt.n(live.integrity.last_verify.first_bad)}`}</span>
+        {/if}
       </a>
 
       <!-- under detect: the inference branch and the tray -->

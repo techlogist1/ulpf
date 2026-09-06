@@ -307,6 +307,53 @@ fn the_metrics_frame_carries_queue_depth_and_a_windowed_rate() {
     r.stop();
 }
 
+// ---------------------------------------------------------- item 1b: the tail frame
+
+/// `GET /api/tail`: `cut` is the part of `skipped` the frame's limit left behind, so
+/// `skipped - cut` is the part the ring evicted and is the only part that is gone.
+#[test]
+fn the_tail_frame_separates_eviction_from_the_frames_own_limit() {
+    // a ring of 64 against 200-plus events, so a reader at id 0 has genuinely lost lines
+    let r = Running::start("tailcut", 64, false, 2);
+    let events = r.feed(LOGS);
+    assert!(events > 200, "the corpus must be larger than one frame's limit, got {events}");
+    r.wait_for(events);
+    let what = "GET /api/tail";
+
+    // the whole ring in one frame: nothing is cut, and what is missing was evicted
+    let (st, whole) = json(&r.addr, "GET", "/api/tail?after=0&limit=500");
+    assert_eq!(st, 200, "{what}: {whole}");
+    let held = whole["events"].as_array().map(|a| a.len()).unwrap_or(0) as u64;
+    assert_eq!(held, 64, "{what}: the ring holds its capacity after {events} events, got {held}");
+    let cut_whole = u64_at(&whole, "cut", what);
+    let evicted = u64_at(&whole, "skipped", what);
+    assert_eq!(cut_whole, 0, "{what}: a frame whose limit is above the ring's size cuts nothing, got {cut_whole}");
+    assert_eq!(evicted, events - 1 - held, "{what}: skipped must be the {events} events minus id 0, minus the {held} still held");
+
+    // the same position under a smaller limit: the extra lines are cut, not evicted
+    let (st, small) = json(&r.addr, "GET", "/api/tail?after=0&limit=8");
+    assert_eq!(st, 200, "{what}: {small}");
+    let carried = small["events"].as_array().map(|a| a.len()).unwrap_or(0) as u64;
+    assert_eq!(carried, 8, "{what}: ?limit=8 carries 8 events, got {carried}");
+    let cut = u64_at(&small, "cut", what);
+    let skipped = u64_at(&small, "skipped", what);
+    assert_eq!(cut, held - carried, "{what}: cut must be the {held} held lines the frame did not carry");
+    assert_eq!(skipped, evicted + cut, "{what}: skipped stays the total: {evicted} evicted + {cut} cut");
+
+    // a caller who is up to date: no eviction, no cut, and a cut line is still in the ring
+    let latest = u64_at(&whole, "latest_raw_id", what);
+    let (_, fresh) = json(&r.addr, "GET", &format!("/api/tail?after={}&limit=500", latest - 2));
+    assert_eq!(
+        (u64_at(&fresh, "skipped", what), u64_at(&fresh, "cut", what)),
+        (0, 0),
+        "{what}: a caller two events behind missed nothing"
+    );
+    let (_, again) = json(&r.addr, "GET", "/api/tail?after=0&limit=500");
+    assert_eq!(u64_at(&again, "cut", what), 0, "{what}: a cut line stays in the ring, so the next full frame carries it");
+
+    r.stop();
+}
+
 // ------------------------------------------------------------------- item 2
 
 /// `GET /api/events/{id}`: the emitted line from the tail or from the output, `?bytes=0`,
