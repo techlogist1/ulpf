@@ -1827,8 +1827,40 @@ joined (both are bounded and finish on their own; a cancel-and-join at stop is a
 change). Nobody has run the branch on a Windows machine by hand; the CI runner is the
 evidence.
 
-## D83: reserved
-D83 is directory-level include/exclude for `run` and `serve` (not built; open item 3 in PROGRESS v4).
+## D83. A directory input is filtered by pattern, and every file kept out is counted and named
+**Decision.** `run` and `serve` take repeatable `--include <PATTERN>` and `--exclude
+<PATTERN>`, matched against each file's path relative to the directory named on the command
+line; a file named directly on the command line is always taken, whatever the patterns say.
+Patterns are the shell's (`*` any run that does not cross `/`, `**` any run including `/`,
+`?` one character, everything else literal), matched by a twelve-line backtracking function
+of our own rather than a crate; a pattern holding no `/` is matched against the file's name
+at any depth as well as against the whole relative path, which is gitignore's rule and what
+`*.md` means to anyone typing it, and a directory that matches an exclude is not descended
+at all (`.git` costs one entry, not one per file under it). A file is ingested when it
+matches at least one include (or there are none) and no exclude. With no `--exclude` the
+defaults are `*.md`, `README*`, `.*`, `*.truth.tsv`, `*.expected.jsonl`, so `ulpf run
+samples` no longer ingests `samples/README.md` and `ulpf run corpus` no longer ingests the
+24 `PROVENANCE.md` and `SETUP.md` files under it; giving any `--exclude` replaces that whole
+list and `--exclude ''` empties it. Because a filtered file is invisible in the output, silence is
+not acceptable: every one is counted in `files_excluded` (the counter block's files line
+reads `16 files (0 failed, 1 excluded)`, and `/api/metrics`' `engine` carries the same
+number) and the first ten are listed under the block as `excluded: samples/README.md
+(*.md)`, with `excluded: N more not listed` when there were more. `serve` re-scans its watch
+directories on every poll, so the exclusions are remembered in a set on `Live` and the
+counter counts each path once, not once per poll; the set stops at 10,000 names so a watch
+over a directory that keeps producing them cannot grow without bound.
+**Principle.** A file the engine decided not to read is a decision, and every decision this
+tool makes is on screen with the reason beside it. **Anchor.** `Filter`, `DEFAULT_EXCLUDES`,
+`glob_match`, `matches_path`, `collect_inputs`, `walk` and `Live::note_excluded` in
+`crates/ulpf/src/engine.rs`; `files_excluded` in `crates/ulpf/src/metrics.rs`; `include`
+and `exclude` on `EngineArgs` in `crates/ulpf/src/cli.rs`;
+`directory_inputs_exclude_documentation_and_dotfiles` in `crates/ulpf/tests/e2e.rs`.
+**Ruled out.** A hard-coded README skip — it fixes the one file in the repo and not the
+`.DS_Store`, the `notes.txt` or the customer's `inventory.csv`, and it is a rule nobody can
+turn off. An ignore file per directory (`.ulpfignore`) — a second configuration format, in
+the data directory, that a teammate has to find before they can explain a missing source.
+A MIME or content sniff — it guesses, and a guess about whether bytes are a log is exactly
+the judgement the unknown-format path and the review screen exist to hand to a human.
 
 ## D67, amended: the runner is a subcommand
 `ulpf demo [--auto] [--check] [--reset] [--dir demo] [--listen 127.0.0.1:7878] [--syslog
@@ -2033,9 +2065,13 @@ is a claim about the tool, so the command that produced it may not quietly inclu
 is not a log. **Ruled out.** Teaching the engine to skip non-log files tonight — an extension
 test or content sniff in the ingest path is an engine change hours before the demo, and it
 would make the counter block depend on a filename heuristic instead of on what was fed in; the
-directory-level include/exclude option stays D83, post-demo. Moving `samples/README.md` out of
+directory-level include/exclude option was deferred to D83. Moving `samples/README.md` out of
 `samples/` — it is the file a teammate reads before adding a sample, and relocating it hides
-the sharp edge instead of deciding about it.
+the sharp edge instead of deciding about it. **Superseded by D83.** The filter exists now:
+`ulpf run samples` reads the 15 logs and prints `excluded: samples/README.md (*.md)`, so the
+rule above is history and a documented command may name a directory again. The commands in
+this repository still name `samples/*.log` because their pasted counter blocks were measured
+that way and both forms now give the same numbers.
 
 ## D92. On Windows the kernel owns the sidecar's lifetime, not the app's exit path
 **Decision.** The engine is spawned into a job object created with

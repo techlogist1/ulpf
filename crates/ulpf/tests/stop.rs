@@ -84,6 +84,7 @@ fn stop_releases_every_file_the_engine_opened() {
         pivot_index: true,
         parquet: Some(dir.join("events.parquet")),
         parquet_roll: Some((4, Duration::from_secs(3600))),
+        filter: Default::default(),
     };
     assert!(open_under(&dir).is_empty());
     let live = Live::open(&cfg, true).unwrap();

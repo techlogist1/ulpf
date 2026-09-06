@@ -271,13 +271,13 @@ jobs:
           if ($out -notmatch 'parsers')    { Write-Host "::error::check printed no 'parsers'"; exit 1 }
           if ($out -notmatch '0 problems') { Write-Host "::error::check printed no '0 problems'"; exit 1 }
 
-          # `ulpf run samples` frames every file in the directory, README.md included, so
-          # the comparison counts every file too. Every non-empty line is one event except
-          # a continuation line a collector folded: samples/fortinet_fortigate.log has
-          # exactly one (see samples/README.md). 355 non-empty lines over sixteen files,
-          # 354 framed, on 2026-09-06 with lane 3's cef/leef/cloudtrail samples merged.
+          # `ulpf run samples` takes the directory's logs and keeps README.md out (D83: a
+          # directory input excludes documentation by default and names it under the
+          # counter block), so the comparison counts *.log lines only. Every non-empty line
+          # is one event except a continuation line a collector folded:
+          # samples/fortinet_fortigate.log has exactly one (see samples/README.md).
           $folded = 1
-          $lines = (Get-ChildItem samples -File | Get-Content | Where-Object { $_ -ne '' }).Count
+          $lines = (Get-ChildItem samples -File -Filter *.log | Get-Content | Where-Object { $_ -ne '' }).Count
           $expect = $lines - $folded
 
           $out = & $ulpf run samples --store s --output o.jsonl --infer-threshold 0 2>&1 | Out-String

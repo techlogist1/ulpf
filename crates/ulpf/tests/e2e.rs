@@ -4,7 +4,7 @@
 use std::path::PathBuf;
 
 use sha2::Digest;
-use ulpf::engine::{Config, collect_inputs, run};
+use ulpf::engine::{Config, Filter, collect_inputs, run};
 use ulpf_store::{Framer, RawId, RawReader};
 
 fn repo() -> PathBuf {
@@ -39,6 +39,7 @@ fn config(inputs: Vec<PathBuf>, dir: &std::path::Path, threads: usize) -> Config
         pivot_index: true,
         parquet: None,
         parquet_roll: None,
+        filter: Default::default(),
     }
 }
 
@@ -60,7 +61,7 @@ fn samples_directory_round_trips_through_store_and_output_in_order() {
     assert!(s.queue_high_water <= s.queue_capacity);
 
     // Every record equals the framed event of its file, in file order, with a good digest.
-    let files = collect_inputs(&cfg.inputs).unwrap();
+    let (files, _) = collect_inputs(&cfg.inputs, &cfg.filter).unwrap();
     let reader = RawReader::open(&cfg.store).unwrap();
     let names = reader.source_names().unwrap();
     let mut id = 0u64;
@@ -88,7 +89,10 @@ fn samples_directory_round_trips_through_store_and_output_in_order() {
         assert_eq!(concat, bytes, "records concatenate back to {name}");
     }
     assert_eq!(id, s.framed);
-    assert!(multiline >= 2, "corpus must include multi-line events, saw {multiline}");
+    // one: the continuation line a collector folded into samples/fortinet_fortigate.log.
+    // The folding rules themselves are covered in ulpf-store's framing_is_lossless_and_
+    // groups_continuations (stack trace, CRLF, blank lines, every chunk boundary).
+    assert!(multiline >= 1, "corpus must include multi-line events, saw {multiline}");
     assert!(non_utf8 >= 2, "corpus must include non-UTF-8 events, saw {non_utf8}");
     assert!(reader.verify().corrupt.is_empty());
 
@@ -105,7 +109,7 @@ fn samples_directory_round_trips_through_store_and_output_in_order() {
     }
     let unknown = lines.iter().filter(|l| l.contains("\"parse_status\":\"no_parser\"")).count() as u64;
     assert_eq!(unknown, s.no_parser, "unknown-format events are emitted, not dropped");
-    assert!(unknown > 0, "samples/README.md is deliberately an unknown format");
+    assert!(unknown >= 2, "samples/squid_access.log carries two lines no parser claims, by design (fixtures/squid_access.expected.jsonl:24,26)");
 
     // A second run on the same store appends; nothing earlier changes. (The same file again
     // would be resumed past, D59, so the second run brings a new source.)
@@ -176,5 +180,47 @@ fn malformed_xml_is_counted_and_emitted_never_a_panic() {
     assert_eq!(s.emitted, 4, "a parse failure is an output line, not a drop");
     let out = std::fs::read_to_string(dir.join("out.jsonl")).unwrap();
     assert_eq!(out.lines().filter(|l| l.contains("\"parse_status\":\"invalid_xml\"")).count(), 3);
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+/// D83: a directory yields only its logs, at every depth. A README, a dotfile, a notes
+/// file and a hidden directory are counted and named, never ingested; `--include` narrows.
+#[test]
+fn directory_inputs_exclude_documentation_and_dotfiles() {
+    let dir = temp("filter");
+    let input = dir.join("in");
+    std::fs::create_dir_all(input.join("sub")).unwrap();
+    std::fs::create_dir_all(input.join(".hiddendir")).unwrap();
+    std::fs::write(input.join("fw.log"), "%ASA-6-302013: Built inbound TCP connection\n").unwrap();
+    std::fs::write(input.join("README.md"), "not a log\n").unwrap();
+    std::fs::write(input.join("notes.md"), "not a log either\n").unwrap();
+    std::fs::write(input.join(".hidden"), "hidden\n").unwrap();
+    std::fs::write(input.join("sub/deep.log"), "%ASA-6-302014: Teardown TCP connection\n").unwrap();
+    std::fs::write(input.join("sub/PROVENANCE.md"), "prose at depth\n").unwrap();
+    std::fs::write(input.join(".hiddendir/config"), "secret\n").unwrap();
+
+    let cfg = config(vec![input.clone()], &dir, 2);
+    let report = run(&cfg).unwrap();
+    assert_eq!(report.snapshot.files, 2, "the two logs, at both depths");
+    assert_eq!(report.snapshot.framed, 2);
+    // README.md, notes.md, .hidden, sub/PROVENANCE.md and .hiddendir (pruned whole)
+    assert_eq!(report.snapshot.files_excluded, 5);
+    assert!(report.excluded.iter().any(|e| e.ends_with("PROVENANCE.md (*.md)")), "{:?}", report.excluded);
+    assert!(report.excluded.iter().any(|e| e.ends_with(".hiddendir (.*)")), "{:?}", report.excluded);
+    let out = std::fs::read_to_string(dir.join("out.jsonl")).unwrap();
+    assert!(!out.contains("secret"), "a hidden directory is never read");
+
+    // --include narrows: the .txt beside the log is not a log, at any depth.
+    std::fs::write(input.join("sub/other.txt"), "text\n").unwrap();
+    let cfg2 = Config {
+        store: dir.join("store2"),
+        output: dir.join("out2.jsonl"),
+        filter: Filter { include: vec!["*.log".into()], exclude: Vec::new() },
+        ..config(vec![input], &dir, 2)
+    };
+    let report2 = run(&cfg2).unwrap();
+    assert_eq!(report2.snapshot.files, 2, "--include '*.log' takes the nested log too");
+    // no --exclude at all, so nothing is pruned and .hiddendir/config is walked and fails the include
+    assert_eq!(report2.snapshot.files_excluded, 6, "README, notes, .hidden, PROVENANCE, the .txt, .hiddendir/config");
     std::fs::remove_dir_all(&dir).unwrap();
 }

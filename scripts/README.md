@@ -45,11 +45,9 @@ and closed inside one 0.5 s gap; `docker` mode is the airtight complement.
 `serve` env: `ULPF_FEED` (default `bench/mixed-5000000.log`, else the `samples` directory),
 `ULPF_FEED_MODE=auto|copy|symlink`, `ULPF_LISTEN` (default `127.0.0.1:7878`). Point
 `ULPF_FEED` at one log file rather than taking that fallback: it copies the directory
-whole, `samples/README.md` included, and the server frames the README as 45 events, 39 of
-which no parser claims (41 across the whole directory, counting the two the real samples
-already have; the engine has no include filter yet, D83). Isolation is a socket verdict,
-so those events change nothing here, but they are why every documented `run` command in
-this repository names `samples/*.log`.
+whole, `samples/README.md` included. The copy is harmless — the engine excludes `*.md` from
+a directory input by default and prints `excluded: .../README.md (*.md)`, so the server
+frames the logs and nothing else (D83). Isolation is a socket verdict either way.
 
 # soak.sh — proves `serve` survives a long run and loses nothing
 

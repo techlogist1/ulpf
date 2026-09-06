@@ -62,6 +62,19 @@ struct EngineArgs {
     /// JSON Lines output is always written). A Parquet file is unreadable until closed.
     #[arg(long)]
     parquet: Option<PathBuf>,
+    /// Only ingest files under an input directory whose relative path matches (repeatable).
+    /// Shell patterns: `*` (not across `/`), `**`, `?`. A pattern with no `/` also matches
+    /// the file's name at any depth, so `--include '*.log'` takes nested logs; one with a
+    /// `/` is anchored at the input directory. Case-sensitive. Default: every file.
+    #[arg(long, value_name = "PATTERN")]
+    include: Vec<String>,
+    /// Never ingest files under an input directory whose relative path (or, for a pattern
+    /// with no `/`, name at any depth) matches; a directory that matches is not descended
+    /// (repeatable). Any --exclude replaces the default `*.md`, `README*`, `.*`,
+    /// `*.truth.tsv`, `*.expected.jsonl`; `--exclude ''` ingests everything. A file named
+    /// on the command line itself is always taken.
+    #[arg(long, value_name = "PATTERN")]
+    exclude: Vec<String>,
 }
 
 #[derive(Subcommand)]
@@ -270,6 +283,14 @@ impl EngineArgs {
             },
             parquet: self.parquet.clone(),
             parquet_roll: self.parquet.as_ref().and(parquet_roll),
+            filter: engine::Filter {
+                include: self.include.iter().filter(|p| !p.is_empty()).cloned().collect(),
+                exclude: if self.exclude.is_empty() {
+                    engine::Filter::default().exclude
+                } else {
+                    self.exclude.iter().filter(|p| !p.is_empty()).cloned().collect()
+                },
+            },
         })
     }
 }
@@ -287,6 +308,13 @@ fn print_report(report: &engine::Report) -> Result<()> {
         writeln!(err, "recovered: {} stored records an interrupted run had not written to the output", report.recovered)?;
     }
     writeln!(err, "{}", report.snapshot)?;
+    for e in &report.excluded {
+        writeln!(err, "excluded: {e}")?;
+    }
+    let unlisted = report.snapshot.files_excluded.saturating_sub(report.excluded.len() as u64);
+    if unlisted > 0 {
+        writeln!(err, "excluded: {unlisted} more not listed")?;
+    }
     if report.inference_secs > 0.0 || !report.pending.is_empty() {
         writeln!(err, "pending: {} proposals awaiting review (final inference pass {:.3} s)", report.pending.len(), report.inference_secs)?;
         for p in &report.pending {

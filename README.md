@@ -62,16 +62,13 @@ pending: 0 proposals awaiting review (final inference pass 0.000 s)
 (The `events/s` on that line is 309 events in five milliseconds — startup noise, not a
 throughput measurement. The measured figure is under "Honest numbers" below.)
 
-The input is `samples/*.log`, never the bare `samples` directory: the engine has no
-include filter yet, so a bare directory ingests `samples/README.md` as a log. That is 16
-files and 354 events instead of 15 and 309 — 45 lines of documentation counted as events,
-`no_parser` 41 instead of 2, `class_unknown` 106 instead of 62, and an inference run over
-prose that ends `skipped [no_templates 1]` (the clustering does refuse it, so no proposal
-is written; the counters are wrong, not the review queue). A directory-level include or
-exclude is a post-demo decision (D83), so every documented command in this repository
-names its log files. The container command above is the one exception a shell cannot fix:
-the `scratch` image has no shell to expand a glob, so it takes the mounted directory and
-its counters carry those same 45 lines.
+The input is written `samples/*.log`, but the bare `samples` directory gives the same
+counts: a directory input skips documentation, dotfiles and fixture ground
+truth by default and names every file it kept out under the counter block (`excluded:
+samples/README.md (*.md)`, D83). `--include '*.log'` and `--exclude` change that list —
+any `--exclude` replaces the defaults, `--exclude ''` ingests everything — and a file named
+on the command line itself is always taken. That is also why the container command above
+can take the mounted directory.
 
 That block is the contract: when the output looks plausible but wrong, read it first.
 `no_parser` means the format was not recognised, `sub_uncovered` means a message id has no

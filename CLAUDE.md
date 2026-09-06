@@ -196,6 +196,7 @@ generated `[[timestamp]]` follows the timestamp slot's own name (`ts`).
 ulpf run <files|dirs>... --store DIR --output FILE.jsonl [--parsers parsers] [--mappings mappings]
          [--schema ocsf] [--tz +05:30] [-j THREADS] [--batch 1024] [--queue 64]
          [--pending pending] [--infer-threshold 64] [--report-json report.json]
+         [--include '*.log']... [--exclude '*.md']...   # per-directory; the default excludes docs, dotfiles and fixtures (D83)
 ulpf serve <dirs>... --store DIR --output FILE.jsonl [--listen 127.0.0.1:7878] [--pending pending]
          [--infer-threshold 64] [--tail 1000] [--poll-ms 250] [--ui-dir ui/dist]
          [--syslog-udp 127.0.0.1:5514] [--syslog-tcp 127.0.0.1:5514] + the run options

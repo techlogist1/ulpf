@@ -58,7 +58,9 @@ always `"jsonl"`: Parquet is an additional sink, not a replacement (see below).
 `buffered` above is its current buffer), `infer_buffer_full`, `infer_runs`,
 `infer_lines_templated`, `infer_lines_unmatched`, `proposals_written`,
 `proposals_replaced`, `proposals_skipped` (list of `[reason, n]`: `edited`,
-`duplicate`, `rejected`, `no_templates`), `approved`, `rejected`, `reloads`.
+`duplicate`, `rejected`, `no_templates`), `approved`, `rejected`, `reloads`. It also carries
+`files_excluded`, the files an input directory's `--include`/`--exclude` filter kept out,
+counted once each over the whole session (D83).
 
 `ParserInfo = { "name", "vendor", "product", "priority": i32, "strategy": "kv|delimiter|json|cef|leef|pattern",
 "subs": n, "origin": "hand|approved", "version": u64, "detected": u64 }` (`detected` counts

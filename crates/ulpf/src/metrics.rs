@@ -14,6 +14,8 @@ pub const SKIP_REASONS: [&str; 4] = ["edited", "duplicate", "rejected", "no_temp
 pub struct Metrics {
     pub files: AtomicU64,
     pub files_failed: AtomicU64,
+    /// Files under an input directory the include/exclude patterns kept out (D83).
+    pub files_excluded: AtomicU64,
     pub bytes: AtomicU64,
     pub framed: AtomicU64,
     pub stored: AtomicU64,
@@ -139,6 +141,7 @@ impl Metrics {
             mb_per_sec: if elapsed_secs > 0.0 { bytes as f64 / 1_048_576.0 / elapsed_secs } else { 0.0 },
             files: g(&self.files),
             files_failed: g(&self.files_failed),
+            files_excluded: g(&self.files_excluded),
             bytes,
             framed,
             stored: g(&self.stored),
@@ -200,6 +203,7 @@ pub struct Snapshot {
     pub mb_per_sec: f64,
     pub files: u64,
     pub files_failed: u64,
+    pub files_excluded: u64,
     pub bytes: u64,
     pub framed: u64,
     pub stored: u64,
@@ -262,8 +266,8 @@ impl std::fmt::Display for Snapshot {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "ulpf: {} files ({} failed), {:.2} MB, {} events in {:.3} s -> {:.0} events/s, {:.1} MB/s, {} worker threads",
-            self.files, self.files_failed, self.bytes as f64 / 1_048_576.0, self.framed, self.elapsed_secs, self.events_per_sec, self.mb_per_sec, self.threads
+            "ulpf: {} files ({} failed, {} excluded), {:.2} MB, {} events in {:.3} s -> {:.0} events/s, {:.1} MB/s, {} worker threads",
+            self.files, self.files_failed, self.files_excluded, self.bytes as f64 / 1_048_576.0, self.framed, self.elapsed_secs, self.events_per_sec, self.mb_per_sec, self.threads
         )?;
         writeln!(
             f,

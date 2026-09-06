@@ -117,17 +117,17 @@ then `S=/tmp/mt`). The commands are the README's quick start, which is not an ex
 install path but the install path itself — `eval/lib/extract_fence.py` reads that fenced
 block out of the README and re-runs it in a fresh clone (README, "Quick start").
 
-**Always name the log files, never the bare `samples` directory.** The engine has no include
-filter, so `samples` ingests `samples/README.md` as a log: 16 files and 354 events instead
-of 15 and 309, `no_parser` 41 instead of 2 (README, "Run it"; D91, the rule; D83 reserves the
-post-demo decision on whether a directory-level filter should exist at all).
+**`samples/*.log` and the bare `samples` directory now give the same numbers.** A directory
+input excludes documentation, dotfiles and fixture ground truth by default, so `ulpf run
+samples` reads the same 15 logs and prints `excluded: samples/README.md (*.md)` under the
+counter block (D83, which superseded D91's name-the-files rule).
 
 | # | Command | Expected |
 |---|---|---|
 | M1 | `cargo build --release` | About a minute; `target/release/ulpf` exists (README, "From source"). If the last line is a `Compiling` line the build is not finished — look for `Finished`; a gate once ran its checks against a stale binary for exactly this reason (PROGRESS v4, 05:11 IST). |
 | M2 | `./target/release/ulpf --version` | The version prints (`cli.rs`). Record it. |
 | M3 | `./target/release/ulpf check --pending pending` | One `parser  <name> <vendor> <product> (N subs, M timestamp candidates)` line per definition, one `mapping` line per schema, then `15 parsers, 2 mappings loaded; 0 problems`; exit 0 (`Cmd::Check` in `cli.rs`; PROGRESS, demo section). A non-zero exit means problems, and the `ERROR` lines above it name the path. |
-| M4 | `./target/release/ulpf run samples/*.log --store $S/store --output $S/out.jsonl` | The counter block. The expected key counts for the fifteen samples: **framed 309, stored 309, detected 307, no_parser 2, parsed 305, parse_failed 2, normalized 309, emitted 309**, under a header line reading `15 files (0 failed), 0.10 MB, 309 events`. These are the numbers in the README's own Run-it block and they are the expected ones (README, "Run it"). |
+| M4 | `./target/release/ulpf run samples/*.log --store $S/store --output $S/out.jsonl` | The counter block. The expected key counts for the fifteen samples: **framed 309, stored 309, detected 307, no_parser 2, parsed 305, parse_failed 2, normalized 309, emitted 309**, under a header line reading `15 files (0 failed, 0 excluded), 0.10 MB, 309 events` (`samples` instead of `samples/*.log` gives the same event counts plus `2 excluded` and two `excluded:` lines, D83). These are the numbers in the README's own Run-it block and they are the expected ones (README, "Run it"). |
 | | | Also expected there: `parse_failed by reason: pattern_no_match 1, invalid_json 1`, and `pending: 0 proposals awaiting review`. The `events/s` on the header line is 309 events in five milliseconds — startup noise, not a throughput measurement, and the README says so in the same place. Do not report it as a number. |
 | M5 | `./target/release/ulpf verify --store $S/store` | `store <hex> genesis <hex>`, then `verified 309 records, 0 corrupt`, then `chain ok (head <hex>)`; exit 0 (`Cmd::Verify` in `cli.rs`). |
 | M6 | `./target/release/ulpf raw 0 --store $S/store` | On **stderr**: `raw id 0  source <file>  received <rfc3339>  <N> bytes  sha256 <hex>`. On **stdout**: the exact original bytes, line terminator included (`Cmd::Raw` in `cli.rs`). The header is on stderr so that redirecting stdout gives you the bytes alone. |
@@ -193,11 +193,10 @@ arguments, not patterns (README, "On Windows").
   `winget install Microsoft.VCRedist.2015+.x64`, or take a build from after 06 Sep 04:45:
   the workflow's Windows engine step sets `RUSTFLAGS=-C target-feature=+crt-static` and
   links the runtime in (app/README.md, "One dependency the engine still has"; `app.yml`).
-- **`(Get-ChildItem samples\*.log).FullName` is not optional.** A bare `samples` ingests
-  `samples\README.md`; CI's own Windows job passes the bare directory and therefore
-  compensates in its arithmetic (`app.yml`, `smoke-windows`: 355 non-empty lines over
-  sixteen files, minus one folded continuation line). Do not copy that form into a manual
-  run.
+- **A bare `samples` is now safe** (D83: `samples\README.md` is excluded, named under the
+  counter block and not framed). CI's Windows job counts the non-empty lines of `samples\*.log`
+  only, minus one folded continuation line, and expects that many framed (`app.yml`,
+  `smoke-windows`).
 
 ---
 
@@ -488,11 +487,9 @@ Every item here is already recorded in `PROGRESS.md`'s v4 section or in `docs/DE
   `lane-5-xml` (the `xml` strategy and the Windows Event definition), `lane-6-index` (the
   entity index cost) and `lane-8-windows` (the store reopen, the stop path's handles and the
   null output device). D75, D76 and D82 are reserved for those branches and written on them,
-  so `docs/DECISIONS.md` on main carries only the reservation. D83 is not a branch at all:
-  it is reserved for the **post-demo decision** on whether the engine should take a
-  directory-level include or exclude, and main already carries the rule that stands until
-  then, D91 — a documented command names its input files, not a directory (PROGRESS v4, "In
-  flight"; the "D75, D76: reserved" and "D82, D83: reserved" entries; D91).
+  so `docs/DECISIONS.md` on main carries only the reservation. D83 is a branch of its own:
+  the directory-level include/exclude, which supersedes D91's name-the-input-files rule once
+  it merges (PROGRESS v4, "In flight"; the "D75, D76: reserved" entry; D83; D91).
 - **The Windows syslog receive buffer is the system default.** `set_recv_buffer` is a
   `cfg(windows)` no-op returning 0 and the asked/granted line says so; the Winsock version
   is on `lane-8-windows` (D74; PROGRESS v4, "In flight").

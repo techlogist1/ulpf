@@ -114,6 +114,7 @@ fn the_server_is_a_window_onto_a_live_engine() {
         pivot_index: true,
         parquet: None,
         parquet_roll: None,
+        filter: Default::default(),
     };
     let live = Live::open(&cfg, true).unwrap();
     let server = Server::start(Arc::clone(&live), "127.0.0.1:0".parse().unwrap(), None).unwrap();

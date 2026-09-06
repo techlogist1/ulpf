@@ -54,6 +54,7 @@ fn udp_and_tcp_events_enter_the_store_and_output_exactly_once_in_order() {
         pivot_index: true,
         parquet: None,
         parquet_roll: None,
+        filter: Default::default(),
     };
     let live = Live::open(&cfg, false).unwrap();
     let serve = {

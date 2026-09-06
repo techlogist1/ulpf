@@ -42,6 +42,7 @@ fn config(dir: &Path, inputs: Vec<PathBuf>, parquet: Option<PathBuf>, roll: Opti
         pivot_index: true,
         parquet,
         parquet_roll: roll,
+        filter: Default::default(),
     }
 }
 

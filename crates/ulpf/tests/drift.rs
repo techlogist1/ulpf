@@ -39,6 +39,7 @@ fn config(dir: &Path, inputs: Vec<PathBuf>) -> Config {
         pivot_index: true,
         parquet: None,
         parquet_roll: None,
+        filter: Default::default(),
     }
 }
 

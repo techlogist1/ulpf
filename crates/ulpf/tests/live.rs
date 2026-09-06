@@ -51,6 +51,7 @@ fn config(dir: &Path, inputs: Vec<PathBuf>, threshold: usize) -> Config {
         pivot_index: true,
         parquet: None,
         parquet_roll: None,
+        filter: Default::default(),
     }
 }
 

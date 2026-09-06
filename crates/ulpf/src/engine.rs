@@ -15,7 +15,7 @@
 //! buffers by batch sequence so the JSON Lines order equals raw id order.
 
 use std::borrow::Cow;
-use std::collections::{BTreeMap, HashMap, VecDeque};
+use std::collections::{BTreeMap, BTreeSet, HashMap, VecDeque};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -72,6 +72,8 @@ pub struct Config {
     /// Watch mode only: close the current Parquet file after this many rows or this
     /// long, whichever comes first, so a reader always has complete files to read.
     pub parquet_roll: Option<(u64, Duration)>,
+    /// Which files under an input directory are ingested (D83).
+    pub filter: Filter,
 }
 
 #[derive(Debug)]
@@ -84,6 +86,8 @@ pub struct Report {
     pub inference_secs: f64,
     /// Records a killed run had stored but not emitted, written to the output at startup.
     pub recovered: u64,
+    /// The first ten files the filter kept out, each with the pattern that did it (D83).
+    pub excluded: Vec<String>,
 }
 
 #[derive(Debug, Default, Clone, Serialize)]
@@ -381,6 +385,11 @@ pub struct Live {
     pub parquet_roll: Option<(u64, Duration)>,
     pub store_dir: PathBuf,
     pub watch: Vec<PathBuf>,
+    pub filter: Filter,
+    /// "path (pattern)" for every file the filter kept out, once each: `serve` re-scans
+    /// its directories on every poll, so the counter must not grow with the polls. Bounded
+    /// at 10,000 names (`note_excluded`).
+    pub excluded: Mutex<BTreeSet<String>>,
     pub threads: usize,
     pub queue_cap: usize,
     pub batch_events: usize,
@@ -644,31 +653,116 @@ pub fn now_nanos() -> i64 {
     SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos() as i64).unwrap_or(0)
 }
 
-/// Expands directories (recursively) into a sorted file list.
-pub fn collect_inputs(inputs: &[PathBuf]) -> Result<Vec<PathBuf>> {
+/// What is ingested from a directory named on the command line (D83): a file is taken
+/// when it matches at least one include (or there are none) and no exclude. Patterns are
+/// matched against the file's path relative to that directory, and a pattern with no `/`
+/// against its name in any subdirectory too, so `*.md` covers `corpus/real/asa/NOTES.md`
+/// and `--include '*.log'` takes a nested log. Matching is case-sensitive. A file named
+/// directly on the command line is always taken.
+#[derive(Debug, Clone)]
+pub struct Filter {
+    pub include: Vec<String>,
+    pub exclude: Vec<String>,
+}
+
+/// Applied when no `--exclude` is given: documentation, dotfiles and test ground truth
+/// are not logs. Any `--exclude` replaces the whole list; `--exclude ''` empties it.
+pub const DEFAULT_EXCLUDES: [&str; 5] = ["*.md", "README*", ".*", "*.truth.tsv", "*.expected.jsonl"];
+
+impl Default for Filter {
+    fn default() -> Self {
+        Filter { include: Vec::new(), exclude: DEFAULT_EXCLUDES.iter().map(|s| (*s).to_string()).collect() }
+    }
+}
+
+impl Filter {
+    /// `None` when the file is taken, else the pattern (or reason) that kept it out.
+    pub fn reject(&self, rel: &str) -> Option<String> {
+        if let Some(p) = self.reject_dir(rel) {
+            return Some(p);
+        }
+        if self.include.is_empty() || self.include.iter().any(|p| matches_path(p, rel)) {
+            return None;
+        }
+        Some("no --include match".into())
+    }
+
+    /// The exclude half alone, for a directory: one that matches is not descended, so
+    /// `.git` costs one entry and not one per file under it. Includes are not applied to
+    /// directories, or `--include '*.log'` would prune every subdirectory.
+    pub fn reject_dir(&self, rel: &str) -> Option<String> {
+        self.exclude.iter().find(|p| matches_path(p, rel)).cloned()
+    }
+}
+
+/// A pattern holding no `/` matches the file's name in any subdirectory as well as the
+/// whole relative path (gitignore's rule, and what `*.md` means in a shell); a pattern
+/// with a `/` is anchored at the input directory.
+fn matches_path(pattern: &str, rel: &str) -> bool {
+    glob_match(pattern, rel) || (!pattern.contains('/') && rel.rsplit('/').next().is_some_and(|name| glob_match(pattern, name)))
+}
+
+/// The shell's globbing over a whole relative path: `*` any run of characters except `/`,
+/// `**` any run including `/`, `?` one character that is not `/`, everything else literal.
+// ponytail: naive backtracking, exponential on a pathological pattern; patterns are a
+// handful of characters from the command line, so a matcher crate would buy nothing.
+pub fn glob_match(pattern: &str, path: &str) -> bool {
+    fn go(p: &[u8], s: &[u8]) -> bool {
+        match p.first() {
+            None => s.is_empty(),
+            Some(b'*') if p.get(1) == Some(&b'*') => (0..=s.len()).any(|i| go(&p[2..], &s[i..])),
+            Some(b'*') => {
+                let limit = s.iter().position(|&c| c == b'/').unwrap_or(s.len());
+                (0..=limit).any(|i| go(&p[1..], &s[i..]))
+            }
+            Some(b'?') => s.first().is_some_and(|c| *c != b'/') && go(&p[1..], &s[1..]),
+            Some(c) => s.first() == Some(c) && go(&p[1..], &s[1..]),
+        }
+    }
+    go(pattern.as_bytes(), path.as_bytes())
+}
+
+/// The files to ingest, and the files the filter kept out each with the pattern that did it.
+pub type Inputs = (Vec<PathBuf>, Vec<(PathBuf, String)>);
+
+/// Expands directories (recursively) into a sorted file list, plus the files `filter`
+/// kept out and the pattern that did it.
+pub fn collect_inputs(inputs: &[PathBuf], filter: &Filter) -> Result<Inputs> {
     let mut files = Vec::new();
+    let mut excluded = Vec::new();
     for p in inputs {
         let meta = std::fs::metadata(p).with_context(|| format!("input {}", p.display()))?;
         if meta.is_dir() {
-            walk(p, &mut files)?;
+            walk(p, p, filter, &mut files, &mut excluded)?;
         } else {
             files.push(p.clone());
         }
     }
     files.sort();
     files.dedup();
-    Ok(files)
+    excluded.sort();
+    excluded.dedup();
+    Ok((files, excluded))
 }
 
-fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<()> {
+fn walk(root: &Path, dir: &Path, filter: &Filter, out: &mut Vec<PathBuf>, excluded: &mut Vec<(PathBuf, String)>) -> Result<()> {
     for entry in std::fs::read_dir(dir).with_context(|| format!("reading {}", dir.display()))? {
         let path = entry?.path();
         // symlinked directories are not followed: a loop would recurse forever
         let meta = std::fs::symlink_metadata(&path)?;
+        // the platform separator is written as `/` so one pattern works on both; a Unix
+        // name holding a literal backslash keeps it
+        let rel = path.strip_prefix(root).unwrap_or(&path).to_string_lossy().replace(std::path::MAIN_SEPARATOR, "/");
         if meta.is_dir() {
-            walk(&path, out)?;
-        } else if path.file_name().is_some_and(|n| !n.to_string_lossy().starts_with('.')) {
-            out.push(path);
+            match filter.reject_dir(&rel) {
+                Some(reason) => excluded.push((path, reason)),
+                None => walk(root, &path, filter, out, excluded)?,
+            }
+        } else {
+            match filter.reject(&rel) {
+                Some(reason) => excluded.push((path, reason)),
+                None => out.push(path),
+            }
         }
     }
     Ok(())
@@ -728,6 +822,8 @@ impl Live {
             parquet_roll: cfg.parquet_roll,
             store_dir: cfg.store.clone(),
             watch: cfg.inputs.clone(),
+            filter: cfg.filter.clone(),
+            excluded: Mutex::new(BTreeSet::new()),
             threads: cfg.threads.max(1),
             queue_cap: cfg.queue_batches.max(1),
             batch_events: cfg.batch_events.max(1),
@@ -760,6 +856,26 @@ impl Live {
             parsers_signature: Mutex::new(parsers_signature(&cfg.parsers)),
             stop: AtomicBool::new(false),
         }))
+    }
+
+    /// Records the files the filter kept out, once each: the counter and the list under
+    /// the counter block (D83).
+    pub fn note_excluded(&self, excluded: Vec<(PathBuf, String)>) {
+        if excluded.is_empty() {
+            return;
+        }
+        let mut seen = self.excluded.lock().unwrap_or_else(|e| e.into_inner());
+        for (path, pattern) in excluded {
+            // the names stop at 10k so a long `serve` over a directory that keeps producing
+            // excluded names cannot grow with them; the counter is what stops too, because
+            // counting without the set would count the same file once per poll
+            if seen.len() >= 10_000 {
+                break;
+            }
+            if seen.insert(format!("{} ({pattern})", path.display())) {
+                self.metrics.files_excluded.fetch_add(1, Relaxed);
+            }
+        }
     }
 
     /// Starts a replay of every stored record on its own thread. The store is flushed and
@@ -1407,6 +1523,7 @@ fn report(live: &Arc<Live>, elapsed: Duration, inference: Duration, input_proble
         pending: live.pending.as_ref().map(Pending::list).unwrap_or_default(),
         inference_secs: inference.as_secs_f64(),
         recovered: live.recovered.load(Relaxed),
+        excluded: live.excluded.lock().unwrap_or_else(|e| e.into_inner()).iter().take(10).cloned().collect(),
     })
 }
 
@@ -1535,7 +1652,9 @@ pub fn run(cfg: &Config) -> Result<Report> {
     let mut files: Vec<(PathBuf, String)> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     for root in &cfg.inputs {
-        for path in collect_inputs(std::slice::from_ref(root))? {
+        let (paths, excluded) = collect_inputs(std::slice::from_ref(root), &cfg.filter)?;
+        live.note_excluded(excluded);
+        for path in paths {
             if seen.insert(path.clone()) {
                 files.push((path.clone(), source_name(root, &path)));
             }
@@ -1650,7 +1769,8 @@ fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight
     let mut files: HashMap<PathBuf, Tailed> = HashMap::new();
     while !live.stopped() {
         for root in &live.watch {
-            let paths = collect_inputs(std::slice::from_ref(root)).unwrap_or_default();
+            let (paths, excluded) = collect_inputs(std::slice::from_ref(root), &live.filter).unwrap_or_default();
+            live.note_excluded(excluded);
             for path in paths {
                 let Ok(meta) = std::fs::metadata(&path) else { continue };
                 let size = meta.len();
@@ -2041,4 +2161,52 @@ fn output_thread(live: &Live, rx: Receiver<Emitted>) -> Result<()> {
         s.finish(&live.metrics);
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod filter_tests {
+    use super::{Filter, glob_match};
+
+    #[test]
+    fn glob_matches_the_shell_and_stops_stars_at_separators() {
+        assert!(glob_match("*.md", "README.md"));
+        assert!(!glob_match("*.md", "docs/README.md"), "* does not cross a separator");
+        assert!(glob_match("**/*.md", "docs/a/README.md"));
+        assert!(glob_match("README*", "README"));
+        assert!(glob_match(".*", ".DS_Store"));
+        assert!(!glob_match(".*", "sub/.DS_Store"));
+        assert!(glob_match("**/.*", "sub/deep/.hidden"));
+        assert!(glob_match("?.log", "a.log"));
+        assert!(!glob_match("?.log", "ab.log"));
+        assert!(!glob_match("a?b", "a/b"), "? does not match a separator");
+        assert!(glob_match("fw syslog *.log", "fw syslog 1.log"), "a path with a space is literal");
+        assert!(glob_match("literal.log", "literal.log"));
+        assert!(!glob_match("literal.log", "literal.log.1"));
+    }
+
+    #[test]
+    fn default_filter_keeps_out_docs_and_dotfiles_and_include_narrows() {
+        let d = Filter::default();
+        assert_eq!(d.reject("README.md").as_deref(), Some("*.md"));
+        assert_eq!(d.reject(".DS_Store").as_deref(), Some(".*"));
+        assert_eq!(d.reject("mikrotik.truth.tsv").as_deref(), Some("*.truth.tsv"));
+        assert_eq!(d.reject("real/cisco_asa/PROVENANCE.md").as_deref(), Some("*.md"), "a pattern with no / matches the name at any depth");
+        assert_eq!(d.reject("generated/openvpn/.DS_Store").as_deref(), Some(".*"));
+        assert_eq!(d.reject_dir(".hiddendir").as_deref(), Some(".*"), "a hidden directory is not descended");
+        assert_eq!(d.reject_dir("real/cisco_asa"), None);
+        assert_eq!(d.reject("fw/syslog.log"), None);
+
+        let only_logs = Filter { include: vec!["*.log".into()], exclude: Vec::new() };
+        assert_eq!(only_logs.reject("a.log"), None);
+        assert_eq!(only_logs.reject("sub/deep.log"), None, "--include '*.log' takes nested logs");
+        assert_eq!(only_logs.reject("notes.txt").as_deref(), Some("no --include match"));
+        assert_eq!(only_logs.reject_dir("sub"), None, "an include never prunes a directory");
+
+        let anchored = Filter { include: Vec::new(), exclude: vec!["sub/*.log".into()] };
+        assert_eq!(anchored.reject("sub/a.log").as_deref(), Some("sub/*.log"));
+        assert_eq!(anchored.reject("other/a.log"), None, "a pattern with a / is anchored at the input directory");
+
+        let nothing = Filter { include: Vec::new(), exclude: Vec::new() };
+        assert_eq!(nothing.reject("README.md"), None, "--exclude '' ingests everything");
+    }
 }

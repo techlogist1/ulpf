@@ -39,6 +39,7 @@ fn config(inputs: Vec<PathBuf>, dir: &std::path::Path, parsers: PathBuf) -> Conf
         pivot_index: true,
         parquet: None,
         parquet_roll: None,
+        filter: Default::default(),
     }
 }
 

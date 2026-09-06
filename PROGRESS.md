@@ -396,9 +396,12 @@ as a37af63, delete it. Not merged:
 2. The tester's contributed throughput figure for the ROG G615 was never received; README says a
    later one would be contributed. The tester's machine has a hardware fault (random access
    violations there are not engine evidence).
-3. D83, directory-level include/exclude, reserved and not built: a bare `samples` directory still
-   ingests `samples/README.md` as a log (D91 documents `samples/*.log` everywhere; `PROGRESS.md`'s
-   demo section line about `run samples` is the last place the glob is not spelled out).
+3. D83, directory-level include/exclude, built on the lane branch and not yet on main: `--include`
+   and `--exclude` on `run` and `serve`, defaults excluding docs, dotfiles and fixture ground truth
+   at any depth, every excluded file counted and named. A bare `samples` is safe again and D91's
+   name-the-files rule is superseded. Open on merge: `.github/workflows/app.yml`'s Windows smoke
+   job counts every file in `samples` (line 280) and asserts `framed == lines - 1`, which is now
+   372 against a real 324 — it needs `-Filter *.log` and the comment above it rewritten.
 4. Lane 8's three Windows store fixes are on the branch (above), not on main.
 5. The rc3 draft release (tag fec0119 at fb7bda9) is unpublished and three commits behind that
    branch's tip; publishing or re-tagging on main is the owner's call. rc1 and rc2 drafts too.
