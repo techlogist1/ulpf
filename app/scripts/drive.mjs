@@ -426,8 +426,11 @@ async function frameBudget(screen) {
     const f = samples[dropped % samples.length]
     try { copyFileSync(f, join(watch, `${basename(f, '.log')}-${Date.now()}.log`)); dropped++ } catch { /* the engine has the directory */ }
   }, 3000) : null
-  await page.waitForFunction(() => window.__mon.done, { timeout: (secs + 30) * 1000, polling: 1000 })
-  if (timer) clearInterval(timer)
+  try {
+    await page.waitForFunction(() => window.__mon.done, { timeout: (secs + 30) * 1000, polling: 1000 })
+  } finally {
+    if (timer) clearInterval(timer)
+  }
 
   const mon = await page.evaluate(() => window.__mon)
   const sse = await page.evaluate(() => ({ types: window.__sse ?? {}, bytes: window.__sseBytes ?? 0 }))
