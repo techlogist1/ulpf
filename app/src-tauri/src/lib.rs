@@ -2,6 +2,7 @@
 // unchanged; this crate starts it against an app-owned data directory, shows the page it
 // serves in the window and stops it on quit. Nothing here parses a log.
 
+mod download;
 mod holder;
 mod ingest;
 mod intensity;
@@ -10,14 +11,15 @@ mod menu;
 mod title;
 
 use std::fs;
-use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::io::Write;
+use std::net::{SocketAddr, TcpListener};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use tauri::webview::WebviewWindowBuilder;
 use tauri::{AppHandle, DragDropEvent, Manager, RunEvent, WindowEvent};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
@@ -43,6 +45,26 @@ const SPLASH: &str = "http://tauri.localhost/index.html";
 #[cfg(not(windows))]
 const SPLASH: &str = "tauri://localhost/index.html";
 
+/// The scheme the injected interceptor hands a file link to the shell on. A navigation is
+/// the one channel a remote origin has: Tauri's ACL gives it no command, and the webview's
+/// own hooks for an anchor download and a `target="_blank"` navigation are never called on
+/// macOS -- measured 06 Sep 07:09 IST with an `eprintln` in each, a click on either of the
+/// UI's two file links reached neither `on_download` nor `on_new_window`, which is why both
+/// buttons did nothing in the app while working in a browser.
+const SAVE_SCHEME: &str = "ulpf-save:";
+
+/// Injected into every page the window loads, the served UI included (an initialization
+/// script runs at document start on any origin). A click on a link the page means as a file
+/// -- `download` or `target="_blank"` -- becomes a navigation to `SAVE_SCHEME<url>`, which
+/// the navigation handler cancels and `download::save` fulfils. Capturing, so the page's own
+/// click handlers still run; nothing else on the page is touched.
+const INTERCEPT: &str = "document.addEventListener('click', function (e) {\
+     var a = e.target && e.target.closest && e.target.closest('a[href]');\
+     if (!a || (!a.hasAttribute('download') && a.target !== '_blank')) return;\
+     e.preventDefault();\
+     location.href = 'ulpf-save:' + a.href;\
+   }, true);";
+
 /// The one shared object: the data directory the engine runs against, the child, the
 /// server URL once it answered, and why the child died if it did.
 pub(crate) struct Engine {
@@ -66,6 +88,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![stop_holder])
         .setup(|app| {
             let handle = app.handle().clone();
+            window(&handle)?;
             let data = configured_data_dir(&handle);
             app.manage(Engine {
                 data: Mutex::new(data.clone()),
@@ -93,6 +116,9 @@ pub fn run() {
                 api.prevent_close();
                 let _ = window.hide();
             }
+            // The window is in front again after an app switch: the webview needs the key
+            // focus back or the UI's keyboard map stays dead (`focus_webview`).
+            WindowEvent::Focused(true) => focus_webview(window.app_handle()),
             _ => {}
         })
         .build(tauri::generate_context!())
@@ -189,7 +215,15 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     *engine.data.lock().unwrap() = data.clone();
     *engine.url.lock().unwrap() = None;
     *engine.down.lock().unwrap() = None;
-    let _ = fs::remove_file(data.join("server.url"));
+    // An engine orphaned by a force quit. `server.url` is written when the engine answers
+    // and removed by every stop and every start, so finding one here means the last run did
+    // not stop -- and on macOS a SIGKILLed app leaves its engine running (job.rs). If that
+    // engine is still holding this store there is no point starting a second one to be
+    // refused: the refusal's own page, with the pid and the button, is the answer already.
+    let orphaned = fs::remove_file(data.join("server.url")).is_ok();
+    if orphaned && holder::find(&data.join("store")).is_some() {
+        return locked(app, generation, &data.join("store"), &data.join("engine.log"));
+    }
     let (chosen, cores) = (intensity::load(app), intensity::cores());
     set_title(app, "ULPF · starting engine…");
     splash(app, &format!("{verb} the engine at {}: {} of {cores} cores, entity index {}", chosen.name(), chosen.threads(cores), intensity::on_off(chosen.pivot())), false);
@@ -334,10 +368,31 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     fail(app, generation, "no answer", "The engine did not answer within two minutes.");
 }
 
+/// The recovery button on the splash page: which flag the fragment carries, which is also
+/// which label the page puts on it. Every failure gets one, because every failure the shell
+/// can show is one a fresh start might survive -- a port that has been freed, a store whose
+/// holder has gone, an engine that died once.
+#[derive(Copy, Clone)]
+pub(crate) enum Retry {
+    /// Start the engine again. Nothing to stop first.
+    StartAgain,
+    /// Stop the process holding the store, then start again.
+    StopHolder,
+}
+
+impl Retry {
+    fn flag(self) -> &'static str {
+        match self {
+            Retry::StartAgain => "+",
+            Retry::StopHolder => "*",
+        }
+    }
+}
+
 /// Records why the engine is not serving, if this is still the current engine, and shows
-/// the reason on the splash page.
+/// the reason and a Start again button on the splash page.
 fn fail(app: &AppHandle, generation: u64, why: &str, message: &str) {
-    down(app, generation, why, message, false);
+    down(app, generation, why, message, Retry::StartAgain);
 }
 
 /// The store is held by another writer. Names the process, offers to stop it, and names
@@ -358,11 +413,11 @@ fn locked(app: &AppHandle, generation: u64, store: &Path, log: &Path) {
         generation,
         "store in use",
         &format!("The engine's store at {} {offer}\nThe whole of its output is in {}", store.display(), log.display()),
-        true,
+        if holder.is_some() { Retry::StopHolder } else { Retry::StartAgain },
     );
 }
 
-fn down(app: &AppHandle, generation: u64, why: &str, message: &str, button: bool) {
+fn down(app: &AppHandle, generation: u64, why: &str, message: &str, retry: Retry) {
     let engine = app.state::<Engine>();
     if engine.generation.load(Relaxed) != generation {
         return;
@@ -371,24 +426,37 @@ fn down(app: &AppHandle, generation: u64, why: &str, message: &str, button: bool
     *engine.url.lock().unwrap() = None;
     let _ = fs::remove_file(engine.data.lock().unwrap().join("server.url"));
     set_title(app, &format!("ULPF · engine down ({why})"));
-    splash_with(app, message, true, button);
+    splash_with(app, message, true, Some(retry));
 }
 
-/// The splash page's one button: stop the process holding the store, then start again
-/// through the ordinary start path. Reachable from the bundled splash page only -- the
-/// served UI is a remote origin, and Tauri's ACL gives a remote origin no command at all.
+/// The splash page's one button, whichever label it is carrying: stop the process holding
+/// the store if there is one, then start again through the ordinary start path. Reachable
+/// from the bundled splash page only -- the served UI is a remote origin, and Tauri's ACL
+/// gives a remote origin no command at all.
+///
+/// A kill that fails is a notice, not a refusal: the holder may have exited on its own
+/// between the refusal and this click, and `kill` on a pid that is gone is an error the
+/// retry must survive. The start's own outcome is the answer either way -- it serves, or it
+/// meets the holder again and says so.
 #[tauri::command]
 fn stop_holder(app: AppHandle) -> Result<(), String> {
     let engine = app.state::<Engine>();
     let holder = engine.holder.lock().unwrap().take();
     let data = engine.data.lock().unwrap().clone();
     if let Some(pid) = holder {
-        holder::kill(pid).map_err(|e| format!("Could not stop pid {pid}: {e}"))?;
+        if let Err(e) = holder::kill(pid) {
+            toast(&app, &format!("pid {pid} did not stop ({e}); starting anyway"));
+        }
         // The OS drops the SQLite lock when the process goes, but not before it has gone.
         thread::sleep(Duration::from_millis(400));
     }
     let app = app.clone();
-    thread::spawn(move || start(&app, data, "Starting"));
+    // Stop first: on the "no answer within two minutes" path the child may still be alive,
+    // and a second engine on one store would only be refused by the first.
+    thread::spawn(move || {
+        stop(&app);
+        start(&app, data, "Starting");
+    });
     Ok(())
 }
 
@@ -403,6 +471,42 @@ pub(crate) fn stop(app: &AppHandle) {
 }
 
 // ---- window ---------------------------------------------------------------------------
+
+/// The one window, built from its own `tauri.conf.json` entry (`"create": false` there, so
+/// this is the only place it is created; every value stays in the config). Creating it here
+/// is what lets the interceptor and the navigation handler be attached, which is how the
+/// served UI's file links come to save a file in the app (`download.rs`).
+fn window(app: &AppHandle) -> tauri::Result<()> {
+    let config = app.config().app.windows.first().expect("the main window in tauri.conf.json").clone();
+    let h = app.clone();
+    WebviewWindowBuilder::from_config(app, &config)?
+        .initialization_script(INTERCEPT)
+        .on_navigation(move |url| match url.as_str().strip_prefix(SAVE_SCHEME) {
+            Some(target) => {
+                if let Ok(target) = target.parse() {
+                    download::save(&h, &target);
+                }
+                false
+            }
+            None => true,
+        })
+        .build()?;
+    Ok(())
+}
+
+/// Makes the webview the key view. A window's own `set_focus` brings the window forward
+/// without restoring the webview's first responder on macOS, so after an app switch the
+/// UI's whole keyboard map (0-7, j/k, a, v, Esc) was dead until a click inside the window.
+/// Called wherever the window comes to the front: the window's own Focused event, the dock
+/// icon (Reopen), and Show from the menu or the tray.
+pub(crate) fn focus_webview(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        // The window's webview: `Manager::get_webview` is behind Tauri's `unstable` feature,
+        // and a WebviewWindow is both halves already.
+        let webview: &tauri::Webview<_> = w.as_ref();
+        let _ = webview.set_focus();
+    }
+}
 
 pub(crate) fn set_title(app: &AppHandle, title: &str) {
     if let Some(w) = app.get_webview_window("main") {
@@ -420,12 +524,13 @@ fn navigate(app: &AppHandle, url: &str) {
 /// travels in the URL fragment, so it is there when the page loads and a fragment change
 /// on a page already showing updates it in place without a reload.
 fn splash(app: &AppHandle, text: &str, error: bool) {
-    splash_with(app, text, error, false);
+    splash_with(app, text, error, None);
 }
 
-/// `*` after the `!` asks the page for its recovery button (`stop_holder`).
-fn splash_with(app: &AppHandle, text: &str, error: bool, button: bool) {
-    let flags = format!("{}{}", if error { "!" } else { "" }, if button { "*" } else { "" });
+/// A `Retry` flag after the `!` asks the page for its recovery button (`stop_holder`) under
+/// that flag's label.
+fn splash_with(app: &AppHandle, text: &str, error: bool, retry: Option<Retry>) {
+    let flags = format!("{}{}", if error { "!" } else { "" }, retry.map(Retry::flag).unwrap_or_default());
     navigate(app, &format!("{SPLASH}#{flags}{}", percent_encode(text)));
 }
 
@@ -462,18 +567,10 @@ fn percent_encode(s: &str) -> String {
 
 // ---- helpers --------------------------------------------------------------------------
 
-/// One GET over loopback, body on 200. The server answers JSON with a Content-Length
-/// and honours Connection: close, which is all this needs.
-// ponytail: hand-rolled HTTP/1.1; switch to ureq if the server ever chunks a response.
+/// One GET over loopback, body on 200: `<base>` is `http://127.0.0.1:<port>`.
 pub(crate) fn http_get(base: &str, path: &str) -> Option<String> {
     let addr: SocketAddr = base.trim_start_matches("http://").parse().ok()?;
-    let mut s = TcpStream::connect_timeout(&addr, Duration::from_millis(500)).ok()?;
-    s.set_read_timeout(Some(Duration::from_secs(3))).ok()?;
-    write!(s, "GET {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n").ok()?;
-    let mut buf = String::new();
-    s.read_to_string(&mut buf).ok()?;
-    let (head, body) = buf.split_once("\r\n\r\n")?;
-    head.starts_with("HTTP/1.1 200").then(|| body.to_string())
+    String::from_utf8(download::get(addr, path).ok()?.1).ok()
 }
 
 #[cfg(test)]
