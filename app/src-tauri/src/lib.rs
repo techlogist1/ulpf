@@ -2,6 +2,7 @@
 // unchanged; this crate starts it against an app-owned data directory, shows the page it
 // serves in the window and stops it on quit. Nothing here parses a log.
 
+mod download;
 mod holder;
 mod ingest;
 mod intensity;
@@ -10,14 +11,15 @@ mod menu;
 mod title;
 
 use std::fs;
-use std::io::{Read, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::io::Write;
+use std::net::{SocketAddr, TcpListener};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
+use tauri::webview::WebviewWindowBuilder;
 use tauri::{AppHandle, DragDropEvent, Manager, RunEvent, WindowEvent};
 use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
@@ -43,6 +45,26 @@ const SPLASH: &str = "http://tauri.localhost/index.html";
 #[cfg(not(windows))]
 const SPLASH: &str = "tauri://localhost/index.html";
 
+/// The scheme the injected interceptor hands a file link to the shell on. A navigation is
+/// the one channel a remote origin has: Tauri's ACL gives it no command, and the webview's
+/// own hooks for an anchor download and a `target="_blank"` navigation are never called on
+/// macOS -- measured 06 Sep 07:09 IST with an `eprintln` in each, a click on either of the
+/// UI's two file links reached neither `on_download` nor `on_new_window`, which is why both
+/// buttons did nothing in the app while working in a browser.
+const SAVE_SCHEME: &str = "ulpf-save:";
+
+/// Injected into every page the window loads, the served UI included (an initialization
+/// script runs at document start on any origin). A click on a link the page means as a file
+/// -- `download` or `target="_blank"` -- becomes a navigation to `SAVE_SCHEME<url>`, which
+/// the navigation handler cancels and `download::save` fulfils. Capturing, so the page's own
+/// click handlers still run; nothing else on the page is touched.
+const INTERCEPT: &str = "document.addEventListener('click', function (e) {\
+     var a = e.target && e.target.closest && e.target.closest('a[href]');\
+     if (!a || (!a.hasAttribute('download') && a.target !== '_blank')) return;\
+     e.preventDefault();\
+     location.href = 'ulpf-save:' + a.href;\
+   }, true);";
+
 /// The one shared object: the data directory the engine runs against, the child, the
 /// server URL once it answered, and why the child died if it did.
 pub(crate) struct Engine {
@@ -66,6 +88,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![stop_holder])
         .setup(|app| {
             let handle = app.handle().clone();
+            window(&handle)?;
             let data = configured_data_dir(&handle);
             app.manage(Engine {
                 data: Mutex::new(data.clone()),
@@ -404,6 +427,28 @@ pub(crate) fn stop(app: &AppHandle) {
 
 // ---- window ---------------------------------------------------------------------------
 
+/// The one window, built from its own `tauri.conf.json` entry (`"create": false` there, so
+/// this is the only place it is created; every value stays in the config). Creating it here
+/// is what lets the interceptor and the navigation handler be attached, which is how the
+/// served UI's file links come to save a file in the app (`download.rs`).
+fn window(app: &AppHandle) -> tauri::Result<()> {
+    let config = app.config().app.windows.first().expect("the main window in tauri.conf.json").clone();
+    let h = app.clone();
+    WebviewWindowBuilder::from_config(app, &config)?
+        .initialization_script(INTERCEPT)
+        .on_navigation(move |url| match url.as_str().strip_prefix(SAVE_SCHEME) {
+            Some(target) => {
+                if let Ok(target) = target.parse() {
+                    download::save(&h, &target);
+                }
+                false
+            }
+            None => true,
+        })
+        .build()?;
+    Ok(())
+}
+
 pub(crate) fn set_title(app: &AppHandle, title: &str) {
     if let Some(w) = app.get_webview_window("main") {
         let _ = w.set_title(title);
@@ -462,18 +507,10 @@ fn percent_encode(s: &str) -> String {
 
 // ---- helpers --------------------------------------------------------------------------
 
-/// One GET over loopback, body on 200. The server answers JSON with a Content-Length
-/// and honours Connection: close, which is all this needs.
-// ponytail: hand-rolled HTTP/1.1; switch to ureq if the server ever chunks a response.
+/// One GET over loopback, body on 200: `<base>` is `http://127.0.0.1:<port>`.
 pub(crate) fn http_get(base: &str, path: &str) -> Option<String> {
     let addr: SocketAddr = base.trim_start_matches("http://").parse().ok()?;
-    let mut s = TcpStream::connect_timeout(&addr, Duration::from_millis(500)).ok()?;
-    s.set_read_timeout(Some(Duration::from_secs(3))).ok()?;
-    write!(s, "GET {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n").ok()?;
-    let mut buf = String::new();
-    s.read_to_string(&mut buf).ok()?;
-    let (head, body) = buf.split_once("\r\n\r\n")?;
-    head.starts_with("HTTP/1.1 200").then(|| body.to_string())
+    String::from_utf8(download::get(addr, path).ok()?.1).ok()
 }
 
 #[cfg(test)]

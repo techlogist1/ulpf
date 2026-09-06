@@ -11,6 +11,7 @@
     "windows": [
       {
         "label": "main",
+        "create": false,
         "title": "ULPF · starting engine…",
         "url": "index.html",
         "width": 1280,
