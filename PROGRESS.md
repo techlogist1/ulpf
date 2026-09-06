@@ -572,15 +572,32 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 07:39 IST: the records fix round on main (the verifier's two record findings; no lane branch --
+  PROGRESS.md and the records commit's message only). GATE GREEN on the final tree: `cargo test
+  --workspace` 124 passed 0 failed over 38 targets, `cargo clippy --workspace --all-targets --
+  -D warnings` rc 0, `cargo build --release` Finished rc 0 with `target/release/ulpf` at
+  12,097,752 bytes, `ulpf check --pending pending` 15 parsers 2 mappings 0 problems,
+  `scripts/demo.sh --check` 39 ok lines rc 0 (re-run because PROGRESS.md is that check's own
+  input), no fetchable external reference in `ui/dist`, and `ULPF_BIN=./target/release/ulpf
+  scripts/isolation.sh run samples/cisco_asa.log` ISOLATION PASS. `crates/`, `ui/` and `app/` are
+  all untouched by this round, so neither `demo --auto` nor the app checks were required; the app
+  checks stand from the 07:19 entry and the verifier reproduced them at 07:25 (9 passed, clippy
+  rc 0, the sidecar at 9,035,672 bytes). What changed: the records commit's message now says
+  07:19 where it said 07:25, so it agrees with the entry it writes (message-only amend, 114a1a3
+  -> 1e3c3a4, identical tree, never pushed, nothing citing it -- the DoD item and Verified state
+  cite 7dc8b9b); CLAUDE.md:242 still reads `(D1-D91)` and is named in In flight as the owner's
+  own one-word edit rather than applied here; and the three gate numbers in the 07:19 entry were
+  re-measured and corrected there.
 - 07:19 IST: lane 7D merged as 7dc8b9b (`lane-7b-app`; Opus builder, Opus verifier, verdict fix
   with four findings all closed; twelve commits 25388fd..02b4bef including its merge of main
   5928e35; 15 files, +587/-55; D92, D93, D94 already written on the branch and not rewritten
-  here). Clean merge, no conflicts. GATE GREEN on the merged tree: `cargo test --workspace` 123
+  here). Clean merge, no conflicts. GATE GREEN on the merged tree: `cargo test --workspace` 124
   passed 0 failed, `cargo clippy --workspace --all-targets -- -D warnings` rc 0, `cargo build
   --release` Finished with `target/release/ulpf` at 12,095,064 bytes, `ulpf check --pending
   pending` 15 parsers 2 mappings 0 problems, `scripts/demo.sh --check` 39 ok lines rc 0, no
-  external reference in `ui/dist`, and `ULPF_BIN=./target/release/ulpf scripts/isolation.sh run
-  samples/cisco_asa.log` ISOLATION PASS. `app/` is touched, so the app checks ran after
+  fetchable external reference in `ui/dist`, and `ULPF_BIN=./target/release/ulpf
+  scripts/isolation.sh run samples/cisco_asa.log` ISOLATION PASS. `app/` is touched, so the
+  app checks ran after
   `app/scripts/sidecar.sh` staged `ulpf-aarch64-apple-darwin` at 9,035,672 bytes and printed
   `profile dist`: in `app/src-tauri`, `cargo test --lib` 9 passed 0 failed and `cargo clippy
   --all-targets -- -D warnings` 0 warnings. `crates/` and `ui/` are untouched by this branch
@@ -588,7 +605,17 @@ look at the captures and a grep of `ui/dist` for external references.
   and `docs/screens/`), so the full `ulpf demo --auto` pass was not required by the gate and was
   not run; the last full pass stands in the entries below. docs/DECISIONS.md now holds 93
   headings: D1-D94 with D67 twice (the lane D amendment) and D76 and D83 reserved but never
-  written, both pre-existing and left unrenumbered.
+  written, both pre-existing and left unrenumbered. Three gate numbers were re-measured at the
+  07:27-07:39 fix round and corrected here. The suite is 124, not 123: `cargo test --workspace` prints
+  38 `test result:` lines and the 123 dropped the last target printed,
+  `crates/ulpf-time/tests/corpus.rs` (one test); nothing was added, the count was short. The
+  release binary's size is not byte-reproducible on this host -- the same source relinked at
+  07:27 and 07:34 gave 12,115,128 and 12,097,752 bytes -- so 12,095,064 is the 07:19 measurement,
+  not an invariant to diff a later build against; `cargo build --release` Finished and rc 0 are
+  the checkable parts. And the `ui/dist` grep does find sixteen `https://` strings (fourteen
+  `svelte.dev/e/<code>` error codes Svelte compiles into its runtime, two XHTML namespace
+  constants); none is fetchable -- no `src=`, `href=`, `fetch(` or `import ... from` names an
+  external host, which is the sense every earlier entry's "no external reference" carries.
 - 07:10 IST: lane DOCS merged as 8c90b0b (Sonnet builder and verifier, verdict pass; two commits
   896caf0, 42b19cd; five files, 12 lines): the adversarial review's seven documentation findings
   closed to the tree (api.md: GET /api/pending answers an empty list with inference disabled, the
@@ -734,7 +761,11 @@ look at the captures and a grep of `ui/dist` for external references.
   Left for the lead before the 08:30 freeze: whether tag `v0.1.0-rc3` is moved off fb7bda9 to a
   head that carries the last three commits and its draft release republished (deliberately not
   done tonight -- moving it deletes the remote tag and re-fires a ~14 min release job), and
-  whether branch run 34004510572 (02b4bef, docs-only, `in_progress` at this merge) is read. 7B (dispatched 05:05) was
+  whether branch run 34004510572 (02b4bef, docs-only, `in_progress` at this merge) is read.
+  One record line is also the owner's: CLAUDE.md:242 still reads `(D1-D91)`, three short after
+  7D landed D92-D94 (lane DOCS corrected that same line at 07:10, twenty minutes before the
+  merge); the fix is one word -- `D1-D94` -- and this fix round left it rather than rewrite
+  CLAUDE.md on a relayed instruction. 7B (dispatched 05:05) was
   stopped at 05:19: its worktree had been created at 14d3b0c, before lane 7's merge, so its
   job-object draft sat on the old `lib.rs`; the diff is kept in the lead's scratch as a
   reference and 7C carries the same items on the right base. The session limit hit at about
