@@ -839,10 +839,14 @@ and the header half of `a_tampered_record_is_named_by_verify_and_exits_1` in
 `crates/ulpf/tests/integrity.rs`. **Ruled out.** Comparing the index count against the
 catalogue's summed `event_count` -- the catalogue is locked for a writer's whole life, which is
 the only window in which the counts legitimately diverge, and when it can be read a surplus is
-the same crash artefact the note already covers. **Not done.** `POST /api/integrity/verify`
-(`Live::start_verify`) still runs digests and chain only, so the UI calls a header-rewritten
-store clean where the CLI exits 1; `crates/ulpf/src/demo.rs` offers the two as equivalent.
-That is server-side and left open.
+the same crash artefact the note already covers. **The server half (c07f087).** `Live::start_verify`
+reads `index_header` on the store directory before it opens the snapshot: a problem there is the
+whole verdict (`ok: false`, `reason: "index header"`, `first_bad: null`, the sentences in
+`header`), and the thread otherwise adds `index_header_against_store` over its snapshot, so a
+note there is a reason without a record to blame. `docs/api.md` carries `last_verify.header`;
+Integrity, Flow and Live's banner say the index header was rewritten;
+`the_servers_verify_names_a_rewritten_index_header` in `crates/ulpf/tests/v4_api.rs` pokes the
+magic under the running writer and reads the verdict back.
 
 ## D57. Provenance spans are pointer arithmetic on the borrowed values, computed only on the traceback
 **Decision.** A parsed field's span is `[start, end)` of its `Cow::Borrowed` slice inside
@@ -1801,8 +1805,7 @@ process's descriptors under the temp directory through `F_GETPATH` on macOS and
 `/proc/self/fd` on Linux, and removes the directory, which is the check Windows makes);
 `a_null_device_output_leaves_nothing_beside_it_or_in_the_cwd` and
 `the_version_meta_counts_the_lines_the_output_holds` in `crates/ulpf/tests/output_meta.rs`;
-`.github/workflows/windows-tests.yml` (the whole suite on `windows-latest` on every push to
-the branch). **Principle.** Immutability as a property of the interface (D7): the only
+`.github/workflows/windows-tests.yml` (the whole suite on `windows-latest` on every push to `main` and to `lane-8-windows` (69ce133; it reports a Windows regression after a merge, it does not gate one)). **Principle.** Immutability as a property of the interface (D7): the only
 bytes recovery touches are bytes that were never a record, and the logical end of the store
 is what the entries prove, never what the filesystem reports; stop means stopped on every
 platform, and a counter the meta disagrees with is a bug wherever it appears. **Ruled out.**
@@ -1826,6 +1829,20 @@ target). **Not done.** A verify or replay thread still running when `serve` retu
 joined (both are bounded and finish on their own; a cancel-and-join at stop is a separate
 change). Nobody has run the branch on a Windows machine by hand; the CI runner is the
 evidence.
+**Amended (752fdf5, 622103b, 34f912e).** Recovery's backward walk checked the last indexed
+record's digest and dropped the record on a mismatch, then zeroed its bytes and reissued its id
+on the next append: one flipped bit, or a body torn under a complete header, erased a record an
+output line may already name. Recovery now decides by shape and chain link only; what an
+indexed record's bytes hash to is `verify`'s to name and never recovery's to reclaim (the chain
+is built from the digest in the header, so one bad body does not spread), and the byte check
+stays for records the index never held, where no id has escaped. The reader likewise trimmed
+every trailing entry it could not read, so a segment cut short read as a shorter clean store
+with exit 0; it now trims only the zeroed entries recovery leaves for the writer, and a crash
+tail no run has recovered yet is named by `verify` as it was before. The header note promises
+a re-index only for a record recovery will re-index (its digest is checked too). Tests:
+`a_bad_digest_in_the_last_record_survives_recovery_with_its_id`,
+`a_segment_cut_short_is_named_not_trimmed` and
+`a_torn_record_beyond_the_index_is_not_promised_a_reindex` in `crates/ulpf-store/tests/chain.rs`.
 
 ## D83. A directory input is filtered by pattern, and every file kept out is counted and named
 **Decision.** `run` and `serve` take repeatable `--include <PATTERN>` and `--exclude
@@ -2070,7 +2087,7 @@ would make the counter block depend on a filename heuristic instead of on what w
 directory-level include/exclude option was deferred to D83. Moving `samples/README.md` out of
 `samples/` — it is the file a teammate reads before adding a sample, and relocating it hides
 the sharp edge instead of deciding about it. **Superseded by D83.** The filter exists now:
-`ulpf run samples` reads the 15 logs and prints `excluded: samples/README.md (*.md)`, so the
+`ulpf run samples` reads the 16 logs and prints `excluded: samples/README.md (*.md)`, so the
 rule above is history and a documented command may name a directory again. The commands in
 this repository still name `samples/*.log` because their pasted counter blocks were measured
 that way and both forms now give the same numbers.

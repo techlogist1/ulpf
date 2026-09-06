@@ -35,8 +35,9 @@ generated parser (`origin = "inferred"`, priority -1) into the repo's `parsers/`
 or a demo copy built after it knows mikrotik already, so the unseen-format demo cannot raise a
 proposal; the demo's reset removes any generated parser from `parsers/` before the copy is made,
 and the bundle step and the app's first-run copy exclude them (a Windows tester hit this against
-14d3b0c). Every documented command names the log files (`samples/*.log`), never the bare
-`samples` directory, which would ingest `samples/README.md` as a log.
+14d3b0c). Every documented command names the log files (`samples/*.log`) because the pasted counter
+   blocks were measured that way; since D83 the bare `samples` directory gives the same events and
+   names `samples/README.md` as excluded.
 
 ```
 cargo build --release                                      # ~1 min; binary target/release/ulpf
@@ -197,7 +198,7 @@ false reproduction is named.**
 - Proof: `CGEvent.postToPid` (bypasses every tap) delivered `keydown:Escape` + `keyup:Escape` to the
   probe, and to the installed shell: its log read `keydown:8 keyup:8 keydown:Escape` with the
   overlay closing and `9` routing to Integrity. The same UI through Chrome over CDP passes the
-  27-check keyboard map (`keys.mjs`). Digits 0-7, `t`, `/`, `a`, Enter route in the shell.
+  27-check keyboard map (`keys.mjs`; 31 checks after D101 added its four). Digits 0-7, `t`, `/`, `a`, Enter route in the shell.
 - Verdict: on macOS the shell delivers every key; the "dead keyboard" I saw was the harness's own
   tap. Cleared. Host-independent and still real: `App.svelte`'s `if (helpOpen) return` makes any
   environment that loses one Escape look like a dead keyboard, because the overlay then swallows
@@ -364,6 +365,108 @@ header-rewritten store clean). (3) Open items 1 (the Windows click-through, now 
 engine, the 20-minute session on the final installed build, the APOSD and adversarial passes (both
 started at this checkpoint over the whole v5 diff), CI green on both runners.
 
+### Checkpoint 03:20 IST, 2026-09-07 (the review pass landed; the final bundle proven; CI run 3)
+
+**The 02:25 checkpoint above was written at 02:03 IST** (the commit time of db5d041); the heading
+is wrong by twenty minutes and is left as it was.
+
+**Landed since 02:25, one cause per commit, full suite green in the worktree at each push
+(31bf785: 147 passed, 0 failed, 2 ignored; d849b12: 150 passed, 0 failed, 2 ignored; clippy
+`-D warnings` clean both times; the shell crate 13 passed and, from this batch on, run by CI on
+both runners).**
+- c07f087 the server half of finding 19: `Live::start_verify` reads the index header first and
+  names it (D56 addendum); a830e75 the Windows measurement job reaches its WebView2 (the shell
+  forwards `ULPF_WEBVIEW_ARGS`, the smoke script stops every leftover browser process first).
+- The review pass (`v5-aposd-and-adversarial-pass`, 12 reviews over 6 slices, then one refuter
+  per finding, 106 agents): 45 findings confirmed, 49 refuted, 12 clean. Every confirmed finding
+  is landed below; the two store blockers it raised were verified by the lead and fixed before
+  the refuters ran (they show as "code no longer at HEAD").
+- 752fdf5 recovery never reclaims an indexed record for what its bytes hash to; 622103b the
+  reader trims only the zeroed entries; 34f912e the header note promises a re-index only for a
+  record recovery will re-index (D82 amended). Tests in `crates/ulpf-store/tests/chain.rs`.
+- daa377a `--exclude` adds to the defaults (D83 amended; `excludes()` with a unit test).
+- 5afd9d3 / 4a73d22 / 927fa74 / 3dc912b / 67970a3 the driver: the verdict is the first result,
+  the sample timer always stops, the OS-key child is bounded, no third send after a trap, keys go
+  only to the app's window. 07c201e the shell's tests in the bundle job; 50f1750 a 45-minute
+  backstop on the Windows suite; f6e5898 `&File` / `&Reset…` mnemonics for the fallback path.
+- 118a255 the holder wait off the UI thread; 31bf785 the pivot index is not reopened after stop
+  (test in `tests/stop.rs`); c6b9a71 the replay listing off the runtime's workers; 3e22b23 the
+  excluded-name cap is said; 33d4229 exit-with-parent waits for the serving line.
+- 2654b68 a LEEF delimiter outside the documented forms is invalid_leef; cab6680 a failed parse
+  returns its pooled keys (alloc test: 0 allocations on the next event); e63d57d CEF Very-High
+  lands on Critical (both schemas, normalize test); b321055 windows_event strips a syslog
+  envelope (strategies test on the shipped file).
+- 9ff4161 table widths in em beside their columns (header/scroller/rows 904/1084/748 px at
+  `--t0` 12px and 974/1167/805 at 13px, the same on all three); c01f304 the budget harness janks
+  with events moving (3/3); 0d225ed / ee983e2 / f1cbe00 / dbcbf7d / d849b12 the keymap note,
+  Live's last-verify line, hidden-window supersedes not counted, the save-failure path only when
+  sent, regenerate refuses to discard an unsaved edit. `ui/keys.mjs` 31/31 after all of them.
+- Records: a9ad80e (xml reference), 0067999 (manual-test section 5, counts, CLAUDE.md, api.md,
+  design.md, D75, D103, app/README), and this commit (README's counter block re-pasted from the
+  dist binary: 16 parsers, 16 files, 324 events; D56's server half; D82 amended; D91/D83 counts;
+  the open-items pointer above).
+
+**The final bundle on this machine** (`ULPF-final.app`: release shell + dist engine at d849b12,
+ad-hoc signed, isolated HOME, never the owner's instance):
+- 20-minute live session #1 (02:14:50-02:34:58, on the c07f087 bundle): 299 samples dropped,
+  13,416 events emitted = framed, 299 sources, 24 proposals, backpressure 0, queue high-water 1;
+  app RSS 98-108 MB (first 103, last 103), engine RSS 12-52 MB (peaks are inference runs, last
+  33), app CPU mean 2.0%, engine mean 3.3%; the footer's `frames skipped 0` at the end; every
+  screen answered its key throughout. Session #2 on the final bundle: below.
+- Review edit end to end (02:25): `src_ip` renamed to `client` in the proposal editor, Save
+  answered "Saved" with 0 problems (the mistyped key `client` in place of `patterns` first drew
+  "Saved, 1 problem remain" naming the file and line 17: the designed error state), `a` then
+  Enter approved it (17 parsers, 250 of 250 re-detected), and every later nginx drop was parsed
+  by `soak_16_nginx_access_inferred` with `client` in the output (1,504 detected by 02:28; no new
+  nginx proposal after it). On the final bundle the regenerate guard drew "Save (s) or reload
+  the edit first" with a character typed into the box.
+- Reset from the keyboard (Cmd+Shift+R -> the splash -> "Reset events, keep approved parsers"):
+  the store, output, watch and pending gone and the app back on Flow at 0 within four seconds,
+  the 17 parsers kept (the approved nginx one among them), usable at once (`1` answered).
+  Twice: 02:36 on the c07f087 bundle, 02:57 on the final one.
+- Force-kill (`kill -9` of the app): the engine gone 0.8 s and 0.5 s later, nothing left in the
+  process list; relaunch on the same data directory resumed the same store (41 of 41 records and
+  the same store id; 52 of 52 the second time). Cmd+Q quits both cleanly.
+- Isolation on the final binary: `run` over bench/mixed-5000000.log PASS (35 samples, 0
+  sockets), `run samples` PASS, `serve` PASS (58 samples, the one loopback listener); `demo
+  --check: no drift`. The menu bar reads File (the `&` stripped on macOS).
+
+**CI run 3 (34060453848 / 34060453822 at 31bf785, pushed 02:44):** windows-tests success (the
+full suite on Windows); smoke-windows success; cli x3 success; bundle macOS and Windows success,
+with the shell's 13 tests now run on both. `app-smoke-windows` **failed**, on one root cause with
+a clean instrument reading behind it:
+- Phase c passed on Windows: Flow and Live both 64 fps, p99 gap 15.7 ms, 0 long tasks, 2,851 /
+  2,982 DOM nodes, heap ~5 MB. The frame-budget rule holds on WebView2.
+- Phase d's Save passed on Windows: the proposal listed, Save answered "Saved" with no problems,
+  and the pending file on disk read `in_if true, 0 CRLF, 17 bare LF` — the atomic write keeps LF
+  and does not corrupt the file (D104 proven on Windows).
+- The rest failed for one reason: `oskeys.ps1` sent keys with `SendKeys`, which posts WM_CHAR to
+  the top-level window; WebView2 renders in a separate browser process that never sees those, so
+  every OS key landed with `keydown seen=false` while the mouse (hardware-level `mouse_event`)
+  went straight through. The CDP retry passed on every key, so the UI routes them. That one
+  failure took phase b (the eleven overlay/number keys after a click), phase d's `a`-key approve,
+  and phase e's reset — and it confounds the reset reading, because `^+r` "not opening the reset
+  page" cannot be told from `^+r` never being delivered. The relaunch check also failed (526
+  records against 496): the smoke script left the sample in `watch/`, and a fresh `serve` re-scans
+  and re-ingests it, so the count climbed across the kill for a reason that is not a resume
+  failure. The engine's own resume is exact when `watch/` is drained (macOS 41=41, 52=52 above).
+  Fixes for run 4: `oskeys.ps1` now injects with `keybd_event`, the same hardware-input layer the
+  working mouse uses; `smoke-windows.ps1` empties `watch/` and waits for the count to settle
+  before the resume test. The engine and shell are unchanged: the artifact shows engine RSS flat
+  at 13-23 MB across the run, no crash, and the job object reaped the engine on the force kill.
+- Windows throughput from run 2, the installed dist build: 648,000 events in 7.522 s ->
+  86,146 events/s, 31.3 MB/s on the runner's 4 threads (wall 8.22 s).
+
+**Symptom -> root cause -> fix -> measurement (the tester's report, closed).**
+| symptom | root cause | fix | measurement |
+|---|---|---|---|
+| "lags badly" | every metrics frame re-rendered the whole Live screen: 12,135 DOM nodes at 340 sources, 89 KB frames twice a second, a 50 ms task per frame; no frame budget anywhere | D102: metrics coalesced per animation frame, every growing list virtualised, motion paused when the budget is missed | Live at 341 sources 3,916 nodes, worst gap 16.8 ms (was 66.7), 60 fps; 20 minutes installed with `frames skipped 0`, RSS flat |
+| "number keys do nothing", "keyboard dead" | the `?` overlay swallowed every key (`if (helpOpen) return`), and Traceback focused its box on arrival so the next digit was typed into it; on macOS the test harness's own tap ate Escape, so every lost Escape read as a dead keyboard | D101: keys never modal (any letter or digit closes the map and still routes), no screen takes focus on its own | `ui/keys.mjs` 31/31; on the installed app `?` then `3` lands on Traceback with no box focused; the Windows driver's phase b rows |
+| "editing a parser in the review screen does not work" | a failed save reported no file and no reason; on Windows the rename under a scanner's lock failed once and was final | D104: `atomic_write` retries the Windows lock, every failure names the file; the UI shows the path and the problem line | the edit above, saved, approved and visible in the next event; server test on a read-only `pending/` |
+| "reset does nothing" | the shell polled `Get-CimInstance` (seconds per call on Windows) and slept 400 ms hoping the engine was gone; a force-quit left the engine holding the store | D103: kernel waits (`WaitForSingleObject` / `kill -0`), `--exit-with-parent`, the wait off the UI thread | reset in four seconds, twice; engine gone 0.5-0.8 s after `kill -9`; relaunch resumes the store |
+| "crashes" | not reproduced in 40 minutes of installed sessions; the crash paths found by review were the store (a bit flip erased a record), the pivot handle after stop, an unbounded OS-key wait | 752fdf5 / 622103b, 31bf785, the driver commits | two 20-minute sessions with 0 backpressure and no exit; the suite's stop and recovery tests |
+| Windows keyboard reset (Cmd+Shift+R is WebView2's reload) | run 3 could not read it: the driver's own `SendKeys` reached no WebView2 key, so `^+r` not opening the reset page was indistinguishable from `^+r` never being delivered | fix the instrument first (keybd_event), re-measure in run 4; reset is reachable from the File menu (mouse) on Windows regardless, and the Cmd+Shift+R accelerator is proven on macOS | run 4's phase e, with keys actually delivered; the menu carries `&File`/`&Reset…` for the fallback |
+
 ## v4 (2026-09-06, 02:50-09:30 IST, autonomous): the demo morning
 
 ### Cold start (read this first; written 09:40 IST at the close of the session)
@@ -423,6 +526,9 @@ as a37af63, delete it. Not merged:
 - lane-7b-windows (fbda6a0, 2 commits over 14d3b0c): ABANDONED, superseded by lane-7b-app; delete.
 
 **Open items, from the report's section 8 and the Windows tester's report.**
+(Read with the v5 checkpoints below: items 2, 3, 4, 6, 7, 9 and 10 were closed by e70ddbc, 4831b82,
+0e2992f, a04f291 + c07f087, fc8b3d0, 035a4d9 and 404dac6; the live list is the "Open at this
+checkpoint" paragraph of the latest v5 checkpoint.)
 1. Nobody has clicked the Windows app since the tester's report against 14d3b0c: exports, the
    locked-store button, the job object under a real force-quit, Intensity's restart, the sidecar per
    target, `sidecar.ps1` (never executed anywhere: CI runs sidecar.sh under bash on Windows), lane
