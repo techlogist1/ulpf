@@ -189,7 +189,7 @@
       <span>{terms.length ? 'Esc clears the filter.' : flaggedOnly ? 'f shows every event again.' : 'The tail fills the moment the engine emits: drop a file into a watched directory or send syslog to the listener in the status line.'}</span>
     </div>
   {:else}
-    <div class="tail wrap" style="--cols:6em 12em 13em 12em 6em 14em 7em minmax(0,1fr); --minw:904px">
+    <div class="tail wrap" style="--cols:6em 12em 13em 12em 6em 14em 7em minmax(0,1fr); --minw:calc(70em + 7 * var(--s3) + 2 * var(--s2))">
       <VList items={rows} max={Math.max(330, innerHeight - 420)} {sel}>
         {#snippet header()}
           <div class="vh"><span class="num">raw</span><span>time</span><span>parser</span><span>class</span><span>action</span><span>device</span><span title="the stages that did not reach their outcome; hover a mark for the flag">flags</span><span>summary</span></div>
@@ -217,7 +217,7 @@
     {#if !m?.sources?.length}
       <div class="empty"><b>No sources yet.</b><span>A source appears when its first file or datagram is read.</span></div>
     {:else}
-      <div class="wrap" style="--cols:16em 11em 6.5em 6.5em 7em 6.5em 5em 5.5em 7em 12em minmax(0,1fr); --minw:1084px">
+      <div class="wrap" style="--cols:16em 11em 6.5em 6.5em 7em 6.5em 5em 5.5em 7em 12em minmax(0,1fr); --minw:calc(83em + 10 * var(--s3) + 2 * var(--s2))">
         <VList items={m.sources} max={listMax}>
           {#snippet header()}
             <div class="vh"><span>source</span><span>parser</span><span class="num">events</span><span class="num">detected</span><span class="num">no_parser</span><span class="num">buffered</span><span class="num">window</span><span class="num">baseline</span><span>drift</span><span>proposal</span><span></span></div>
@@ -251,7 +251,7 @@
     {#if !m?.parsers?.length}
       <div class="empty"><b>No parsers loaded.</b><span>The registry scans the parsers directory at start and whenever it changes.</span></div>
     {:else}
-      <div class="wrap" style="--cols:12em 14em 8em 4.5em 4.5em 7em 7em minmax(0,1fr); --minw:748px">
+      <div class="wrap" style="--cols:12em 14em 8em 4.5em 4.5em 7em 7em minmax(0,1fr); --minw:calc(57em + 7 * var(--s3) + 2 * var(--s2))">
         <VList items={m.parsers} max={listMax}>
           {#snippet header()}
             <div class="vh"><span>name</span><span>device</span><span>strategy</span><span class="num">subs</span><span class="num">prio</span><span>origin</span><span class="num">detected</span><span></span></div>
