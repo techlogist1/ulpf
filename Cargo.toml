@@ -41,10 +41,9 @@ parquet = { version = "59.3.0", default-features = false, features = ["snap"] }
 lto = false
 debug = 1
 
-# What ships: the Docker image and every throughput number the harness reports. Exactly
-# what [profile.release] carried before the split. CI's release assets and the sidecar
-# build still use `cargo build --release` at this commit and move to `--profile dist`
-# with lane 7C (lane-7b-app, in flight).
+# What ships: the Docker image, every throughput number the harness reports, and since lane
+# 7C every CI release asset and the app's sidecar. Exactly what [profile.release] carried
+# before the split. Only app.yml's smoke-windows job stays on --release, on purpose.
 [profile.dist]
 inherits = "release"
 lto = "fat"

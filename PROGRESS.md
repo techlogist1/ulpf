@@ -386,10 +386,15 @@ look at the captures and a grep of `ui/dist` for external references.
 - [x] L2P. (merged 04:12 IST as 2027391, 986154b, D81; the lead's gate: 116 tests, clippy clean, demo check 18/18) `elapsed_ms` on every pivot page; the
       related scan on four connections without the SQLite mutex, through mmap, borrowed blobs, a
       bitset; pages byte-identical to before; the lead's gate on the merged tree.
-- [ ] LD. `ulpf demo` plays the PROGRESS demo from the binary with `--auto`, `--check`, `--reset`;
-      `scripts/demo.sh` the wrapper; the reset purges generated parsers from `parsers/`; a full
-      `--auto` pass on the merged binary; the Windows smoke job runs `--check` (lane 7B).
-- [~] L7. (lane 7 merged 05:03 IST, nine commits c6400e3..26d0bbd, D89; 7B dispatched 05:05)
+- [x] LD. (merged 04:16 IST as 82378fc with the follow-up 97934a9 at 04:26 amending D67; the
+      lead's two runner fixes d6d5a77 at 05:34 and 7c223e3 at 07:04 are on main since; the item
+      was left unchecked at the merge and is checked here) `ulpf demo` plays the PROGRESS demo
+      from the binary with `--auto`, `--check`, `--reset`; `scripts/demo.sh` the wrapper; the
+      reset purges generated parsers from `parsers/`; a full `--auto` pass on the merged binary;
+      the Windows smoke job runs `--check`, which landed with lane 7D (466d79b).
+- [x] L7. (lane 7 merged 05:03 IST, nine commits c6400e3..26d0bbd, D89; 7C/7D merged 07:19 IST
+      as 7dc8b9b, twelve commits 25388fd..02b4bef including its merge of main 5928e35, 15 files
+      +587/-55, D92-D94)
       Lane 7's builder hit the session limit before returning, so no structured report and no
       verifier ran: the lead reviewed the diff (11 files, +367/-25: the offline WebView2 installer
       mode, the failure sentences on the splash with `engine.log` named, the pinned-port hook,
@@ -399,11 +404,43 @@ look at the captures and a grep of `ui/dist` for external references.
       installed the NSIS build into AppData\Local\ULPF, saw `server.url`, and printed `orphan:
       ulpf.exe pid 1904 outlived a Stop-Process of the window`, which is the tester's finding
       reproduced and the reason for 7B's job object. Tag `v0.1.0-rc2` is on the lane 7 head (run
-      33998466623; its draft held the two macOS assets when read at 05:00). 7B (Opus builder,
-      Fable verifier, ceiling 07:10): the job object, the locked-store sentence with a button, the
-      first-run copy and the bundle step excluding generated parsers, `CARGO_TARGET_DIR` and the
-      dist binary in the sidecar scripts, `--profile dist` in the `cli` and `bundle` jobs, `ulpf
-      demo --check` in the smoke job, which installer it exercised, tag rc3.
+      33998466623; its draft held the two macOS assets when read at 05:00). Lane 7D (Opus builder,
+      Opus verifier; the verifier's verdict was fix with four findings, all closed by the fix
+      round) carried 7B's items on the right base and closed them: a Windows job object with
+      `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` held for the app's life, so the kernel reaps the
+      sidecar whatever the exit path (D92, `app/src-tauri/src/job.rs`); a store another writer
+      holds is a splash sentence naming the store and the holder pid with one button that stops
+      it and restarts through the ordinary path (D93, `app/src-tauri/src/holder.rs`); generated
+      parsers excluded by their own `origin = "inferred"` at all three places they could leak --
+      the first-run copy, which logs which file it skipped, and `sidecar.sh`/`.ps1`, which exit 1
+      naming each refused file (D94, `lib.rs` and `app/scripts/sidecar.sh`); `--profile dist` in
+      app.yml's `cli` and `bundle` jobs honouring `CARGO_TARGET_DIR`, with `smoke-windows`
+      deliberately left on `--release`; `ulpf.exe demo --check` in the smoke job against the
+      installed engine. Verified by the builder on the M1: `cargo test --workspace` 123 passed,
+      app `cargo test --lib` 9 passed, clippy clean, `pnpm tauri build` producing ULPF.app and
+      `ULPF_0.1.0_aarch64.dmg`, the bundle answering `server.url` inside 0.5 s with
+      `samples/cisco_asa.log` through the watch directory at 30 each framed through emitted and
+      `no_parser` 0, `osascript quit` leaving no `ulpf-app` and no engine, and the first-run
+      exclusion proved on the built bundle (16 definitions in `Resources/parsers`, 15 in the data
+      directory, `engine.log`: `shell: 1 generated definition(s) not copied into <data>/parsers:
+      mikrotik_firewall.toml`). CI on the branch: run 34002152105 (fb7bda9) green over 8 jobs,
+      `app-smoke-windows` reading `no ulpf.exe left 500 ms after the window process was
+      force-killed (ceiling 5 s): the job object reaped it`; run 34003825762 (e2ce03b) green over
+      all 8 jobs in 13m36s. The four verifier findings closed: not rebased -> `git merge main`
+      (5928e35, merge-base 217d0df); D92-D94 dangling in `app/README.md` -> written into
+      docs/DECISIONS.md at 1721/1741/1757 (e2ce03b); the orphan assertion claiming `5 s` where it
+      measured a 500 ms poll -> the script now prints the measured elapsed against the named
+      ceiling; the screens index at 24 rows for 28 app captures -> 28 rows (02b4bef), including
+      `app-error-locked.png` for D93. Tag `v0.1.0-rc3` (annotated fec0119) points at fb7bda9,
+      three commits behind the branch tip (one PowerShell log string and two markdown changes);
+      its draft release run 34002380126 is green with 8 assets and unpublished. The tag was
+      deliberately not moved: moving it deletes the remote tag and re-fires a ~14 min release
+      job, so the owner decides after the demo. Run 34004510572 (02b4bef, docs-only) was still
+      `in_progress` when this merge landed at 07:19 IST and was not waited on. Gaps, recorded not
+      papered over: the DragDrop handler was never exercised by hand (every file was fed through
+      the watch directory); `sidecar.ps1` has never been executed (no pwsh on this Mac, and CI
+      runs `sidecar.sh` under bash on Windows too); and the branch's macOS bundle pass is the
+      earlier build's, the fix round having touched no Rust, script, bundle config or `ui/`.
 - [x] LI. (merged 04:17 IST as 20a66c2, eight commits 3e85c8a..f68781d, D84) Intensity: Low /
       Balanced / Max with the machine's core count and the index state, persisted in
       `app_config_dir/intensity`, applied at sidecar start, a clean restart on change with the
@@ -474,16 +511,19 @@ look at the captures and a grep of `ui/dist` for external references.
       executable Unix command in the Quick start run once at exit 0, `isolation.sh docker` PASS.
       Stated limits: the PowerShell block and the docker isolation were inspected, not executed
       here (no pwsh on this Mac; the docker run substituted lane P's verify image of the same
-      Dockerfile), so the Windows block is reasoned from PowerShell semantics and lane 7C or the
-      smoke job should paste it once; the container command in "Get it" still names the mounted
+      Dockerfile), so the Windows block is reasoned from PowerShell semantics and lane 7D's smoke
+      job now runs `demo --check` on the installed engine, though the README block itself is
+      still unpasted; the container command in "Get it" still names the mounted
       `/data/samples` because the `scratch` image has no shell to expand a glob, and README says
       so and names the cost where the command appears (the real fix is D83); `docs/coverage.md`'s
       header still stamps `commit 0c197bc` and `2026-09-05 23:04 UTC`, three merges stale,
       unregenerated because `scripts/coverage.sh` already runs one file at a time so its numbers
       should not have moved. The three out-of-lane repeats of "what CI ships" (D88 in two
-      places, `docs/evaluation.md`, Cargo.toml's `[profile.dist]` comment) are applied in this
-      commit, worded as: CI's release assets and the sidecar build still use `cargo build
-      --release` at this commit and move to `--profile dist` with lane 7C.
+      places, `docs/evaluation.md`, Cargo.toml's `[profile.dist]` comment) were applied in that
+      commit as "still use `cargo build --release` ... and move to `--profile dist` with lane
+      7C", and all four were rewritten to the past tense at lane 7D's merge, once app.yml on
+      main was confirmed to build `--profile dist` in the `cli` and `bundle` jobs (lines 80 and
+      141) and to stay on `--release` only in `smoke-windows` (line 213).
 - [x] L3b. (pushed 04:30 IST, `origin/lane-3b-cef-leef` at c6e13ca, a9c8ac6 + 4, never merges
       tonight) CEF's seventh header field is `cef_severity`, bucketed in both mappings on
       ArcSight's own ranges (0-3 Low, 4-6 Medium, 7-8 High, 9-10 Very-High to Critical; 14 of 14
@@ -532,6 +572,23 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 07:19 IST: lane 7D merged as 7dc8b9b (`lane-7b-app`; Opus builder, Opus verifier, verdict fix
+  with four findings all closed; twelve commits 25388fd..02b4bef including its merge of main
+  5928e35; 15 files, +587/-55; D92, D93, D94 already written on the branch and not rewritten
+  here). Clean merge, no conflicts. GATE GREEN on the merged tree: `cargo test --workspace` 123
+  passed 0 failed, `cargo clippy --workspace --all-targets -- -D warnings` rc 0, `cargo build
+  --release` Finished with `target/release/ulpf` at 12,095,064 bytes, `ulpf check --pending
+  pending` 15 parsers 2 mappings 0 problems, `scripts/demo.sh --check` 39 ok lines rc 0, no
+  external reference in `ui/dist`, and `ULPF_BIN=./target/release/ulpf scripts/isolation.sh run
+  samples/cisco_asa.log` ISOLATION PASS. `app/` is touched, so the app checks ran after
+  `app/scripts/sidecar.sh` staged `ulpf-aarch64-apple-darwin` at 9,035,672 bytes and printed
+  `profile dist`: in `app/src-tauri`, `cargo test --lib` 9 passed 0 failed and `cargo clippy
+  --all-targets -- -D warnings` 0 warnings. `crates/` and `ui/` are untouched by this branch
+  (`git diff` over the merge names only `.github/workflows/app.yml`, `app/`, `docs/DECISIONS.md`
+  and `docs/screens/`), so the full `ulpf demo --auto` pass was not required by the gate and was
+  not run; the last full pass stands in the entries below. docs/DECISIONS.md now holds 93
+  headings: D1-D94 with D67 twice (the lane D amendment) and D76 and D83 reserved but never
+  written, both pre-existing and left unrenumbered.
 - 07:10 IST: lane DOCS merged as 8c90b0b (Sonnet builder and verifier, verdict pass; two commits
   896caf0, 42b19cd; five files, 12 lines): the adversarial review's seven documentation findings
   closed to the tree (api.md: GET /api/pending answers an empty list with inference disabled, the
@@ -666,12 +723,18 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
-- 06:18 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7, 4B (each through the gate; the four
-  before 4B under one gate, 05:07; the binary re-verified 05:11; 4B's own gate is GATE GREEN in
-  Verified state above, and its fix round's gate GATE GREEN in the 06:18 entry). Branches
-  pushed: lane-5-xml, lane-6-index, lane-3b-cef-leef, lane-8-windows. Running: 7C (`lane-7b-app`, Opus builder, Fable
-  verifier, ceiling 07:10, dispatched 05:16 on main at f57e652) alone; 4B (`lane-4b-readme`,
-  Opus, Fable, dispatched 05:05, nine commits) is merged and recorded above. 7B (dispatched 05:05) was
+- 07:23 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7, 4B, DOCS and 7C/7D (each through the
+  gate; the four before 4B under one gate, 05:07; the binary re-verified 05:11; 4B's own gate is
+  GATE GREEN in Verified state above, and its fix round's gate GATE GREEN in the 06:18 entry;
+  7C/7D's gate is the 07:19 entry at the top of Verified state). Branches pushed: lane-5-xml,
+  lane-6-index, lane-3b-cef-leef, lane-8-windows -- none of them merges tonight. No lane is
+  running: 7C (`lane-7b-app`, Opus builder, Opus verifier, dispatched 05:16 on main at f57e652)
+  was the last, and it is merged as 7dc8b9b with its records in this commit; 4B
+  (`lane-4b-readme`, Opus, Fable, dispatched 05:05, nine commits) is merged and recorded above.
+  Left for the lead before the 08:30 freeze: whether tag `v0.1.0-rc3` is moved off fb7bda9 to a
+  head that carries the last three commits and its draft release republished (deliberately not
+  done tonight -- moving it deletes the remote tag and re-fires a ~14 min release job), and
+  whether branch run 34004510572 (02b4bef, docs-only, `in_progress` at this merge) is read. 7B (dispatched 05:05) was
   stopped at 05:19: its worktree had been created at 14d3b0c, before lane 7's merge, so its
   job-object draft sat on the old `lib.rs`; the diff is kept in the lead's scratch as a
   reference and 7C carries the same items on the right base. The session limit hit at about
