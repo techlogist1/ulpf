@@ -8,10 +8,15 @@ here; the app bundles `ulpf` as a sidecar.
 ## Build
 
 ```
-cargo build --release -p ulpf         # at the repo root: the engine
+cargo build --profile dist -p ulpf    # at the repo root: the engine that ships
 app/scripts/sidecar.sh                # copies it to app/src-tauri/binaries/ulpf-<host triple>[.exe]
 cd app && pnpm install && pnpm tauri build
 ```
+`dist` is the shipped profile (fat LTO, one codegen unit; `[profile.dist]` at the repo root)
+and `sidecar.sh` takes `<target>/dist/ulpf[.exe]` first. It falls back to
+`<target>/release/` with a warning naming the profile it took, so a `--release` build still
+bundles, it just says it is not the shipped one. `<target>` is `CARGO_TARGET_DIR` when that
+is set and `<root>/target` otherwise — the same place cargo put the build.
 On Windows without Git Bash, `app\scripts\sidecar.ps1` is the same copy in PowerShell.
 The bundle lands under `app/src-tauri/target/release/bundle/` (`macos/ULPF.app` and a `.dmg`
 on macOS; `nsis/*.exe` and `msi/*.msi` on Windows). `pnpm tauri dev` runs it unbundled.
@@ -85,12 +90,24 @@ page as a sentence, the way out, and the file to read.
 | The engine binary is not beside the app | `ULPF could not start its engine: <error>.` / `The engine ships beside the app as ulpf.exe; reinstalling ULPF replaces it.` (`ulpf` on macOS) |
 | The port is taken | `ULPF could not take port 7913 on 127.0.0.1: <error>.` / `Quit whatever is listening there, or start ULPF with ULPF_APP_PORT unset and it will pick a free port.` |
 | The engine started and died | `The engine stopped (exit 2). Its last words: <the engine's own last line>` / `The whole of its output is in <data>/engine.log` |
+| The store is held by another writer | `The engine's store at <path> is held by ulpf (pid N). Stop it and start again?` / `The whole of its output is in <data>/engine.log`, and one button, **Stop it and start again** |
 | The engine never answered | `The engine did not answer within two minutes.` |
 
 The title carries the same state (`ULPF · engine down (port in use)`). ULPF picks a free
 port for itself; `ULPF_APP_PORT` pins one, which is how the port case above is provoked.
-Captures of the three, taken from the built app on macOS: `docs/screens/app-error-sidecar.png`,
-`docs/screens/app-error-port.png`, `docs/screens/app-error-engine.png`.
+Captures, taken from the built app on macOS: `docs/screens/app-error-sidecar.png`,
+`docs/screens/app-error-port.png`, `docs/screens/app-error-engine.png`,
+`docs/screens/app-error-locked.png`.
+
+The locked-store row is the only clickable thing on the splash page: the engine allows one
+writer (the store's catalogue is opened in SQLite's exclusive locking mode), so a second
+`ulpf serve` on the same directory is refused and the app would otherwise show that refusal
+as the generic "the engine stopped". The holder is found by its command line (`ps` on macOS,
+`Get-CimInstance Win32_Process` on Windows) because the lock is the process and the file
+that records the writer's pid is the locked one; the button stops that pid and starts the
+engine again through the ordinary start path. Provoke it by running a second
+`ulpf serve --store "~/Library/Application Support/dev.ulpf.desktop/store"` before launching
+the app (D92).
 
 ## Platform differences (each one is also a comment where it matters)
 
@@ -113,6 +130,14 @@ Captures of the three, taken from the built app on macOS: `docs/screens/app-erro
 - Stopping the engine: std's `Child::kill`, SIGKILL on macOS and `TerminateProcess` on
   Windows; both are safe under the engine's kill recovery (D59). An intensity change uses
   the same kill, so the restart behaves the same way on both platforms.
+- Stopping the engine when the *app* is force-killed: on Windows the sidecar is put in a
+  job object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` (`src/job.rs`), whose handle the app
+  holds for its whole life, so the kernel terminates the engine when the app's handles close
+  — End task on the window, a crash, `Stop-Process -Force`, anything. Windows has no
+  process group, so without it a force kill left `ulpf.exe` running with the store's SQLite
+  lock and the next launch was refused (D91). macOS needs nothing: the sidecar is a direct
+  child and dies with its parent. `app-smoke-windows` asserts it: no `ulpf.exe` five
+  seconds after the window is force-killed, or the job fails.
 - The splash page is served from `tauri://localhost` on macOS and `http://tauri.localhost`
   on Windows (`SPLASH` in `src/lib.rs`).
 - Positional reads in the store and the UDP receive buffer in the syslog listener have
@@ -184,17 +209,32 @@ redistributable (`winget install Microsoft.VCRedist.2015+.x64`), or take a build
 leaves nothing to install.
 
 **What CI checks now.** `app-smoke-windows` in `.github/workflows/app.yml` runs after the
-bundle job on `windows-latest`: it installs the NSIS installer silently (`/S`, the NSIS
-switch), finds the installed `ulpf-app.exe` under `%LOCALAPPDATA%`, proves `ulpf.exe` sits
-beside it, launches the app, waits for `%APPDATA%\dev.ulpf.desktop\server.url` and for
-`/api/status` to answer JSON, checks that both processes are running, then kills the window
-and reports whether the engine outlived it. If the runner cannot host a webview the job
-drives the installed engine instead (`check`, `demo --check`, `run samples`, `serve` +
+bundle job on `windows-latest`. **The installer it exercises is the NSIS
+`ULPF_0.1.0_x64-setup.exe`, installed silently with `/S`; the MSI
+(`ULPF_0.1.0_x64_en-US.msi`) is built by the same job and attached to the release, but
+nothing in CI installs it.** After the install the job finds `ulpf-app.exe` under
+`%LOCALAPPDATA%`, proves `ulpf.exe` sits beside it, runs
+`ulpf.exe demo --check --repo <the checkout>` on the installed engine and fails on a
+non-zero exit (the inputs, the two ports and every title and command in PROGRESS.md's demo
+section), launches the app, waits for `%APPDATA%\dev.ulpf.desktop\server.url` and for
+`/api/status` to answer JSON, checks that both processes are running, then force-kills the
+window and **fails if any `ulpf.exe` is still alive five seconds later** — the job object
+above is what makes that an assertion rather than a note. If the runner cannot host a
+webview the job drives the installed engine instead (`check`, `run samples`, `serve` +
 `/api/status`) and prints `SMOKE PATH: app` or `SMOKE PATH: sidecar` so the log says which
 one it achieved. The same script runs by hand: `pwsh app\scripts\smoke-windows.ps1
--Installer <the .exe>`. The Windows engine in that workflow is built with
-`RUSTFLAGS=-C target-feature=+crt-static`, so the shipped `ulpf.exe` no longer needs the
-Visual C++ redistributable.
+-Installer <the .exe> [-Repo <the checkout>]`. The Windows engine in that workflow is built
+with `RUSTFLAGS=-C target-feature=+crt-static`, so the shipped `ulpf.exe` no longer needs
+the Visual C++ redistributable.
+
+**Demo notes: never ship a generated parser.** Approving a proposal from the CLI writes the
+generated parser (`origin = "inferred"`, priority -1) into the repo's `parsers/`, and a
+bundle built after that carries it as a resource — so the app arrives already knowing the
+"unseen" format and the inference demo has nothing to propose. Refused in three places:
+`sidecar.sh` / `sidecar.ps1` exit 1 naming the file (they are the first command of the
+bundle step), the app's first-run copy of the bundled definitions skips any such file and
+says how many it skipped in `engine.log`, and this paragraph. `ulpf demo --reset` purges
+them from `parsers/`; run it before building a bundle for the demo (D93).
 
 ### Building from source on Windows
 
