@@ -15,12 +15,17 @@
 //! internally consistent. An index without the magic is a pre-chain store and is refused.
 //!
 //! Crash recovery (`recover`): the index is authoritative for every entry whose record is
-//! fully present in the segment. Trailing index entries that point past the segment (the
-//! index buffer drained before the segment buffer) are dropped; complete records the
-//! segment holds beyond the last index entry (the segment drained first) are indexed
-//! again, so an id that was handed out is never reissued; both files are cut to the
-//! recovered end. The engine flushes both buffers before it lets an id escape into the
-//! output, so only power loss can reach the reindexing path.
+//! fully present in the segment, hashes to its stored digest and whose chain value follows
+//! its predecessor's. Trailing entries that fail that (the index buffer drained before the
+//! segment buffer, or a torn write) are dropped; complete records the segment holds beyond
+//! the last index entry (the segment drained first) are indexed again, so an id that was
+//! handed out is never reissued. Neither file is ever shrunk: the bytes between the
+//! recovered end and the file end are overwritten with zeros and the writer resumes at the
+//! recovered end, so the next append reclaims them (D82). A file is never truncated
+//! because Windows refuses to shrink a file another process has mapped, and on POSIX a
+//! reader mapped across the shrink would fault; the logical end is what the entries say,
+//! never the file length. The engine flushes both buffers before it lets an id escape
+//! into the output, so only power loss can reach the reindexing path.
 //!
 //! One writer at a time: the catalogue connection is opened in SQLite's exclusive locking
 //! mode and holds the file lock until it closes; a second writer, or a reader of the
@@ -424,24 +429,30 @@ pub fn hex(bytes: &[u8]) -> String {
     out
 }
 
-/// Returns `(record count, segment end, chain of the last record)` after cutting both files
-/// to the last state that is consistent in both directions (module doc). Reindexed records
-/// get their chain value recomputed from the surviving head, so the chain of the surviving
-/// records is intact by construction.
+/// Returns `(record count, segment end, chain of the last record)`: the last state that is
+/// consistent in both directions (module doc). Reindexed records get their chain value
+/// recomputed from the surviving head, so the chain of the surviving records is intact by
+/// construction. Bytes beyond the recovered end are zeroed, never cut off.
 fn recover(seg: &mut File, idx: &mut File, genesis: [u8; 32]) -> io::Result<(u64, u64, [u8; 32])> {
     let seg_file_len = seg.metadata()?.len();
-    let mut n = idx.metadata()?.len().saturating_sub(IDX_HEADER_LEN) / IDX_ENTRY_LEN;
+    let idx_file_len = idx.metadata()?.len();
+    let mut n = idx_file_len.saturating_sub(IDX_HEADER_LEN) / IDX_ENTRY_LEN;
     let mut seg_len = FILE_MAGIC.len() as u64;
     let mut head = genesis;
     while n > 0 {
-        idx.seek(SeekFrom::Start(IDX_HEADER_LEN + (n - 1) * IDX_ENTRY_LEN))?;
-        let mut entry = [0u8; IDX_ENTRY_LEN as usize];
-        idx.read_exact(&mut entry)?;
+        let entry = read_entry(idx, n - 1)?;
         let off = u64::from_le_bytes(entry[0..8].try_into().expect("8 bytes"));
-        if let Some((end, _)) = record_end(seg, off, n - 1, seg_file_len, false)? {
-            seg_len = end;
-            head = entry[8..40].try_into().expect("32 bytes");
-            break;
+        let chain: [u8; 32] = entry[8..40].try_into().expect("32 bytes");
+        // the digest and the link are checked here, not only the shape: a torn write can
+        // leave a complete header over a half-written body, or a complete offset beside a
+        // half-written chain value, and either would poison every later chain value
+        if let Some((end, digest)) = record_end(seg, off, n - 1, seg_file_len, true)? {
+            let prev = if n >= 2 { read_entry(idx, n - 2)?[8..40].try_into().expect("32 bytes") } else { genesis };
+            if chain == chain_step(&prev, &digest) {
+                seg_len = end;
+                head = chain;
+                break;
+            }
         }
         n -= 1;
     }
@@ -455,9 +466,34 @@ fn recover(seg: &mut File, idx: &mut File, genesis: [u8; 32]) -> io::Result<(u64
         n += 1;
         seg_len = end;
     }
-    idx.set_len(IDX_HEADER_LEN + n * IDX_ENTRY_LEN)?;
-    seg.set_len(seg_len)?;
+    zero_tail(idx, IDX_HEADER_LEN + n * IDX_ENTRY_LEN, idx_file_len)?;
+    zero_tail(seg, seg_len, seg_file_len)?;
     Ok((n, seg_len, head))
+}
+
+fn read_entry(idx: &mut File, id: u64) -> io::Result<[u8; IDX_ENTRY_LEN as usize]> {
+    idx.seek(SeekFrom::Start(IDX_HEADER_LEN + id * IDX_ENTRY_LEN))?;
+    let mut entry = [0u8; IDX_ENTRY_LEN as usize];
+    idx.read_exact(&mut entry)?;
+    Ok(entry)
+}
+
+/// Overwrites `from..to` with zeros: the torn tail is reclaimed in place, and a reader
+/// that maps the file meanwhile finds no record there (a zero offset is below the file
+/// magic, a zero header has no record magic).
+fn zero_tail(f: &mut File, from: u64, to: u64) -> io::Result<()> {
+    if to <= from {
+        return Ok(());
+    }
+    f.seek(SeekFrom::Start(from))?;
+    let zeros = [0u8; 1 << 16];
+    let mut left = to - from;
+    while left > 0 {
+        let n = left.min(zeros.len() as u64) as usize;
+        f.write_all(&zeros[..n])?;
+        left -= n as u64;
+    }
+    f.flush()
 }
 
 /// End offset and stored digest of the record at `off` if a complete record carrying `id`
@@ -607,9 +643,9 @@ impl RawReader {
         // names only records the segment already held at T, and a segment mapped after T
         // is a superset: map the index first, or a reader beside a live writer could see
         // entries whose records lie past its segment mapping and call them corrupt.
-        // SAFETY: the files are only appended to while a writer runs; recovery truncates
-        // and rewrites only bytes above the last complete record, before any reader that
-        // this writer hands out exists (D7, D33).
+        // SAFETY: the files are only appended to while a writer runs, and never shrunk;
+        // recovery rewrites only bytes above the last complete record, which no reader's
+        // count reaches (D7, D33, D82).
         let idx = unsafe { Mmap::map(&idx_file)? };
         let seg = unsafe { Mmap::map(&seg_file)? };
         if seg.len() < FILE_MAGIC.len() || &seg[..FILE_MAGIC.len()] != FILE_MAGIC {
@@ -620,7 +656,15 @@ impl RawReader {
         }
         let store_id: [u8; 16] = idx[8..24].try_into().expect("16 bytes");
         let count = (idx.len() as u64 - IDX_HEADER_LEN) / IDX_ENTRY_LEN;
-        Ok(RawReader { seg, idx, count, dir: dir.to_path_buf(), store_id, genesis: genesis_of(&store_id) })
+        let mut reader = RawReader { seg, idx, count, dir: dir.to_path_buf(), store_id, genesis: genesis_of(&store_id) };
+        // The file length is not the logical end (D82): behind the last record the index
+        // may hold the zeros recovery left, or entries a crash wrote for records the
+        // segment never received. Only entries that are not a record are dropped; a record
+        // whose bytes or chain value are wrong stays, for `verify` to name.
+        while reader.count > 0 && reader.get(RawId(reader.count - 1)).is_none() {
+            reader.count -= 1;
+        }
+        Ok(reader)
     }
 
     pub fn store_id(&self) -> [u8; 16] {
@@ -667,6 +711,9 @@ impl RawReader {
         }
         let p = (IDX_HEADER_LEN + id.0 * IDX_ENTRY_LEN) as usize;
         let off = u64::from_le_bytes(self.idx.get(p..p + 8)?.try_into().ok()?) as usize;
+        if off < FILE_MAGIC.len() {
+            return None;
+        }
         let hdr = self.seg.get(off..off.checked_add(HEADER_LEN)?)?;
         if u32::from_le_bytes(hdr[0..4].try_into().ok()?) != REC_MAGIC {
             return None;

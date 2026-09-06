@@ -1,0 +1,26 @@
+# The whole test suite on Windows: what a Windows tester sees, on every push to main
+# (it moved here with the store fix from lane-8-windows, D82). The toolchain and cache
+# steps are app.yml's; cargo test needs neither node nor pnpm.
+name: windows-tests
+
+on:
+  push:
+    branches: ["main", "lane-8-windows"]
+  workflow_dispatch:
+
+concurrency:
+  group: windows-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: cargo test --workspace --no-fail-fast
+        run: cargo test --workspace --no-fail-fast

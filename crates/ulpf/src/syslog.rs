@@ -67,7 +67,7 @@ impl PeerBuf {
         let bytes = self.buf.len() as u64;
         let started = self.receipts.first().copied().unwrap_or_else(now_nanos);
         let (first, seq) = {
-            let mut store = live.store.lock().unwrap_or_else(|e| e.into_inner());
+            let mut store = live.store()?;
             let source = match self.source_id {
                 Some(s) => s,
                 None => {
@@ -120,11 +120,36 @@ fn set_recv_buffer(sock: &UdpSocket) -> u64 {
     got.max(0) as u64
 }
 
-/// Windows: std has no receive-buffer setter and the engine uses libc only for this one
-/// call on unix; the socket keeps the system default and reports 0 as the grant.
+/// Windows: the same two calls through Winsock, which std already links; `libc` has no
+/// socket API there. Left at the default (64 KiB) the loopback dropped a third of the
+/// syslog test's datagrams (D82).
 #[cfg(windows)]
-fn set_recv_buffer(_sock: &UdpSocket) -> u64 {
-    0
+fn set_recv_buffer(sock: &UdpSocket) -> u64 {
+    use std::os::windows::io::AsRawSocket;
+    #[link(name = "ws2_32")]
+    unsafe extern "system" {
+        fn setsockopt(s: usize, level: i32, optname: i32, optval: *const u8, optlen: i32) -> i32;
+        fn getsockopt(s: usize, level: i32, optname: i32, optval: *mut u8, optlen: *mut i32) -> i32;
+    }
+    const SOL_SOCKET: i32 = 0xFFFF;
+    const SO_RCVBUF: i32 = 0x1002;
+    let s = sock.as_raw_socket() as usize;
+    let mut want = RECV_BUFFER_BYTES as i32;
+    while want >= 65_536 {
+        // SAFETY: a plain setsockopt on a socket this process owns; the value is 4 bytes.
+        let ok = unsafe { setsockopt(s, SOL_SOCKET, SO_RCVBUF, (&want as *const i32).cast(), 4) } == 0;
+        if ok {
+            break;
+        }
+        want /= 2;
+    }
+    let mut got: i32 = 0;
+    let mut len: i32 = 4;
+    // SAFETY: as above; `got` is a valid out-pointer of the length passed.
+    unsafe {
+        getsockopt(s, SOL_SOCKET, SO_RCVBUF, (&mut got as *mut i32).cast(), &mut len);
+    }
+    got.max(0) as u64
 }
 
 /// The UDP listener thread: one datagram is one event, batched per peer.
@@ -132,9 +157,7 @@ pub(crate) fn udp_listener(live: &Arc<Live>, addr: SocketAddr, tx: SyncSender<Ba
     let sock = UdpSocket::bind(addr).with_context(|| format!("binding syslog udp {addr}"))?;
     let rcvbuf = set_recv_buffer(&sock);
     live.syslog_udp_rcvbuf.store(rcvbuf, Relaxed);
-    if cfg!(windows) {
-        eprintln!("ulpf: syslog udp: receive buffer left at the Windows default (asked {RECV_BUFFER_BYTES}, granted unknown, reported as 0)");
-    } else if rcvbuf < RECV_BUFFER_BYTES as u64 {
+    if rcvbuf < RECV_BUFFER_BYTES as u64 {
         eprintln!("ulpf: syslog udp: kernel granted a {rcvbuf} byte receive buffer (asked {RECV_BUFFER_BYTES}); raise kern.ipc.maxsockbuf / net.core.rmem_max for bursts");
     }
     sock.set_read_timeout(Some(FLUSH_AFTER))?;

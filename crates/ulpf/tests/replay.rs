@@ -148,7 +148,7 @@ fn the_server_replays_through_the_writer_and_reports_progress() {
     live.reload_parsers();
     let (version, total) = live.start_replay(None).unwrap();
     assert_eq!(version, 2);
-    assert_eq!(total, live.store.lock().unwrap().len());
+    assert_eq!(total, live.store().unwrap().len());
     let buggy = std::fs::read_to_string(dir.join("out.jsonl")).unwrap().lines().filter(|l| l.contains("\"dst_addr\"")).count() as u64;
     assert!(buggy > 0);
     assert!(matches!(live.start_replay(None), Err(ReplayError::Running)) || live.replay_progress().is_none(), "a second replay while one runs is a conflict");

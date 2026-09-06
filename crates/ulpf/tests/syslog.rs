@@ -22,10 +22,11 @@ fn tmp(name: &str) -> PathBuf {
     d
 }
 
-fn wait_until(what: &str, mut f: impl FnMut() -> bool) {
+/// `what` is built only on failure, so a timeout can name the counters as they stood.
+fn wait_until(what: impl Fn() -> String, mut f: impl FnMut() -> bool) {
     let start = Instant::now();
     while !f() {
-        assert!(start.elapsed() < Duration::from_secs(30), "timed out waiting for {what}");
+        assert!(start.elapsed() < Duration::from_secs(30), "timed out waiting for {}", what());
         std::thread::sleep(Duration::from_millis(25));
     }
 }
@@ -61,7 +62,7 @@ fn udp_and_tcp_events_enter_the_store_and_output_exactly_once_in_order() {
     };
     let (udp, tcp): (SocketAddr, SocketAddr) = {
         let mut got = (None, None);
-        wait_until("listeners to bind", || {
+        wait_until(|| "listeners to bind".to_string(), || {
             got = *live.syslog_bound.lock().unwrap();
             got.0.is_some() && got.1.is_some()
         });
@@ -114,7 +115,7 @@ fn udp_and_tcp_events_enter_the_store_and_output_exactly_once_in_order() {
         s.write_all(b"<134>Sep  4 06:00:00 gw firewall,info half a li").unwrap();
     }
     let expected = (udp_n + tcp_lines + tcp_frames + 1) as u64;
-    wait_until("every event to be emitted", || live.metrics.emitted.load(Relaxed) >= expected);
+    wait_until(|| format!("every event to be emitted (expected {expected}): {}", live.snapshot()), || live.metrics.emitted.load(Relaxed) >= expected);
     std::thread::sleep(Duration::from_millis(200));
     live.stop();
     let report = serve.join().unwrap().unwrap();
