@@ -210,13 +210,25 @@ SHA-256 and the integrity chain flushed per batch included. That is the number t
 It was produced by the neutral harness every tool is run through, not by a hand-timed
 loop: `eval/run.sh eval/tools/ulpf.toml`, scorecard committed at
 `eval/results/ulpf-20260905T140426Z-33371/scorecard.md`, 2026-09-05. Run-to-run variance
-is about ±10% on a quiet machine, and that qualifier is load-bearing: re-run six times on
-the dist build on 2026-09-06 between 05:14 and 05:22 IST, with five other builds and test
-suites on the same laptop, the identical command gave 153,247 / 282,646 / 166,196 /
-192,197 / 221,180 / 308,528 events/s while the one-minute load moved between 5.9 and 21.6.
-The fastest of those (308,528, 16.2 s) beats the fastest run behind the headline (263,588,
-19.0 s), so the engine is not slower than the number says; the slow runs are the machine,
-not the code. Quote the figure with the machine state, or do not quote it.
+is about ±10% on a quiet machine, and both halves of that sentence have now been measured
+again on the merged v4 tree.
+
+Quiet: `eval/run.sh eval/tools/ulpf.toml throughput` on the dist build, started
+2026-09-06 05:28 IST only after three consecutive twenty-second samples put the one-minute
+load under 4 (2.91 at the last), with 77% of one core's worth of everything-else on the
+machine while it ran, gave **310,849 / 295,928 / 290,478 events/s (median 295,928)** in
+16.1-17.2 s per run. That is 14% above the 258,411 the committed scorecard holds, and it
+is the same input, the same harness, the same thread count. 258,411 stays the figure to
+quote because it is the one with a committed scorecard behind it (D87) — the newer number
+is recorded here, not promoted, until a scorecard re-pins it. Read the headline as a floor.
+
+Loaded: the identical command, run six times between 05:14 and 05:22 while five other
+build and test lanes shared the laptop, gave 153,247 / 282,646 / 166,196 / 192,197 /
+221,180 / 308,528 events/s — a 2x spread at one-minute loads of 12 to 21. `ulpf` alone
+takes the load past 18 while it runs (seven worker threads plus store and output I/O), so
+the load to gate on is the load *before* a run and the CPU everything else is using
+*during* it; `docs/evaluation.md`'s 04:00 procedure says the same thing in one line. A
+throughput figure without its machine state is not a figure.
 
 **Which build.** Every number in a scorecard is a `--profile dist` number: fat LTO, one
 codegen unit, and what CI ships, what the Docker image holds and what
