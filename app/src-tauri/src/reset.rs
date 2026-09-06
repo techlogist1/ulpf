@@ -14,12 +14,7 @@ use std::time::{Duration, Instant};
 
 use tauri::{AppHandle, Manager};
 
-use crate::{holder, is_toml, navigate, splash_with, start, stop, toast, Engine, Retry};
-
-/// How long the engine is given to be gone before the deletion runs anyway. The store's
-/// lock is held by the process and released when it exits, so this is a wait on a SIGKILL
-/// (TerminateProcess on Windows), not on a shutdown.
-const EXIT_WAIT: Duration = Duration::from_secs(5);
+use crate::{holder, is_toml, navigate, splash_with, start, stop, toast, Engine, Retry, EXIT_WAIT};
 
 /// Everything the chosen reset removes, given the data directory as it stands.
 ///
@@ -68,15 +63,23 @@ pub(crate) fn ask(app: &AppHandle) {
 }
 
 /// `stop`, then wait until nothing holds the store, so the deletion cannot race the writer.
-/// `holder::find` is the question asked -- it answers for any writer, not only the child
-/// this shell spawned. A store still held after `EXIT_WAIT` is not a reason to refuse: the
-/// deletion reports what it could not remove, and the start reports the holder.
+/// The child this shell spawned is waited on by pid, the one question that costs nothing
+/// and answers exactly when the lock is released. Only with no child of ours is the holder
+/// looked for by its command line (`holder::find`, a process listing per poll). A store
+/// still held after `EXIT_WAIT` is not a reason to refuse: the deletion reports what it
+/// could not remove, and the start reports the holder.
 fn stop_and_wait(app: &AppHandle) {
     let store = app.state::<Engine>().data.lock().unwrap().join("store");
-    stop(app);
-    let deadline = Instant::now() + EXIT_WAIT;
-    while Instant::now() < deadline && holder::find(&store).is_some() {
-        thread::sleep(Duration::from_millis(100));
+    match stop(app) {
+        Some(pid) => {
+            holder::wait_exit(pid, EXIT_WAIT);
+        }
+        None => {
+            let deadline = Instant::now() + EXIT_WAIT;
+            while Instant::now() < deadline && holder::find(&store).is_some() {
+                thread::sleep(Duration::from_millis(100));
+            }
+        }
     }
 }
 

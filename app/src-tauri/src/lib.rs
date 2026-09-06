@@ -26,6 +26,10 @@ use tauri_plugin_shell::process::{CommandChild, CommandEvent};
 use tauri_plugin_shell::ShellExt;
 
 const START_TIMEOUT: Duration = Duration::from_secs(120);
+/// How long a stopped engine is given to be gone before the next step runs anyway. The
+/// store's lock is held by the process and released when it exits, so this is a wait on a
+/// SIGKILL (TerminateProcess on Windows), not on a shutdown.
+pub(crate) const EXIT_WAIT: Duration = Duration::from_secs(5);
 
 /// The engine's own words when a second writer meets a store another process holds
 /// (`store <dir> is in use by another process`, crates/ulpf-store/src/store.rs). Matched on
@@ -135,7 +139,9 @@ pub fn run() {
             // the raw store is append-only, its SQLite lock dies with the process, and the
             // next start completes the interrupted output from the store before it ingests
             // anything new (D59, kill recovery).
-            RunEvent::ExitRequested { .. } | RunEvent::Exit => stop(app),
+            RunEvent::ExitRequested { .. } | RunEvent::Exit => {
+                stop(app);
+            }
             // macOS: a click on the dock icon while the window is hidden.
             #[cfg(target_os = "macos")]
             RunEvent::Reopen { .. } => menu::show(app),
@@ -456,9 +462,10 @@ fn stop_holder(app: AppHandle) -> Result<(), String> {
     if let Some(pid) = holder {
         if let Err(e) = holder::kill(pid) {
             toast(&app, &format!("pid {pid} did not stop ({e}); starting anyway"));
+        } else if !holder::wait_exit(pid, EXIT_WAIT) {
+            // The OS drops the SQLite lock when the process goes, but not before it has gone.
+            toast(&app, &format!("pid {pid} is still running {}s after the kill; starting anyway", EXIT_WAIT.as_secs()));
         }
-        // The OS drops the SQLite lock when the process goes, but not before it has gone.
-        thread::sleep(Duration::from_millis(400));
     }
     let app = app.clone();
     // Stop first: on the "no answer within two minutes" path the child may still be alive,
@@ -470,14 +477,19 @@ fn stop_holder(app: AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) fn stop(app: &AppHandle) {
-    let Some(engine) = app.try_state::<Engine>() else { return };
+/// Kills the child if there is one and returns its pid, so a caller that must know the
+/// store is free again can wait on that pid (`holder::wait_exit`) instead of guessing.
+pub(crate) fn stop(app: &AppHandle) -> Option<u32> {
+    let engine = app.try_state::<Engine>()?;
     engine.generation.fetch_add(1, Relaxed);
-    if let Some(child) = engine.child.lock().unwrap().take() {
+    let pid = engine.child.lock().unwrap().take().map(|child| {
+        let pid = child.pid();
         let _ = child.kill();
-    }
+        pid
+    });
     let _ = fs::remove_file(engine.data.lock().unwrap().join("server.url"));
     *engine.url.lock().unwrap() = None;
+    pid
 }
 
 // ---- window ---------------------------------------------------------------------------
