@@ -1522,7 +1522,7 @@ it spawns `current_exe() serve` with `--parsers demo/parsers --pending demo/pend
 files into the watch directory, speaks HTTP/1.1 to localhost over a `TcpStream` (the shape of
 `crates/ulpf/tests/server.rs`, so the binary gains no HTTP client), runs verify and attest as
 children, and kills the server at the end because a killed run restarts to the same output
-and store as an uninterrupted one (D59). `--check` keeps and widens the old grep: the ten step
+and store as an uninterrupted one (D59). `--check` keeps and widens the old grep: the fourteen step
 headings and the seventeen command strings are constants the runner prints, and each must
 appear verbatim in the demo section (the inputs and both ports are checked too); `cargo test`
 asserts the same, so drift fails the suite. Requests the demo makes on stage (approve,
