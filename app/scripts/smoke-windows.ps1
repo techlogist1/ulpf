@@ -1,8 +1,12 @@
 # Installs the NSIS installer this repo built, launches the installed app, and proves the
 # window and the engine came up together. If the runner cannot host a webview, the engine
 # the installer put on disk is driven directly instead; the last line says which path ran.
-# Usage: pwsh app\scripts\smoke-windows.ps1 -Installer <path to *-setup.exe>
-param([Parameter(Mandatory = $true)][string]$Installer)
+# Usage: pwsh app\scripts\smoke-windows.ps1 -Installer <path to *-setup.exe> [-Repo <checkout>]
+param(
+  [Parameter(Mandatory = $true)][string]$Installer,
+  # What `demo --check` reads: samples/, heldout/, parsers/, mappings/ and PROGRESS.md.
+  [string]$Repo = (Get-Location).Path
+)
 
 $ErrorActionPreference = 'Continue'
 $data = Join-Path $env:APPDATA 'dev.ulpf.desktop'
@@ -32,6 +36,14 @@ Write-Host "installed into $dir"
 Get-ChildItem $dir -Recurse | ForEach-Object { Write-Host ("  {0,10} {1}" -f $_.Length, $_.FullName.Substring($dir.Length + 1)) }
 # The sidecar must be beside the executable, not at a dev path (D73).
 if (-not (Test-Path $engine)) { Fail 'the sidecar ulpf.exe is not beside the installed app' }
+
+# The demo's own check mode, run on the installed engine: the inputs, the ports and every
+# title and command in PROGRESS.md's demo section. It starts nothing and exits 0 or 1, so it
+# belongs here, before the app is launched. This is the shipped binary checking the demo the
+# hackathon will run, on Windows, out of the installer.
+$out = & $engine demo --check --repo $Repo 2>&1 | Out-String
+Write-Host $out
+if ($LASTEXITCODE -ne 0) { Fail "the installed engine's demo --check exited $LASTEXITCODE" }
 
 # The installer may have started it already; this job owns the instance it launches.
 Get-Process -Name 'ulpf-app', 'ulpf' -ErrorAction SilentlyContinue | Stop-Process -Force
@@ -92,13 +104,6 @@ Get-Content (Join-Path $data 'engine.log') -ErrorAction SilentlyContinue | Write
 $out = & $engine check 2>&1 | Out-String
 Write-Host $out
 if ($LASTEXITCODE -ne 0) { Fail "the installed engine's check exited $LASTEXITCODE" }
-
-# lane D's subcommand when it is there, nothing when it is not.
-if ((& $engine --help 2>&1 | Out-String) -match '(?m)^\s+demo\b') {
-  $out = & $engine demo --check 2>&1 | Out-String
-  Write-Host $out
-  if ($LASTEXITCODE -ne 0) { Write-Host "::warning::demo --check exited $LASTEXITCODE on Windows" }
-}
 
 $out = & $engine run samples --store smoke-store --output smoke-out.jsonl 2>&1 | Out-String
 Write-Host $out

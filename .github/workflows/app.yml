@@ -36,7 +36,10 @@ jobs:
         run: |
           $setup = (Get-ChildItem installer -Recurse -Filter '*-setup.exe' | Select-Object -First 1).FullName
           if (-not $setup) { Write-Host '::error::no NSIS installer in the windows-x64-nsis artifact'; exit 1 }
-          & .\app\scripts\smoke-windows.ps1 -Installer $setup
+          # -Repo is the checkout: `demo --check` reads samples/, heldout/, mappings/ and
+          # PROGRESS.md from it. The job installs the NSIS setup only (/S); the MSI is built
+          # and attached to the release, but nothing here installs it.
+          & .\app\scripts\smoke-windows.ps1 -Installer $setup -Repo $PWD.Path
 
   bundle:
     strategy:
