@@ -20,6 +20,10 @@ fn repo() -> PathBuf {
 
 fn temp(name: &str) -> PathBuf {
     let dir = std::env::temp_dir().join(format!("ulpf-server-{}-{}", name, std::process::id()));
+    // a previous run left pending/ read-only if it died inside the failed-save assertion,
+    // and remove_dir_all cannot descend into it
+    #[cfg(unix)]
+    let _ = std::fs::set_permissions(dir.join("pending"), <std::fs::Permissions as std::os::unix::fs::PermissionsExt>::from_mode(0o755));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("watch")).unwrap();
     dir
@@ -171,6 +175,22 @@ fn the_server_is_a_window_onto_a_live_engine() {
     assert_eq!(st, 422);
     assert_eq!(err["reason"], "invalid");
     assert_eq!(err["problems"].as_array().unwrap().len(), 1);
+    // a save that cannot reach the disk names the file, not just the reason (the Windows
+    // rename-over-an-open-file failure reads the same way; unix reproduces it with a
+    // read-only directory, and root ignores the mode, so skip there)
+    #[cfg(unix)]
+    if !nix_is_root() {
+        use std::os::unix::fs::PermissionsExt;
+        let pdir = dir.join("pending");
+        std::fs::set_permissions(&pdir, std::fs::Permissions::from_mode(0o555)).unwrap();
+        let (st, err) = json(&addr, "PUT", "/api/pending/mikrotik", Some(&serde_json::json!({ "definition": definition }).to_string()));
+        std::fs::set_permissions(&pdir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        assert_eq!(st, 500, "{err}");
+        assert_eq!(err["reason"], "io");
+        assert_eq!(err["path"], pdir.join("mikrotik.toml").display().to_string());
+        let msg = err["error"].as_str().unwrap();
+        assert!(msg.contains("mikrotik.toml"), "the message names the file: {msg}");
+    }
     let (st, _) = json(&addr, "PUT", "/api/pending/mikrotik", Some(&serde_json::json!({ "definition": definition }).to_string()));
     assert_eq!(st, 200);
     let (st, err) = json(&addr, "GET", "/api/pending/nope", None);
@@ -239,4 +259,10 @@ fn the_server_is_a_window_onto_a_live_engine() {
     assert_eq!(report.snapshot.stored, 500);
     assert_eq!(report.snapshot.emitted, 500);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+/// A read-only directory does not stop root, so the failed-save assertion is skipped there.
+#[cfg(unix)]
+fn nix_is_root() -> bool {
+    std::process::Command::new("id").arg("-u").output().map(|o| o.stdout.starts_with(b"0")).unwrap_or(false)
 }

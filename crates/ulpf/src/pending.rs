@@ -87,7 +87,15 @@ pub enum ReviewError {
     NotFound(String),
     Invalid(Vec<String>),
     Conflict(String),
-    Io(String),
+    /// An io failure; `path` is the one file it happened on, when that is known, so the
+    /// API can tell the human which file to look at.
+    Io { path: Option<PathBuf>, msg: String },
+}
+
+impl ReviewError {
+    fn on(path: &Path, e: impl std::fmt::Display) -> ReviewError {
+        ReviewError::Io { path: Some(path.to_path_buf()), msg: format!("{}: {e}", path.display()) }
+    }
 }
 
 impl std::fmt::Display for ReviewError {
@@ -96,14 +104,14 @@ impl std::fmt::Display for ReviewError {
             ReviewError::NotFound(id) => write!(f, "no pending proposal `{id}`"),
             ReviewError::Invalid(p) => write!(f, "definition does not load: {}", p.join("; ")),
             ReviewError::Conflict(n) => write!(f, "an active parser is already named `{n}`; change [parser] name first"),
-            ReviewError::Io(e) => write!(f, "{e}"),
+            ReviewError::Io { msg, .. } => write!(f, "{msg}"),
         }
     }
 }
 
 impl From<io::Error> for ReviewError {
     fn from(e: io::Error) -> Self {
-        ReviewError::Io(e.to_string())
+        ReviewError::Io { path: None, msg: e.to_string() }
     }
 }
 
@@ -190,12 +198,12 @@ impl Pending {
             return Err(ReviewError::NotFound(id.to_string()));
         }
         let text = fs::read_to_string(self.json_path(id)).map_err(|_| ReviewError::NotFound(id.to_string()))?;
-        serde_json::from_str(&text).map_err(|e| ReviewError::Io(format!("{}: {e}", self.json_path(id).display())))
+        serde_json::from_str(&text).map_err(|e| ReviewError::on(&self.json_path(id), e))
     }
 
     fn save_record(&self, rec: &PendingRecord) -> Result<(), ReviewError> {
-        let text = serde_json::to_string_pretty(rec).map_err(|e| ReviewError::Io(e.to_string()))?;
-        atomic_write(&self.json_path(&rec.id), text.as_bytes())?;
+        let text = serde_json::to_string_pretty(rec).map_err(|e| ReviewError::Io { path: None, msg: e.to_string() })?;
+        atomic_write(&self.json_path(&rec.id), text.as_bytes()).map_err(|e| ReviewError::on(&self.json_path(&rec.id), e))?;
         Ok(())
     }
 
@@ -227,7 +235,7 @@ impl Pending {
         let record = self.record(id)?;
         let path = self.toml_path(id);
         // the record exists, so a missing definition is damage, not absence
-        let definition = fs::read_to_string(&path).map_err(|e| ReviewError::Io(format!("proposal `{id}` is damaged: {}: {e}", path.display())))?;
+        let definition = fs::read_to_string(&path).map_err(|e| ReviewError::Io { path: Some(path.clone()), msg: format!("proposal `{id}` is damaged: {}: {e}", path.display()) })?;
         let problems = problems_of(&path, &definition);
         Ok(PendingDetail { id: id.to_string(), source: record.source.clone(), definition, problems, record })
     }
@@ -256,7 +264,7 @@ impl Pending {
     pub fn put_text(&self, id: &str, text: &str) -> Result<Vec<String>, ReviewError> {
         let _ops = self.lock();
         let mut rec = self.record(id)?;
-        atomic_write(&self.toml_path(id), text.as_bytes())?;
+        atomic_write(&self.toml_path(id), text.as_bytes()).map_err(|e| ReviewError::on(&self.toml_path(id), e))?;
         if !rec.edited {
             rec.edited = true;
             self.save_record(&rec)?;
@@ -285,7 +293,7 @@ impl Pending {
             Some(_) => WriteOutcome::Replaced,
             None => WriteOutcome::Written,
         };
-        let text = toml::to_string(&proposal.definition).map_err(|e| ReviewError::Io(e.to_string()))?;
+        let text = toml::to_string(&proposal.definition).map_err(|e| ReviewError::Io { path: None, msg: e.to_string() })?;
         let mut joined = Vec::with_capacity(lines.iter().map(Vec::len).sum::<usize>() + lines.len());
         for l in lines {
             joined.extend_from_slice(l);
@@ -338,7 +346,7 @@ impl Pending {
             def.strategy.patterns = kept.iter().map(|t| t.pattern.clone()).collect();
             def.strategy.pattern = None;
         }
-        let text = toml::to_string(&def).map_err(|e| ReviewError::Io(e.to_string()))?;
+        let text = toml::to_string(&def).map_err(|e| ReviewError::Io { path: None, msg: e.to_string() })?;
         atomic_write(&self.toml_path(id), text.as_bytes())?;
         rec.edited = true;
         rec.evidence.decisions.push(format!("review: definition regenerated from templates {}", keep.iter().map(u64::to_string).collect::<Vec<_>>().join(", ")));
@@ -473,12 +481,79 @@ pub fn unified_diff(a_name: &str, b_name: &str, a: &str, b: &str) -> String {
 
 /// Write to a sibling temp file, sync it, and rename, so a reader never sees a
 /// half-written file and a power loss leaves either the old file or the new one.
+/// Every error names the file it failed on, so a failed save from the review screen
+/// tells the human which path to look at.
 pub fn atomic_write(path: &Path, bytes: &[u8]) -> io::Result<()> {
     let tmp = path.with_extension(format!("{}.tmp", path.extension().and_then(|e| e.to_str()).unwrap_or("")));
-    {
+    let write = || -> io::Result<()> {
         let mut f = fs::File::create(&tmp)?;
         io::Write::write_all(&mut f, bytes)?;
-        f.sync_all()?;
+        f.sync_all()
+    };
+    // a failure leaves no temp file behind: on Windows the leftover is what blocks the
+    // next attempt's create
+    retry(write).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        io::Error::new(e.kind(), format!("write {}: {e}", tmp.display()))
+    })?;
+    retry(|| fs::rename(&tmp, path)).map_err(|e| {
+        let _ = fs::remove_file(&tmp);
+        io::Error::new(e.kind(), format!("rename {} -> {}: {e}", tmp.display(), path.display()))
+    })
+}
+
+/// Windows only: a create or a rename over a file an indexer, an antivirus scan or a
+/// still-open reader holds fails with a sharing violation (32), a lock violation (33) or
+/// access denied for a few tens of milliseconds, so retry for half a second before giving
+/// up. Unix has no such failure, so there it is one attempt.
+#[cfg(windows)]
+fn retry(op: impl Fn() -> io::Result<()>) -> io::Result<()> {
+    let mut last = op();
+    for _ in 0..9 {
+        match &last {
+            Err(e) if e.kind() == io::ErrorKind::PermissionDenied || matches!(e.raw_os_error(), Some(32 | 33)) => {}
+            _ => break,
+        }
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        last = op();
     }
-    fs::rename(&tmp, path)
+    last
+}
+
+#[cfg(not(windows))]
+fn retry(op: impl Fn() -> io::Result<()>) -> io::Result<()> {
+    op()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::atomic_write;
+
+    #[test]
+    fn atomic_write_replaces_the_file_and_leaves_no_temp() {
+        let dir = std::env::temp_dir().join(format!("ulpf-atomic-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("x.toml");
+        atomic_write(&path, b"one").unwrap();
+        atomic_write(&path, b"two").unwrap();
+        assert_eq!(std::fs::read(&path).unwrap(), b"two");
+        let left: Vec<_> = std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name()).collect();
+        assert_eq!(left, vec![std::ffi::OsString::from("x.toml")], "the temp file is renamed, not left behind");
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_failed_write_names_the_path() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = std::env::temp_dir().join(format!("ulpf-atomic-ro-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o555)).unwrap();
+        let err = atomic_write(&dir.join("x.toml"), b"one").unwrap_err().to_string();
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(err.contains("x.toml.tmp"), "the error names the file it failed on: {err}");
+    }
 }

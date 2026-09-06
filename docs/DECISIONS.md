@@ -2222,3 +2222,25 @@ tooltip false).
 **Anchor.** `ui/src/state.svelte.js` (`schedule`, `budget`), `ui/src/Flow.svelte`, `ui/src/Live.svelte`,
 `ui/src/VList.svelte`, `ui/src/app.css` (`.vh`, `.vl`), `ui/uiperf.mjs` and `ui/budget.mjs` (the
 measurements).
+
+## D104. A review-screen save retries a transient Windows lock and every failure names the file it failed on
+**Decision.** `atomic_write` (write `<path>.tmp`, fsync, rename over `<path>`) retries both the
+create and the rename on Windows — ten attempts, fifty milliseconds apart — when the error is
+access denied, a sharing violation (OS error 32) or a lock violation (33), and removes the `.tmp`
+on either failure so a failed save leaves nothing behind. `ReviewError::Io` carries the path the
+failure happened on (the definition `<id>.toml`, or the record `<id>.json`), so `PUT
+/api/pending/{id}` answers `500` with `reason: io`, an `error` that names the file and the operating
+system's own reason, and a `path` field whenever the failure is about one known file; the review
+screen titles its failure with that path.
+**Principle.** An indexer or antivirus holding a just-written file open for a few tens of
+milliseconds is normal on Windows, and a save that fails for it is a lie about the operator's edit.
+What cannot be retried is named where it happened, so the operator can look at the right file: a
+handler that guesses `<id>.toml` from the URL names the wrong file when the record is the one that
+failed, and names a failure when the definition was in fact written.
+**Ruled out.** Writing in place without the rename (a crash mid-write leaves half a definition the
+engine would load). Retrying forever (a genuinely locked file must surface; the retry costs half a
+second at most). Serialising the path as a `PathBuf` in the JSON (serde refuses a non-UTF-8 path
+and the handler would panic on the platform this exists for; it is `display()`ed).
+**Anchor.** `crates/ulpf/src/pending.rs` (`atomic_write`, `ReviewError::Io`), `crates/ulpf/src/server.rs`
+(the PUT handler), `crates/ulpf/tests/server.rs` (the read-only `pending/` case),
+`ui/src/Review.svelte` (`save`), `docs/api.md`.

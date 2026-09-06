@@ -161,7 +161,7 @@ fn review_error(live: &Live, e: ReviewError) -> ApiError {
         ReviewError::NotFound(id) => ApiError::new(StatusCode::NOT_FOUND, "not_found", format!("no pending proposal `{id}`")),
         ReviewError::Invalid(problems) => ApiError { status: StatusCode::UNPROCESSABLE_ENTITY, reason: "invalid", error: format!("definition does not load: {}", problems.join("; ")), extra: json!({ "problems": problems }) },
         ReviewError::Conflict(name) => ApiError::new(StatusCode::CONFLICT, "conflict", format!("an active parser is already named `{name}`; change [parser] name first")),
-        ReviewError::Io(msg) => ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "io", msg),
+        ReviewError::Io { msg, .. } => ApiError::new(StatusCode::INTERNAL_SERVER_ERROR, "io", msg),
     };
     if err.status.is_client_error() {
         live.review_errors.fetch_add(1, Relaxed);
@@ -445,7 +445,20 @@ struct PutBody {
 }
 
 async fn pending_put(State(app): State<App>, Path(id): Path<String>, Json(body): Json<PutBody>) -> Result<Json<Value>, ApiError> {
-    let problems = app.live.put_text(&id, &body.definition).map_err(|e| review_error(&app.live, e))?;
+    let problems = app.live.put_text(&id, &body.definition).map_err(|e| {
+        // a save that failed on disk is about one file: name the file the error itself
+        // names, so the review screen shows a path and not just the reason
+        let path = match &e {
+            ReviewError::Io { path: Some(p), .. } => Some(p.display().to_string()),
+            _ => None,
+        };
+        let mut err = review_error(&app.live, e);
+        if let Some(path) = path {
+            err.error = format!("saving {}", err.error);
+            err.extra["path"] = json!(path);
+        }
+        err
+    })?;
     Ok(Json(json!({ "problems": problems })))
 }
 

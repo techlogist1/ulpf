@@ -110,7 +110,12 @@ invalid syntax lists its error here and refuses approval with the same list.
 
 `PUT /api/pending/{id}` body `{ "definition": string }` → `{ "problems": [..] }`. Saved
 even with problems (the human is mid-edit); marks the proposal `edited`, which stops the
-engine from replacing it with a later proposal for the same source.
+engine from replacing it with a later proposal for the same source. A save that fails on
+disk answers `500` with `"reason": "io"`, an `error` naming the file it failed on and the
+operating system's own reason, and — whenever the failure is about one known file — a
+`"path"` field holding that file (the definition `<id>.toml`, or `<id>.json` when it is the
+record that could not be read or written). On Windows a failing save can take about half a
+second: the create and the rename are retried through a scanner's transient lock.
 
 `POST /api/pending/{id}/regenerate` body `{ "keep": [template id], "merge": [[template id]] }`
 → `{ "definition": string, "problems": [..] }`. Each `merge` group becomes one new
