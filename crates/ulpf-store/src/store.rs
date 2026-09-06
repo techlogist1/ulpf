@@ -21,7 +21,7 @@
 //! the last index entry (the segment drained first) are indexed again, so an id that was
 //! handed out is never reissued. Neither file is ever shrunk: the bytes between the
 //! recovered end and the file end are overwritten with zeros and the writer resumes at the
-//! recovered end, so the next append reclaims them (D82). A file is never truncated
+//! recovered end, so the next append reclaims them (D101). A file is never truncated
 //! because Windows refuses to shrink a file another process has mapped, and on POSIX a
 //! reader mapped across the shrink would fault; the logical end is what the entries say,
 //! never the file length. The engine flushes both buffers before it lets an id escape
@@ -645,7 +645,7 @@ impl RawReader {
         // entries whose records lie past its segment mapping and call them corrupt.
         // SAFETY: the files are only appended to while a writer runs, and never shrunk;
         // recovery rewrites only bytes above the last complete record, which no reader's
-        // count reaches (D7, D33, D82).
+        // count reaches (D7, D33, D101).
         let idx = unsafe { Mmap::map(&idx_file)? };
         let seg = unsafe { Mmap::map(&seg_file)? };
         if seg.len() < FILE_MAGIC.len() || &seg[..FILE_MAGIC.len()] != FILE_MAGIC {
@@ -657,7 +657,7 @@ impl RawReader {
         let store_id: [u8; 16] = idx[8..24].try_into().expect("16 bytes");
         let count = (idx.len() as u64 - IDX_HEADER_LEN) / IDX_ENTRY_LEN;
         let mut reader = RawReader { seg, idx, count, dir: dir.to_path_buf(), store_id, genesis: genesis_of(&store_id) };
-        // The file length is not the logical end (D82): behind the last record the index
+        // The file length is not the logical end (D101): behind the last record the index
         // may hold the zeros recovery left, or entries a crash wrote for records the
         // segment never received. Only entries that are not a record are dropped; a record
         // whose bytes or chain value are wrong stays, for `verify` to name.

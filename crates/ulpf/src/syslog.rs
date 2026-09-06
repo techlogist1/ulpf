@@ -122,7 +122,7 @@ fn set_recv_buffer(sock: &UdpSocket) -> u64 {
 
 /// Windows: the same two calls through Winsock, which std already links; `libc` has no
 /// socket API there. Left at the default (64 KiB) the loopback dropped a third of the
-/// syslog test's datagrams (D82).
+/// syslog test's datagrams (D101).
 #[cfg(windows)]
 fn set_recv_buffer(sock: &UdpSocket) -> u64 {
     use std::os::windows::io::AsRawSocket;

@@ -364,7 +364,7 @@ impl std::ops::DerefMut for StoreGuard<'_> {
 pub struct Live {
     pub metrics: Metrics,
     pipeline: RwLock<Arc<Pipeline>>,
-    /// `None` once `run`/`serve` returned: stop closes every file the engine opened (D82).
+    /// `None` once `run`/`serve` returned: stop closes every file the engine opened (D101).
     store: Mutex<Option<RawStore>>,
     pub tail: Tail,
     pub sources: Mutex<BTreeMap<String, SourceStats>>,
@@ -1557,7 +1557,7 @@ pub fn run(cfg: &Config) -> Result<Report> {
         finish(&live, t, ingest_result)
     });
     // Whatever happened downstream, every appended record reaches disk before we report,
-    // and every file the engine opened is closed before we return (D82).
+    // and every file the engine opened is closed before we return (D101).
     let result = (|| {
         live.store()?.flush(true)?;
         let (elapsed, inference) = timing?;
