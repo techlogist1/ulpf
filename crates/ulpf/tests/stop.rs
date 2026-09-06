@@ -113,6 +113,10 @@ fn stop_releases_every_file_the_engine_opened() {
     // a request racing shutdown gets a value, not a panic
     assert!(matches!(live.traceback(0), Err(TracebackError::Io(_))));
     assert!(live.attestation().is_err());
+    // the pivot index is not opened again by the request that follows close: `None` is
+    // also its "not opened yet" state, so the store's state is what says stopped
+    assert!(live.entities(None, "", 5).is_err(), "an entity query after stop reopened the pivot index");
+    assert!(open_under(&dir).is_empty(), "reopened after stop: {:?}", open_under(&dir));
     assert!(live.snapshot().emitted == lines, "the counters outlive the files");
     // the check Windows makes for us: a directory with an open file cannot be removed
     std::fs::remove_dir_all(&dir).unwrap();

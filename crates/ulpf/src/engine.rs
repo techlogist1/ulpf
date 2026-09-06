@@ -1014,8 +1014,11 @@ impl Live {
         Ok(self.store()?.reader()?.attest())
     }
 
-    /// One entity's timeline from the index beside the output; the index is opened once.
+    /// One entity's timeline from the index beside the output; the index is opened once,
+    /// and not again after `close` (stopped means stopped: the store's own state is the
+    /// signal, so a request racing shutdown gets the same error a traceback gets).
     pub fn pivot(&self, q: &PivotQuery<'_>) -> Result<PivotPage> {
+        self.store()?;
         let mut idx = self.pivot_index.lock().unwrap_or_else(|e| e.into_inner());
         if idx.is_none() {
             *idx = Some(PivotIndex::open(&self.output)?);
@@ -1024,6 +1027,7 @@ impl Live {
     }
 
     pub fn entities(&self, kind: Option<EntityKind>, prefix: &str, limit: usize) -> Result<Vec<crate::pivot::EntitySummary>> {
+        self.store()?;
         let mut idx = self.pivot_index.lock().unwrap_or_else(|e| e.into_inner());
         if idx.is_none() {
             *idx = Some(PivotIndex::open(&self.output)?);
