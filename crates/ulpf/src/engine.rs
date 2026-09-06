@@ -1616,6 +1616,31 @@ pub fn serve(live: &Arc<Live>, poll: Duration) -> Result<Report> {
     result
 }
 
+/// Stops the engine once `parent`, the process that started it, is gone. The desktop shell
+/// passes `--exit-with-parent <its pid>`: a force quit of the shell runs no exit handler,
+/// and without this the engine outlived it holding the store (measured on macOS, PROGRESS
+/// v5). Unix re-parents an orphan to pid 1 or a subreaper, so `getppid()` no longer
+/// answering `parent` is the signal, checked twice a second; the pid is passed rather than
+/// read at start because the parent can be gone before this thread runs. On Windows the
+/// shell's job object already reaps the engine (app/src-tauri/src/job.rs), so the flag is
+/// accepted and does nothing.
+pub fn stop_with_parent(live: Arc<Live>, parent: u32) {
+    #[cfg(unix)]
+    std::thread::spawn(move || {
+        while !live.stopped() {
+            // SAFETY: getppid takes nothing and cannot fail.
+            if unsafe { libc::getppid() } as u32 != parent {
+                eprintln!("ulpf: the parent process (pid {parent}) is gone; stopping");
+                live.stop();
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(500));
+        }
+    });
+    #[cfg(not(unix))]
+    drop((live, parent));
+}
+
 #[allow(clippy::too_many_arguments)]
 fn poll_loop(live: &Arc<Live>, poll: Duration, tx: &SyncSender<Batch>, in_flight: &AtomicI64, problems: &mut Vec<String>) -> Result<()> {
     let resume = live.store()?.ingested_bytes().context("reconciling ingest offsets with the store")?;

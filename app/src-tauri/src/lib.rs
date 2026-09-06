@@ -280,6 +280,10 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
         arg("mappings"),
         "--listen".into(),
         format!("127.0.0.1:{port}"),
+        // A force quit of this shell runs nothing here; the engine notices on its own
+        // (unix: its parent pid changes; Windows: the job object, job.rs).
+        "--exit-with-parent".into(),
+        std::process::id().to_string(),
     ];
     // The intensity setting, applied where the engine takes it: both the worker count and
     // the entity index are fixed when the process starts, which is why changing the setting

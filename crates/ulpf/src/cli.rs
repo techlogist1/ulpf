@@ -107,6 +107,9 @@ enum Cmd {
         /// Close the current Parquet file after this many seconds (`--parquet` only).
         #[arg(long, default_value_t = 300)]
         parquet_roll_secs: u64,
+        /// Stop when this process, the one that started the engine, is gone (the desktop shell passes its own pid).
+        #[arg(long, value_name = "PID")]
+        exit_with_parent: Option<u32>,
     },
     /// Run inference over one file as if no parser covered it; write the proposal to the pending directory.
     Infer {
@@ -330,7 +333,7 @@ pub fn main() -> Result<()> {
             }
             Ok(())
         }
-        Cmd::Serve { watch, engine: args, listen, tail, ui_dir, poll_ms, syslog_udp, syslog_tcp, parquet_roll_rows, parquet_roll_secs } => {
+        Cmd::Serve { watch, engine: args, listen, tail, ui_dir, poll_ms, syslog_udp, syslog_tcp, parquet_roll_rows, parquet_roll_secs, exit_with_parent } => {
             let roll = (parquet_roll_rows.max(1), Duration::from_secs(parquet_roll_secs.max(1)));
             let mut cfg = args.config(watch, tail, Some(roll))?;
             cfg.syslog_udp = syslog_udp;
@@ -342,6 +345,9 @@ pub fn main() -> Result<()> {
             }
             let server = crate::server::Server::start(std::sync::Arc::clone(&live), listen, ui_dir)?;
             server.install_ctrl_c(std::sync::Arc::clone(&live));
+            if let Some(pid) = exit_with_parent {
+                engine::stop_with_parent(std::sync::Arc::clone(&live), pid);
+            }
             let listeners: Vec<String> = [("udp", cfg.syslog_udp), ("tcp", cfg.syslog_tcp)].iter().filter_map(|(k, a)| a.map(|a| format!("syslog {k} {a}"))).collect();
             eprintln!("ulpf: serving http://{} ; watching {} ; {}{} parsers loaded ; ctrl-c to stop", server.addr, cfg.inputs.iter().map(|p| p.display().to_string()).collect::<Vec<_>>().join(", "), if listeners.is_empty() { String::new() } else { format!("{} ; ", listeners.join(", ")) }, live.pipeline().registry.len());
             let report = engine::serve(&live, Duration::from_millis(poll_ms.max(50)));
