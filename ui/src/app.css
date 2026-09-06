@@ -111,6 +111,9 @@ main > .screen { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(
 
 .foot { position: fixed; bottom: 0; left: 0; right: 0; height: var(--foot); z-index: 5; display: flex; align-items: center; background: var(--bg-1); border-top: 1px solid var(--line); font: var(--t-1)/1 var(--mono); color: var(--fg-2); padding: 0 var(--gutter); gap: var(--s6); white-space: nowrap; overflow: hidden; }
 .foot b { font-weight: 400; color: var(--fg-1); }
+/* The left half is static configuration: it truncates so the right-hand counters, which change, stay whole at any width. */
+.foot > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.foot .push, .foot .push ~ span { flex: none; }
 .foot .push { margin-left: auto; }
 .foot .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--line-3); margin-right: var(--s2); vertical-align: 1px; }
 .foot .live .dot { background: var(--ok); }
