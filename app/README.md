@@ -39,13 +39,37 @@ another directory (the old one is left as it is).
 
 ## Menus
 
-File: Add files… (Cmd/Ctrl+O), Add folder…, Open output folder, Open in browser, Intensity ▸
+File: Add files… (Cmd/Ctrl+O), Add folder…, Open output folder, Reset… (Cmd/Ctrl+Shift+R,
+next section), Open in browser, Intensity ▸
 (Low, Balanced, Max — the running one check-marked), Choose data directory…. Tray (menu bar
 on macOS, notification area on Windows): Show, Open output folder, Open in browser, Quit —
 no Intensity there, it is a File-menu setting only. Closing the window hides it and the
 engine keeps ingesting; Quit is what stops the engine. The title reads `ULPF · engine ok · N
 events · M pending · Balanced · 4 of 8 cores · index on` once a second (the intensity part is
 the next section), or `engine down (exit N)` if the engine stopped.
+
+## Reset
+
+File > Reset… (Cmd/Ctrl+Shift+R) starts nothing by itself: it shows a page naming the data
+directory with three buttons.
+
+| Button | Removed | Kept |
+|---|---|---|
+| Reset events, keep approved parsers | `store/`, `out.*` (the output, its `.pivot` and every `out.vN.*`), `watch/`, `pending/`, `staging/` | `parsers/`, `mappings/`, `engine.log`, and the chosen data directory |
+| Reset to first launch | the whole data directory | the chosen data directory (the override in `<config dir>/data_dir` is a setting, not data) |
+| Cancel | nothing | everything |
+
+Either reset stops the engine, waits for it to let go of the store, removes what the button
+says and starts the engine again exactly as a launch does — so after the first you have your
+parsers and no events, and after the second the app is as it was when you installed it, with
+the 15 bundled parsers copied back (never a generated one: see the demo note below). The
+notice at the bottom says which it was: `Reset: events removed, N parsers kept`, or
+`Reset to first launch: 15 parsers`. Anything that would not delete is named in `engine.log`
+and counted in that notice; the app comes back up either way.
+
+The engine never deletes: its raw store is append-only by contract and every record is a
+link in a chain (D42, D56). A reset is the shell removing files, which is why it is a menu
+item and not a button in the UI the engine serves.
 
 ## The UI's file links
 
