@@ -10,8 +10,12 @@
 // the job is terminated. The clean-quit path (Child::kill on ExitRequested) is unchanged
 // and still the normal way out; this is the net under it.
 //
-// macOS needs none of this: the sidecar is a direct child and dies with the parent through
-// tauri-plugin-shell's kill-on-drop, on top of the same explicit kill on the way out.
+// macOS has no equivalent, and no way to want one: Unix does not kill a child when its
+// parent dies, and a SIGKILLed parent runs no code to kill it either -- measured, `kill -9`
+// of the app leaves `ulpf serve` running and holding the store. The clean-quit path
+// (Child::kill on ExitRequested) is what stops it there; a force quit leaves it until the
+// next launch, which meets the held store, finds the holder by its command line
+// (`holder.rs`) and offers to stop it and start again.
 
 /// Puts the just-spawned engine in this app's kill-on-job-close job. `Err` says why not;
 /// the caller logs it and carries on, because a missing safety net is no reason to refuse
