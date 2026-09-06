@@ -239,7 +239,7 @@ input for any output line (`ulpf.raw_id`).
 ## Working files
 - `PROGRESS.md` — hackathon demo script first, then the v4, v3, v2, v1 and v0.1 records (definition of
   done, fan-outs, verified state, tried and abandoned, next action).
-- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out (D1-D99).
+- `docs/DECISIONS.md` — every structural decision with anchor file and the alternative it ruled out (D1-D100).
 - `docs/api.md` — the HTTP and SSE contract the server and UI are built against.
 - `docs/parser-format.md` — the definition format reference for teammates.
 - `docs/timestamps.md` — timestamp survey, auto-detection order, zone table, policies.

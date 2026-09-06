@@ -1855,3 +1855,28 @@ documenting that they are only true of the default layout — the screen is read
 who is about to look for the file. Converting stamps to the viewer's local time — it makes two
 stamps on one screen incomparable when one is a device time in its own zone, and makes a
 screenshot unreadable without knowing the machine that took it.
+
+## D100. A reset is the shell removing files, never a call into the engine
+**Decision.** `File > Reset…` (`CmdOrCtrl+Shift+R`, after `Open output folder`) empties the app's
+data from inside the app, and it does it entirely on the shell's side of the sidecar boundary: the
+engine is never asked to delete anything, because its raw store is append-only by contract (D42,
+D56) and its API has no verb that removes a record. The menu item removes nothing by itself — it
+shows the splash under a third fragment flag `?`, a question rather than a failure, naming the data
+directory and offering three buttons. `Reset events, keep approved parsers` removes `store/`,
+`out.*` (the output, its `.pivot` and every `out.vN.*`, matched by prefix because the version is not
+known here), `watch/`, `pending/` and `staging/`, and keeps `parsers/`, `mappings/` and
+`engine.log`; `Reset to first launch` removes the whole data directory and the ordinary start
+re-seeds the 15 bundled parsers with the generated ones excluded (D94); `Cancel` touches nothing and
+navigates back to the served UI, or to the page that was showing. Either reset stops the engine and
+waits until `holder::find` reports nothing holds the store, so the deletion cannot race the writer,
+then deletes and re-enters `start()` exactly as a launch does — one start path, not a second one for
+resets. A path that will not go is a line in `engine.log` and a count in the notice, never a panic
+and never a refusal: the app comes back up either way. **Anchor.** `reset_paths`, `ask`,
+`stop_and_wait`, `reset` and `reset_cancel` in `app/src-tauri/src/reset.rs`; the `reset` item and
+its `action` arm in `app/src-tauri/src/menu.rs`; the `?` flag and the three buttons in
+`app/dist/index.html`. **Ruled out.** A `POST /api/reset` in the engine — it breaks the append-only
+contract the store is defined by and would make the server own state, against D41. A one-click
+silent reset straight off the menu item — it destroys an approved parser by accident, and the one
+thing the operator needs before a destructive act is the directory's name and a choice. Deleting
+while the engine still runs — the store lock is held by the writer, so the removal would half
+succeed and leave the app pointing at a store that no longer matches its index.

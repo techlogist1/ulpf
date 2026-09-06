@@ -668,9 +668,70 @@ look at the captures and a grep of `ui/dist` for external references.
       (the `cli` and `bundle` jobs build `--profile dist`, the Windows smoke job is deliberately
       `--release`, so the plan says which build a tester holds), and A36/A38 were rewritten because
       lane A landed in the same tree. `README.md:354` carries its line under "Where things are".
+- [x] LR. (merged 08:44 IST in 1ce7652, `lane-r-reset` head be8748b, two commits: 014d393 the reset,
+      be8748b the app/README section) The desktop app empties its own data from inside the app.
+      `File > Reset…` (`CmdOrCtrl+Shift+R`, placed after `Open output folder`) shows the splash under
+      a third fragment flag `?` -- a question, not a failure -- naming the data directory, with three
+      buttons: `Reset events, keep approved parsers` removes `store/`, `out.*` (by prefix, so the
+      `.pivot` and every `out.vN.*` go too), `watch/`, `pending/` and `staging/` and keeps `parsers/`,
+      `mappings/` and `engine.log`; `Reset to first launch` removes the whole data directory and the
+      ordinary start re-seeds the 15 bundled parsers, generated ones excluded (D94); `Cancel` touches
+      nothing and navigates back to the served UI or to the page that was showing. Either reset stops
+      the engine, waits until `holder::find` says nothing holds the store, deletes, and re-enters
+      `start()` exactly as a launch does; a path that will not go is a line in `engine.log` and a
+      count in the notice (`. N item(s) could not be removed; see engine.log`), never a panic. The
+      notice reads `Reset: events removed, N parsers kept` or `Reset to first launch: 15 parsers`.
+      The engine is never asked to delete: D100 records why. Scope check: app/ only -- app/README.md,
+      app/dist/index.html, app/src-tauri/src/{lib.rs,menu.rs,reset.rs} (+271/-19, reset.rs new),
+      no crates/ and no ui/, so the 56 s demo pass was NOT required for this merge and was not run.
+      Numbers: `cargo test --lib` in app/src-tauri 12 passed 0 failed (the 11 that were there plus
+      `reset::tests::each_choice_removes_exactly_its_own_paths`), `cargo clippy --all-targets -D
+      warnings` rc 0, `cargo test --workspace` at the root 125 passed 0 failed (unchanged -- app/ is
+      its own workspace). The builder drove the bundled app under a private HOME on port 7931, never
+      the owner's data directory: 30 events -> Reset events -> framed 0 with 15 parsers kept; Reset
+      to first launch -> the data directory recreated, 15 parsers seeded, framed 0; the menu clicked
+      through System Events (`osascript`), the buttons through the page. Verification, plainly: the
+      lane's independent verifier was STOPPED by the lead at 08:37 because its test instances were
+      opening windows on the owner's screen during the demo, so its verdict does not exist. What
+      stands instead is the builder's own private-HOME drive above, the app crate's 12 tests and
+      clippy on the merged tree, and the lead's hands-on test of the installed bundle -- the lead
+      installed this lane's own bundle at 08:28 as `/Applications/ULPF.app`, sidecar sha256
+      55b52b87931faf63b79e2af1cfe298686f79b72d07c0382dc50105ec85ea951c, the same binary as
+      `target/dist/ulpf` at 4e0d71d, and is driving it. Gaps, not closed: `Cancel` while the engine
+      is DOWN was set up (a second instance on an occupied port lands on the `port in use` page with
+      its Start again button) but never driven end to end; Windows untested, where `remove_dir_all`
+      can fail on an open file -- that path is the `engine.log` line and the notice count, not a
+      crash; no capture in `docs/screens/`; no hidden CLI argument was added.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 08:45 IST: the merge gate on main at 1ce7652, the merge of lane R (`lane-r-reset`, head be8748b)
+  into 20d1890. The merge was clean -- no conflict in any file -- and `git diff 20d1890..HEAD --stat`
+  is five files, all under app/ (`--numstat`): app/README.md (+25/-1), app/dist/index.html
+  (+47/-12), app/src-tauri/src/lib.rs (+22/-6), app/src-tauri/src/menu.rs (+3/-0),
+  app/src-tauri/src/reset.rs (+174/-0, new), 271 insertions and 19 deletions in all. crates/ and ui/ are untouched, so the 56 s
+  `ulpf demo --auto` pass was NOT required for this merge and was not run; the gate, isolation and
+  the app checks all were.
+  GATE GREEN at 1ce7652, 08:43:54-08:44:29 (35 s): `cargo test --workspace` 125 passed 0 failed,
+  `cargo clippy --workspace --all-targets -- -D warnings` rc 0, `cargo build --release` Finished
+  rc 0 (up to date in 0.17 s -- app/ is its own workspace, so no engine code was rebuilt),
+  `target/release/ulpf` 12,114,696 B, `ulpf check --pending pending` 15 parsers 2 mappings
+  0 problems, `scripts/demo.sh --check` 39 ok lines rc 0, no fetchable external reference in
+  `ui/dist`.
+  ISOLATION, run mode, 08:44:49: `ULPF_BIN=./target/release/ulpf scripts/isolation.sh run
+  samples/cisco_asa.log` -> counter block printed, "(no network socket observed in any sample)",
+  1 live sample, 0 distinct sockets, ISOLATION PASS, rc 0.
+  APP CHECKS, 08:44:11-08:44:18 (7 s), in app/src-tauri: `app/scripts/sidecar.sh` rc 0 and it
+  printed `(profile dist)` -- it took the shipped binary, not the release fallback, and refused no
+  generated parser; `cargo test --lib` 12 passed 0 failed; `cargo clippy --all-targets -- -D
+  warnings` rc 0. `target/dist/ulpf` is unmoved at 9,035,832 B, sha256
+  55b52b87931faf63b79e2af1cfe298686f79b72d07c0382dc50105ec85ea951c -- the same sha as the sidecar
+  inside `/Applications/ULPF.app`, which is this lane's own bundle at be8748b, installed by the
+  lead at 08:28 and being driven by hand right now. Nothing in this merge touched that bundle, that
+  app or `~/Library/Application Support/dev.ulpf.desktop`, and no `ulpf` process was signalled.
+  Lane R's independent verifier is not part of this record: the lead stopped it at 08:37 because its
+  test instances opened windows on the owner's screen mid-demo. The three checks above, the
+  builder's private-HOME drive and the lead's hands-on test are what the item stands on.
 - 08:11 IST: the final sequence, second half, on frozen main at 4e0d71d. The engine DID change
   since the first half's head 217d0df (`git diff --stat 217d0df..4e0d71d -- crates ui Cargo.toml
   Cargo.lock`: 20 files, +242/-50 -- pivot.rs, tail.rs, server.rs, demo.rs, cli.rs, two test files,
@@ -998,6 +1059,21 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
+- 08:46 IST (lane R merged): nothing is in flight. Lane R (`lane-r-reset`, the in-app reset) is on
+  main as the merge commit 1ce7652 and its records commit below it; its branch is merged, its
+  worktree is finished with, and its independent verifier was stopped by the lead at 08:37 and will
+  not return a verdict (why, and what stands in its place, is in the Definition-of-done item and the
+  Verified state entry at the top). Main is frozen again at this records commit. Nothing of this
+  session's is running: no worker, no build, no engine of ours. What IS running on this machine and
+  is deliberately left alone: the owner's demo on `/Applications/ULPF.app` -- this lane's own bundle
+  at be8748b, sidecar sha 55b52b87..., installed at 08:28 -- which the lead is driving by hand, plus
+  its data directory `~/Library/Application Support/dev.ulpf.desktop`; and `caffeinate`. No `ulpf`
+  process was signalled by this merge and the app was never launched by it. Ports 7878 and 5514 are
+  free for the demo. Branches pushed and never merged before the demo, unchanged: `lane-5-xml`,
+  `lane-6-index`, `lane-3b-cef-leef`, `lane-8-windows` (and 7B, stopped at 05:19, whose items lane 7C
+  carries on the right base). This records commit is not pushed. Left for the owner, as before:
+  whether tag `v0.1.0-rc3` is moved off fb7bda9 and its draft release republished, and whether
+  branch run 34004510572 (02b4bef, docs-only) is read.
 - 08:24 IST (fix round): nothing of this session's is in flight, but this machine is not idle --
   another lane is working in the worktree `.claude/worktrees/wf_babea0b7-cc8-1` (born 08:14:23, at
   this same commit 5b27f68): it bundled the app there (`bundle_dmg.sh`, pid 43664, seen running at
