@@ -357,10 +357,31 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     fail(app, generation, "no answer", "The engine did not answer within two minutes.");
 }
 
+/// The recovery button on the splash page: which flag the fragment carries, which is also
+/// which label the page puts on it. Every failure gets one, because every failure the shell
+/// can show is one a fresh start might survive -- a port that has been freed, a store whose
+/// holder has gone, an engine that died once.
+#[derive(Copy, Clone)]
+pub(crate) enum Retry {
+    /// Start the engine again. Nothing to stop first.
+    StartAgain,
+    /// Stop the process holding the store, then start again.
+    StopHolder,
+}
+
+impl Retry {
+    fn flag(self) -> &'static str {
+        match self {
+            Retry::StartAgain => "+",
+            Retry::StopHolder => "*",
+        }
+    }
+}
+
 /// Records why the engine is not serving, if this is still the current engine, and shows
-/// the reason on the splash page.
+/// the reason and a Start again button on the splash page.
 fn fail(app: &AppHandle, generation: u64, why: &str, message: &str) {
-    down(app, generation, why, message, false);
+    down(app, generation, why, message, Retry::StartAgain);
 }
 
 /// The store is held by another writer. Names the process, offers to stop it, and names
@@ -381,11 +402,11 @@ fn locked(app: &AppHandle, generation: u64, store: &Path, log: &Path) {
         generation,
         "store in use",
         &format!("The engine's store at {} {offer}\nThe whole of its output is in {}", store.display(), log.display()),
-        true,
+        if holder.is_some() { Retry::StopHolder } else { Retry::StartAgain },
     );
 }
 
-fn down(app: &AppHandle, generation: u64, why: &str, message: &str, button: bool) {
+fn down(app: &AppHandle, generation: u64, why: &str, message: &str, retry: Retry) {
     let engine = app.state::<Engine>();
     if engine.generation.load(Relaxed) != generation {
         return;
@@ -394,24 +415,37 @@ fn down(app: &AppHandle, generation: u64, why: &str, message: &str, button: bool
     *engine.url.lock().unwrap() = None;
     let _ = fs::remove_file(engine.data.lock().unwrap().join("server.url"));
     set_title(app, &format!("ULPF · engine down ({why})"));
-    splash_with(app, message, true, button);
+    splash_with(app, message, true, Some(retry));
 }
 
-/// The splash page's one button: stop the process holding the store, then start again
-/// through the ordinary start path. Reachable from the bundled splash page only -- the
-/// served UI is a remote origin, and Tauri's ACL gives a remote origin no command at all.
+/// The splash page's one button, whichever label it is carrying: stop the process holding
+/// the store if there is one, then start again through the ordinary start path. Reachable
+/// from the bundled splash page only -- the served UI is a remote origin, and Tauri's ACL
+/// gives a remote origin no command at all.
+///
+/// A kill that fails is a notice, not a refusal: the holder may have exited on its own
+/// between the refusal and this click, and `kill` on a pid that is gone is an error the
+/// retry must survive. The start's own outcome is the answer either way -- it serves, or it
+/// meets the holder again and says so.
 #[tauri::command]
 fn stop_holder(app: AppHandle) -> Result<(), String> {
     let engine = app.state::<Engine>();
     let holder = engine.holder.lock().unwrap().take();
     let data = engine.data.lock().unwrap().clone();
     if let Some(pid) = holder {
-        holder::kill(pid).map_err(|e| format!("Could not stop pid {pid}: {e}"))?;
+        if let Err(e) = holder::kill(pid) {
+            toast(&app, &format!("pid {pid} did not stop ({e}); starting anyway"));
+        }
         // The OS drops the SQLite lock when the process goes, but not before it has gone.
         thread::sleep(Duration::from_millis(400));
     }
     let app = app.clone();
-    thread::spawn(move || start(&app, data, "Starting"));
+    // Stop first: on the "no answer within two minutes" path the child may still be alive,
+    // and a second engine on one store would only be refused by the first.
+    thread::spawn(move || {
+        stop(&app);
+        start(&app, data, "Starting");
+    });
     Ok(())
 }
 
@@ -465,12 +499,13 @@ fn navigate(app: &AppHandle, url: &str) {
 /// travels in the URL fragment, so it is there when the page loads and a fragment change
 /// on a page already showing updates it in place without a reload.
 fn splash(app: &AppHandle, text: &str, error: bool) {
-    splash_with(app, text, error, false);
+    splash_with(app, text, error, None);
 }
 
-/// `*` after the `!` asks the page for its recovery button (`stop_holder`).
-fn splash_with(app: &AppHandle, text: &str, error: bool, button: bool) {
-    let flags = format!("{}{}", if error { "!" } else { "" }, if button { "*" } else { "" });
+/// A `Retry` flag after the `!` asks the page for its recovery button (`stop_holder`) under
+/// that flag's label.
+fn splash_with(app: &AppHandle, text: &str, error: bool, retry: Option<Retry>) {
+    let flags = format!("{}{}", if error { "!" } else { "" }, retry.map(Retry::flag).unwrap_or_default());
     navigate(app, &format!("{SPLASH}#{flags}{}", percent_encode(text)));
 }
 
