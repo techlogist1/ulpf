@@ -62,18 +62,24 @@ if ($url) {
   Write-Host "window pid $($window.Id), engine pid $($child.Id)"
 
   # A hard kill of the window process is NOT the tray's Quit (that runs the shell's exit
-  # handler, which kills the child). Windows does not take a child down with its parent, so
-  # an orphan here is the expected result of the kill, not a fault in D73's kill-on-exit;
-  # the tray path stays a human check. The orphan is reported, then cleaned up.
+  # handler, which kills the child). It is the shape a tester hit: End task on the window
+  # left the engine running and the store locked. The job object with
+  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE (app/src-tauri/src/job.rs) makes the kernel reap the
+  # engine when the app's handles close, however the app died, so an orphan here is now a
+  # failure and not a note.
   Stop-Process -Id $proc.Id -Force
-  Start-Sleep -Seconds 5
-  $left = Get-Process -Name 'ulpf' -ErrorAction SilentlyContinue
-  if ($left) {
-    Write-Host "orphan: ulpf.exe pid $($left.Id) outlived a Stop-Process of the window (expected on Windows; the tray's Quit is what kills it)"
-    Stop-Process -Id $left.Id -Force
-  } else {
-    Write-Host 'no ulpf.exe left after the window process was killed'
+  $left = $null
+  for ($i = 0; $i -lt 10; $i++) {
+    Start-Sleep -Milliseconds 500
+    $left = Get-Process -Name 'ulpf' -ErrorAction SilentlyContinue
+    if (-not $left) { break }
   }
+  if ($left) {
+    $left | ForEach-Object { Write-Host "orphan: ulpf.exe pid $($_.Id) outlived a Stop-Process of the window" }
+    $left | Stop-Process -Force
+    Fail 'the engine outlived a force kill of the window: the kill-on-job-close job did not reap it'
+  }
+  Write-Host 'no ulpf.exe left 5 s after the window process was force-killed: the job object reaped it'
   Write-Host 'SMOKE PATH: app'
   exit 0
 }

@@ -4,6 +4,7 @@
 
 mod ingest;
 mod intensity;
+mod job;
 mod menu;
 mod title;
 
@@ -162,6 +163,8 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     set_title(app, "ULPF · starting engine…");
     splash(app, &format!("{verb} the engine at {}: {} of {cores} cores, entity index {}", chosen.name(), chosen.threads(cores), intensity::on_off(chosen.pivot())), false);
 
+    // Lines the shell wants in engine.log; written once the file exists, below.
+    let mut notes: Vec<String> = Vec::new();
     if let Err(e) = prepare(app, &data) {
         return fail(app, generation, "start failed", &format!("Cannot prepare {}: {e}", data.display()));
     }
@@ -224,6 +227,12 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
             )
         }
     };
+    // The kernel's net under the clean-quit path: whatever happens to this process, the
+    // engine goes with it (job.rs; no-op off Windows). A failure here is not fatal, so it
+    // is a line in the log and nothing else.
+    if let Err(e) = job::adopt(child.pid()) {
+        notes.push(format!("shell: the engine is not in a kill-on-close job ({e}); a force kill of the window can leave it running"));
+    }
     *engine.child.lock().unwrap() = Some(child);
 
     let h = app.clone();
@@ -231,6 +240,14 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     // engine's own store and output are the durable record, this is the last words.
     let log = data.join("engine.log");
     let mut log_file = fs::File::create(&log).ok();
+    // What the shell did before the engine printed anything, in the same file, so the one
+    // log a user is told to read holds both halves.
+    for note in &notes {
+        eprintln!("[shell] {note}");
+        if let Some(f) = log_file.as_mut() {
+            let _ = writeln!(f, "{note}");
+        }
+    }
     tauri::async_runtime::spawn(async move {
         let mut last = String::new();
         while let Some(event) = rx.recv().await {
