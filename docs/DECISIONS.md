@@ -1843,7 +1843,8 @@ samples` no longer ingests `samples/README.md` and `ulpf run corpus` no longer i
 24 `PROVENANCE.md` and `SETUP.md` files under it; an `--exclude` adds to that list rather than
 replacing it (one more pattern must not open `.git` to an append-only store, which nothing
 undoes) and `--exclude ''` is the one way to empty it. Because a filtered file is invisible in the output, silence is
-not acceptable: every one is counted in `files_excluded` (the counter block's files line
+not acceptable: every one is counted in `files_excluded`, up to the 10,000-name cap below,
+where the count stops with the list and the counter block says so (the counter block's files line
 reads `16 files (0 failed, 1 excluded)`, and `/api/metrics`' `engine` carries the same
 number) and the first ten are listed under the block as `excluded: samples/README.md
 (*.md)`, with `excluded: N more not listed` when there were more. `serve` re-scans its watch

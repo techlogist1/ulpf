@@ -670,6 +670,8 @@ pub struct Filter {
 
 /// In force under any `--exclude`: documentation, dotfiles and test ground truth are not
 /// logs, and one more pattern must not open `.git` to the store. `--exclude ''` drops them.
+/// Excluded names are remembered up to `EXCLUDED_CAP`, where the count stops with the list.
+pub const EXCLUDED_CAP: u64 = 10_000;
 pub const DEFAULT_EXCLUDES: [&str; 5] = ["*.md", "README*", ".*", "*.truth.tsv", "*.expected.jsonl"];
 
 impl Default for Filter {
@@ -869,10 +871,11 @@ impl Live {
         }
         let mut seen = self.excluded.lock().unwrap_or_else(|e| e.into_inner());
         for (path, pattern) in excluded {
-            // the names stop at 10k so a long `serve` over a directory that keeps producing
-            // excluded names cannot grow with them; the counter is what stops too, because
-            // counting without the set would count the same file once per poll
-            if seen.len() >= 10_000 {
+            // the names stop at the cap so a long `serve` over a directory that keeps
+            // producing excluded names cannot grow with them; the counter stops with them,
+            // because counting without the set would count the same file once per poll,
+            // and the counter block says so when the cap is reached
+            if seen.len() as u64 >= EXCLUDED_CAP {
                 break;
             }
             if seen.insert(format!("{} ({pattern})", path.display())) {

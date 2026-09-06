@@ -317,6 +317,9 @@ fn print_report(report: &engine::Report) -> Result<()> {
     for e in &report.excluded {
         writeln!(err, "excluded: {e}")?;
     }
+    if report.snapshot.files_excluded >= engine::EXCLUDED_CAP {
+        writeln!(err, "excluded: the {} name cap was reached; the count and the list stop there", engine::EXCLUDED_CAP)?;
+    }
     let unlisted = report.snapshot.files_excluded.saturating_sub(report.excluded.len() as u64);
     if unlisted > 0 {
         writeln!(err, "excluded: {unlisted} more not listed")?;
