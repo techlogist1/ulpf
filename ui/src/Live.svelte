@@ -336,7 +336,7 @@
           <span class="kv on"><span>verify</span><span class="num">running</span></span>
         {:else if live.integrity.last_verify}
           <span class="kv" class:ok={live.integrity.last_verify.ok} class:bad={!live.integrity.last_verify.ok}>
-            <span>last verify</span><span class="num">{live.integrity.last_verify.ok ? 'clean' : `first bad ${live.integrity.last_verify.first_bad}`}</span>
+            <span>last verify</span><span class="num">{live.integrity.last_verify.ok ? 'clean' : live.integrity.last_verify.first_bad == null ? 'index header' : `first bad ${fmt.n(live.integrity.last_verify.first_bad)}`}</span>
           </span>
           <span class="kv"><span>at</span><span class="num">{fmt.stamp(live.integrity.last_verify.at)}</span></span>
         {:else}
