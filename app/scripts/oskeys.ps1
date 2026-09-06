@@ -81,6 +81,9 @@ if ($xy.Count -eq 2) {
   $fg = [Win]::GetForegroundWindow()   # the click itself grants the foreground
 }
 
+# Read again right before sending: SendKeys goes to whatever holds the foreground, so a
+# refused activation must stop the send rather than type into another window.
+$fg = [Win]::GetForegroundWindow()
+if ($fg -ne $h) { [Console]::Error.WriteLine("the foreground is $fg, not the app's window $h (SetForegroundWindow=$set): the keys were not sent"); exit 3 }
 if ($Keys) { [System.Windows.Forms.SendKeys]::SendWait($Keys) }
-if ($fg -ne $h) { [Console]::Error.WriteLine("the foreground is $fg, not the app's window $h (SetForegroundWindow=$set): the input went elsewhere"); exit 3 }
 exit 0
