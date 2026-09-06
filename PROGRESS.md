@@ -569,9 +569,131 @@ look at the captures and a grep of `ui/dist` for external references.
       recorded: a reader in another process can observe the zero region between the writer's
       zero-fill and its next append (dropped by the walk-back; nothing in the format marks the
       logical end explicitly).
+- [x] LU. (merged 07:58 IST in 06ab4fb, `lane-u-ui` head eee630f, nine commits plus three fix-round
+      commits, D95) The tail frame's honest cut count: `TailFrame` carries an additive `cut` set by
+      `since()` and published in the server's tail JSON, `skipped` keeps its published meaning (the
+      total a caller did not receive) and `skipped - cut` is the eviction, the only part that is
+      gone; the `docs/api.md` sentence that called `skipped` eviction -- the source of the
+      misleading tooltip -- is corrected and a "Tail frame" subsection added; the footer says which
+      is which. The new `the_tail_frame_separates_eviction_from_the_frames_own_limit`
+      (crates/ulpf/tests/v4_api.rs) asserts it over real HTTP on a 64-event ring fed 309 events:
+      `?limit=500` cut 0 and skipped 309-1-64, `?limit=8` cut 56 with skipped == evicted + cut, a
+      caller two events behind 0 and 0, and a cut line still in the ring on the next full frame.
+      Also `fmt.stamp` renders the zone the value carries rather than the viewer's local time, and
+      the confirmation is kept on screen with scroll-margin plus `scrollIntoView({block:'nearest'})`
+      rather than moved into an overlay. Its verifier confirmed 124 tests on the branch and the tail
+      arithmetic over HTTP, and its fix round closed all three findings (the 12em stamp columns --
+      the zone decision cost a millisecond digit at 11em -- the merge of main, and the footer's gaps
+      at 900px so the cut note is not pushed off the edge). Gaps the lane recorded: the footer has to
+      name the per-tick frame limit (200) in prose because `/api/status` reports `tail_capacity` and
+      nothing reports `TAIL_PER_TICK` (server.rs:704), so the tooltip goes stale if that constant
+      changes; `engine.files` counts inputs opened, not files in the watch directories, so Flow's
+      note says "M files watched" with the caveat in its title; and nothing in the metrics frame
+      separates "sources seen this run" from "sources this store knows", which is why the ingest note
+      has to say "this run".
+- [x] LU2. (merged 07:58 IST in 06ab4fb, `lane-u2-review` head 1e9e2f3, two commits, D99) The review
+      screen's confirmations name the real directories: Approve/reject confirmations, notes and the
+      proof row hardcoded `parsers/` and `pending/rejected/` while the demo server runs with
+      `demo/parsers` and `demo/pending` and the desktop app points at its own data directory, so the
+      confirmation named a path that held nothing; they now read `parsers_dir` and `pending_dir`
+      from live.status. The same commit added the missing `m` row (load more diff entries on Replay)
+      to the `?` overlay, which the documented keyboard map already listed, and 1e9e2f3 corrected two
+      docs/design.md claims against the code (the foot inventory was missing the queue item; the tail
+      row is ten flattened fields, not seven strings). Four files, +16/-10. Verdict pass. It has no
+      test line of its own -- it is covered by the merged tree's 125 and by the dist rebuild; it
+      deliberately did not commit `ui/dist`, which is why the integration's dist rebuild was not a
+      no-op.
+- [x] LA. (merged 07:58 IST in 06ab4fb, `lane-a-shell` head 81d1dbd, five commits, D97 and D98) The
+      desktop shell's exports and recovery buttons, all in `app/` plus docs/screens/README.md, zero
+      engine files. New `app/src-tauri/src/download.rs` (171 lines: `save()`, the loopback GET with
+      Content-Disposition and de-chunking, `name_for`); `lib.rs` gains `SAVE_SCHEME`, `INTERCEPT`,
+      `window()` building the window in code against `"create": false`, a `Retry` enum,
+      `down`/`splash_with`/`stop_holder`, `focus_webview` and an orphan pre-flight in `start()`;
+      `app/dist/index.html` labels the button per fragment flag and hides the drop hint when the
+      engine is down; `app/README.md` gains the file-links section, the failure/button paragraph, the
+      macOS force-quit sentence and 15 parsers in the Windows payload; docs/screens/README.md's four
+      parser counts corrected to 15 seeded / 15 loaded / 16 after approve, each naming the capture's
+      own older number, the captures themselves unchanged. Numbers (builder, reproduced here): in
+      app/src-tauri `cargo test --lib` 11 passed 0 failed (was 10; download.rs adds two) and
+      `cargo clippy --all-targets -- -D warnings` rc 0; six `pnpm tauri build` runs with every claim
+      driven on the last bundle; saves of attestation.json (597 bytes) and out-first-last.jsonl
+      (32,206) / .csv (38,969) into ~/Downloads byte-identical to curl. Its independent verifier had
+      not returned when this merge was dispatched at 07:58 and its verdict is still pending: the
+      builder's claims stand on the integration check and on this gate, which re-ran the app tests
+      and clippy on the merged tree. Gaps: nothing is measured on Windows -- the interceptor is
+      unexercised on WebView2 and `app-smoke-windows` does not touch the export; the v4 export
+      contract has no `filename` parameter, so the shell takes the server's own
+      Content-Disposition name and falls back to the URL's last path segment; `GET /api/export`
+      answers `Transfer-Encoding: chunked` and docs/api.md does not say so, so a naive reader
+      interleaves chunk-size lines into the file; the de-chunker's read timeout is 3 s per read, not
+      total, verified only against a 38,969-byte loopback export; why WKWebView drops the anchor
+      download without calling any delegate is unexplained (empirical -- wry 0.55.1 and
+      tauri-runtime-wry 2.11.4 were read and everything is wired), and Tauri 2.11.5's own
+      `on_download`/`on_new_window` are measured dead for these links on macOS and are not in the
+      tree. The Mac force-quit truth, plainly: `kill -9` of the app leaves the engine running on
+      macOS; the locked-store page with its button (D93) is the recovery, not the job object (D92),
+      which is Windows only.
+- [x] LPV. (merged 07:58 IST in 06ab4fb, `lane-pv-paging` head da002ec, one commit, D96) The pivot
+      paging flake is fixed, and it was never a race. `PivotIndex::walk` kept only the first
+      `limit*4` postings past the cursor as candidates before sorting them by device time, so an
+      event whose device clock ran behind sorted onto a page it had already been dropped from and
+      the `(time, raw id)` cursor then paged past it for good; the cap now only ends the scan and
+      never drops an entry, and `query()` wraps the header and the timeline in one read transaction
+      because the writer commits a batch's entity counts and its posting rows together. Scope check:
+      crates/ulpf/src/pivot.rs (+18/-4) and crates/ulpf/tests/pivot.rs (+69) only, no engine crate
+      touched, docs/api.md unedited because nothing in the contract changed -- it already promised
+      events are "neither repeated nor skipped" and the code now does what that says. Numbers:
+      the new deterministic test saw 20 of 200 events before the fix (= `limit*4` exactly) and 200
+      of 200 after; the builder measured 2 failures in 50 loops before and 50 of 50 after under six
+      `yes` load generators; its verifier paged the seven busiest entities on main's pre-fix binary
+      over all 15 samples and found 6 of 7 skipping (src_ip 203.0.113.9 38 of 51, dst_port 443 33 of
+      36, user jdoe 31 of 33) against 7 of 7 exhaustive on the branch, with the pre-fix skip
+      repeating to the row across three runs; end to end on the release binary dst_port 443 pages 36
+      of 36 distinct in 8 pages of limit 5; the million-posting page 0.009 s -> 0.017 s against its
+      own 1.0 s bound, the index write unchanged. The integration tree reproduced it: 1 failure in
+      45 isolated runs pre-merge, 45 of 45 post-merge at the same load. Gap, named in the code and
+      not documented away: the ceiling is not lifted -- an entity with more than about 10,000 events
+      can still in principle hide an event whose device clock is behind by more than the scan's
+      window, and closing that needs a first_time/last_time column on `postings`, an index-format
+      change. The pivot screen was driven by curl and the API test, not opened in a browser.
+- [x] LMT. (merged 07:58 IST in 06ab4fb, `lane-mt-plan` head e6fdde8, five commits) The hand-test
+      plan, one new file: `docs/manual-test.md`, 517 lines -- 13 macOS CLI steps, 11 PowerShell
+      steps, 41 app steps, results tables and 11 known limits, every expectation cited to the file it
+      was read out of rather than remembered, and an expectation with no source in the tree says so
+      and asks the tester to record what they saw. Docs only, no tests. Its fix round closed all
+      nine findings: the "(with lane 7C)" markers are gone, `git show lane-7b-app:` prefixes became
+      real paths (holder.rs and job.rs, not a guard.rs that lived only on a dead branch), the
+      pre-7C halves of the two contrast rows read "Before lane 7D" so both sentences stay true of
+      the merged tree, the dist-profile sentence was rewritten against .github/workflows/app.yml
+      (the `cli` and `bundle` jobs build `--profile dist`, the Windows smoke job is deliberately
+      `--release`, so the plan says which build a tester holds), and A36/A38 were rewritten because
+      lane A landed in the same tree. `README.md:354` carries its line under "Where things are".
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 08:04 IST: lane FINAL5 merged as 06ab4fb -- five verified lanes (U, U2, A, PV, MT) integrated on
+  branch `integration-final` at 6c56572 over main at 4804f30 and merged here in one `--no-ff`
+  commit. Clean merge, no conflicts, no hand resolution; PROGRESS.md and docs/DECISIONS.md carry no
+  change on the branch, so neither could conflict. 29 files, +1103/-97 (crates/ulpf pivot.rs,
+  server.rs, tail.rs and two test files; ui/src plus ui/dist; app/src-tauri including the new
+  download.rs; docs/api.md, design.md, screens/README.md and the new docs/manual-test.md; README.md
+  and app/README.md). D95-D99 written from the five lanes. GATE GREEN on the merged tree:
+  `cargo test --workspace` 125 passed 0 failed (124 on main plus lane PV's deterministic pivot
+  case), `cargo clippy --workspace --all-targets -- -D warnings` rc 0, `cargo build --release`
+  Finished rc 0 with `target/release/ulpf` at 12,114,696 bytes, `ulpf check --pending pending` 15
+  parsers 2 mappings 0 problems, `scripts/demo.sh --check` 39 ok lines rc 0, no fetchable external
+  reference in `ui/dist`, and `ULPF_BIN=./target/release/ulpf scripts/isolation.sh run
+  samples/cisco_asa.log` ISOLATION PASS (no network socket observed in any sample). `crates/` and
+  `ui/` are touched, so the demo pass ran: `./target/release/ulpf demo --auto` twice, exit 0 both
+  times on 7878/5514, each pass showing the mikrotik proposal (0.6 s), approve giving
+  `parsers_loaded` 16 with 250 of 250 re-detected at `demo/parsers/mikrotik_inferred.toml`, the
+  drift update proposal for mikrotik_inferred (6.2 s and 6.0 s), attestation 2 of 2 checkpoints
+  agreeing over 2,739 records, `chain broken at id 0 (digest)` with exit 1 as the point, and
+  `done: stopped and reset (demo removed)`. `app/` is touched, so the app checks ran after
+  `app/scripts/sidecar.sh` (sidecar at 9,035,672 bytes, profile dist): in app/src-tauri
+  `cargo test --lib` 11 passed 0 failed and `cargo clippy --all-targets -- -D warnings` rc 0.
+  The mentors' live review instance (/Applications/ULPF.app, pid 29713, its own store under
+  ~/Library/Application Support/dev.ulpf.desktop) was not touched at any point.
 - 07:39 IST: the records fix round on main (the verifier's two record findings; no lane branch --
   PROGRESS.md and the records commit's message only). GATE GREEN on the final tree: `cargo test
   --workspace` 124 passed 0 failed over 38 targets, `cargo clippy --workspace --all-targets --
@@ -750,34 +872,28 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
-- 07:23 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7, 4B, DOCS and 7C/7D (each through the
-  gate; the four before 4B under one gate, 05:07; the binary re-verified 05:11; 4B's own gate is
-  GATE GREEN in Verified state above, and its fix round's gate GATE GREEN in the 06:18 entry;
-  7C/7D's gate is the 07:19 entry at the top of Verified state). Branches pushed: lane-5-xml,
-  lane-6-index, lane-3b-cef-leef, lane-8-windows -- none of them merges tonight. No lane is
-  running: 7C (`lane-7b-app`, Opus builder, Opus verifier, dispatched 05:16 on main at f57e652)
-  was the last, and it is merged as 7dc8b9b with its records in this commit; 4B
-  (`lane-4b-readme`, Opus, Fable, dispatched 05:05, nine commits) is merged and recorded above.
-  Left for the lead before the 08:30 freeze: whether tag `v0.1.0-rc3` is moved off fb7bda9 to a
-  head that carries the last three commits and its draft release republished (deliberately not
-  done tonight -- moving it deletes the remote tag and re-fires a ~14 min release job), and
-  whether branch run 34004510572 (02b4bef, docs-only, `in_progress` at this merge) is read.
-  One record line is also the owner's: CLAUDE.md:242 still reads `(D1-D91)`, three short after
-  7D landed D92-D94 (lane DOCS corrected that same line at 07:10, twenty minutes before the
-  merge); the fix is one word -- `D1-D94` -- and this fix round left it rather than rewrite
-  CLAUDE.md on a relayed instruction. 7B (dispatched 05:05) was
-  stopped at 05:19: its worktree had been created at 14d3b0c, before lane 7's merge, so its
-  job-object draft sat on the old `lib.rs`; the diff is kept in the lead's scratch as a
-  reference and 7C carries the same items on the right base. The session limit hit at about
-  04:55 (resets 08:00): lane 7's builder died before returning, lane 8's verifier and the fix
-  rounds of P and 2U never ran; the lead reviewed those diffs and captures directly and carried
-  the open findings to 4B and 7C (recorded per lane above). Done by the lead since: lane 8's
-  review and the live UI look (Verified state). Still the lead's: two demo
-  passes, the final sequence, the report. The harness re-run on the dist build in a quiet window
-  is done twice over (4B's median 295,928 and its verifier's 320,369, both above the committed
-  258,411 and its 10 percent band) and a separate agent is re-measuring now; whether a scorecard
-  is committed and the headline re-pinned off 258,411 is the final sequence's call, D87
-  unchanged.
+- 08:04 IST: nothing in flight. Main is frozen at this records commit for the final sequence
+  (08:30-09:30). On main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7, 4B, DOCS, 7C/7D and, last,
+  FINAL5 -- lanes U, U2, A, PV and MT merged together as 06ab4fb through one gate (GATE GREEN at
+  the top of Verified state). No worker is running; every lane dispatched this session has
+  returned and is recorded above. One verdict is outstanding rather than in flight: lane A's
+  independent verifier had not returned when this merge was dispatched at 07:58, so anything it
+  asks for is a post-freeze item; the builder's claims stand on the integration check and on this
+  gate, which re-ran the app tests (11 passed) and clippy on the merged tree.
+  Branches pushed and never merged before the demo, still listed as such: lane-5-xml,
+  lane-6-index, lane-3b-cef-leef, lane-8-windows. 7B stays stopped at 05:19 (its worktree was
+  created at 14d3b0c, before lane 7's merge, so its job-object draft sat on the old `lib.rs`); the
+  diff is kept in the lead's scratch and 7C carries the same items on the right base.
+  Left for the owner, deliberately not applied here: whether tag `v0.1.0-rc3` is moved off fb7bda9
+  to a head that carries the last commits and its draft release republished (moving it deletes the
+  remote tag and re-fires a ~14 min release job); whether branch run 34004510572 (02b4bef,
+  docs-only) is read; and CLAUDE.md:242, which reads `(D1-D91)` and is now eight short after this
+  merge landed D95-D99 -- the fix is one word, `D1-D99`, and this round left CLAUDE.md alone rather
+  than rewrite it on a relayed instruction.
+  Still the lead's: the final sequence and the report. The harness re-run on the dist build is done
+  twice over (4B's median 295,928 and its verifier's 320,369, both above the committed 258,411 and
+  its 10 percent band); whether a scorecard is committed and the headline re-pinned off 258,411 is
+  the final sequence's call, D87 unchanged.
 
 ### Tried and abandoned (v4)
 - Lane 2P's headline "cut 4-8x": measured only at load 28-36. The controlled pair on a quiet
@@ -792,19 +908,23 @@ look at the captures and a grep of `ui/dist` for external references.
   The tamper moved to byte 100, inside record 0's body whatever the first sample is (the segment
   and record headers end at byte 68). Post-demo question for the owner, recorded not built:
   whether the record header's receipt time belongs under the chain (a store-format change).
-- A flake, not fixed tonight: `crates/ulpf/tests/v4_api.rs` `pivot_pages_by_the_cursor_pair_and_
-  reports_its_timings` failed once at load 37 on lane 6's worktree ("saw 31 of 32"). Re-measured
-  on main at 06:12-06:14 IST (load 7.45-8.62, the fix round's own gate): it is commoner than that
-  entry said. It failed the full `cargo test --workspace --release` once, then 3 of 11 runs of the
-  `v4_api` binary alone, always the same "saw 31 of 32"; it passes 3 of 3 when named on the command
-  line by itself, and the gate's next full run was 123 passed 0 failed. So the frequency is load,
-  not the tree, and a hand-run gate before the demo may need a second run: the criterion is a green
-  full run, and this test failing alone is the known flake, not a regression. Mechanism (read
-  from `walk` in pivot.rs, main's read path): a page takes the first `limit*4` entries past the cursor in raw-id order and re-sorts
-  by device time, so an event whose device time disagrees with arrival order by more than that
-  window is skipped; the test copies every sample into a watch directory and the poll's
-  interleaving under load sets the order. Post-demo: widen the candidate window or make the
-  test's input order deterministic.
+- A flake, closed by lane PV in this session's last merge (D96): `crates/ulpf/tests/v4_api.rs`
+  `pivot_pages_by_the_cursor_pair_and_reports_its_timings` failed once at load 37 on lane 6's
+  worktree ("saw 31 of 32"), then, re-measured on main at 06:12-06:14 IST (load 7.45-8.62), 3 of 11
+  runs of the `v4_api` binary alone with the same "saw 31 of 32" while passing 3 of 3 when named by
+  itself. The mechanism recorded here was right -- a page took the first `limit*4` entries past the
+  cursor in raw-id order and re-sorted them by device time, so an event whose device time disagreed
+  with arrival order by more than that window was skipped -- but the reading of it was wrong: this
+  was never a race, and "a hand-run gate may need a second run" was the wrong remedy. Lane PV
+  reproduced it deterministically on a fully settled hand-written index and on real data, so the
+  test was right and the read path was wrong; the cap now only ends the scan and never drops an
+  entry. Before: 2 failures in 50 loaded runs, and 20 of 200 events on the deterministic repro.
+  After: 50 of 50 for the builder, 30 of 30 at load 19.24 for its verifier, 45 of 45 on the
+  integration tree at load 8-12, 200 of 200 on the repro, and 5 of 5 twice for `cargo test -p ulpf
+  --test v4_api`. What the load actually decided was which entity the test picked, not whether the
+  read path was correct. The ceiling that remains -- an entity above about 10,000 events can still
+  hide an event whose device clock is behind by more than the scan's window -- is named in D96 and
+  in the code, and needs an index-format change to lift.
 
 ### Next action (if this session is cut off here)
 Main is clean at the last commit named in the verified state. Lanes in flight are in their own

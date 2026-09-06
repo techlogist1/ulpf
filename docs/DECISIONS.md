@@ -1771,3 +1771,87 @@ source, not with a suffix, and any rename defeats the check; the file already de
 is, so read the declaration. Trusting the operator to run `ulpf demo --reset` before building —
 the bundle step is where the leak becomes an artifact somebody installs, so that is where the
 refusal belongs.
+
+## D95. The tail frame's `cut` is additive: `skipped` keeps meaning "did not receive"
+**Decision.** `TailFrame` carries a new `cut` beside `skipped`, set by `since()` and published
+as `"cut"` in the server's tail JSON. `skipped` keeps the meaning every consumer built against
+`docs/api.md` already has — the total a caller did not receive — and `cut` names the part of it
+the frame's own 200-row per-tick limit left behind, which is still in the ring and arrives on the
+next frame. `skipped - cut` is therefore the eviction: the only part that is gone. The footer
+says so in prose, and the streaming sentence in `docs/api.md` that described `skipped` as
+eviction (the source of the misleading tooltip) is corrected. Measured over real HTTP on a
+64-event ring fed 309 events: `?limit=500` gives cut 0 and skipped 309-1-64, `?limit=8` gives
+cut 56 with skipped == evicted + cut, and a caller two events behind gets 0 and 0. **Anchor.**
+`crates/ulpf/src/tail.rs` (`TailFrame.cut`, `since`), the `tail_json` line in
+`crates/ulpf/src/server.rs`, the "Tail frame" subsection of `docs/api.md`,
+`the_tail_frame_separates_eviction_from_the_frames_own_limit` in `crates/ulpf/tests/v4_api.rs`,
+the footer in `ui/src/App.svelte`. **Ruled out.** Redefining `skipped` as eviction-only — it
+silently changes an existing published field under every consumer written against the contract.
+Publishing `evicted` and `cut` and leaving `skipped` as their sum — a third field for arithmetic
+the client can do. Dropping the counter — it hides real eviction, which is the one number an
+operator must see.
+
+## D96. A pivot page is ordered by device time over every posting row the scan reads, in one snapshot
+**Decision.** `PivotIndex::walk` capped its candidate set at `limit*4` postings past the cursor
+and only then sorted them by device time, so an event whose device clock ran behind sorted onto a
+page it had already been dropped from, and the `(time, raw id)` cursor paged past it for good.
+The cap now ends the scan and never drops an entry, and `query()` reads the header and the
+timeline inside one read transaction, because the writer commits a batch's entity counts and its
+posting rows together. The page's ordering is the cursor's ordering. The remaining ceiling is
+named in the comment above `candidates` rather than documented away: a page is exact whenever the
+entity's posting rows fit the scan. Measured: 20 of 200 events before the fix (= `limit*4`
+exactly) and 200 of 200 after on a deterministic hand-written index; on real data with main's
+binary 33 of 36 before and 36 of 36 after; the million-posting page 0.009 s -> 0.017 s against
+its own 1.0 s bound, the index write unchanged. **Anchor.** `walk` and `query` in
+`crates/ulpf/src/pivot.rs`, `crates/ulpf/tests/pivot.rs`. **Ruled out.** Retrying a page when the
+header and the page disagree — a retry hides a moving answer instead of naming one. Making the
+test wait for the index to settle — the deterministic repro skips events on a fully settled
+hand-written index, so the test was right and the read path was wrong. A time-ordered posting
+list — the index file format is frozen for the demo.
+
+## D97. The desktop shell downloads the file, not the page
+**Decision.** WKWebView drops an anchor download without calling any delegate, so a file link in
+the served UI did nothing in the app. The shell injects a capturing click handler that turns a
+click on an anchor the page means as a file into a navigation to `ulpf-save:<url>`; the
+navigation handler cancels that navigation and `download.rs` fetches the URL over loopback,
+takes the name from the server's own `Content-Disposition` (falling back to the URL's last path
+segment), de-chunks a `Transfer-Encoding: chunked` body and writes it into `~/Downloads`. The
+window is built in code with `WebviewWindowBuilder::from_config` and `"create": false` in
+`tauri.conf.json`, so the config stays the single source of every window value while the two
+handlers a config cannot carry get attached. Measured: `attestation.json` (597 bytes) and
+`out-first-last.jsonl` (32,206) / `.csv` (38,969) saved byte-identical to `curl`. **Anchor.**
+`app/src-tauri/src/download.rs`, `SAVE_SCHEME`/`INTERCEPT`/`window()` in
+`app/src-tauri/src/lib.rs`, `app/src-tauri/tauri.conf.json`. **Ruled out.** A Tauri command
+called from the served page — the ACL gives a remote origin no command at all. Doing it in `ui/`
+— it forks the web UI from the app UI for a problem only the shell has. Tauri 2.11.5's own
+`on_download` and `on_new_window` hooks — measured dead for these links on macOS, and keeping
+them beside the interceptor would risk a double save.
+
+## D98. Every splash failure carries a recovery button, and a stale `server.url` is a state, not a start
+**Decision.** Each way the engine can fail to come up ends on the splash with a sentence and a
+button that acts: `splash_with` takes a `Retry` and the fragment flag (`+` / `*`) selects the
+button's label, so the label varies and the button's presence does not — the port row and the
+never-answered row are no longer dead ends. The retry stops the current child first and treats a
+failed kill as a notice rather than a refusal. And a launch that finds a stale `server.url`
+together with a live `ulpf` holding the store goes straight to the store-held page instead of
+starting a second engine only to have it refused; `server.url` is the signal because it is
+written when the engine answers and removed by every stop and every start. **Anchor.** `Retry`,
+`down`, `splash_with`, `stop_holder` and the orphan pre-flight in `start()` in
+`app/src-tauri/src/lib.rs`; `app/dist/index.html`. **Ruled out.** Restarting automatically — it
+loops forever against a store a live writer holds. Buttons on only the two cases the brief named
+— that is what left the other rows dead. `holder::find` alone as the trigger — a reader holding
+no lock would block a good start.
+
+## D99. The UI states what the running server reports, never a compiled-in literal
+**Decision.** The Review screen's approve and reject confirmations, its notes and its proof row
+read `parsers_dir` and `pending_dir` from `/api/status` and interpolate them, instead of naming
+the literals `parsers/` and `pending/rejected/`. Those literals were wrong for both instances
+that matter: the demo server runs with `demo/parsers` and `demo/pending`, and the desktop app
+points at its own data directory, so the confirmation told the operator a file had been written
+to a path that holds nothing. By the same rule `fmt.stamp` renders the zone the value carries
+rather than converting to the viewer's local time. **Anchor.** `pdir`/`pendir` in
+`ui/src/Review.svelte`, `fmt.stamp` in `ui/src/api.js`. **Ruled out.** Keeping the literals and
+documenting that they are only true of the default layout — the screen is read by an operator
+who is about to look for the file. Converting stamps to the viewer's local time — it makes two
+stamps on one screen incomparable when one is a device time in its own zone, and makes a
+screenshot unreadable without knowing the machine that took it.
