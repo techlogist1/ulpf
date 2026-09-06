@@ -157,6 +157,105 @@ stored and recomputed digest, the chain link, and the same bytes through today's
 
 ## v4 (2026-09-06, 02:50-09:30 IST, autonomous): the demo morning
 
+### Cold start (read this first; written 09:40 IST at the close of the session)
+
+**Where main is.** The commit this block ships in sits on 2c955c7 (the lead's 08:58 record) over
+06cd41a (lane R's records, D100). main == origin/main after every push this morning; the pushes go
+over `ssh://git@ssh.github.com:443/techlogist1/ulpf.git` because the https token lacks the workflow
+scope. The wake lock (caffeinate) is stopped. No agent, worktree or process of this session is
+running; the caffeinate and the demo server are down. The owner's demo material lives outside the
+repo in `~/Desktop/demo-logs` on the Mac (the HPC slices, the 15-device pivot folder, the 100k
+Cisco file, the reset/tamper/benchmark `.command` files) and the installed app is lane R's bundle
+at be8748b, its sidecar sha 55b52b87… equal to main's `target/dist/ulpf`.
+
+**What is verified, by which test (all on the tree at 06cd41a; nothing in the two commits since
+touches code).**
+- Engine, server, UI contract: `cargo test --workspace` 125 passed 0 failed over 38 binaries
+  (fixtures over all 15 samples in `crates/ulpf/tests/fixtures.rs`; the v4 API contract in
+  `v4_api.rs`, 5 tests, the paging case deterministic since D96; pivot in `pivot.rs`; store,
+  recovery, replay, drift, syslog, integrity, parquet, adversarial each in its file), `cargo clippy
+  --workspace --all-targets -- -D warnings` clean, `ulpf check` 15 parsers 2 mappings 0 problems.
+- The demo path: `scripts/demo.sh --check` 39 ok lines rc 0 (every step title and command in this
+  file matches the binary), `ulpf demo --auto` at 4e0d71d 57 s exit 0 (proposal 0.6 s, approve 250
+  of 250, drift 6.0 s, attestation 2 of 2 over 2,739, tamper named at raw id 0 with exit 1).
+- Isolation: `scripts/isolation.sh run` PASS at 4e0d71d; serve and docker modes PASS at 217d0df
+  (the scripts unchanged since). Cold start from a fresh clone 50.2 s over 9 commands at 217d0df.
+- The desktop app: app crate `cargo test --lib` 12 passed, clippy clean; CI `app.yml` green on
+  lane-7b-app (runs 34002152105, 34003825762): macOS and Windows bundles, the Windows smoke job
+  installs the NSIS setup silently, force-kills the window and proves no ulpf.exe survives (500 ms
+  against a 5 s ceiling), runs `ulpf.exe demo --check` on the installed engine. By hand on this Mac
+  (08:43-08:46, the lead, one clean instance): 100,000 Cisco events through every stage, Traceback,
+  both resets, an unknown 1,000-line slice to a proposal, approve, the fast path on a second slice.
+  CI has NOT run on main since 5b27f68's push: run it (`gh run list --branch main`) and read it
+  before trusting a fresh checkout on Windows.
+- Throughput: the committed scorecard 258,411 events/s (D87); 295,928 and 320,369 measured quiet
+  on dist and recorded beside it, not promoted; 237,643 at 08:52 with other work running.
+
+**Every lane branch on origin, one line each.** Merged into main and safe to delete:
+lane-4-releases (f62ef5c), lane-4b-readme (61233b3), lane-7-windows (26d0bbd), lane-7b-app
+(02b4bef, tag v0.1.0-rc3 at fb7bda9 on it), lane-docs-fixes (42b19cd), lane-i-intensity (f68781d),
+lane-mt-plan (e6fdde8), lane-pv-paging (da002ec), lane-r-reset (be8748b), lane-u-ui (eee630f),
+lane-u2-review (1e9e2f3); lane-a-shell (a88a709) is one docs commit ahead whose content is on main
+as a37af63, delete it. Not merged:
+- lane-5-xml (1b8aa19, 7 commits over 14d3b0c): the xml strategy and Windows Event, D75 on the
+  branch, 118 tests there. Verified by its lane; engine work, so it waited for the owner's go. Needs
+  a rebase over the demo-morning merges (crates/ulpf-parse touched) and one full gate: READY after
+  that rebase.
+- lane-6-index (9389be7, 6 commits over d62a01c, merges main once): the entity-index page cache,
+  5.1x back to back, D76 reserved. Engine + store-adjacent; rebase then gate and a quiet-window
+  re-measure of D87's index-on figure: READY after that.
+- lane-3b-cef-leef (c6e13ca, 4 commits over a9c8ac6): CEF string severity `Very-High` into the
+  Critical bucket, LEEF `0xHH` delimiters, 117 tests. Parsers and mappings plus one test: the rebase
+  is trivial, READY.
+- lane-8-windows (80a5bfc, 6 commits over 14d3b0c): the store reopen under a live mapping on
+  Windows, the Parquet teardown handle, the null device metadata, a Windows suite job (green,
+  33998281457); D82 on the branch; reviewed by the lead 05:27 (118 tests on the Mac). Touches
+  ulpf-store and ulpf-parquet: rebase, full gate, and one Windows run of the suite: READY after that.
+- lane-7b-windows (fbda6a0, 2 commits over 14d3b0c): ABANDONED, superseded by lane-7b-app; delete.
+
+**Open items, from the report's section 8 and the Windows tester's report.**
+1. Nobody has clicked the Windows app since the tester's report against 14d3b0c: exports, the
+   locked-store button, the job object under a real force-quit, Intensity's restart, the sidecar per
+   target, `sidecar.ps1` (never executed anywhere: CI runs sidecar.sh under bash on Windows), lane
+   A's click interceptor on WebView2, and File > Reset… on Windows (`remove_dir_all` over an open
+   file is reported in engine.log and the notice, untested). `docs/manual-test.md` is the plan.
+2. The tester's contributed throughput figure for the ROG G615 was never received; README says a
+   later one would be contributed. The tester's machine has a hardware fault (random access
+   violations there are not engine evidence).
+3. D83, directory-level include/exclude, reserved and not built: a bare `samples` directory still
+   ingests `samples/README.md` as a log (D91 documents `samples/*.log` everywhere; `PROGRESS.md`'s
+   demo section line about `run samples` is the last place the glob is not spelled out).
+4. Lane 8's three Windows store fixes are on the branch (above), not on main.
+5. The rc3 draft release (tag fec0119 at fb7bda9) is unpublished and three commits behind that
+   branch's tip; publishing or re-tagging on main is the owner's call. rc1 and rc2 drafts too.
+6. `ulpf verify` covers record bytes, digest and chain link, not the index header: a tampered
+   `raw.idx` header reads as a pre-chain store and verify refuses instead of naming the rewrite
+   (adversarial review finding 19).
+7. On macOS a force-quit (`kill -9`) of the app leaves the engine running; the next launch names
+   the holder and offers Stop it and start again (D93, D98). A parent-death mitigation in the engine
+   is not built.
+8. The DragDrop handler in the app was never driven by a real drag with the tools (files went in
+   through the watch directory and Add files); the owner dragged files by hand this morning and it
+   worked.
+9. Two timing assertions still flake under machine load (`server.rs:209`, `replay.rs:154`).
+10. The footer's 200-row frame limit is prose in the UI, not read from the server (a
+    `tail_per_tick` in `/api/status` would fix it).
+11. Process lessons for the next session: create every lane worktree from main's head and print
+    its base; a gate script checks the build's exit code; a headline number comes from a quiet
+    window; a verifier that drives a GUI gets its own HOME from the start (lane R's had to be
+    killed mid-demo); write the lead's own actions into PROGRESS before a report pass, because
+    agents cannot source them.
+12. Kabir's LogLens comparison has no numbers: the corpus was not reachable.
+
+**GitHub secret-scanning alert 1** ("Amazon AWS Temporary Access Key ID", samples/cloudtrail.log:5
+and fixtures/cloudtrail.expected.jsonl:5, first seen in 360faec): the string was the AWS
+documentation's temporary-key example `ASIAIOSFODNN7EXAMPLE`; both files now carry the documented
+permanent-key example `AKIAIOSFODNN7EXAMPLE` (same length, so no byte offset in any record moved),
+the fixture test passes, and the alert can be closed as "used in tests" once this commit is on
+origin. The AROA/AIDA example ids in the same file are AWS's documented examples and are not
+flagged.
+
+
 Started 02:50 IST at 14d3b0c (main == origin/main, 114 tests, clippy clean, CI green on both
 runners). Two clocks: main freezes at 08:30 (nothing merges after); 08:30-09:30 is the final
 sequence (rebuild with the final dist, re-bundle the app with the sidecar SHA checked,
