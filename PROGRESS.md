@@ -532,6 +532,14 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 07:10 IST: lane DOCS merged as 8c90b0b (Sonnet builder and verifier, verdict pass; two commits
+  896caf0, 42b19cd; five files, 12 lines): the adversarial review's seven documentation findings
+  closed to the tree (api.md: GET /api/pending answers an empty list with inference disabled, the
+  `[entities]` example is `user.name`; parser-format's `pattern` row back in its table; CLAUDE.md:
+  the demo's flags, D1-D91, the v4 record, `FILE.pivot` only with the index on, a docs/coverage.md
+  line; D67's fourteen headings; L4's fifteen samples). Docs only, so the gate for this merge is
+  `demo --check` 39 ok no drift, `check` 15 parsers 0 problems, the D-numbering unchanged; the
+  suite runs on the merged tree at the next lane's gate.
 - 07:04 IST: the adversarial review's runner findings closed on main (lead; demo.rs and one clap
   attribute in cli.rs). The review (five Opus finders, three Sonnet skeptics per finding, 80 agents,
   06:04-06:55) confirmed 19 findings and refuted 6; the demo-breaking one was the lead's own
