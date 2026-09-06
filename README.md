@@ -239,9 +239,10 @@ why the load to gate on is the load *before* a run and the CPU everything else i
 throughput figure without its machine state is not a figure.
 
 **Which build.** Every number in a scorecard is a `--profile dist` number: fat LTO, one
-codegen unit — what the Docker image holds and what `eval/tools/ulpf.toml` builds. (Not,
-today, what CI ships: `.github/workflows/app.yml` builds its release assets with
-`cargo build --release` and overrides no profile. Whether that moves to dist is open.)
+codegen unit — what the Docker image holds and what `eval/tools/ulpf.toml` builds. (And,
+since lane 7C, what CI ships: `.github/workflows/app.yml` builds every release asset and
+the app's sidecar with `cargo build --profile dist`. Only its `smoke-windows` job stays on
+`--release`, deliberately: that job proves the Windows code paths, not the shipped bits.)
 The committed scorecard's own header line reads `cargo build --release -p ulpf` because it
 predates the split, when `[profile.release]` still carried the fat LTO that
 `[profile.dist]` carries now — the same settings under the older name, as Cargo.toml says

@@ -97,8 +97,9 @@ runs, and therefore what the **cold_start** criterion executes and times. The
 two are the same source, so correctness, raw_preservation, damaged_inputs,
 unknown_format, isolation and kill_recovery read identically on either; only
 throughput and memory can differ, and those are reported on dist. CI's release
-assets and the sidecar build still use `cargo build --release` at this commit and
-move to `--profile dist` with lane 7C (`lane-7b-app`, in flight).
+assets and the app's sidecar build use `cargo build --profile dist` since lane 7C;
+only its `smoke-windows` job stays on `--release`, which proves the Windows code
+paths rather than the shipped bits.
 
 A second tool declares its own optimized build in its own `.toml`; the harness
 has no opinion about profiles beyond running the `[build].cmd` it is given.

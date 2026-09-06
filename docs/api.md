@@ -10,7 +10,8 @@ unless stated. Every error the server decides is `{"error": "<human text>", "rea
 "<code>"}` with the status: `404 not_found`, `409 conflict`, `422 invalid`, `500 io`.
 A malformed query or path parameter (a non-numeric raw id, an unparseable `after`) is
 rejected by the framework with a plain-text `400`. Every 4xx a review route decides
-increments `review_errors`; with inference disabled every review route is `404 not_found`.
+increments `review_errors`; with inference disabled the per-proposal review routes answer
+`404 not_found` and `GET /api/pending` answers an empty list.
 
 ## Streaming
 
@@ -355,7 +356,7 @@ mapping, beside `[fields]`):
 [entities]                       # mappings/ocsf.toml
 src_ip   = "src_endpoint.ip"
 dst_ip   = "dst_endpoint.ip"
-user     = "actor.user.name"
+user     = "user.name"
 dst_port = "dst_endpoint.port"
 device   = "device.hostname"
 ```

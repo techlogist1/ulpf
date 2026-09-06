@@ -1522,7 +1522,7 @@ it spawns `current_exe() serve` with `--parsers demo/parsers --pending demo/pend
 files into the watch directory, speaks HTTP/1.1 to localhost over a `TcpStream` (the shape of
 `crates/ulpf/tests/server.rs`, so the binary gains no HTTP client), runs verify and attest as
 children, and kills the server at the end because a killed run restarts to the same output
-and store as an uninterrupted one (D59). `--check` keeps and widens the old grep: the ten step
+and store as an uninterrupted one (D59). `--check` keeps and widens the old grep: the fourteen step
 headings and the seventeen command strings are constants the runner prints, and each must
 appear verbatim in the demo section (the inputs and both ports are checked too); `cargo test`
 asserts the same, so drift fails the suite. Requests the demo makes on stage (approve,
@@ -1635,9 +1635,10 @@ the default (nothing measured for it to recover); `dist` as the default with `re
 (the default is what a stranger, README, `scripts/demo.sh` and the cold-start criterion
 type, and every `target/release` path stays correct). Cargo offers no alias for a custom
 profile and no stable output path across profiles, so every shipping caller spells
-`--profile dist` and `target/dist/` (Dockerfile, `eval/run.sh`, `eval/tools/ulpf.toml`;
-CI's release assets and the sidecar build still use `cargo build --release` at this commit
-and move to `--profile dist` with lane 7C, `lane-7b-app`, in flight).
+`--profile dist` and `target/dist/` (Dockerfile, `eval/run.sh`, `eval/tools/ulpf.toml`, and
+since lane 7C the `cli` and `bundle` jobs of `.github/workflows/app.yml`; that workflow's
+`smoke-windows` job stays on `--release` deliberately, because it proves the Windows code
+paths and not the shipped bits).
 
 ## D89. Windows is a first-class target: the installer carries its runtime, a failed start is a sentence, the log has a name
 **Decision.** `bundle.windows.webviewInstallMode` is `offlineInstaller`: the NSIS installer
@@ -1717,3 +1718,56 @@ would make the counter block depend on a filename heuristic instead of on what w
 directory-level include/exclude option stays D83, post-demo. Moving `samples/README.md` out of
 `samples/` — it is the file a teammate reads before adding a sample, and relocating it hides
 the sharp edge instead of deciding about it.
+
+## D92. On Windows the kernel owns the sidecar's lifetime, not the app's exit path
+**Decision.** The engine is spawned into a job object created with
+`JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, whose handle the app holds for its whole life
+(`app/src-tauri/src/job.rs`, `windows-sys` under `cfg(windows)`; the assignment happens
+immediately after the spawn, before the app waits for `server.url`). When the last handle
+closes — a clean quit, a panic, End task on the window, `Stop-Process -Force` — the kernel
+terminates every process in the job. Windows has no process group, so before this a force
+kill left `ulpf.exe` alive holding the store's exclusive SQLite lock and the next launch was
+refused with the message D93 now explains. `app-smoke-windows` force-kills the window
+process and fails with `::error::` if any `ulpf.exe` survives; the log line prints the
+elapsed milliseconds (500 in both green runs) against a 5 s ceiling. **Anchor.**
+`app/src-tauri/src/job.rs`, the spawn in `app/src-tauri/src/lib.rs`,
+`app/scripts/smoke-windows.ps1`, the `app-smoke-windows` job in
+`.github/workflows/app.yml`. **Ruled out.** `taskkill /T` on quit — it runs in the exit path,
+which is exactly what a force kill or a crash skips, so it answers every case except the ones
+that produced the orphan. The sidecar polling its parent's pid and exiting when it changes —
+a second lifetime mechanism inside the engine, added for the app's sake, on the binary whose
+hot path is the product; and pid reuse makes the poll wrong rather than merely late. macOS
+needs neither: the sidecar is a direct child and dies with its parent.
+
+## D93. A store another writer holds is a sentence with a button, not a dead window
+**Decision.** The engine allows one writer, so a second `ulpf serve` on the same store exits
+with `is in use by another process`. The app matches that message, finds the holder by
+command line (`ps` on macOS, `Get-CimInstance Win32_Process` on Windows —
+`app/src-tauri/src/holder.rs`; by command line because the lock is the process and the file
+that would record its pid is the locked one), and renders one row on the splash naming the
+pid, with a single button that stops that process and starts the engine again through the
+ordinary start path. Captured at `docs/screens/app-error-locked.png`. **Anchor.**
+`app/src-tauri/src/holder.rs`, the error branch in `app/src-tauri/src/lib.rs`, the
+locked-store paragraph in `app/README.md`. **Ruled out.** Letting it fall into the generic
+"the engine stopped" — the operator sees a dead app and no cause, and the one thing they must
+do is invisible. Killing the holder automatically on launch — the holder may be a deliberate
+`ulpf run` mid-ingest, and an app that terminates another writer without being asked breaks
+the single-writer invariant's whole point: that the second writer is refused, not that the
+first one is expendable.
+
+## D94. A generated parser is excluded by what it declares, at all three places it could leak
+**Decision.** An approved proposal writes a parser with `origin = "inferred"` into `parsers/`,
+and a bundle built after that ships it as a resource — the app then arrives already knowing
+the "unseen" format and the inference demo has nothing to propose. Excluded at three points:
+`app/scripts/sidecar.sh` and `sidecar.ps1` refuse before the bundle, naming the offending file
+and `ulpf demo --reset`; the app's first-run copy of the bundled definitions skips any such
+file and logs how many it skipped to `engine.log`; and `app/README.md`'s demo note says so for
+the human. The test is a line that starts with `origin` and contains `inferred`, not the word
+anywhere in the file, so a hand-written parser whose description mentions inference is not a
+refusal. **Anchor.** `app/scripts/sidecar.sh`, `app/scripts/sidecar.ps1`, the first-run copy in
+`app/src-tauri/src/lib.rs`, the "never ship a generated parser" note in `app/README.md`.
+**Ruled out.** Matching the name pattern `*_inferred` — the engine names a proposal after the
+source, not with a suffix, and any rename defeats the check; the file already declares what it
+is, so read the declaration. Trusting the operator to run `ulpf demo --reset` before building —
+the bundle step is where the leak becomes an artifact somebody installs, so that is where the
+refusal belongs.
