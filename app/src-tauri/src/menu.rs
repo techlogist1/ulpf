@@ -42,6 +42,7 @@ pub(crate) fn install(app: &AppHandle) -> tauri::Result<()> {
             &item("add_folder", "Add folder…", Some("CmdOrCtrl+Shift+O"))?,
             &PredefinedMenuItem::separator(app)?,
             &item("open_output", "Open output folder", Some("CmdOrCtrl+Shift+E"))?,
+            &item("reset", "Reset…", Some("CmdOrCtrl+Shift+R"))?,
             &item("open_browser", "Open in browser", Some("CmdOrCtrl+Shift+B"))?,
             &PredefinedMenuItem::separator(app)?,
             &intensity_menu,
@@ -148,6 +149,8 @@ pub(crate) fn action(app: &AppHandle, id: &str) {
                 None => toast(app, "The engine is not serving yet."),
             }
         }
+        // The choice page only: a menu item never removes anything by itself.
+        "reset" => crate::reset::ask(app),
         "show" => show(app),
         "quit" => app.exit(0),
         _ => {

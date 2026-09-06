@@ -8,6 +8,7 @@ mod ingest;
 mod intensity;
 mod job;
 mod menu;
+mod reset;
 mod title;
 
 use std::fs;
@@ -77,6 +78,9 @@ pub(crate) struct Engine {
     down: Mutex<Option<String>>,
     /// The pid the splash page's one button stops: the writer holding this store.
     holder: Mutex<Option<u32>>,
+    /// The last splash URL that was not the reset choice page, so Cancel on that page can
+    /// put back exactly the page it covered when the engine is not serving.
+    pub(crate) splash: Mutex<Option<String>>,
 }
 
 pub fn run() {
@@ -84,8 +88,9 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        // The one command, for the splash page's one button.
-        .invoke_handler(tauri::generate_handler![stop_holder])
+        // The commands behind the splash page's buttons: its recovery button, and the
+        // three on the reset choice page.
+        .invoke_handler(tauri::generate_handler![stop_holder, reset::reset, reset::reset_cancel])
         .setup(|app| {
             let handle = app.handle().clone();
             window(&handle)?;
@@ -97,6 +102,7 @@ pub fn run() {
                 url: Mutex::new(None),
                 down: Mutex::new(None),
                 holder: Mutex::new(None),
+                splash: Mutex::new(None),
             });
             menu::install(&handle)?;
             let h = handle.clone();
@@ -190,7 +196,7 @@ fn prepare(app: &AppHandle, data: &Path, notes: &mut Vec<String>) -> std::io::Re
     Ok(())
 }
 
-fn is_toml(p: &Path) -> bool {
+pub(crate) fn is_toml(p: &Path) -> bool {
     p.extension().is_some_and(|x| x == "toml")
 }
 
@@ -378,6 +384,9 @@ pub(crate) enum Retry {
     StartAgain,
     /// Stop the process holding the store, then start again.
     StopHolder,
+    /// Not a recovery: the reset choice page's three buttons (`reset.rs`). It travels the
+    /// one page mechanism the failures use so there is not a second one.
+    Reset,
 }
 
 impl Retry {
@@ -385,6 +394,7 @@ impl Retry {
         match self {
             Retry::StartAgain => "+",
             Retry::StopHolder => "*",
+            Retry::Reset => "?",
         }
     }
 }
@@ -514,7 +524,7 @@ pub(crate) fn set_title(app: &AppHandle, title: &str) {
     }
 }
 
-fn navigate(app: &AppHandle, url: &str) {
+pub(crate) fn navigate(app: &AppHandle, url: &str) {
     if let (Some(w), Ok(url)) = (app.get_webview_window("main"), url.parse::<tauri::Url>()) {
         let _ = w.navigate(url);
     }
@@ -529,9 +539,15 @@ fn splash(app: &AppHandle, text: &str, error: bool) {
 
 /// A `Retry` flag after the `!` asks the page for its recovery button (`stop_holder`) under
 /// that flag's label.
-fn splash_with(app: &AppHandle, text: &str, error: bool, retry: Option<Retry>) {
+pub(crate) fn splash_with(app: &AppHandle, text: &str, error: bool, retry: Option<Retry>) {
     let flags = format!("{}{}", if error { "!" } else { "" }, retry.map(Retry::flag).unwrap_or_default());
-    navigate(app, &format!("{SPLASH}#{flags}{}", percent_encode(text)));
+    let url = format!("{SPLASH}#{flags}{}", percent_encode(text));
+    if !matches!(retry, Some(Retry::Reset)) {
+        if let Some(engine) = app.try_state::<Engine>() {
+            *engine.splash.lock().unwrap() = Some(url.clone());
+        }
+    }
+    navigate(app, &url);
 }
 
 /// A short-lived notice at the bottom of whatever page the window shows (the splash or the
