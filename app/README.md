@@ -155,8 +155,9 @@ as the generic "the engine stopped". The holder is found by its command line (`p
 `Get-CimInstance Win32_Process` on Windows) because the lock is the process and the file
 that records the writer's pid is the locked one; the button stops that pid and starts the
 engine again through the ordinary start path. Provoke it by running a second
-`ulpf serve --store "~/Library/Application Support/dev.ulpf.desktop/store"` before launching
-the app (D93).
+`ulpf serve --store "~/Library/Application Support/dev.ulpf.desktop/store"` (Windows:
+`ulpf.exe serve --store "$env:APPDATA\dev.ulpf.desktop\store"`) before launching the app
+(D93).
 
 ## Platform differences (each one is also a comment where it matters)
 
