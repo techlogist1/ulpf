@@ -819,6 +819,30 @@ stored digest on every request, beside the digest pair it already had. **Anchor.
 D41/D42 kept: the server owns nothing, and no code path opens the store twice.
 **Ruled out.** Verifying under the store lock (blocks ingest for the length of the scan);
 a cached chain in the server (two truths).
+**Addendum (finding 19).** `verify` now reads `raw.idx`'s header before any digest runs and
+separates two things the old command could not tell apart. A rewritten *field* -- magic,
+version, or a store id record 0's stored chain does not follow from -- prints an `index
+header:` line naming the field and exits 1; the magic case also still prints the open's
+"predates the integrity chain" sentence, so a genuinely old store is named as one. An index
+that is merely *behind* its segment -- a partial trailing entry, or a complete record where
+the next entry would point -- is the power-loss state D82's recovery reclaims on the next run,
+not a rewrite: it prints as a note saying a run over the store re-indexes it, and exits 0. The
+segment comparison is skipped while a writer holds the store, because `flush` writes the
+segment before the index (D82), so beside a live `run` or `serve` a record ahead of the index
+is the ordinary state between two flushes and not evidence of anything (D52 unchanged: verify
+still reads and writes nothing). The header read opens no mapping and the checks that need one
+take the caller's `RawReader`, so the segment is still mapped once. **Anchor.** `index_header`,
+`index_header_against_store` and `idle` in `crates/ulpf-store/src/store.rs`, called by
+`Cmd::Verify` in `crates/ulpf/src/cli.rs`;
+`each_index_header_field_is_named_when_it_is_rewritten` in `crates/ulpf-store/tests/chain.rs`
+and the header half of `a_tampered_record_is_named_by_verify_and_exits_1` in
+`crates/ulpf/tests/integrity.rs`. **Ruled out.** Comparing the index count against the
+catalogue's summed `event_count` -- the catalogue is locked for a writer's whole life, which is
+the only window in which the counts legitimately diverge, and when it can be read a surplus is
+the same crash artefact the note already covers. **Not done.** `POST /api/integrity/verify`
+(`Live::start_verify`) still runs digests and chain only, so the UI calls a header-rewritten
+store clean where the CLI exits 1; `crates/ulpf/src/demo.rs` offers the two as equivalent.
+That is server-side and left open.
 
 ## D57. Provenance spans are pointer arithmetic on the borrowed values, computed only on the traceback
 **Decision.** A parsed field's span is `[start, end)` of its `Cow::Borrowed` slice inside

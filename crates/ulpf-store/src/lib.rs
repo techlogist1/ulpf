@@ -11,5 +11,6 @@ mod store;
 
 pub use frame::Framer;
 pub use store::{
-    Attestation, CHECKPOINT_EVERY, Checkpoint, OwnedRecord, RawId, RawReader, RawRecord, RawStore, VerifyReason, VerifyReport, hex,
+    Attestation, CHECKPOINT_EVERY, Checkpoint, IndexHeader, OwnedRecord, RawId, RawReader, RawRecord, RawStore, VerifyReason, VerifyReport, hex, index_header,
+    index_header_against_store,
 };

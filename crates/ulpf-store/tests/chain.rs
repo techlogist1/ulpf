@@ -287,3 +287,108 @@ fn a_million_appends_and_a_break_in_the_middle() {
     assert_eq!(r.verify_against(&att).bad_checkpoint, Some(RawId(700_416)), "the first checkpoint at or after the break");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+/// Finding 19: each field of the index header is named, and the two states a `kill -9` leaves
+/// (a truncated index, a torn entry) are named as the recovery D82 already blesses, not as a
+/// rewrite. The full sentence is asserted every time: a message that printed the wrong hex
+/// would otherwise still pass.
+#[test]
+fn each_index_header_field_is_named_when_it_is_rewritten() {
+    let good = temp("header");
+    fill(&good, 8);
+    let clean = header_of(&good);
+    assert!(clean.problems.is_empty() && clean.notes.is_empty(), "an untouched store has a clean header: {clean:?}");
+
+    // magic, version and the store id are the fields the header carries; a rewrite of any of
+    // them is a problem, and `ulpf verify` exits 1 on it.
+    let rewritten = |field: &str, break_it: fn(&std::path::Path), expected: &str| {
+        let h = broken(&good, field, break_it);
+        assert_eq!(h.problems, vec![expected.to_string()], "{field}");
+        assert!(h.notes.is_empty(), "{field}: {h:?}");
+    };
+    rewritten("magic", |d| poke(d.join("raw.idx"), 0, b"ULPFIDY"), r#"index header: magic says 554c5046494459, the store format writes 554c5046494458 ("ULPFIDX")"#);
+    rewritten("version", |d| poke(d.join("raw.idx"), 7, &[9]), "index header: version says 9, this build writes 2");
+    rewritten("store-id", |d| poke(d.join("raw.idx"), 8, &[0xff; 16]), "index header: record 0's stored chain does not follow from the store id ffffffffffffffffffffffffffffffff in the header; one of the two was rewritten");
+
+    // The count the header implies is checked against the segment, but a shorter index is the
+    // documented power-loss state: a note, never a problem, so verify does not exit 1 on it.
+    let recovers = |field: &str, break_it: fn(&std::path::Path), expected: &str| {
+        let h = broken(&good, field, break_it);
+        assert!(h.problems.is_empty(), "{field}: a truncated index is recovery, not corruption: {h:?}");
+        assert!(h.notes.iter().any(|n| n == expected), "{field}: expected {expected:?}, got {h:?}");
+    };
+    recovers(
+        "count",
+        truncate_3_entries,
+        "index header: the index holds 5 entries, the segment holds a complete record at id 5 the index has not indexed; a run over this store re-indexes it (D82)",
+    );
+    recovers("partial", truncate_7_bytes, "index header: raw.idx is 337 bytes, 33 past the last whole 40-byte entry; a run over this store reclaims the partial entry (D82)");
+
+    let _ = std::fs::remove_dir_all(&good);
+}
+
+/// Both halves of the check for a store on disk, the way `ulpf verify` runs them.
+fn header_of(dir: &std::path::Path) -> ulpf_store::IndexHeader {
+    let mut h = ulpf_store::index_header(dir).unwrap();
+    if h.problems.is_empty() {
+        let rest = ulpf_store::index_header_against_store(&RawReader::open(dir).unwrap());
+        h.problems.extend(rest.problems);
+        h.notes.extend(rest.notes);
+    }
+    h
+}
+
+/// Copies the good store, breaks one header field on the copy, and returns what the check says.
+/// The copy is a temp directory: no fixture in the repo is ever damaged.
+fn broken(good: &std::path::Path, field: &str, break_it: fn(&std::path::Path)) -> ulpf_store::IndexHeader {
+    let dir = temp(&format!("header-{field}"));
+    copy_dir(good, &dir);
+    break_it(&dir);
+    let h = header_of(&dir);
+    let _ = std::fs::remove_dir_all(&dir);
+    h
+}
+
+fn truncate_3_entries(d: &std::path::Path) {
+    let idx = std::fs::read(d.join("raw.idx")).unwrap();
+    std::fs::write(d.join("raw.idx"), &idx[..idx.len() - 3 * IDX_ENTRY as usize]).unwrap();
+}
+
+fn truncate_7_bytes(d: &std::path::Path) {
+    let idx = std::fs::read(d.join("raw.idx")).unwrap();
+    std::fs::write(d.join("raw.idx"), &idx[..idx.len() - 7]).unwrap();
+}
+
+fn copy_dir(from: &std::path::Path, to: &std::path::Path) {
+    let _ = std::fs::remove_dir_all(to);
+    std::fs::create_dir_all(to).unwrap();
+    for entry in std::fs::read_dir(from).unwrap() {
+        let entry = entry.unwrap();
+        if entry.file_type().unwrap().is_file() {
+            std::fs::copy(entry.path(), to.join(entry.file_name())).unwrap();
+        }
+    }
+}
+
+/// Finding 1: `flush` writes the segment before the index, so a record the index has not
+/// reached is the ordinary state between two flushes of a live writer -- not evidence of
+/// anything. The check must stay silent while a writer holds the store, or `ulpf verify`
+/// beside `ulpf serve` exits 1 on an untouched store (D52 permits both at once).
+#[test]
+fn a_record_ahead_of_the_index_is_silent_while_a_writer_holds_the_store() {
+    let dir = temp("header-live");
+    fill(&dir, 4);
+    let writer = RawStore::open(&dir).unwrap();
+    // Cut the last entry behind the writer's back: the shape a segment flushed ahead of the
+    // index leaves, produced without racing a real one.
+    let idx = std::fs::read(dir.join("raw.idx")).unwrap();
+    std::fs::write(dir.join("raw.idx"), &idx[..idx.len() - IDX_ENTRY as usize]).unwrap();
+    let h = ulpf_store::index_header_against_store(&RawReader::open(&dir).unwrap());
+    assert!(h.problems.is_empty() && h.notes.is_empty(), "a writer holds the store: {h:?}");
+
+    drop(writer);
+    let h = ulpf_store::index_header_against_store(&RawReader::open(&dir).unwrap());
+    assert!(h.problems.is_empty(), "{h:?}");
+    assert_eq!(h.notes.len(), 1, "with no writer the same store is named: {h:?}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

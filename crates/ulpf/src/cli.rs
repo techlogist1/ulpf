@@ -457,7 +457,27 @@ pub fn main() -> Result<()> {
             Ok(())
         }
         Cmd::Verify { store, attestation } => {
-            let reader = ulpf_store::RawReader::open(&store).with_context(|| format!("opening store {}", store.display()))?;
+            // The index header is checked first and named by field: a rewritten magic,
+            // version or store id used to surface as "predates the integrity chain" from
+            // the open, or as a shorter store that verified clean (finding 19).
+            let mut header = ulpf_store::index_header(&store).with_context(|| format!("opening store {}", store.display()))?;
+            for line in header.lines() {
+                println!("{line}");
+            }
+            let reader = match ulpf_store::RawReader::open(&store) {
+                Ok(reader) => reader,
+                // The header lines above say which field; the open error names the store.
+                Err(e) if !header.problems.is_empty() => {
+                    println!("{e}");
+                    std::process::exit(1)
+                }
+                Err(e) => return Err(e).with_context(|| format!("opening store {}", store.display())),
+            };
+            let against_store = ulpf_store::index_header_against_store(&reader);
+            for line in against_store.lines() {
+                println!("{line}");
+            }
+            header.problems.extend(against_store.problems);
             let attestation = match &attestation {
                 Some(path) => {
                     let text = std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
@@ -487,7 +507,7 @@ pub fn main() -> Result<()> {
                     None => println!("attestation: {} of {} checkpoints agree ({} records attested, generated {})", report.checkpoints, att.checkpoints.len(), att.records, att.generated),
                 }
             }
-            if !report.ok() {
+            if !report.ok() || !header.problems.is_empty() {
                 std::process::exit(1);
             }
             Ok(())

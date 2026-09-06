@@ -703,14 +703,19 @@ impl RawReader {
         &self.seg
     }
 
-    /// The record with this id, or `None` if the id was never issued or the record is
-    /// structurally damaged (bad magic, length past end of segment).
-    pub fn get(&self, id: RawId) -> Option<RawRecord<'_>> {
+    /// Segment offset the index stores for one record; `None` when the id was never issued.
+    fn offset(&self, id: RawId) -> Option<u64> {
         if id.0 >= self.count {
             return None;
         }
         let p = (IDX_HEADER_LEN + id.0 * IDX_ENTRY_LEN) as usize;
-        let off = u64::from_le_bytes(self.idx.get(p..p + 8)?.try_into().ok()?) as usize;
+        Some(u64::from_le_bytes(self.idx.get(p..p + 8)?.try_into().ok()?))
+    }
+
+    /// The record with this id, or `None` if the id was never issued or the record is
+    /// structurally damaged (bad magic, length past end of segment).
+    pub fn get(&self, id: RawId) -> Option<RawRecord<'_>> {
+        let off = self.offset(id)? as usize;
         if off < FILE_MAGIC.len() {
             return None;
         }
@@ -868,4 +873,109 @@ impl RawReader {
         }
         Ok(out)
     }
+}
+
+/// What `raw.idx`'s header says, checked against the rest of the store.
+///
+/// `problems` are states nothing repairs — a rewritten magic, version or store id — and make
+/// `ulpf verify` exit 1. `notes` are the power-loss states D82's recovery reclaims on the next
+/// run over the store; they are printed so an operator is not left guessing, and are not a
+/// failure. Both are read-only and run before any digest is recomputed (finding 19).
+#[derive(Default, Debug)]
+pub struct IndexHeader {
+    pub problems: Vec<String>,
+    pub notes: Vec<String>,
+}
+
+impl IndexHeader {
+    pub fn lines(&self) -> impl Iterator<Item = &String> {
+        self.problems.iter().chain(&self.notes)
+    }
+}
+
+/// The header's own fields, read without mapping anything: nothing below an unrecognised magic
+/// or version can be read as this format at all, so each of those is reported alone and
+/// `RawReader::open` is only worth trying when `problems` is empty.
+pub fn index_header(dir: &Path) -> io::Result<IndexHeader> {
+    let mut out = IndexHeader::default();
+    let mut f = File::open(dir.join("raw.idx"))?;
+    let len = f.metadata()?.len();
+    if len < IDX_HEADER_LEN {
+        out.problems.push(format!("index header: raw.idx is {len} bytes, the {IDX_HEADER_LEN}-byte header does not fit"));
+        return Ok(out);
+    }
+    let mut header = [0u8; IDX_HEADER_LEN as usize];
+    f.read_exact(&mut header)?;
+    if header[..7] != IDX_MAGIC[..7] {
+        out.problems.push(format!("index header: magic says {}, the store format writes {} (\"ULPFIDX\")", hex(&header[..7]), hex(&IDX_MAGIC[..7])));
+        return Ok(out);
+    }
+    if header[7] != IDX_MAGIC[7] {
+        out.problems.push(format!("index header: version says {}, this build writes {}", header[7], IDX_MAGIC[7]));
+        return Ok(out);
+    }
+    // A part-written entry is a torn index write, which is exactly what recovery reclaims.
+    let trailing = (len - IDX_HEADER_LEN) % IDX_ENTRY_LEN;
+    if trailing != 0 {
+        out.notes.push(format!("index header: raw.idx is {len} bytes, {trailing} past the last whole {IDX_ENTRY_LEN}-byte entry; a run over this store reclaims the partial entry (D82)"));
+    }
+    Ok(out)
+}
+
+/// The header's remaining claims, against a store already open: the store id it carries, and
+/// the number of entries it implies. Takes the reader the caller already has, so `verify` maps
+/// a segment that can be multi-GB once (D56).
+pub fn index_header_against_store(reader: &RawReader) -> IndexHeader {
+    let mut out = IndexHeader::default();
+    // The store id fixes the genesis, so record 0's stored chain proves it without a pass over
+    // the store. It cannot say which of the two was rewritten: the same inequality is what
+    // `check` reports as a broken chain at id 0.
+    if let Some(rec) = reader.get(RawId(0)) {
+        let digest: [u8; 32] = Sha256::digest(rec.bytes).into();
+        if digest == rec.sha256 && reader.chain(RawId(0)) != Some(chain_step(&reader.genesis, &digest)) {
+            out.problems.push(format!("index header: record 0's stored chain does not follow from the store id {} in the header; one of the two was rewritten", hex(&reader.store_id)));
+        }
+    }
+    // A complete record where the next entry would point means the index is behind the segment.
+    // Only meaningful with no writer: `flush` writes the segment before the index (D82), so
+    // beside a live `run` or `serve` this is the ordinary state between two flushes.
+    let count = reader.len();
+    if !idle(&reader.dir) {
+        return out;
+    }
+    let next = match count.checked_sub(1) {
+        None => Some(FILE_MAGIC.len() as u64),
+        Some(last) => match (reader.offset(RawId(last)), reader.get(RawId(last))) {
+            (Some(off), Some(rec)) => Some(off + HEADER_LEN as u64 + rec.bytes.len() as u64),
+            _ => None,
+        },
+    };
+    if next.is_some_and(|next| record_at(&reader.seg, next, count)) {
+        out.notes.push(format!(
+            "index header: the index holds {count} entries, the segment holds a complete record at id {count} the index has not indexed; a run over this store re-indexes it (D82)"
+        ));
+    }
+    out
+}
+
+/// Whether a complete record carrying `id` starts at `off` in the mapped segment.
+fn record_at(seg: &[u8], off: u64, id: u64) -> bool {
+    let Ok(off) = usize::try_from(off) else { return false };
+    let Some(end) = off.checked_add(HEADER_LEN) else { return false };
+    let Some(hdr) = seg.get(off..end) else { return false };
+    if u32::from_le_bytes(hdr[0..4].try_into().expect("4 bytes")) != REC_MAGIC || u64::from_le_bytes(hdr[4..12].try_into().expect("8 bytes")) != id {
+        return false;
+    }
+    let len = u32::from_le_bytes(hdr[24..28].try_into().expect("4 bytes")) as usize;
+    end.checked_add(len).and_then(|body| seg.get(end..body)).is_some()
+}
+
+/// Whether no writer holds the store: the catalogue is opened in exclusive locking mode for a
+/// writer's whole life, so a read-only query succeeding means nobody is appending. False is the
+/// safe answer for any other read failure too — it only skips a check.
+fn idle(dir: &Path) -> bool {
+    let Ok(conn) = rusqlite::Connection::open_with_flags(dir.join("catalog.sqlite"), rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY) else {
+        return false;
+    };
+    conn.busy_timeout(std::time::Duration::ZERO).is_ok() && conn.query_row("SELECT COUNT(*) FROM sources", [], |r| r.get::<_, i64>(0)).is_ok()
 }
