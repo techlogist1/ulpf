@@ -20,7 +20,8 @@ export function flagsOf(l) {
   return f
 }
 
-// A tail row is flattened the moment it arrives: nine strings, never the nested event.
+// A tail row is flattened the moment it arrives: ten fields (eight strings, the flag
+// list and the raw id), never the nested event.
 // Keeping the whole normalized object in reactive state would proxy every nested field of
 // every row on every frame, which is what locks a browser at full rate. `text` is the whole
 // line once, lowercased, so the filter is a substring test per term and not a walk per field.
