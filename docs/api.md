@@ -30,6 +30,7 @@ behind receives at most 200 events per tick and `skipped` counts what the ring e
 before it was read. Nothing blocks the engine on a slow client.
 
 `TailFrame = { "events": [TailEvent], "skipped": u64, "latest_raw_id": u64|null }`
+(v4 adds `"cut": u64` beside `skipped`; see "Tail frame" below)
 `TailEvent = { "raw_id": u64, "line": <normalized event object as emitted> }`
 
 ## Read-only
@@ -475,6 +476,15 @@ could not render rather than queueing them, so a full-rate run cannot lock the b
 
 Everything above stays as written. Every addition below is a new field, a new route or a new
 query parameter; nothing that exists changes shape. The UI is built against this text.
+
+## Tail frame: what is gone, apart from what this frame did not carry
+
+`TailFrame` gains `"cut": u64`, the part of `skipped` the frame left out because of its
+limit (`?limit=`, or 200 per SSE tick): those lines are still in the ring, so another
+request reaches them. `skipped` keeps its meaning, the total a caller at that position did
+not receive, so `skipped - cut` is the part the ring evicted before it was read and is the
+only part that is gone. A bulk drop larger than one frame therefore reports `cut` and no
+eviction, and the UI shows eviction in `--warn` and the cut as a plain note.
 
 ## Metrics frame: the queue as it is, and a windowed rate
 

@@ -28,6 +28,9 @@ pub struct TailFrame {
     pub events: Vec<(u64, Vec<u8>)>,
     /// Lines newer than the caller's position that were evicted or cut by `limit`.
     pub skipped: u64,
+    /// The `limit` half of `skipped`: lines this frame did not carry that the ring still
+    /// holds. `skipped - cut` is the half that is gone, which is the half worth an alarm.
+    pub cut: u64,
     pub latest: Option<u64>,
 }
 
@@ -71,7 +74,7 @@ impl Tail {
         let cut = newer.len().saturating_sub(limit);
         skipped += cut as u64;
         let events = newer[cut..].iter().map(|e| (e.raw_id, e.buf[e.range.clone()].to_vec())).collect();
-        TailFrame { events, skipped, latest }
+        TailFrame { events, skipped, cut: cut as u64, latest }
     }
 
     pub fn find(&self, raw_id: u64) -> Option<Vec<u8>> {
@@ -107,14 +110,18 @@ mod tests {
         let f = tail.since(None, 10);
         assert_eq!(f.events.iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec![2, 3, 4, 5, 6]);
         assert_eq!(f.latest, Some(6));
-        // a reader at id 0 missed id 1 (evicted) and gets the rest
+        // a reader at id 0 missed id 1 (evicted) and gets the rest: gone, not cut
         let f = tail.since(Some(0), 10);
-        assert_eq!(f.skipped, 1);
+        assert_eq!((f.skipped, f.cut), (1, 0));
         assert_eq!(f.events.first().map(|(id, _)| *id), Some(2));
-        // limit cuts the oldest and counts them
+        // limit cuts the oldest and counts them under both: the ring still holds them
         let f = tail.since(Some(2), 2);
         assert_eq!(f.events.iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec![5, 6]);
-        assert_eq!(f.skipped, 2);
+        assert_eq!((f.skipped, f.cut), (2, 2));
+        assert_eq!(tail.find(3), Some(b"d".to_vec()));
+        // eviction and a cut in one frame: id 1 is gone, ids 2-4 are only cut
+        let f = tail.since(Some(0), 2);
+        assert_eq!((f.skipped, f.cut, f.skipped - f.cut), (4, 3, 1));
         assert_eq!(tail.find(4), Some(b"e".to_vec()));
         assert_eq!(tail.find(1), None);
         assert_eq!(tail.find(99), None);

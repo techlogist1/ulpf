@@ -175,6 +175,7 @@ fn tail_json(frame: TailFrame) -> Value {
     json!({
         "events": frame.events.iter().map(|(id, line)| json!({ "raw_id": id, "line": serde_json::from_slice::<Value>(line).unwrap_or(Value::Null) })).collect::<Vec<_>>(),
         "skipped": frame.skipped,
+        "cut": frame.cut,
         "latest_raw_id": frame.latest,
     })
 }
