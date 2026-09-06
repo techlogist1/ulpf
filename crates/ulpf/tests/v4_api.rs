@@ -605,3 +605,43 @@ fn pivot_pages_by_the_cursor_pair_and_reports_its_timings() {
     assert_eq!(seen.len() as u64, total, "{what}: paging must visit every one of dst_port {value}'s {total} events, saw {}", seen.len());
     r.stop();
 }
+
+/// The server's verify checks the index header first, as `ulpf verify` does (finding 19): a
+/// rewritten magic byte makes `last_verify.ok` false with the field named in `header`, no raw id
+/// blamed, and `reason` reading `index header`.
+#[test]
+fn the_servers_verify_names_a_rewritten_index_header() {
+    use std::io::{Seek, SeekFrom, Write};
+    let r = Running::start("verify-header", 16, false, 2);
+    let events = r.feed(&["cisco_asa.log"]);
+    r.wait_for(events);
+    let (st, v) = json(&r.addr, "POST", "/api/integrity/verify");
+    assert_eq!(st, 200, "{v}");
+    wait_until("the first verify finished", || json(&r.addr, "GET", "/api/integrity").1["running"] == false);
+    let first = json(&r.addr, "GET", "/api/integrity").1["last_verify"].clone();
+    assert_eq!(first["ok"], true, "{first}");
+    assert_eq!(first["header"].as_array().map(|a| a.len()), Some(0), "{first}");
+
+    // "ULPFIDX" -> "ULPFIDY" on disk; the writer keeps its own handle and never re-reads the magic
+    let idx = r.dir.join("store").join("raw.idx");
+    let poke = |b: &[u8]| {
+        let mut f = std::fs::OpenOptions::new().write(true).open(&idx).unwrap();
+        f.seek(SeekFrom::Start(6)).unwrap();
+        f.write_all(b).unwrap();
+    };
+    poke(b"Y");
+    let (st, v) = json(&r.addr, "POST", "/api/integrity/verify");
+    assert_eq!(st, 200, "{v}");
+    wait_until("the second verify finished", || {
+        let i = json(&r.addr, "GET", "/api/integrity").1;
+        i["running"] == false && i["last_verify"]["at"] != first["at"]
+    });
+    let second = json(&r.addr, "GET", "/api/integrity").1["last_verify"].clone();
+    poke(b"X");
+    assert_eq!(second["ok"], false, "{second}");
+    assert_eq!(second["reason"], "index header", "{second}");
+    assert!(second["first_bad"].is_null(), "no record is to blame for a rewritten header: {second}");
+    let line = second["header"][0].as_str().unwrap_or("");
+    assert!(line.starts_with("index header: magic says"), "{second}");
+    r.stop();
+}

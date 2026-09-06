@@ -179,7 +179,7 @@
         <span class="marks" class:grew>{#each { length: marks } as _, i}<i class:new={i === marks - 1}></i>{/each}{#if marks === 0}<i class="none"></i>{/if}</span>
         <span class="n">{fmt.n(live.integrity?.records ?? e.stored)} records</span>
         {#if live.integrity?.running || live.integrity?.last_verify}
-          <span class="n">{live.integrity.running ? 'verifying' : live.integrity.last_verify.ok ? 'verify clean' : `broken at ${fmt.n(live.integrity.last_verify.first_bad)}`}</span>
+          <span class="n">{live.integrity.running ? 'verifying' : live.integrity.last_verify.ok ? 'verify clean' : live.integrity.last_verify.first_bad == null ? 'index header rewritten' : `broken at ${fmt.n(live.integrity.last_verify.first_bad)}`}</span>
         {/if}
       </a>
 

@@ -78,9 +78,10 @@
         {:else if v}
           {#key v.at}
           <div class="verdict" class:ok={v.ok} class:bad={!v.ok} class:arrive={seen !== null && v.at !== seen}>
-            <b>{v.ok ? `Clean: ${fmt.n(v.records)} records recomputed, every chain value follows` : `Broken at raw id ${fmt.n(v.first_bad)}: the ${v.reason} does not match`}</b>
+            <b>{v.ok ? `Clean: ${fmt.n(v.records)} records recomputed, every chain value follows` : v.first_bad == null ? 'The index header was rewritten' : `Broken at raw id ${fmt.n(v.first_bad)}: the ${v.reason} does not match`}</b>
             <span class="lab">{fmt.stamp(v.at)}, {fmt.f(v.elapsed_secs, 2)}s, {fmt.n(v.corrupt)} corrupt, {v.against_attestation ? 'checked against the attestation document' : 'store-only check'}</span>
-            {#if !v.ok}<span><a href="#/trace/{v.first_bad}">Trace record {fmt.n(v.first_bad)}</a> to read the stored bytes beside the digest that disagrees.</span>{/if}
+            {#each v.header ?? [] as line}<span class="lab">{line}</span>{/each}
+            {#if !v.ok && v.first_bad != null}<span><a href="#/trace/{v.first_bad}">Trace record {fmt.n(v.first_bad)}</a> to read the stored bytes beside the digest that disagrees.</span>{/if}
           </div>
           {/key}
         {:else}

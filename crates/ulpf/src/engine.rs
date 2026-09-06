@@ -335,6 +335,9 @@ pub struct LastVerify {
     pub reason: Option<&'static str>,
     pub elapsed_secs: f64,
     pub against_attestation: bool,
+    /// The index header's own problems (finding 19): a rewritten magic, version or store id.
+    /// Empty when the header is sound; `ok` is false whenever it is not.
+    pub header: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -943,6 +946,20 @@ impl Live {
         if state.running {
             return Err(IntegrityError::Running);
         }
+        // The header first, as the CLI does (finding 19): a rewritten magic or version stops
+        // the snapshot from opening at all, so it is judged here and recorded as the verdict
+        // rather than answered as an io error nobody can act on. Only the fields that need no
+        // idle store are checked; an index behind its segment is the ordinary state beside the
+        // running writer and is not reported.
+        let header = ulpf_store::index_header(&self.store_dir).map(|h| h.problems).unwrap_or_else(|e| vec![format!("index header: {e}")]);
+        if !header.is_empty() {
+            let mut at = String::new();
+            ulpf_time::format_rfc3339(now_nanos(), &mut at);
+            state.last = Some(LastVerify { at, records: 0, ok: false, corrupt: 0, first_bad: None, reason: Some("index header"), elapsed_secs: 0.0, against_attestation: false, header });
+            drop(state);
+            self.integrity_generation.fetch_add(1, Relaxed);
+            return Ok(0);
+        }
         let reader = self.store().and_then(|mut s| s.reader()).map_err(|e| IntegrityError::Io(e.to_string()))?;
         let records = reader.len();
         state.running = true;
@@ -953,18 +970,20 @@ impl Live {
             .name("ulpf-verify".into())
             .spawn(move || {
                 let started = Instant::now();
+                let header = ulpf_store::index_header_against_store(&reader).problems;
                 let report = reader.verify();
                 let mut at = String::new();
                 ulpf_time::format_rfc3339(now_nanos(), &mut at);
                 let last = LastVerify {
                     at,
                     records: report.checked,
-                    ok: report.ok(),
+                    ok: report.ok() && header.is_empty(),
                     corrupt: report.corrupt.len() as u64,
                     first_bad: report.first_bad.map(|(id, _)| id.0),
-                    reason: report.first_bad.map(|(_, r): (RawId, VerifyReason)| r.as_str()),
+                    reason: report.first_bad.map(|(_, r): (RawId, VerifyReason)| r.as_str()).or(if header.is_empty() { None } else { Some("index header") }),
                     elapsed_secs: started.elapsed().as_secs_f64(),
                     against_attestation: false,
+                    header,
                 };
                 let mut state = live.integrity.lock().unwrap_or_else(|e| e.into_inner());
                 state.last = Some(last);

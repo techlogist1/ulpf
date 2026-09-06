@@ -274,11 +274,17 @@ recovery (D7, D33).
   "checkpoint_every": 4096,
   "last_verify": null | { "at": rfc3339, "records": u64, "ok": bool,
                           "corrupt": u64, "first_bad": u64|null, "reason": string|null,
-                          "elapsed_secs": f64, "against_attestation": bool },
+                          "elapsed_secs": f64, "against_attestation": bool,
+                          "header": [string] },
   "running": bool }
 ```
 `first_bad` is the lowest raw id whose bytes do not hash to the stored digest or whose
-chain value does not follow from its predecessor; `reason` is `digest` or `chain`.
+chain value does not follow from its predecessor; `reason` is `digest`, `chain`, or `index
+header` when `header` is not empty. `header` lists the index header's own problems, checked
+before any digest as `ulpf verify` does (finding 19): a rewritten magic, version or store id,
+each named; `ok` is false whenever it is not empty. The states D82's recovery reclaims (an
+index behind its segment) are the ordinary state beside the running writer and are not
+reported here.
 
 `POST /api/integrity/verify` → `{ "started": true, "records": u64 }`; `409 conflict`
 while one runs. Runs on its own thread over a snapshot of the store (ids below the

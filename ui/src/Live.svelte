@@ -19,7 +19,7 @@
     })),
     ...(live.pending.count ? [{ tone: 'pend', text: `${live.pending.count} proposal${live.pending.count === 1 ? '' : 's'} waiting for a human`, href: '#/review', link: 'review' }] : []),
     ...(live.integrity?.last_verify && !live.integrity.last_verify.ok
-      ? [{ tone: 'bad', text: `integrity broken at raw id ${live.integrity.last_verify.first_bad} (${live.integrity.last_verify.reason})`, href: '#/integrity', link: 'integrity' }]
+      ? [{ tone: 'bad', text: live.integrity.last_verify.first_bad == null ? 'integrity: the index header was rewritten' : `integrity broken at raw id ${live.integrity.last_verify.first_bad} (${live.integrity.last_verify.reason})`, href: '#/integrity', link: 'integrity' }]
       : []),
   ])
 
