@@ -34,13 +34,19 @@
   .hint { margin-top: 28px; font-size: 13px; color: #6f7883; }
   /* The one recovery button: shown whenever the shell asks for it, which is on every
      failure it can show. Nothing else on this page is clickable. */
-  #act { display: none; margin: 18px auto 0; padding: 8px 18px; border-radius: 7px;
+  #act, .choices button { padding: 8px 18px; border-radius: 7px;
     border: 1px solid #4a545f; background: #262b33; color: #f2f4f7; font: inherit; font-size: 14px;
     cursor: pointer; }
-  #act:hover { background: #2e343d; }
-  #act:focus-visible { outline: 2px solid #f0b46b; outline-offset: 2px; }
-  #act:disabled { opacity: .5; cursor: default; }
+  #act:hover, .choices button:hover { background: #2e343d; }
+  #act:focus-visible, .choices button:focus-visible { outline: 2px solid #f0b46b; outline-offset: 2px; }
+  #act:disabled, .choices button:disabled { opacity: .5; cursor: default; }
+  #act { display: none; margin: 18px auto 0; }
   #act.on { display: block; }
+  /* Reset: three buttons, the one that changes nothing last and quiet. */
+  .choices { display: none; margin: 22px auto 0; flex-direction: column; align-items: center; gap: 10px; }
+  .choices.on { display: flex; }
+  .choices .quiet { border-color: transparent; background: none; color: #9aa3ad; }
+  .choices .quiet:hover { background: #1c2028; }
 </style>
 </head>
 <body>
@@ -49,32 +55,42 @@
   <h1>ULPF</h1>
   <p id="msg">Starting the engine<span class="pulse"></span></p>
   <button id="act" type="button">Start again</button>
+  <div class="choices" id="choices">
+    <button id="reset-keep" type="button">Reset events, keep approved parsers</button>
+    <button id="reset-all" type="button">Reset to first launch</button>
+    <button id="reset-cancel" class="quiet" type="button">Cancel</button>
+  </div>
   <p class="hint" id="hint">Drop log files or folders anywhere in this window once the feed is up.</p>
 </main>
 <script>
   // The shell puts the status line in the URL fragment: "#text", "#!text" for an error, and
-  // an error the recovery button can act on carries its label as a flag after the "!":
-  // "#!+text" for Start again, "#!*text" for a store another writer holds, where the button
-  // stops that writer first. A fragment change on the loaded page updates it in place, so
-  // no reload and no race.
+  // a page whose buttons act carries a flag after the "!": "#!+text" for Start again,
+  // "#!*text" for a store another writer holds, where the button stops that writer first,
+  // and "#?text" for the reset choice page, which is a question and not a failure. A
+  // fragment change on the loaded page updates it in place, so no reload and no race.
   var label = 'Start again';
   function show() {
     var h = decodeURIComponent(location.hash.slice(1));
     if (!h) return;
     var err = h[0] === '!';
     if (err) h = h.slice(1);
+    var reset = h[0] === '?';
     var act = h[0] === '+' || h[0] === '*';
-    if (act) { label = h[0] === '*' ? 'Stop it and start again' : 'Start again'; h = h.slice(1); }
+    if (act) { label = h[0] === '*' ? 'Stop it and start again' : 'Start again'; }
+    if (act || reset) h = h.slice(1);
     var m = document.getElementById('msg');
     m.textContent = h;
     m.className = err ? 'err' : '';
-    if (!err) { var s = document.createElement('span'); s.className = 'pulse'; m.appendChild(s); }
+    // The pulse says the shell is waiting on something. A question is waiting on the user.
+    if (!err && !reset) { var s = document.createElement('span'); s.className = 'pulse'; m.appendChild(s); }
     var b = document.getElementById('act');
     b.className = act ? 'on' : '';
     b.textContent = label;
     b.disabled = false;
-    // Nothing can be dropped on a window with no engine behind it.
-    document.getElementById('hint').hidden = err;
+    document.getElementById('choices').className = reset ? 'choices on' : 'choices';
+    // Nothing can be dropped on a window with no engine behind it, and nothing should be
+    // dropped into one that is about to be emptied.
+    document.getElementById('hint').hidden = err || reset;
   }
   // The shell's one command. It stops the process holding the store if there is one and
   // starts the engine again through the ordinary start path, which navigates this page
@@ -89,6 +105,25 @@
       document.getElementById('msg').textContent = String(e);
     });
   });
+  // The reset choice page. Each button is one command; the shell stops the engine, removes
+  // what the choice names and starts again, which navigates this page onward. Cancel
+  // touches nothing and puts back the page this one covered.
+  function choose(id, cmd, args, working) {
+    document.getElementById(id).addEventListener('click', function () {
+      var b = this;
+      var siblings = document.querySelectorAll('#choices button');
+      for (var i = 0; i < siblings.length; i++) siblings[i].disabled = true;
+      if (working) b.textContent = working;
+      window.__TAURI__.core.invoke(cmd, args).catch(function (e) {
+        for (var i = 0; i < siblings.length; i++) siblings[i].disabled = false;
+        document.getElementById('msg').textContent = String(e);
+      });
+    });
+  }
+  choose('reset-keep', 'reset', { keep: true }, 'Resetting…');
+  choose('reset-all', 'reset', { keep: false }, 'Resetting…');
+  choose('reset-cancel', 'reset_cancel', {});
+
   addEventListener('hashchange', show);
   show();
 </script>
