@@ -912,8 +912,10 @@ impl Live {
         ulpf_time::format_rfc3339(now_nanos(), &mut started);
         state.running = Some((ReplayProgress { version, done: 0, total, started }, Arc::clone(&progress)));
         state.last_error = None;
-        drop(state);
+        // Bumped before the lock goes: whoever sees the slot change under the lock sees the
+        // new generation too, so a poll on the generation cannot lag a poll on the slot.
         self.replay_generation.fetch_add(1, Relaxed);
+        drop(state);
         let job = replay::Job { versions, version, pipeline, threads: self.threads, batch: self.batch_events, parsers_generation: self.generation.load(Relaxed), names, reader, total };
         let live = Arc::clone(self);
         std::thread::Builder::new()
@@ -927,8 +929,8 @@ impl Live {
                     Err(e) => state.last_error = Some(format!("{e:#}")),
                 }
                 state.running = None;
-                drop(state);
                 live.replay_generation.fetch_add(1, Relaxed);
+                drop(state);
             })
             .map_err(|e| ReplayError::Io(e.to_string()))?;
         Ok((version, total))
