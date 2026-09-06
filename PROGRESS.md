@@ -876,10 +876,12 @@ look at the captures and a grep of `ui/dist` for external references.
   (08:30-09:30). On main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7, 4B, DOCS, 7C/7D and, last,
   FINAL5 -- lanes U, U2, A, PV and MT merged together as 06ab4fb through one gate (GATE GREEN at
   the top of Verified state). No worker is running; every lane dispatched this session has
-  returned and is recorded above. One verdict is outstanding rather than in flight: lane A's
-  independent verifier had not returned when this merge was dispatched at 07:58, so anything it
-  asks for is a post-freeze item; the builder's claims stand on the integration check and on this
-  gate, which re-ran the app tests (11 passed) and clippy on the merged tree.
+  returned and is recorded above. Lane A's independent verifier returned at 08:02 with verdict
+  fix on one sentence (app/README.md's Windows payload count, which had traded a stale 12 for an
+  unmeasured 15: run 33990295166's artifact really carried 12); its fix round's docs-only commit
+  a88a709 is cherry-picked onto main as a37af63 after the freeze commit, with CLAUDE.md's D-range
+  brought to D1-D99 in the same pass. The builder's code claims stand on the integration check
+  and on this gate, which re-ran the app tests (11 passed) and clippy on the merged tree.
   Branches pushed and never merged before the demo, still listed as such: lane-5-xml,
   lane-6-index, lane-3b-cef-leef, lane-8-windows. 7B stays stopped at 05:19 (its worktree was
   created at 14d3b0c, before lane 7's merge, so its job-object draft sat on the old `lib.rs`); the
