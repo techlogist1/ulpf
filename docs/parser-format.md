@@ -63,8 +63,8 @@ timestamp precedes them.
 | `kv` | `key_value_separator` (default `=`), `pair_separator` (default space; a space also means tab/CR/LF), `quote` (default `"`; may list several, `"'`, each closing itself) | Bare tokens without a separator are skipped. `\"` inside quotes is unescaped. Check Point: separator `:`, pair `"; "`. |
 | `delimiter` | `delimiter` (one byte or `tab`), `quote` (optional), `fields` (column names in order, `_` skips), `rest` (optional name for everything after the last named column, unsplit) | Short rows emit what exists; extra columns become `column_N`. With `rest`, a `[[sub]]` gated on an earlier column splits the tail by the row's own type (pfSense, PAN-OS). |
 | `json` | none | Nested keys flatten with `.`; arrays index from 0 (`tags.0`). Nulls are dropped. |
-| `cef` | none | Header fields: `cef_version`, `device_vendor`, `device_product`, `device_version`, `signature_id`, `name`, `severity`; extension pairs as-is. |
-| `leef` | none | LEEF 1.0 (tab) and 2.0 (declared delimiter, `xHH` form allowed). |
+| `cef` | none | Header fields: `cef_version`, `device_vendor`, `device_product`, `device_version`, `signature_id`, `name`, `cef_severity`; extension pairs as-is. The seventh field is `cef_severity`, not `severity`, because CEF's scale is 0-10 while a device that writes a bare `severity` is on the syslog 0-7 scale; a vendor definition that speaks CEF and adds `[[sub]]`s sees the header value under `cef_severity` too. |
+| `leef` | none | LEEF 1.0 (tab) and 2.0 (declared delimiter: one literal byte, or the hex value spelled `xHH`, `XHH`, `0xHH` or `0XHH`). A hex prefix whose digits do not parse is `invalid_leef`, not a silent fall back to tab. |
 | `pattern` | `pattern` or `patterns` (first match wins), `regex` (raw, `(?P<name>...)`), `anchor` (`start` default, `full`, `none`) | See slot syntax below. |
 
 A generated definition (`origin = "inferred"`) is usually `kind = "pattern"`. When the unknown

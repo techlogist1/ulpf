@@ -119,7 +119,7 @@ kind = "cef"
     assert_field(&out, "cef_version", b"0");
     assert_field(&out, "device_vendor", b"Vendor");
     assert_field(&out, "name", b"Name with | pipe");
-    assert_field(&out, "severity", b"5");
+    assert_field(&out, "cef_severity", b"5");
     assert_field(&out, "src", b"10.0.0.5");
     assert_field(&out, "spt", b"1234");
     assert_field(&out, "msg", b"hello world a=b");
@@ -153,6 +153,37 @@ kind = "leef"
     assert_field(&out, "leef_version", b"1.0");
     assert_field(&out, "dst", b"4.4.4.4");
     assert_eq!(run(&p, b"LEEF:1.0|V|P", &mut out), Err(ParseFailure::InvalidLeef));
+}
+
+/// IBM: the delimiter is "a single character or the hex value for that character. The hex
+/// value can be represented by the prefix 0x or x".
+#[test]
+fn leef_delimiter_hex_prefixes_and_bad_digits() {
+    let p = parser(r#"
+[parser]
+name = "t"
+vendor = "v"
+product = "p"
+[match]
+contains = ["LEEF:"]
+[strategy]
+kind = "leef"
+"#);
+    for header in ["0x5E", "x5E", "X5e", "^"] {
+        let line = format!("LEEF:2.0|V|P|1.0|evt|{header}|devTime=1788516923123^src=10.0.0.1^dst=10.0.0.2^sev=9");
+        let mut out = Parsed::default();
+        run(&p, line.as_bytes(), &mut out).unwrap_or_else(|e| panic!("{header}: {e:?}"));
+        assert_field(&out, "src", b"10.0.0.1");
+        assert_field(&out, "dst", b"10.0.0.2");
+        assert_field(&out, "sev", b"9");
+    }
+    // A prefix whose digits are not hex digits is a counted failure, not a silent split on tab.
+    for header in ["0xZZ", "0x+5", "x 5"] {
+        let line = format!("LEEF:2.0|V|P|1.0|evt|{header}|src=10.0.0.1^dst=10.0.0.2");
+        let mut out = Parsed::default();
+        assert_eq!(run(&p, line.as_bytes(), &mut out), Err(ParseFailure::InvalidLeef), "{header}");
+        assert!(field(&out, "src").is_none(), "{header}");
+    }
 }
 
 #[test]
