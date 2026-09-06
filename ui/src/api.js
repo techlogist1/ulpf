@@ -44,13 +44,14 @@ export const fmt = {
   pct: (x) => (x == null ? '–' : `${(Number(x) * 100).toFixed(1).replace(/^-(0(\.0+)?)$/, '$1')}%`),
   pairs: (list) => (Array.isArray(list) && list.length ? list.map(([r, n]) => `${r} ${fmt.n(n)}`).join('  ') : 'none'),
   time: (ms) => (ms == null ? '–' : new Date(ms).toISOString().replace('T', ' ').replace('Z', '')),
-  // "2026-09-04T10:23:00.000Z" or epoch ms -> "09-04 10:23:00.000". The year is identical on
+  // "2026-09-04T10:23:00.000Z" or epoch ms -> "09-04 10:23:00.000Z". The year is identical on
   // every row of a tail, and carrying it truncated the seconds, which is the part being read.
+  // The zone is kept: without it a UTC stamp reads as local time five hours in the past.
   stamp: (v) => {
     if (v == null || v === '') return '–'
-    const s = typeof v === 'number' ? fmt.time(v) : String(v)
-    const m = s.match(/\d{4}-(\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?)/)
-    return m ? `${m[1]} ${m[2]}` : s
+    const s = typeof v === 'number' ? `${fmt.time(v)}Z` : String(v)
+    const m = s.match(/\d{4}-(\d{2}-\d{2})[T ](\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?)\d*(Z|[+-]\d{2}:?\d{2})?/)
+    return m ? `${m[1]} ${m[2]}${m[3] ?? ''}` : s
   },
   clock: (ms) => (ms == null ? '–' : new Date(ms).toISOString().slice(11, 23)),
   day: (ms) => (ms == null ? '–' : new Date(ms).toISOString().slice(0, 10)),
