@@ -113,7 +113,9 @@
         <span class="name">ingest<kbd>i</kbd></span>
         <b class="num">{fmt.n(e.framed)}</b>
         <span class="lab">framed</span>
-        <span class="sub">{fmt.n(m.sources?.length ?? 0)} source{m.sources?.length === 1 ? '' : 's'}, {fmt.n(e.files)} file{e.files === 1 ? '' : 's'}{#if m.syslog?.udp_datagrams || m.syslog?.tcp_events}, syslog {fmt.n((m.syslog.udp_datagrams ?? 0) + (m.syslog.tcp_events ?? 0))}{/if}</span>
+        <span class="sub" title="sources that produced an event since this run started">{fmt.n(m.sources?.length ?? 0)} source{m.sources?.length === 1 ? '' : 's'} this run</span>
+        <span class="sub" title="files found in the watched directories, whether or not this run read from them (plus one per syslog listener)">{fmt.n(e.files)} file{e.files === 1 ? '' : 's'} watched</span>
+        {#if m.syslog?.udp_datagrams || m.syslog?.tcp_events}<span class="sub">syslog {fmt.n((m.syslog.udp_datagrams ?? 0) + (m.syslog.tcp_events ?? 0))} received</span>{/if}
       </a>
       <span class="link" class:idle={!(rates.d.stored > 0)}><i class="pulse" data-k="stored" data-axis="x" {@attach pulse}></i></span>
       <!-- preserve -->
