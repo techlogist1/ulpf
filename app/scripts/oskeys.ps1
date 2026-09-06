@@ -21,7 +21,6 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Windows.Forms
 
 # Guarded so a warm process does not recompile it; each run is its own process, so this is
 # only correctness insurance against a caller dot-sourcing the script twice.
@@ -37,8 +36,63 @@ public static class Win {
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int x, int y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint f, uint x, uint y, uint d, IntPtr e);
+  [DllImport("user32.dll")] public static extern void keybd_event(byte vk, byte scan, uint flags, IntPtr extra);
 }
 '@
+}
+
+# Keystrokes are injected with keybd_event, the same hardware-input layer as mouse_event
+# above, not with SendKeys. SendKeys posts WM_CHAR to the focused control of the top-level
+# window; WebView2 renders its content in a separate browser process that never sees those
+# messages, so on a runner every SendKeys landed nowhere (keydown seen=false) while the mouse
+# went straight through. keybd_event enters the same input queue Chromium reads, so the key
+# reaches the web content the way a real key does. Only the small SendKeys subset this driver
+# sends is translated: single characters, {ESC}/{ENTER}/{TAB}, and the modifier prefixes
+# ^ (Ctrl), + (Shift), % (Alt), each applying to the one key token that follows.
+$MODVK = @{ '^' = 0x11; '+' = 0x10; '%' = 0x12 }   # VK_CONTROL, VK_SHIFT, VK_MENU
+$NAMEVK = @{ 'ESC' = 0x1B; 'ENTER' = 0x0D; 'TAB' = 0x09 }
+function Vk-Of([string]$ch) {
+  # @(virtual-key, needs-shift) for one character, or $null if unmapped.
+  if ($ch -cmatch '^[0-9]$') { return @([int][char]$ch, $false) }
+  if ($ch -cmatch '^[a-z]$') { return @([int][char]([string]$ch).ToUpper(), $false) }
+  if ($ch -cmatch '^[A-Z]$') { return @([int][char]$ch, $true) }
+  switch ($ch) {
+    '?' { return @(0xBF, $true) }   # Shift + VK_OEM_2 (the /? key, US layout)
+    '/' { return @(0xBF, $false) }
+    default { return $null }
+  }
+}
+function Press-Vk([int]$vk, [int[]]$mods, [bool]$shift) {
+  $down = @($mods)
+  if ($shift -and ($mods -notcontains 0x10)) { $down += 0x10 }
+  foreach ($m in $down) { [Win]::keybd_event([byte]$m, 0, 0, [IntPtr]::Zero) }
+  Start-Sleep -Milliseconds 12
+  [Win]::keybd_event([byte]$vk, 0, 0, [IntPtr]::Zero)
+  Start-Sleep -Milliseconds 12
+  [Win]::keybd_event([byte]$vk, 0, 2, [IntPtr]::Zero)   # KEYEVENTF_KEYUP
+  Start-Sleep -Milliseconds 12
+  [array]::Reverse($down)
+  foreach ($m in $down) { [Win]::keybd_event([byte]$m, 0, 2, [IntPtr]::Zero) }
+}
+function Send-KeysHw([string]$s) {
+  $i = 0
+  while ($i -lt $s.Length) {
+    $mods = @()
+    while ($i -lt $s.Length -and $MODVK.ContainsKey([string]$s[$i])) { $mods += $MODVK[[string]$s[$i]]; $i++ }
+    if ($i -ge $s.Length) { break }
+    if ($s[$i] -eq '{') {
+      $close = $s.IndexOf('}', $i)
+      if ($close -lt 0) { break }
+      $name = $s.Substring($i + 1, $close - $i - 1).ToUpper()
+      $i = $close + 1
+      if ($NAMEVK.ContainsKey($name)) { Press-Vk $NAMEVK[$name] $mods $false }
+      elseif ($name.Length -eq 1) { $r = Vk-Of ([string]$name); if ($r) { Press-Vk $r[0] $mods $r[1] } }
+    } else {
+      $r = Vk-Of ([string]$s[$i]); $i++
+      if ($r) { Press-Vk $r[0] $mods $r[1] }
+    }
+    Start-Sleep -Milliseconds 20
+  }
 }
 
 $xy = @()
@@ -85,5 +139,5 @@ if ($xy.Count -eq 2) {
 # refused activation must stop the send rather than type into another window.
 $fg = [Win]::GetForegroundWindow()
 if ($fg -ne $h) { [Console]::Error.WriteLine("the foreground is $fg, not the app's window $h (SetForegroundWindow=$set): the keys were not sent"); exit 3 }
-if ($Keys) { [System.Windows.Forms.SendKeys]::SendWait($Keys) }
+if ($Keys) { Send-KeysHw $Keys }
 exit 0
