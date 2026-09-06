@@ -148,6 +148,12 @@ jobs:
           releaseName: ${{ startsWith(github.ref, 'refs/tags/v') && format('ULPF {0}', github.ref_name) || '' }}
           releaseDraft: true
 
+      # The shell is its own workspace, so the root `cargo test --workspace` never compiles
+      # it; this is the only place holder.rs's Windows `alive` runs. After tauri-action, so
+      # the sidecar and the built UI the crate embeds are both in place.
+      - name: shell tests
+        run: cargo test --manifest-path app/src-tauri/Cargo.toml
+
   # The CLI a stranger downloads: one static Linux binary, one macOS binary, one Windows
   # exe, from the same commit as the installers above.
   cli:
