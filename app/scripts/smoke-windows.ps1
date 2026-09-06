@@ -68,12 +68,25 @@ if (-not $line) { Write-Host $out; Fail 'no events/s line in the throughput run'
 Write-Host "THROUGHPUT (installed dist build, $cores threads, wall ${wall}s): $line"
 Remove-Item $bench -Recurse -Force -ErrorAction SilentlyContinue
 
-# The installer may have started it already; this job owns the instance it launches.
+# The installer may have started it already; this job owns the instance it launches. The
+# WebView2 browser process outlives the window that made it by a few seconds and is shared
+# by every window on the same user data folder, so a new window started while it is still
+# up inherits ITS command line, without the debugging port: the first measurement run lost
+# its whole driver to exactly that. Every msedgewebview2 goes too, and the launch waits
+# until none is left.
 Get-Process -Name 'ulpf-app', 'ulpf' -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process -Name 'msedgewebview2' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+for ($i = 0; $i -lt 40; $i++) {
+  if (-not (Get-Process -Name 'ulpf-app', 'ulpf', 'msedgewebview2' -ErrorAction SilentlyContinue)) { break }
+  Start-Sleep -Milliseconds 250
+}
 Remove-Item $urlFile -ErrorAction SilentlyContinue
 
-# WebView2 reads its extra command line from this variable, so the window the job launches
-# exposes CDP on 9222 and app/scripts/drive.mjs can measure what the tester actually hit.
+# The window the job launches exposes CDP on 9222 so app/scripts/drive.mjs can measure what
+# the tester actually hit. Two routes to the same switch: the shell passes ULPF_WEBVIEW_ARGS
+# to WebView2 itself (src-tauri/src/lib.rs, Windows only), and WebView2's own variable is set
+# as well for a runtime that honours it.
+$env:ULPF_WEBVIEW_ARGS = '--remote-debugging-port=9222'
 $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
 
 $proc = Start-Process -FilePath $app -PassThru
@@ -123,6 +136,15 @@ if ($url) {
       Start-Sleep -Seconds 10
     }
   }
+
+  # Whether the switch took, said before the driver runs so a failure to attach is diagnosed
+  # in this run: the browser process's command line and whoever listens on 9222.
+  $wv = @(Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" -ErrorAction SilentlyContinue)
+  $withPort = @($wv | Where-Object { $_.CommandLine -match 'remote-debugging-port' }).Count
+  Write-Host "webview2 processes: $($wv.Count), with --remote-debugging-port: $withPort"
+  foreach ($w in $wv | Where-Object { $_.CommandLine -match '--type=' -eq $false } | Select-Object -First 2) { Write-Host "  browser: $($w.CommandLine)".Substring(0, [math]::Min(400, "  browser: $($w.CommandLine)".Length)) }
+  $listen = @(Get-NetTCPConnection -LocalPort 9222 -State Listen -ErrorAction SilentlyContinue)
+  Write-Host "listeners on 9222: $($listen.Count)"
 
   $driverExit = 0
   if (-not (Get-Command node -ErrorAction SilentlyContinue)) {

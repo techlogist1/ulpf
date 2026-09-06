@@ -505,7 +505,17 @@ pub(crate) fn stop(app: &AppHandle) -> Option<u32> {
 fn window(app: &AppHandle) -> tauri::Result<()> {
     let config = app.config().app.windows.first().expect("the main window in tauri.conf.json").clone();
     let h = app.clone();
-    WebviewWindowBuilder::from_config(app, &config)?
+    let builder = WebviewWindowBuilder::from_config(app, &config)?;
+    // Windows only: the measurement job (app/scripts/smoke-windows.ps1) asks WebView2 for its
+    // debugging port through this variable. Setting the arguments replaces wry's own switch
+    // list, so wry's default is repeated in front of what the job asked for. Unset in every
+    // ordinary launch, so a user's window runs with wry's defaults alone.
+    #[cfg(windows)]
+    let builder = match std::env::var("ULPF_WEBVIEW_ARGS") {
+        Ok(extra) if !extra.trim().is_empty() => builder.additional_browser_args(&format!("--disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection {extra}")),
+        _ => builder,
+    };
+    builder
         .initialization_script(INTERCEPT)
         .on_navigation(move |url| match url.as_str().strip_prefix(SAVE_SCHEME) {
             Some(target) => {
