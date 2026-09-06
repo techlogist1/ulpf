@@ -135,7 +135,7 @@
 {#if helpOpen}
   <div class="overlay" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false }}>
     <div class="keymap" role="dialog" aria-label="Keyboard map" tabindex="-1" {@attach (el) => el.focus()}>
-      <h2>Keys <span class="note">any key closes it and still does its job</span><button class="btn" onclick={() => (helpOpen = false)}>close<kbd>Esc</kbd></button></h2>
+      <h2>Keys <span class="note">Esc closes it; any letter or digit closes it and still does its job</span><button class="btn" onclick={() => (helpOpen = false)}>close<kbd>Esc</kbd></button></h2>
       <section>
         <h3>Anywhere</h3>
         <dl>
