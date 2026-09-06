@@ -1658,8 +1658,9 @@ SmartScreen dialog text and clicks, the prerequisites checked against Tauri's pa
 `app-smoke-windows` installs the NSIS build silently, launches it from the installed
 location, waits for `server.url` and `/api/status`, and prints which path it achieved; its
 first run found `ulpf.exe` outliving a `Stop-Process` of the window, the fact 7B's job
-object (D91) answers. **Anchor.** `app/src-tauri/tauri.conf.json`, `start` and `SPLASH` in
-`app/src-tauri/src/lib.rs`, `app/src-tauri/src/ingest.rs`, `app/scripts/sidecar.ps1`,
+object answers (the decision lane 7C records at its merge). **Anchor.**
+`app/src-tauri/tauri.conf.json`, `start` and `SPLASH` in `app/src-tauri/src/lib.rs`,
+`app/src-tauri/src/ingest.rs`, `app/scripts/sidecar.ps1`,
 `app/scripts/smoke-windows.ps1`, `app/README.md`, `docs/screens/app-error-*.png`. **Ruled
 out.** `downloadBootstrapper` (the default; fetches at install time, and a demo machine may
 be offline); a blank window or a spinner on a failed start (the tester saw one); a CI
