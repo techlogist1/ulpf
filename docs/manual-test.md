@@ -49,9 +49,9 @@ ticked) or download while logged in. The tags are `v0.1.0-rc1`, `v0.1.0-rc2`, �
 **Nothing in this repository's `parsers/` may carry `origin = "inferred"` when a bundle is
 built.** A generated parser inside the installer means the unseen format is recognised on
 first run and no proposal is ever raised. **On main nothing catches this** — the two sidecar
-scripts (`app/scripts/sidecar.sh`, sixteen lines, and `app/scripts/sidecar.ps1`, twelve) check
-only that the engine binary exists — so on main the rule is yours to keep by hand. **(with lane
-7C)** two gates appear. Both sidecar scripts test each `parsers/*.toml` for a line matching
+scripts (`app/scripts/sidecar.sh`, sixteen lines, and `app/scripts/sidecar.ps1`, twelve)
+check only that the engine binary exists — so on main the rule is yours to keep by hand.
+**(with lane 7C)** two gates appear. Both scripts test each `parsers/*.toml` for a line matching
 `^\s*origin.*inferred` as their first command, name the offending files one per line and
 refuse: `sidecar.sh: the bundle would carry a generated parser:` then `sidecar.sh: remove the
 N of them with: ulpf demo --reset`, and on Windows `sidecar.ps1: the bundle would carry a
