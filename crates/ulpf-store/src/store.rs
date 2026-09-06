@@ -15,11 +15,14 @@
 //! internally consistent. An index without the magic is a pre-chain store and is refused.
 //!
 //! Crash recovery (`recover`): the index is authoritative for every entry whose record is
-//! fully present in the segment, hashes to its stored digest and whose chain value follows
-//! its predecessor's. Trailing entries that fail that (the index buffer drained before the
-//! segment buffer, or a torn write) are dropped; complete records the segment holds beyond
-//! the last index entry (the segment drained first) are indexed again, so an id that was
-//! handed out is never reissued. Neither file is ever shrunk: the bytes between the
+//! fully present in the segment and whose chain value follows its predecessor's. Trailing
+//! entries that fail that (the index buffer drained before the segment buffer, or a torn
+//! entry) are dropped; complete records the segment holds beyond the last index entry (the
+//! segment drained first) are indexed again, so an id that was handed out is never
+//! reissued. What an indexed record's bytes hash to is never recovery's business: its id
+//! may already stand in an output line, so it keeps its id and its bytes and `verify` names
+//! it (the chain is built from the digest in the header, so one bad body does not spread).
+//! Neither file is ever shrunk: the bytes between the
 //! recovered end and the file end are overwritten with zeros and the writer resumes at the
 //! recovered end, so the next append reclaims them (D82). A file is never truncated
 //! because Windows refuses to shrink a file another process has mapped, and on POSIX a
@@ -436,17 +439,19 @@ pub fn hex(bytes: &[u8]) -> String {
 fn recover(seg: &mut File, idx: &mut File, genesis: [u8; 32]) -> io::Result<(u64, u64, [u8; 32])> {
     let seg_file_len = seg.metadata()?.len();
     let idx_file_len = idx.metadata()?.len();
-    let mut n = idx_file_len.saturating_sub(IDX_HEADER_LEN) / IDX_ENTRY_LEN;
+    let indexed = idx_file_len.saturating_sub(IDX_HEADER_LEN) / IDX_ENTRY_LEN;
+    let mut n = indexed;
     let mut seg_len = FILE_MAGIC.len() as u64;
     let mut head = genesis;
     while n > 0 {
         let entry = read_entry(idx, n - 1)?;
         let off = u64::from_le_bytes(entry[0..8].try_into().expect("8 bytes"));
         let chain: [u8; 32] = entry[8..40].try_into().expect("32 bytes");
-        // the digest and the link are checked here, not only the shape: a torn write can
-        // leave a complete header over a half-written body, or a complete offset beside a
-        // half-written chain value, and either would poison every later chain value
-        if let Some((end, digest)) = record_end(seg, off, n - 1, seg_file_len, true)? {
+        // the shape and the link, never the bytes (module doc): a torn 40-byte entry can
+        // hold a complete offset beside a half-written chain value, and continuing from
+        // that value would poison every later one; the entry is dropped here and written
+        // again below from its inputs, the record and its id untouched
+        if let Some((end, digest)) = record_end(seg, off, n - 1, seg_file_len, false)? {
             let prev = if n >= 2 { read_entry(idx, n - 2)?[8..40].try_into().expect("32 bytes") } else { genesis };
             if chain == chain_step(&prev, &digest) {
                 seg_len = end;
@@ -456,7 +461,9 @@ fn recover(seg: &mut File, idx: &mut File, genesis: [u8; 32]) -> io::Result<(u64
         }
         n -= 1;
     }
-    while let Some((end, digest)) = record_end(seg, seg_len, n, seg_file_len, true)? {
+    // only a record the index never held is checked byte for byte: no id for it has
+    // escaped, and it may be torn in the middle of its bytes
+    while let Some((end, digest)) = record_end(seg, seg_len, n, seg_file_len, n >= indexed)? {
         head = chain_step(&head, &digest);
         let mut entry = [0u8; IDX_ENTRY_LEN as usize];
         entry[0..8].copy_from_slice(&seg_len.to_le_bytes());

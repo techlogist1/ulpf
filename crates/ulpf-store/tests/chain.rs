@@ -120,6 +120,29 @@ fn a_torn_index_entry_recovers_with_the_chain_intact() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// An indexed record whose bytes no longer hash to its digest (bit rot, a tamper, a body torn
+/// under a complete header) is not recovery's to reclaim: its id may already stand in an
+/// output line. It keeps its id and its bytes, the next id is not reissued, and `verify` names
+/// it once.
+#[test]
+fn a_bad_digest_in_the_last_record_survives_recovery_with_its_id() {
+    let dir = temp("rot");
+    fill(&dir, 50);
+    poke(dir.join("raw.seg"), offset_of(&dir, 49) + REC_HEADER + 2, b"X");
+    let mut s = RawStore::open(&dir).unwrap();
+    assert_eq!(s.len(), 50, "an indexed record is kept whatever its bytes hash to");
+    let src = s.source_id("a.log").unwrap();
+    assert_eq!(s.append(src, 1, b"after\n").unwrap(), RawId(50), "id 49 is not reissued");
+    s.flush(true).unwrap();
+    drop(s);
+    let r = RawReader::open(&dir).unwrap();
+    assert_eq!(r.get(RawId(49)).unwrap().bytes, b"evXnt 49\n", "the bytes are kept as they are, not zeroed");
+    let report = r.verify();
+    assert_eq!(report.first_bad, Some((RawId(49), VerifyReason::Digest)));
+    assert_eq!(report.corrupt, vec![RawId(49)], "the record appended after it follows the stored chain");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn one_flipped_byte_is_named_with_reason_digest() {
     let dir = temp("flip");
