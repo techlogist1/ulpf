@@ -705,6 +705,48 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 08:58 IST, the lead's own record of what the agents could not see. PUSHES: this session's lead
+  pushed main three times over the SSH URL `ssh://git@ssh.github.com:443/techlogist1/ulpf.git`
+  (the https remote's token lacks the workflow scope, so workflow files push only that way): 5b27f68
+  at 08:22, 20d1890 at 08:30, 06cd41a at 08:47; `git fetch origin main` after each showed main ==
+  origin/main. The 08:24 In flight sentence that says the pushes came from outside this session is
+  right about the agents and wrong about the session: they were the lead's. INSTALLS: the lead
+  installed three bundles into /Applications/ULPF.app: lane 7D's (07:44, for the mentors, its data
+  seeded with samples/*.log and heldout/mikrotik.log), the 4e0d71d bundle (08:10, by the final-half
+  executor), and lane R's own bundle at be8748b (08:28, while R's verifier still ran); the data
+  directory was reset by the lead at the owner's request at 08:09, 08:25, 08:28, 08:37, 08:42,
+  08:50 and 08:57 (quit, remove, relaunch), which is the "something outside this session" the
+  08:11 and 08:24 entries saw. HANDS-ON DRIVE of the installed lane R bundle, 08:43-08:46, with the
+  computer-use tools on one clean instance from first launch: samples of 100,000 Cisco ASA lines
+  (samples/cisco_asa.log repeated) through the watch directory: framed, stored, detected, parsed,
+  normalized and emitted 100,000 each, the Flow screen reading 10,105 events per second over its
+  own 9.9 s window, Live rows cisco_asa, Traceback lighting 15 byte ranges with the digest
+  recomputed equal and the chain link shown; File > Reset... > Reset to first launch back in 5 s
+  with the toast `Reset to first launch: 15 parsers`; a 1,000-line HPC slice: 1,000 no_parser, one
+  proposal (1 template, 1,000 of 1,000 verified, six slots each with a reason), the approve
+  confirmation scrolled into view, Enter: `parsers loaded 16, 1,000 of 1,000 buffered lines take
+  the fast path`; Reset events keep approved parsers: toast `Reset: events removed, 16 parsers
+  kept`; a second slice of a different message type was not claimed (detected 0, no_parser 1,000,
+  a second proposal), correct engine behaviour and a demo-material finding. DEMO MATERIAL in
+  ~/Desktop/demo-logs (not in the repo): hpc-test.log is every 433rd line of the owner's 433,489-
+  line HPC.log (433,490 events, the last line unterminated); `ulpf infer` on it gives 25 templates
+  with a matcher regex over the message families; hpc-test-2.log is 1,000 lines chosen so that
+  parser parses every one (CLI: detected 1,000, parsed 1,000, failed 0; before the selection a
+  sampled slice parsed 973 with 27 pattern_no_match, and the engine turned those 27 into a new
+  proposal when the source went quiet, which is the product working and not a defect);
+  samples-15-devices is samples/*.log with each file's most frequent address rewritten to
+  203.0.113.9 (CLI pivot src_ip: 72 events across 14 sources); two double-click .command files
+  reset the app from Finder, one runs the dist binary over bench/mixed-5000000.log (08:52, other
+  work running: 5,000,000 events in 21.0 s, 237,643 events/s, 72.5 MB/s), one flips byte 100 of the
+  app's raw.seg so Integrity's verify names raw id 0. PROCESS facts the records lacked: the
+  session limit hit at about 04:55 and the owner resumed the session in low-priority mode at about
+  05:15; 7B was dispatched at 05:05 and stopped at 05:19; lane 3b's worktree had also been created
+  at a stale base and reset itself (nothing of the kind is recorded for 4B); the adversarial
+  review was launched twice, the first launch at about 06:00 with every agent inheriting the lead's
+  model, stopped within minutes at the owner's instruction, and relaunched at 06:04 with Opus
+  finders and Sonnet skeptics, which is the run the 07:04 entry records. The owner's brief changed
+  during the morning: no 10:00 slot; mentorship sessions from 07:45 on the installed app; a
+  two-minute demo, a video and the upload before 11:00.
 - 08:45 IST: the merge gate on main at 1ce7652, the merge of lane R (`lane-r-reset`, head be8748b)
   into 20d1890. The merge was clean -- no conflict in any file -- and `git diff 20d1890..HEAD --stat`
   is five files, all under app/ (`--numstat`): app/README.md (+25/-1), app/dist/index.html
