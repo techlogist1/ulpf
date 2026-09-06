@@ -550,3 +550,17 @@ fn the_same_parsed_event_lands_on_two_disjoint_schemas() {
         "every parsed field is accounted for under either schema"
     );
 }
+
+/// CEF's header severity is 0-10 or one of Low, Medium, High, Very-High (the CEF standard):
+/// the named form lands where its number does.
+#[test]
+fn cef_named_severity_lands_where_its_number_does() {
+    let reg = registry();
+    let map = mapping();
+    let line = b"CEF:0|Vendor|Firewall|2.1|100|Connection denied|Very-High|rt=1788516923123 src=203.0.113.9 dst=10.0.0.7 act=deny";
+    let (v, _) = normalize_line(&reg, &map, "cef", line, 3);
+    assert_eq!(get(&v, "severity"), "Critical");
+    assert_eq!(get(&v, "severity_id"), 5);
+    let (v, _) = normalize_line(&reg, &mapping_named("ecs"), "cef", line, 3);
+    assert_eq!(get(&v, "log.level"), "critical");
+}

@@ -177,7 +177,7 @@ raw_by_field = { "alert.severity" = ["1"], "ipspri" = ["1"], "sev" = ["7", "8"],
 value = "Critical"
 id = 5
 raw = ["critical", "1", "alert", "severe"]
-raw_by_field = { "sev" = ["9", "10"], "cef_severity" = ["9", "10"] }
+raw_by_field = { "sev" = ["9", "10"], "cef_severity" = ["9", "10", "very-high"] }
 
 [[enum.values]]
 value = "Fatal"
