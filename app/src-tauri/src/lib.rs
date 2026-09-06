@@ -215,7 +215,15 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
     *engine.data.lock().unwrap() = data.clone();
     *engine.url.lock().unwrap() = None;
     *engine.down.lock().unwrap() = None;
-    let _ = fs::remove_file(data.join("server.url"));
+    // An engine orphaned by a force quit. `server.url` is written when the engine answers
+    // and removed by every stop and every start, so finding one here means the last run did
+    // not stop -- and on macOS a SIGKILLed app leaves its engine running (job.rs). If that
+    // engine is still holding this store there is no point starting a second one to be
+    // refused: the refusal's own page, with the pid and the button, is the answer already.
+    let orphaned = fs::remove_file(data.join("server.url")).is_ok();
+    if orphaned && holder::find(&data.join("store")).is_some() {
+        return locked(app, generation, &data.join("store"), &data.join("engine.log"));
+    }
     let (chosen, cores) = (intensity::load(app), intensity::cores());
     set_title(app, "ULPF · starting engine…");
     splash(app, &format!("{verb} the engine at {}: {} of {cores} cores, entity index {}", chosen.name(), chosen.threads(cores), intensity::on_off(chosen.pivot())), false);
