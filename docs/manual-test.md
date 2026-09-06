@@ -223,7 +223,7 @@ Max is all but one (`threads()` in `app/src-tauri/src/intensity.rs`).
 | A1 | Install and launch: Start menu > `ULPF` on Windows, the `.app` on macOS | The window opens on the bundled splash — the ULPF mark and one status line: `Starting the engine at Balanced: 4 of 8 cores, entity index on`, with a pulsing dot. The title bar reads `ULPF · starting engine…` while it starts (`start()` in `app/src-tauri/src/lib.rs`; the window's `title` in `app/src-tauri/tauri.conf.json`). | The line is on the page, not in a log. |
 | A2 | Wait for the engine | The window navigates to the served UI and a notice at the bottom says `Engine ready at Balanced · 4 of 8 cores · entity index on` (`ready_notice` in `intensity.rs`). `<data>/server.url` now exists and holds the URL; it is written only after `/api/status` answered (D73). | macOS: `cat "$HOME/Library/Application Support/dev.ulpf.desktop/server.url"`. Windows: `Invoke-RestMethod "$(Get-Content $env:APPDATA\dev.ulpf.desktop\server.url)/api/status"` answers JSON (app/README.md, step 3). |
 | A3 | Read the title | `ULPF · engine ok · N events · M pending · Balanced · 4 of 8 cores · index on`, refreshed once a second. The core count and `index on/off` come from the running engine's `/api/status` (`threads`, `pivot_index`), not from the setting file, so while a restart is in flight the title says `restarting` rather than quoting a number nothing is using (`intensity_part` in `title.rs`; D84). | Read the window title. |
-| A4 | Check the first-run copy | `<data>/parsers/` holds the fifteen bundled definitions and `<data>/mappings/` holds two. Nothing named `*_inferred.toml` is there. They are seeded only when the directory holds no TOML, so an approved or edited parser is never overwritten on a later launch (`prepare()` in `lib.rs`; D73). | List the directory. **(with lane 7C)** `engine.log` also says `[shell] seeded 15 parsers definition(s) from the bundle` and names anything it skipped: `[shell] skipped N generated parsers definition(s) (origin = "inferred"): <files>` (`seed_dir` in `app/src-tauri/src/guard.rs`). |
+| A4 | Check the first-run copy | `<data>/parsers/` holds the fifteen bundled definitions and `<data>/mappings/` holds two. Nothing named `*_inferred.toml` is there. They are seeded only when the directory holds no TOML, so an approved or edited parser is never overwritten on a later launch (`prepare()` in `lib.rs`; D73). | List the directory. On main a successful copy writes **nothing** to `engine.log` — the file opens with the engine's own first line — so the directory listing is the whole check. **(with lane 7C)** there is still no line for the files it did copy; the one line it can add is a skip, and only if there was something to skip: `shell: N generated definition(s) not copied into <path>: <files>`, written both to `engine.log` and to the app's stderr with a `[shell] ` prefix (`prepare()` and `is_generated()` in `git show lane-7b-app:app/src-tauri/src/lib.rs`). On a clean checkout there is nothing to skip and the line is absent; that is a pass, not a missing line. |
 | A5 | Resize the window | It opens at 1280x820 and will not go below 720x480 (`tauri.conf.json`). At the minimum nothing overlaps: wide content (the byte ruler, the diff, the tail) scrolls inside its own container, and long lists render only the rows in view (docs/design.md, "Under load"). | Drag the corner to the minimum and back. |
 | A6 | Press `t` | The whole UI switches between dark and light. Every colour is a token with a light value and a contrast row (docs/design.md, the colour tables and the Keyboard map). | Check the four state colours (green, amber, red, blue) are still legible on the light ground. |
 | A7 | Press `?` | The full key map in two columns; Esc or a click outside closes it (docs/design.md, the component inventory). Everything below is reachable from it. | Compare it against docs/design.md's Keyboard map. |
@@ -246,7 +246,8 @@ or nothing (`ingest_paths` in `app/src-tauri/src/ingest.rs`; D73).
 | # | Action | Expected | How to tell |
 |---|---|---|---|
 | A12 | `File > Add files…` (Cmd/Ctrl+O), pick `samples/cisco_asa.log` | A native file picker titled `Add log files to ULPF`, then a notice at the bottom of the window: `Added 1 file to the watch folder: cisco_asa.log` (`action("add_files")` in `menu.rs`; `ingest_paths`). | Press `1` for Live: the source appears with its counters and the tail moves (app/README.md, step 4). |
-| A13 | `File > Add folder…` (Cmd/Ctrl+Shift+O), pick `samples` | A native folder picker titled `Add a folder of logs to ULPF`; the notice counts the regular files copied and names up to four of them, then `, …`. Folders keep their structure; only regular files are copied, and symlinks, sockets and devices are skipped (`copy_tree` in `ingest.rs`). | The notice's count, then Live's source list. |
+| A13 | `File > Add folder…` (Cmd/Ctrl+Shift+O), pick `samples` | A native folder picker titled `Add a folder of logs to ULPF`, then `Added 16 files to the watch folder: samples`. **The count and the names count different things**: the count is every regular file found by walking the tree (sixteen — the fifteen `*.log` plus `samples/README.md`, which is why every documented command names the files and not the directory, D91), the name list is one entry per item you picked, so picking one folder gives one name and no `, …` however many files came with it. Folders keep their structure; only regular files are copied, and symlinks, sockets and devices are skipped (`ingest_paths` and `copy_tree` in `ingest.rs`). | The notice's count, then Live's source list. Live gains sixteen sources and `no_parser` climbs on the README one. |
+| A13b | Select four or more files at once in `File > Add files…` | This is the form that truncates: `Added N files to the watch folder: a, b, c, d, …` — up to four names, then `, …` only when a fifth item was picked (`names.iter().take(4)` in `ingest.rs`). | Count the names in the notice. |
 | A14 | Drag `samples/openvpn.log` onto the window | The same notice. Tauri owns the drop wherever it lands on the window, on both platforms, so the served page never sees it (`dragDropEnabled` in `tauri.conf.json`; the `DragDrop` arm in `lib.rs`). | The notice, then Live. |
 | A15 | Add the same file twice | The second copy is renamed, not overwritten: `cisco_asa (2).log` (`unique` in `ingest.rs`). | The notice names the new name. |
 | A16 | Copy a file into `<data>/watch/` from the shell | The engine's own poller picks it up; the app is not involved. | Live's source list gains it. |
@@ -284,7 +285,7 @@ or nothing (`ingest_paths` in `app/src-tauri/src/ingest.rs`; D73).
 | A33 | Close the window (the red button, or the X) | The window hides and the engine keeps ingesting. The tray brings it back: menu bar on macOS (a template glyph that follows the bar's style), notification area on Windows (the app icon) (`CloseRequested` in `lib.rs`; `menu.rs`; D73). | Copy a file into `<data>/watch` while the window is hidden; on `Show ULPF` the counters have moved. |
 | A34 | **Clean quit**: tray > `Quit ULPF`, or Cmd/Ctrl+Q | Both the window and the engine stop; `<data>/server.url` is removed (`stop()` in `lib.rs`, from `RunEvent::ExitRequested` and `Exit`). | macOS: `pgrep -l ulpf` prints nothing. Windows: `Get-Process ulpf, ulpf-app -ErrorAction SilentlyContinue` prints nothing (app/README.md, step 8). |
 | A35 | Relaunch | The record count does not go backwards and `out.jsonl` keeps its earlier lines: a restart completes an interrupted output from the store before ingesting anything new (D59). The title's **event count restarts at 0** — it is this run's counter, like the engine's counter block — and that is not a loss (app/README.md, step 8). | `GET /api/integrity` `records` is not below what it was; `wc -l` the output before and after. |
-| A36 | **Force kill.** Windows: Task Manager > `ulpf-app.exe` > End task. macOS: `kill -9` the app process | This skips the clean quit path on both platforms. **On main** the engine can survive it: CI's own smoke run found `ulpf.exe` outliving a `Stop-Process` of the window and records that as the expected result there, with the tray's Quit left as the human check (`app/scripts/smoke-windows.ps1`; D89). **(with lane 7C)** a Windows job object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` holds the sidecar for the app's whole life, so the kernel terminates `ulpf.exe` when the app process ends by any means (`adopt()` in `guard.rs`). On macOS the tree makes **no** claim that anything reaps it: `guard.rs`'s own comment says a SIGKILL of the app skips the quit path exactly as it does on Windows, and the leftover is caught on the next launch instead. | Windows: `Get-Process ulpf`. macOS: `pgrep -l ulpf`. Record the answer on each machine rather than confirming a claim; then clean up by hand and relaunch, which is A38. |
+| A36 | **Force kill.** Windows: Task Manager > `ulpf-app.exe` > End task. macOS: `kill -9` the app process | This skips the clean quit path on both platforms. **On main** the engine can survive it on Windows: CI's own smoke run found `ulpf.exe` outliving a `Stop-Process` of the window and prints that as the expected result there — `orphan: ulpf.exe pid N outlived a Stop-Process of the window (expected on Windows; the tray's Quit is what kills it)` — with the tray's Quit left as the human check (`app/scripts/smoke-windows.ps1`; D89). **(with lane 7C)** the sidecar is put in a job object carrying `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` whose handle the app holds for its whole life, so the kernel terminates `ulpf.exe` when the app's handles close, however it died, and CI turns the note into an assertion: no `ulpf.exe` five seconds after the force kill or the job fails (`adopt()` in `git show lane-7b-app:app/src-tauri/src/job.rs`, called right after the spawn in that branch's `lib.rs`; `git show lane-7b-app:app/README.md`, "Platform differences"). On **macOS** the tree asserts nothing either way: `job.rs`'s own comment says macOS needs none of it because the sidecar is a direct child that dies with its parent through the plugin's kill-on-drop, but a kill-on-drop is a `Drop` a `kill -9` does not run, and no macOS force-kill test exists anywhere in the tree. So this is the one step where you are the measurement. | Windows: `Get-Process ulpf`. macOS: `pgrep -l ulpf`. Record the answer on each machine rather than confirming a claim; then clean up by hand and relaunch, which is A38. |
 
 ### The failure paths (a sentence, then the way out, then the file)
 
@@ -294,7 +295,7 @@ spinner (app/README.md, "When it does not start"). Copy the sentence verbatim.
 | # | Provoke it | Expected sentence |
 |---|---|---|
 | A37 | **Engine missing.** Rename or remove the sidecar beside the installed executable (`ulpf.exe` on Windows, `ulpf` on macOS) | `ULPF could not start its engine: <error>.` then `The engine ships beside the app as ulpf.exe; reinstalling ULPF replaces it.` (`ulpf` on macOS). Title: `ULPF · engine down (engine missing)` (the `spawned` error arm and `SIDECAR` in `lib.rs`). macOS capture: `docs/screens/app-error-sidecar.png`. |
-| A38 | **Store held by another writer.** Start `ulpf serve` by hand against `<data>/store`, then launch the app | **On main**: the sidecar exits at once, so you get `The engine stopped (exit N). Its last words: <the store-in-use line>` and `The whole of its output is in <data>/engine.log` (the `Terminated` arm in `lib.rs`). **(with lane 7C)**: the splash names the holder before anything is spawned — `The engine's store at <path> is held by ulpf (pid N, started <when>). Stop it and start again?`, a `Details: <data>/engine.log` line, and one button, `Stop it and start again`, that stops that pid and retries through the same start path (`find_holder` and `stop_holder`; the `#act` button in `app/dist/index.html`). Title: `ULPF · engine down (store in use)`. |
+| A38 | **Store held by another writer.** Start `ulpf serve` by hand against `<data>/store` (give it `--listen 127.0.0.1:7979` so it does not also collide with the demo's port), then launch the app | **On main**: the sidecar spawns, is refused by its own writer and exits, so the generic sentence is what you get — `The engine stopped (exit 2). Its last words: ulpf: opening store <path>: store <path> is in use by another process` then `The whole of its output is in <data>/engine.log`, and the title says `ULPF · engine down (exit 2)`, quoting the code because nothing on main reads the refusal (the `Terminated` arm, `fail()` and `down()` in `lib.rs`; `exit(2)` in `crates/ulpf/src/main.rs`; the `in_use` text and the `opening store` context in `crates/ulpf-store/src/store.rs` and `crates/ulpf/src/engine.rs`). **(with lane 7C)**: the sidecar still spawns and still dies first — the holder is looked up in the `Terminated` arm, not before the spawn — but the store-in-use case is pulled out of the generic arm and gets its own sentence and a button: `The engine's store at <path> is held by ulpf (pid N). Stop it and start again?` then `The whole of its output is in <data>/engine.log`, with one button reading `Stop it and start again` that force-kills that pid and retries through the ordinary start path. If the holder exited between the refusal and the lookup the sentence is `... is held by another writer that is no longer running. Start again?` instead, and there is nothing to press but the retry. The holder is found by scanning process command lines for a `ulpf` naming the same `--store` path, because the lock is SQLite's and carries no pid (`locked()` in `git show lane-7b-app:app/src-tauri/src/lib.rs`, `find()` and `kill()` in that branch's `holder.rs`, the `#act` button in `git show lane-7b-app:app/dist/index.html`). Title there: `ULPF · engine down (store in use)`. |
 | A39 | **Port in use.** Set `ULPF_APP_PORT` to a port something else already holds, then launch | `ULPF could not take port <N> on 127.0.0.1: <error>.` then `Quit whatever is listening there, or start ULPF with ULPF_APP_PORT unset and it will pick a free port.` Title: `ULPF · engine down (port in use)` (the `pinned` branch in `lib.rs`). Capture: `docs/screens/app-error-port.png`. Unset the variable afterwards: unset, the app asks the kernel for a free port and never collides with the demo's 7878. |
 | A40 | **The engine dies.** Point `data_dir` at a path the user cannot write, or corrupt the store directory | `The engine stopped (exit N). Its last words: <the engine's own last line>` and `The whole of its output is in <data>/engine.log`; or `Cannot prepare <path>: <error>` when the directory itself could not be made (`fail` and the `prepare` error arm in `lib.rs`). Capture: `docs/screens/app-error-engine.png`. |
 | A41 | **No answer.** Hard to provoke deliberately; report it if you see it | `The engine did not answer within two minutes.` — the start timeout (`START_TIMEOUT` in `lib.rs`). |
@@ -367,6 +368,7 @@ file says is unrecorded (A28, A29, A36, and the macOS Gatekeeper case in section
 | A11 | | | |
 | A12 | | | |
 | A13 | | | |
+| A13b | | | |
 | A14 | | | |
 | A15 | | | |
 | A16 | | | |
@@ -424,6 +426,7 @@ file says is unrecorded (A28, A29, A36, and the macOS Gatekeeper case in section
 | A11 | | | |
 | A12 | | | |
 | A13 | | | |
+| A13b | | | |
 | A14 | | | |
 | A15 | | | |
 | A16 | | | |
@@ -466,12 +469,19 @@ Every item here is already recorded in `PROGRESS.md`'s v4 section or in `docs/DE
   body whatever the first sample is (the segment and record headers end at byte 68). Whether
   the header's receipt time belongs under the chain is a store-format question recorded for
   after the demo, not built (PROGRESS v4, "Tried and abandoned").
-- **One known test flake.** `crates/ulpf/tests/v4_api.rs`'s
-  `pivot_pages_by_the_cursor_pair_and_reports_its_timings` failed once at machine load 37
-  ("saw 31 of 32") and passed three times alone and in the full run. A page takes the first
-  `limit*4` entries past the cursor in raw-id order and re-sorts by device time, so an event
-  whose device time disagrees with arrival order by more than that window is skipped
-  (PROGRESS v4, "Tried and abandoned").
+- **One known test flake, and it is commoner than the first measurement said.**
+  `crates/ulpf/tests/v4_api.rs`'s `pivot_pages_by_the_cursor_pair_and_reports_its_timings`
+  first failed once at machine load 37 ("saw 31 of 32"). Re-measured on main at 06:12-06:14
+  IST on a quiet machine (load 7.45-8.62): it failed the full `cargo test --workspace
+  --release` once, then 3 of 11 runs of the `v4_api` binary alone, always the same "saw 31 of
+  32"; it passes 3 of 3 when named on the command line by itself, and the next full run after
+  that was 123 passed, 0 failed. So the frequency is load, not the tree, and **a hand-run
+  gate before the demo may need a second run**: the criterion is a green full run, and this
+  one test failing alone is the known flake, not a regression. Mechanism: a page takes the
+  first `limit*4` entries past the cursor in raw-id order and re-sorts by device time, so an
+  event whose device time disagrees with arrival order by more than that window is skipped;
+  the test copies every sample into a watch directory and the poll's interleaving under load
+  sets the order (`walk` in `pivot.rs`; PROGRESS v4, "Tried and abandoned").
 - **The tail's `frames skipped` / `events skipped` counters go amber during fast drops**
   (150 during a demo pass, 1,400 after replay and drift). That is the tail's honesty about
   what it did not render; `framed`, `stored` and `emitted` stay equal, so nothing was lost
@@ -481,9 +491,12 @@ Every item here is already recorded in `PROGRESS.md`'s v4 section or in `docs/DE
 - **Three branches are not merged, so their features are absent, not broken.**
   `lane-5-xml` (the `xml` strategy and the Windows Event definition), `lane-6-index` (the
   entity index cost) and `lane-8-windows` (the store reopen, the stop path's handles and the
-  null output device). D75, D76, D82 and D83 are reserved for them and written on those
-  branches, so `docs/DECISIONS.md` on main carries only the reservation (PROGRESS v4, "In
-  flight"; the "D75, D76: reserved" and "D82, D83: reserved" entries).
+  null output device). D75, D76 and D82 are reserved for those branches and written on them,
+  so `docs/DECISIONS.md` on main carries only the reservation. D83 is not a branch at all:
+  it is reserved for the **post-demo decision** on whether the engine should take a
+  directory-level include or exclude, and main already carries the rule that stands until
+  then, D91 — a documented command names its input files, not a directory (PROGRESS v4, "In
+  flight"; the "D75, D76: reserved" and "D82, D83: reserved" entries; D91).
 - **The Windows syslog receive buffer is the system default.** `set_recv_buffer` is a
   `cfg(windows)` no-op returning 0 and the asked/granted line says so; the Winsock version
   is on `lane-8-windows` (D74; PROGRESS v4, "In flight").
