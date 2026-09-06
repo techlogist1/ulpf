@@ -91,7 +91,10 @@ if ($url) {
     $left | Stop-Process -Force
     Fail 'the engine outlived a force kill of the window: the kill-on-job-close job did not reap it'
   }
-  Write-Host 'no ulpf.exe left 5 s after the window process was force-killed: the job object reaped it'
+  # The loop breaks on the first empty poll, so say when it was actually empty; 5 s is the
+  # ceiling the assertion allows, not the measurement.
+  $ms = ($i + 1) * 500
+  Write-Host "no ulpf.exe left $ms ms after the window process was force-killed (ceiling 5 s): the job object reaped it"
   Write-Host 'SMOKE PATH: app'
   exit 0
 }

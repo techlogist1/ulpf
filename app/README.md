@@ -136,8 +136,10 @@ the app (D93).
   — End task on the window, a crash, `Stop-Process -Force`, anything. Windows has no
   process group, so without it a force kill left `ulpf.exe` running with the store's SQLite
   lock and the next launch was refused (D92). macOS needs nothing: the sidecar is a direct
-  child and dies with its parent. `app-smoke-windows` asserts it: no `ulpf.exe` five
-  seconds after the window is force-killed, or the job fails.
+  child and dies with its parent. `app-smoke-windows` asserts it: no `ulpf.exe` within five
+  seconds of the window being force-killed, or the job fails. Five seconds is the ceiling,
+  not the measurement — the job polls every 500 ms, breaks on the first empty poll and
+  prints the elapsed milliseconds, which has been 500 in every run so far.
 - The splash page is served from `tauri://localhost` on macOS and `http://tauri.localhost`
   on Windows (`SPLASH` in `src/lib.rs`).
 - Positional reads in the store and the UDP receive buffer in the syslog listener have
@@ -218,8 +220,9 @@ nothing in CI installs it.** After the install the job finds `ulpf-app.exe` unde
 non-zero exit (the inputs, the two ports and every title and command in PROGRESS.md's demo
 section), launches the app, waits for `%APPDATA%\dev.ulpf.desktop\server.url` and for
 `/api/status` to answer JSON, checks that both processes are running, then force-kills the
-window and **fails if any `ulpf.exe` is still alive five seconds later** — the job object
-above is what makes that an assertion rather than a note. If the runner cannot host a
+window and **fails if any `ulpf.exe` is still alive after five seconds of polling** (every
+500 ms, breaking on the first empty poll, whose elapsed time it prints: 500 ms in every run
+so far) — the job object above is what makes that an assertion rather than a note. If the runner cannot host a
 webview the job drives the installed engine instead (`check`, `run samples`, `serve` +
 `/api/status`) and prints `SMOKE PATH: app` or `SMOKE PATH: sidecar` so the log says which
 one it achieved. The same script runs by hand: `pwsh app\scripts\smoke-windows.ps1
