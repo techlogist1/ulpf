@@ -64,7 +64,7 @@ says and starts the engine again exactly as a launch does — so after the first
 parsers and no events, and after the second the app is as it was when you installed it, with
 the 15 bundled parsers copied back (never a generated one: see the demo note below). The
 notice at the bottom says which it was: `Reset: events removed, N parsers kept`, or
-`Reset to first launch: 15 parsers`. Anything that would not delete is named in `engine.log`
+`Reset to first launch: 16 parsers`. Anything that would not delete is named in `engine.log`
 and counted in that notice; the app comes back up either way.
 
 The engine never deletes: its raw store is append-only by contract and every record is a

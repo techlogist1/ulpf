@@ -47,19 +47,19 @@ One command, on the samples in this repository:
 ```
 
 ```
-definitions: 15 parsers loaded, 0 file problems
-ulpf: 15 files (0 failed), 0.10 MB, 309 events in 0.005 s -> 59345 events/s, 18.6 MB/s, 7 worker threads
-stages: framed 309  stored 309  detected 307  no_parser 2  parsed 305  parse_failed 2  normalized 309  emitted 309 (410361 bytes)
+definitions: 16 parsers loaded, 0 file problems
+ulpf: 16 files (0 failed, 0 excluded), 0.12 MB, 324 events in 0.011 s -> 30704 events/s, 11.2 MB/s, 7 worker threads
+stages: framed 324  stored 324  detected 322  no_parser 2  parsed 320  parse_failed 2  normalized 324  emitted 324 (438550 bytes)
 parse_failed by reason: pattern_no_match 1, invalid_json 1
-signals: sub_matched 202  sub_no_match 7  sub_uncovered 4  time_from_receipt 10  time_error [no_match 1]  class_unknown 62  enum_other 4  unmapped_fields 3025  utf8_lossy 13
-queue: 15 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
+signals: sub_matched 216  sub_no_match 7  sub_uncovered 4  time_from_receipt 10  time_error [no_match 1]  class_unknown 62  enum_other 2  unmapped_fields 3318  utf8_lossy 13
+queue: 16 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
 inference: buffered 2 (buffer full 0)  runs 0  lines templated 0 unmatched 0  proposals written 0 replaced 0 skipped [none]  approved 0  rejected 0  reloads 0
 drift: tripped 0  lines routed 0  update proposals 0  cleared 0
 syslog: udp datagrams 0 (0 bytes)  tcp connections 0 events 0 (0 bytes) partial 0 refused 0  errors 0
 pending: 0 proposals awaiting review (final inference pass 0.000 s)
 ```
 
-(The `events/s` on that line is 309 events in five milliseconds — startup noise, not a
+(The `events/s` on that line is 324 events in eleven milliseconds — startup noise, not a
 throughput measurement. The measured figure is under "Honest numbers" below.)
 
 The input is written `samples/*.log`, but the bare `samples` directory gives the same
