@@ -222,9 +222,12 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .scroll { max-height: 60vh; overflow: auto; }
 .wrap { overflow-x: auto; }
 
-/* ---- virtual lists: a header grid and a scroller of fixed-height rows ---- */
+/* ---- virtual lists: a header grid and a scroller of fixed-height rows ----
+   The header and the rows must share one column resolution: same font-size (em columns resolve
+   against the element's own), and --minw (the fixed columns plus gaps) on both, so a `.wrap`
+   around them scrolls one width sideways instead of clipping the rows. */
 .vh, .vr { display: grid; grid-template-columns: var(--cols); gap: 0 var(--s3); align-items: center; font-size: var(--t0); height: var(--row); padding: 0 var(--s2); }
-.vh { color: var(--fg-2); font-size: var(--t-1); font-weight: 600; border-bottom: 1px solid var(--line-2); }
+.vh { color: var(--fg-2); font-weight: 600; border-bottom: 1px solid var(--line-2); min-width: var(--minw, 0); }
 .vh > span, .vr > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .vh > .num, .vr > .num { text-align: right; }
 .vr { border-bottom: 1px solid var(--line); cursor: pointer; }
@@ -232,7 +235,7 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .vr.sel { background: var(--sel); box-shadow: inset 2px 0 0 var(--fg); }
 .vr.static { cursor: default; }
 .vr.static:hover { background: none; }
-.vl { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; position: relative; }
+.vl { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; position: relative; min-width: var(--minw, 0); }
 .vl > .inner { position: relative; }
 .vl > .inner > .win { position: absolute; left: 0; right: 0; top: 0; }
 

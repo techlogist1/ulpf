@@ -69,20 +69,44 @@ export const TAIL_MAX = 500
 let es = null
 let delay = 1000
 let inbox = [] // events waiting for the next frame (plain array: not reactive)
+let nextMetrics = null // the newest metrics frame waiting for the next paint (not reactive)
 let raf = 0
 
 function schedule() {
-  if (raf) {
-    live.dropped++ // the previous frame never painted; it is superseded, not queued
-    return
-  }
+  if (raf) return // a frame is already booked; each handler counts its own supersede
   raf = requestAnimationFrame(() => {
     raf = 0
-    if (!inbox.length) return
-    live.tail = inbox.concat(live.tail).slice(0, TAIL_MAX)
-    inbox = []
+    if (inbox.length) {
+      live.tail = inbox.concat(live.tail).slice(0, TAIL_MAX)
+      inbox = []
+    }
+    if (nextMetrics) {
+      live.metrics = nextMetrics
+      nextMetrics = null
+    }
   })
 }
+
+// The frame budget: the animation-frame gaps of the last 3 s. `missed` is true while 3 or
+// more gaps over 50 ms fall in one 3 s window and false again 10 s after the last one, so a
+// machine that cannot paint says so once and Flow stops animating instead of stuttering.
+export const budget = $state({ missed: false })
+let overs = [] // timestamps of the gaps over 50 ms in the window
+let lastOver = 0
+let prevFrame = 0
+function watchFrames(t) {
+  requestAnimationFrame(watchFrames)
+  if (prevFrame) {
+    // A gap over a second is the host suspending the loop (hidden window, low power), not jank.
+    const d = t - prevFrame
+    if (d > 50 && d < 1000) { overs.push(t); lastOver = t }
+    while (overs.length && t - overs[0] > 3000) overs.shift()
+    if (overs.length >= 3) { if (!budget.missed) budget.missed = true }
+    else if (budget.missed && t - lastOver > 10000) budget.missed = false
+  }
+  prevFrame = t
+}
+requestAnimationFrame(watchFrames)
 
 export function resume() {
   live.paused = false
@@ -118,10 +142,14 @@ export function connect() {
       fetch('/api/pending').then((r) => r.json()).then((l) => { if (Array.isArray(l)) live.pending.count = l.length }).catch(() => {})
     }
   })
+  // Only the metrics snapshot waits for the paint: a burst coalesces and the superseded ones
+  // count. Drift and integrity apply at once, or a deferred older frame would undo a newer event.
   on('metrics', (m) => {
-    live.metrics = m
     if (m.drift) live.drift = m.drift
     if (m.integrity) live.integrity = m.integrity
+    if (nextMetrics) live.dropped++
+    nextMetrics = m
+    schedule()
   })
   on('tail', (t) => {
     // `skipped` is the total; `cut` is the part the frame's limit left in the ring.
@@ -131,7 +159,10 @@ export function connect() {
     // Held: the rows on screen stay where the reader left them; new events are counted,
     // not stacked, so releasing shows the present rather than a backlog.
     if (live.paused) { live.held += t.events?.length ?? 0; return }
-    if (t.events?.length) inbox = t.events.slice(-TAIL_MAX).reverse().map(row).concat(inbox).slice(0, TAIL_MAX)
+    if (t.events?.length) {
+      if (inbox.length) live.dropped++ // the previous frame never painted; it is superseded, not queued
+      inbox = t.events.slice(-TAIL_MAX).reverse().map(row).concat(inbox).slice(0, TAIL_MAX)
+    }
     schedule()
   })
   on('pending', (p) => (live.pending = p))

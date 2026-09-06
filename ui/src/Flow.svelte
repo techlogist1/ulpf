@@ -2,7 +2,7 @@
   // The front door: six stations on one line, every number a counter the metrics frame
   // carries, every motion a rate the frames give. A pulse is one animated element per link
   // whose speed is the rate law in docs/design.md (Motion); never one element per event.
-  import { live } from './state.svelte.js'
+  import { live, budget } from './state.svelte.js'
   import { fmt } from './api.js'
   import { keys, stations, reduced } from './keys.js'
 
@@ -59,8 +59,11 @@
     anims[el.dataset.k] = a
     return () => { a.cancel(); delete anims[el.dataset.k] }
   }
+  // Motion is the first thing to go when the machine cannot paint: below the frame budget
+  // the pulses stop dead rather than stutter, and the line says so.
   $effect(() => {
-    for (const [k, a] of Object.entries(anims)) a.playbackRate = down ? 0 : speed(rates.d[k] ?? 0)
+    const stop = down || budget.missed
+    for (const [k, a] of Object.entries(anims)) a.playbackRate = stop ? 0 : speed(rates.d[k] ?? 0)
   })
 
   // Station to screen: the screen behind each is the one that shows that stage's evidence.
@@ -199,6 +202,10 @@
         <div class="under" style="grid-column: 7"><span class="n is-warn">{fmt.pairs(e.parse_failed)}</span></div>
       {/if}
     </div>
+
+    {#if budget.missed}
+      <p class="muted sm">motion paused: this machine missed the frame budget</p>
+    {/if}
 
     {#if empty}
       <div class="empty">

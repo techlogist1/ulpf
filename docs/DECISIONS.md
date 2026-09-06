@@ -2197,3 +2197,28 @@ unreachable by keyboard and the dialog unscrollable, which the review measured).
 **Anchor.** `ui/src/App.svelte` (`onKey`), `ui/src/Traceback.svelte` (the `/` key, no autofocus),
 `ui/src/keys.js` (`typing`), `ui/keys.mjs` (the keyboard map harness over CDP, 31 checks),
 `app/scripts/drive.mjs` (the Windows driver names a screen that takes focus as a finding).
+
+## D102. The frame-budget rule: coalesce per animation frame, virtualise every list that grows, pause motion when the budget is missed
+**Decision.** Every frame the server pushes, tail *and* metrics, is applied inside one
+`requestAnimationFrame` callback; a frame that arrives before the previous one painted replaces it
+and is counted in `live.dropped` at the point of the supersede (a tail and a metrics frame painting
+on the same callback is not a drop). `drift` and `integrity` still apply the moment they arrive, so
+a deferred metrics snapshot never overwrites a newer one. Every list that grows with the session —
+the tail, the byte ruler, the replay diff, and now Live's Sources and Parsers — renders through
+`VList.svelte`, header and rows sharing one column resolution (`--cols`, one font size, `--minw` so a
+narrow window scrolls the list sideways instead of clipping it). A `budget` state watches the page's
+own frame gaps: three gaps over 50 ms inside three seconds mark the budget missed, ten quiet seconds
+clear it, and a gap over a second is host suspension, not a miss. Flow's pulses drop to playback rate
+0 with a one-line note while the budget is missed and resume when it clears.
+**Principle.** The UI's cost per second must not grow with the session. Before the rule, Live with
+340 sources held 12,135 DOM nodes and paid one 50 ms task per metrics frame (worst gap 66.7 ms)
+while the tail, already coalesced and virtualised, cost the same at 340 as at 30 (PROGRESS v5,
+Phase 1). After it, the same screen holds 3,916 nodes and every gap is 16.8 ms.
+**Ruled out.** Thinning the metrics frame on the server (89 KB twice a second at 340 sources, which no
+measurement blamed; the DOM was the cost). A frame-rate cap in CSS (`prefers-reduced-motion` is the
+user's setting, not the machine's state). Dropping rows from long tables (nothing is hidden, it is
+windowed). Counting `dropped` in `schedule()` (it over-counted the mixed case and made the footer's
+tooltip false).
+**Anchor.** `ui/src/state.svelte.js` (`schedule`, `budget`), `ui/src/Flow.svelte`, `ui/src/Live.svelte`,
+`ui/src/VList.svelte`, `ui/src/app.css` (`.vh`, `.vl`), `ui/uiperf.mjs` and `ui/budget.mjs` (the
+measurements).

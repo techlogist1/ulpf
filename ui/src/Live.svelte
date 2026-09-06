@@ -61,6 +61,8 @@
     if (terms.length) r = r.filter((x) => terms.every((t) => x.text.includes(t)))
     return r
   })
+  // Sources and Parsers are windows too: 340 sources is 340 rows in the DOM otherwise.
+  const listMax = $derived(Math.max(220, Math.round(innerHeight * 0.6)))
   const flagged = $derived(live.tail.reduce((a, r) => a + (r.flags.length ? 1 : 0), 0))
   const countNote = $derived(
     terms.length && flaggedOnly
@@ -187,7 +189,7 @@
       <span>{terms.length ? 'Esc clears the filter.' : flaggedOnly ? 'f shows every event again.' : 'The tail fills the moment the engine emits: drop a file into a watched directory or send syslog to the listener in the status line.'}</span>
     </div>
   {:else}
-    <div class="tail" style="--cols:6em 12em 13em 12em 6em 14em 7em minmax(0,1fr)">
+    <div class="tail wrap" style="--cols:6em 12em 13em 12em 6em 14em 7em minmax(0,1fr); --minw:904px">
       <VList items={rows} max={Math.max(330, innerHeight - 420)} {sel}>
         {#snippet header()}
           <div class="vh"><span class="num">raw</span><span>time</span><span>parser</span><span>class</span><span>action</span><span>device</span><span title="the stages that did not reach their outcome; hover a mark for the flag">flags</span><span>summary</span></div>
@@ -215,32 +217,32 @@
     {#if !m?.sources?.length}
       <div class="empty"><b>No sources yet.</b><span>A source appears when its first file or datagram is read.</span></div>
     {:else}
-      <div class="wrap scroll">
-        <table class="tbl">
-          <thead><tr><th>source</th><th>parser</th><th class="num">events</th><th class="num">detected</th><th class="num">no_parser</th><th class="num">buffered</th><th class="num">window</th><th class="num">baseline</th><th>drift</th><th>proposal</th><th class="fill"></th></tr></thead>
-          <tbody>
-            {#each m.sources as s (s.name)}
-              <tr>
-                <td class="mono">{s.name}</td>
-                <td class="mono">{#if s.parser}{s.parser}{:else}<span class="is-dim">none</span>{/if}</td>
-                <td class="num">{fmt.n(s.events)}</td>
-                <td class="num">{fmt.n(s.detected)}</td>
-                <td class="num" class:is-warn={s.no_parser > 0}>{fmt.n(s.no_parser)}</td>
-                <td class="num">{fmt.n(s.buffered)}</td>
-                <td class="num">{s.window_rate == null ? '' : fmt.pct(s.window_rate)}</td>
-                <td class="num">{s.baseline_rate == null ? '' : fmt.pct(s.baseline_rate)}</td>
-                <td>
-                  {#if s.drift === 'tripped'}<span class="tag warn">tripped</span>
-                  {:else if s.drift === 'proposed'}<span class="tag pend">proposed</span>
-                  {:else if s.drift === 'watching'}<span class="tag">watching</span>
-                  {:else}<span class="is-dim">–</span>{/if}
-                </td>
-                <td>{#if s.pending_id}<a class="mono" href="#/review/{encodeURIComponent(s.pending_id)}">{s.pending_id}</a>{:else}<span class="is-dim">–</span>{/if}</td>
-                <td class="fill"></td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+      <div class="wrap" style="--cols:16em 11em 6.5em 6.5em 7em 6.5em 5em 5.5em 7em 12em minmax(0,1fr); --minw:1084px">
+        <VList items={m.sources} max={listMax}>
+          {#snippet header()}
+            <div class="vh"><span>source</span><span>parser</span><span class="num">events</span><span class="num">detected</span><span class="num">no_parser</span><span class="num">buffered</span><span class="num">window</span><span class="num">baseline</span><span>drift</span><span>proposal</span><span></span></div>
+          {/snippet}
+          {#snippet row(s)}
+            <div class="vr static">
+              <span class="mono" title={s.name}>{s.name}</span>
+              <span class="mono" title={s.parser ?? ''}>{#if s.parser}{s.parser}{:else}<span class="is-dim">none</span>{/if}</span>
+              <span class="num">{fmt.n(s.events)}</span>
+              <span class="num">{fmt.n(s.detected)}</span>
+              <span class="num" class:is-warn={s.no_parser > 0}>{fmt.n(s.no_parser)}</span>
+              <span class="num">{fmt.n(s.buffered)}</span>
+              <span class="num">{s.window_rate == null ? '' : fmt.pct(s.window_rate)}</span>
+              <span class="num">{s.baseline_rate == null ? '' : fmt.pct(s.baseline_rate)}</span>
+              <span>
+                {#if s.drift === 'tripped'}<span class="tag warn">tripped</span>
+                {:else if s.drift === 'proposed'}<span class="tag pend">proposed</span>
+                {:else if s.drift === 'watching'}<span class="tag">watching</span>
+                {:else}<span class="is-dim">–</span>{/if}
+              </span>
+              <span>{#if s.pending_id}<a class="mono" href="#/review/{encodeURIComponent(s.pending_id)}">{s.pending_id}</a>{:else}<span class="is-dim">–</span>{/if}</span>
+              <span></span>
+            </div>
+          {/snippet}
+        </VList>
       </div>
     {/if}
   </section>
@@ -249,24 +251,24 @@
     {#if !m?.parsers?.length}
       <div class="empty"><b>No parsers loaded.</b><span>The registry scans the parsers directory at start and whenever it changes.</span></div>
     {:else}
-      <div class="wrap scroll">
-        <table class="tbl">
-          <thead><tr><th>name</th><th>device</th><th>strategy</th><th class="num">subs</th><th class="num">prio</th><th>origin</th><th class="num">detected</th><th class="fill"></th></tr></thead>
-          <tbody>
-            {#each m.parsers as p (p.name)}
-              <tr>
-                <td class="mono">{p.name}</td>
-                <td class="tight" title="{p.vendor} {p.product}">{p.vendor} {p.product}</td>
-                <td class="mono is-dim">{p.strategy}</td>
-                <td class="num">{fmt.n(p.subs)}</td>
-                <td class="num">{fmt.n(p.priority)}</td>
-                <td>{#if p.origin === 'approved'}<span class="tag ok">approved</span>{:else}<span class="is-dim">hand</span>{/if}</td>
-                <td class="num">{fmt.n(p.detected)}</td>
-                <td class="fill"></td>
-              </tr>
-            {/each}
-          </tbody>
-        </table>
+      <div class="wrap" style="--cols:12em 14em 8em 4.5em 4.5em 7em 7em minmax(0,1fr); --minw:748px">
+        <VList items={m.parsers} max={listMax}>
+          {#snippet header()}
+            <div class="vh"><span>name</span><span>device</span><span>strategy</span><span class="num">subs</span><span class="num">prio</span><span>origin</span><span class="num">detected</span><span></span></div>
+          {/snippet}
+          {#snippet row(p)}
+            <div class="vr static">
+              <span class="mono" title={p.name}>{p.name}</span>
+              <span title="{p.vendor} {p.product}">{p.vendor} {p.product}</span>
+              <span class="mono is-dim" title={p.strategy}>{p.strategy}</span>
+              <span class="num">{fmt.n(p.subs)}</span>
+              <span class="num">{fmt.n(p.priority)}</span>
+              <span>{#if p.origin === 'approved'}<span class="tag ok">approved</span>{:else}<span class="is-dim">hand</span>{/if}</span>
+              <span class="num">{fmt.n(p.detected)}</span>
+              <span></span>
+            </div>
+          {/snippet}
+        </VList>
       </div>
     {/if}
   </section>
