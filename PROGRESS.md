@@ -739,18 +739,64 @@ look at the captures and a grep of `ui/dist` for external references.
   Nothing in this session touched that directory before that point (no move, no delete; the
   instruction to move it aside was deliberately not followed), the app itself has no code path that
   removes it, and the data is not in `~/.Trash` and not anywhere on disk -- a `find` for a 500 MB
-  `out.jsonl` newer than 07:00 returns nothing. The owner's 866,980 records and their two approved
-  parsers are gone and are not recoverable from this machine. THIS IS THE ONE UNVERIFIED CLAIM IN
-  THIS ENTRY: who deleted it is not known.
-  WHAT THE REVIEWERS SEE NOW. The guard that said "feed nothing" existed to protect that data, and
-  the data was already gone, so the empty instance was seeded the way step 3 describes rather than
-  left blank in front of the mentors: `samples/*.log` copied into the watch directory one a second
-  (08:13:21-08:13:36), then `heldout/mikrotik.log` (08:13:36); `heldout/edgerouter.log` was NOT fed,
-  it needs UDP. Counts at 08:13:44, from the instance: framed 559 stored 559 detected 307 no_parser
-  252 parsed 305 normalized 559 emitted 559, `/api/integrity` records 559 head e2979fb0..., 15
-  parsers loaded, and `/api/pending` carries exactly one proposal -- `mikrotik`, source
-  mikrotik.log, 250 lines, 14 templates. IT IS NOT APPROVED: approving it is the reviewers' step.
-  The window was brought to the front. The app is left running.
+  `out.jsonl` newer than 07:00 returns nothing. WHAT IS GONE IS THE STORE, NOT THE DATA -- this
+  sentence is the correction of a wrong one (see the fix round at the end of this entry). The events
+  themselves were re-creatable from disk the whole time and were in fact re-created within minutes
+  (below): the source sits in four places, `~/Downloads/HPC/HPC-1.log` and
+  `~/Desktop/demo-logs/HPC-full.log`, both 33,553,503 B = 433,490 events, plus the two small
+  extracts `hpc-test.log` and `hpc-test-2.log`; 2 x 433,490 = 866,980 is exactly the count that was
+  lost. What no re-ingest can bring back is that store's identity and chain -- store id a7f3f36d...
+  with head 1dea952e... over 866,980 records under one genesis, and the two approved parser files --
+  because a new store gets a new random genesis and issues new ids. THE ONE UNVERIFIED CLAIM IN THIS
+  ENTRY REMAINS: who deleted the directory is not known. The one candidate on this machine -- the
+  other lane that runs a bundled ULPF.app against a redirected HOME under `/tmp/laneR` -- is ruled
+  out: its worktree was created at 08:14:23 and `/tmp/laneR` at 08:14:40, both after the deletion.
+  SEEDING THE EMPTY INSTANCE (08:13, this session). The guard that said "feed nothing" existed to
+  protect that data, and the data was already gone, so the empty instance was seeded the way step 3
+  describes rather than left blank in front of the mentors: `samples/*.log` copied into the watch
+  directory one a second (08:13:21-08:13:36), then `heldout/mikrotik.log` (08:13:36);
+  `heldout/edgerouter.log` was NOT fed, it needs UDP. Measured at 08:13:44: framed 559 stored 559
+  detected 307 no_parser 252 parsed 305 normalized 559 emitted 559, `/api/integrity` records 559
+  head e2979fb0..., 15 parsers, one proposal (`mikrotik`) and it not approved. The window was
+  brought to the front and the app left running.
+  WHAT THE REVIEWERS SEE NOW -- measured at 08:21:55 by the fix round, and it is a live instance, so
+  these counts move whenever anything is fed to it. After this session finished, someone outside it
+  put the corpus back: `HPC.log` into the watch directory at 08:15:48 and `HPC-1.log` at 08:16:37
+  (both 33,553,503 B, 433,490 events each), and approved the hpc proposal at 08:16:23
+  (`pending/approved/hpc-1788662783824868000.json`, `parsers/hpc_inferred.toml` written 08:16:23).
+  So the instance now holds `/api/integrity` records 867,539 = 559 + 2 x 433,490, head 7f89822d...,
+  store id c93f12ac..., genesis 66086db6..., running false (ingest idle: two reads 30 s apart in
+  the fix round, 08:21:25 and 08:21:55, gave the same count); framed/stored/normalized/emitted 867,539, detected 59,034, no_parser 808,505, parsed
+  31,138, parse_failed pattern_no_match 27,895 and invalid_json 1, files 18, elapsed 669 s; 16
+  parsers, the sixteenth `hpc_inferred` (origin approved, priority -1, 58,727 detected); inference
+  runs 5, proposals written 3 replaced 2, approved 1; drift tripped 1 with 401,746 lines routed and
+  2 update proposals. `/api/pending` carries TWO: `mikrotik` (source mikrotik.log, 250 lines, 14
+  templates, version 1) and `hpc_1` (an update to hpc_inferred, version 2, source HPC-1.log, 4096
+  lines, 9 templates, 2 unmatched). NEITHER IS APPROVED: approving one is still the reviewers' step.
+  The app was running from `/Applications/ULPF.app` on 127.0.0.1:52134, pids 39323 and 39329, and
+  the fix round did not touch it (read-only GETs only).
+  AND THEN IT HAPPENED AGAIN, SO TREAT THE NUMBERS ABOVE AS A SNAPSHOT, NOT A STATE. At 08:25:53 the
+  installed app restarted a second time onto a fresh empty data directory: new pids 45563/45569, new
+  port 127.0.0.1:56552, new store id da68516f... with genesis bdcbcd73... and records 0, `out.jsonl`
+  empty, `server.url` rewritten. Nothing in this session did it (between 08:21:55 and 08:25:53 this
+  session ran only git, cargo and `ulpf demo --check`), and the same thing happened at 08:10:45.
+  Twice in fifteen minutes, so expect it again: something on this machine is resetting
+  `~/Library/Application Support/dev.ulpf.desktop`, and it is not the app's own code and not the
+  other lane (which is sandboxed under `/tmp/laneR`). Practical consequence for whoever demos: read
+  the live port from `~/Library/Application Support/dev.ulpf.desktop/server.url` rather than from
+  this entry, and if the window is empty, `cp samples/*.log heldout/mikrotik.log` into the `watch`
+  directory that `/api/status` names -- the counters move immediately and the mikrotik proposal
+  lands in about half a second. The terminal demo (`ulpf demo`) does not depend on the app at all.
+  FIX ROUND, 08:16-08:26, PROGRESS.md only. The verifier's fifteen findings: thirteen pass (repo
+  state, the four binary shas, the app running as this build, /api/status, the unapproved mikrotik
+  proposal, isolation, check, demo --check, and every figure in this entry against the logs under
+  /tmp/final-b and against final-a's quoted numbers), two record errors, both corrected above --
+  the recoverability sentence, and the reviewers-see-now paragraph which was accurate as a
+  measurement and stale as a present tense. Nothing else in the tree changed. Re-run first-hand
+  here at 08:23 to make sure the correction did not rest on the verifier's word alone: `ulpf check
+  --pending pending` rc 0 "15 parsers, 2 mappings loaded; 0 problems", `ulpf demo --check` rc 0
+  "demo --check: no drift", and `ULPF_BIN=./target/release/ulpf scripts/isolation.sh run
+  samples/cisco_asa.log` ISOLATION PASS "(no network socket observed in any sample)".
 - 08:04 IST: lane FINAL5 merged as 06ab4fb -- five verified lanes (U, U2, A, PV, MT) integrated on
   branch `integration-final` at 6c56572 over main at 4804f30 and merged here in one `--no-ff`
   commit. Clean merge, no conflicts, no hand resolution; PROGRESS.md and docs/DECISIONS.md carry no
@@ -952,6 +998,20 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
+- 08:24 IST (fix round): nothing of this session's is in flight, but this machine is not idle --
+  another lane is working in the worktree `.claude/worktrees/wf_babea0b7-cc8-1` (born 08:14:23, at
+  this same commit 5b27f68): it bundled the app there (`bundle_dmg.sh`, pid 43664, seen running at
+  08:21 and finished by 08:24) and is now running that bundle's own ULPF.app (pids 44556/45101,
+  started 08:21:43) against a redirected HOME, `/tmp/laneR/home`, on port 7931. Left alone, and
+  named here for two reasons: so the line below is not read as "nothing at all is running", and
+  because it is the obvious suspect for the deleted data directory and it is not the culprit --
+  its worktree and its `/tmp/laneR` were both created after 08:14, three and a half minutes after
+  the 08:10:45 deletion, and it never writes outside `/tmp/laneR`. That question stays open.
+  `caffeinate` 6054 also still alive and untouched. Ports 7878 and 5514 are free for the demo (7931
+  is that lane's, not ours). And the remote moved: `origin/main` was 14d3b0c when the verifier
+  checked at 08:19:52 and is `5b27f68` at 08:23:15, so main through the final-half commit has been
+  pushed by someone outside this session (`git ls-remote origin main` agrees). This fix round's
+  records commit is not pushed.
 - 08:11 IST: nothing is in flight. Every lane dispatched this session has returned; no worker and
   no build is running. Main is frozen at the final-sequence commit (the entry at the top of Verified
   state), and the second half of the final sequence -- rebuild, bundle, install, gate, isolation,
@@ -1021,10 +1081,18 @@ The app is running from `/Applications/ULPF.app` for the mentors: it is this tre
 engine inside it hashes to `target/dist/ulpf`), it serves on its own free localhost port named in
 `~/Library/Application Support/dev.ulpf.desktop/server.url`, and its store, output, parsers and
 pending directory are the owner's own -- leave them alone. If it is ever gone, relaunch with
-`open /Applications/ULPF.app`.
+`open /Applications/ULPF.app`. Its port changes on every restart, so take it from
+`~/Library/Application Support/dev.ulpf.desktop/server.url`, not from any number written here; that
+directory was reset from underneath the app twice this morning (08:10:45 and 08:25:53) by something
+outside this session, so if the window is empty, copy `samples/*.log` and `heldout/mikrotik.log`
+into the `watch` directory `/api/status` names and it fills in seconds.
 The terminal demo is `./target/release/ulpf demo --check` and then `./target/release/ulpf demo`
 (ports 7878 and 5514; the app never uses them). `--auto` plays it without waiting for a key.
-Main is frozen at the commit this entry was written in, `git status --short` empty, nothing pushed.
+Main is frozen at the records commit this entry was written in and `git status --short` is empty.
+Pushing has changed since the entry above was first written: main through `5b27f68` IS on origin
+now (someone outside this session pushed it; a fetch at 08:23:15 moved the ref up from 14d3b0c,
+and `git ls-remote origin main` confirms it). The records commit sitting on top of it is not
+pushed, and this session pushed nothing at any point.
 Branches pushed and never merged before the demo: `lane-5-xml`, `lane-6-index`, `lane-3b-cef-leef`,
 `lane-8-windows`; 7B stays stopped at 05:19 and 7C carries its items on the right base. Lane
 worktrees, where any remain, are under `.claude/worktrees/`; `git worktree list` names them.
