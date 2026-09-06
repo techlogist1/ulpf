@@ -277,7 +277,7 @@ async function keyStep(page, k, label, pred, useOs) {
     row.after = r.v.hash
     v = r.v
   }
-  if (!ok && useOs) {
+  if (!ok && useOs && !row.focus_trap) {
     // The diagnosis: the same key straight into the renderer. If this passes and the OS path
     // did not, the loss is in focus or WebView2's accelerator handling, not in the UI.
     await page.evaluate(() => { window.__keys = [] }).catch(() => {})
