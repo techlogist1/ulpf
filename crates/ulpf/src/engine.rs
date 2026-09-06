@@ -1630,8 +1630,11 @@ pub fn stop_with_parent(live: Arc<Live>, parent: u32) {
         while !live.stopped() {
             // SAFETY: getppid takes nothing and cannot fail.
             if unsafe { libc::getppid() } as u32 != parent {
-                eprintln!("ulpf: the parent process (pid {parent}) is gone; stopping");
                 live.stop();
+                // After the stop, and never through eprintln!: the parent owned this
+                // process's stderr pipe, so a write now fails with EPIPE, and a panic here
+                // would be a watcher that died without stopping anything.
+                let _ = writeln!(std::io::stderr(), "ulpf: the parent process (pid {parent}) is gone; stopping");
                 return;
             }
             std::thread::sleep(Duration::from_millis(500));
