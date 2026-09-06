@@ -19,7 +19,10 @@ case "$triple" in *windows*) ext=".exe" ;; esac
 generated=""
 for p in "$root"/parsers/*.toml; do
   [ -f "$p" ] || continue
-  if grep -Eq '^[[:space:]]*origin' "$p" && grep -q 'inferred' "$p"; then
+  # One line carrying both, as sidecar.ps1 and the shell's `is_generated` (src/lib.rs) test
+  # it: two greps over the whole file refused a hand-written parser whose prose said
+  # "inferred".
+  if grep -Eq '^[[:space:]]*origin.*inferred' "$p"; then
     generated="$generated $p"
   fi
 done
