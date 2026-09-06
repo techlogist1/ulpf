@@ -215,18 +215,26 @@ again on the merged v4 tree.
 
 Quiet: `eval/run.sh eval/tools/ulpf.toml throughput` on the dist build, started
 2026-09-06 05:28 IST only after three consecutive twenty-second samples put the one-minute
-load under 4 (2.91 at the last), with 77% of one core's worth of everything-else on the
-machine while it ran, gave **310,849 / 295,928 / 290,478 events/s (median 295,928)** in
-16.1-17.2 s per run. That is 14% above the 258,411 the committed scorecard holds, and it
-is the same input, the same harness, the same thread count. 258,411 stays the figure to
-quote because it is the one with a committed scorecard behind it (D87) — the newer number
-is recorded here, not promoted, until a scorecard re-pins it. Read the headline as a floor.
+load under 4 (2.91 at the last) and everything else on the machine at 1.2-1.5 cores' worth
+of CPU (118%, 147%, 130% of one core across those three samples), gave
+**310,849 / 295,928 / 290,478 events/s (median 295,928)** in 16.1-17.2 s per run. That is
+14% above the 258,411 the committed scorecard holds, on the same input, the same harness
+and the same thread count. 258,411 stays the figure to quote because it is the one with a
+committed scorecard behind it (D87) — the newer number is recorded here, not promoted,
+until a scorecard re-pins it. Read the headline as a floor. Those three CPU samples are
+pre-run ones: that run has no valid during-run competition figure, because the sampler
+counted `ulpf`'s own threads as everything else (`ps -o comm` split on this repository's
+spaced path), and a broken instrument is quoted as nothing at all.
 
 Loaded: the identical command, run six times between 05:14 and 05:22 while five other
 build and test lanes shared the laptop, gave 153,247 / 282,646 / 166,196 / 192,197 /
-221,180 / 308,528 events/s — a 2x spread at one-minute loads of 12 to 21. `ulpf` alone
-takes the load past 18 while it runs (seven worker threads plus store and output I/O), so
-the load to gate on is the load *before* a run and the CPU everything else is using
+221,180 / 308,528 events/s — a 2x spread. Those six went as two sets of three, at
+before-run one-minute loads of **4.99** and **5.85** against the quiet set's 2.91, and the
+first set ran on a cold page cache as well: its first run took 32.6 s, the slowest of the
+six, where the later sets read the input once before gating. Load observed across the six
+spanned 4.99 to 21.58, but the top of that range is mostly `ulpf` itself — it alone takes
+the load past 18 while it runs (seven worker threads plus store and output I/O), which is
+why the load to gate on is the load *before* a run and the CPU everything else is using
 *during* it; `docs/evaluation.md`'s 04:00 procedure says the same thing in one line. A
 throughput figure without its machine state is not a figure.
 
