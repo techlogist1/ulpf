@@ -68,10 +68,13 @@ jobs:
           cache-dependency-path: app/pnpm-lock.yaml
 
       - name: engine (the sidecar)
+        # The dist profile is what ships (fat LTO, one codegen unit): the installers carry
+        # the same binary the throughput numbers were measured on, not the fast-to-build
+        # release profile. sidecar.sh takes target/dist/ first for the same reason.
         # Windows: link the C runtime statically. rusqlite's bundled SQLite otherwise leaves
         # ulpf.exe importing VCRUNTIME140.dll, which a machine without the Visual C++
         # redistributable does not have; the engine then cannot start there at all.
-        run: cargo build --release -p ulpf
+        run: cargo build --profile dist -p ulpf
         env:
           RUSTFLAGS: ${{ matrix.os == 'windows-latest' && '-C target-feature=+crt-static' || '' }}
 
@@ -130,17 +133,18 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: sudo apt-get update && sudo apt-get install -y musl-tools
 
+      # The dist profile is what ships, here as it is in the bundle job.
       - name: build
-        run: cargo build --release -p ulpf --target ${{ matrix.target }}
+        run: cargo build --profile dist -p ulpf --target ${{ matrix.target }}
 
-      # The release profile keeps debug info (57 MB on musl); a download does not need it,
+      # The dist profile keeps debug info (57 MB on musl); a download does not need it,
       # and the Dockerfile strips for the same reason. MSVC keeps its symbols in a .pdb.
       - name: name it for the release
         shell: bash
         run: |
           mkdir -p dist
           out=dist/ulpf-${{ github.ref_name }}-${{ matrix.target }}${{ matrix.ext }}
-          cp target/${{ matrix.target }}/release/ulpf${{ matrix.ext }} "$out"
+          cp target/${{ matrix.target }}/dist/ulpf${{ matrix.ext }} "$out"
           case "${{ matrix.target }}" in
             *linux-musl)   strip "$out" ;;
             *apple-darwin) strip -x "$out" ;;
@@ -200,6 +204,8 @@ jobs:
         with:
           key: smoke-windows
 
+      # Deliberately --release, not --profile dist: this job proves the Windows code paths
+      # work and nothing it builds ships. Fat LTO would cost minutes for no assertion.
       - name: build
         run: cargo build --release -p ulpf
 

@@ -1,8 +1,11 @@
 # The PowerShell twin of sidecar.sh, for a Windows machine without Git Bash: copies the
-# engine built by `cargo build --release -p ulpf` at the repo root to the name Tauri's
-# externalBin expects, binaries\ulpf-<host triple>.exe.
+# engine to the name Tauri's externalBin expects, binaries\ulpf-<host triple>.exe. Same two
+# rules as the shell version: the shipped profile (`cargo build --profile dist -p ulpf`)
+# with target\release\ as a warned fallback, and CARGO_TARGET_DIR honoured because that is
+# where cargo put the build.
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path "$PSScriptRoot\..\..").Path
+$target = if ($env:CARGO_TARGET_DIR) { $env:CARGO_TARGET_DIR } else { Join-Path $root "target" }
 $triple = (rustc -vV | Select-String '^host: ').ToString().Substring(6).Trim()
 
 # A generated parser inside the bundle is a broken demo: the app would arrive already
@@ -14,9 +17,16 @@ if ($generated) {
   throw "sidecar.ps1: the bundle would carry a generated parser (listed above); remove it with: ulpf demo --reset"
 }
 
-$src = Join-Path $root "target\release\ulpf.exe"
+$src = Join-Path $target "dist\ulpf.exe"
+$profileName = "dist"
+if (-not (Test-Path $src)) {
+  $src = Join-Path $target "release\ulpf.exe"
+  $profileName = "release"
+  Write-Warning "sidecar.ps1: no $target\dist\ulpf.exe; taking the release profile instead (build the shipped one with: cargo build --profile dist -p ulpf)"
+}
+if (-not (Test-Path $src)) { throw "sidecar.ps1: $src missing; run: cargo build --profile dist -p ulpf" }
+
 $dst = Join-Path $root "app\src-tauri\binaries\ulpf-$triple.exe"
-if (-not (Test-Path $src)) { throw "sidecar.ps1: $src missing; run: cargo build --release -p ulpf" }
 New-Item -ItemType Directory -Force -Path (Split-Path $dst) | Out-Null
 Copy-Item $src $dst -Force
-Write-Output "sidecar: $dst"
+Write-Output "sidecar: $dst (profile $profileName)"
