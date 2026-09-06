@@ -65,6 +65,10 @@
   const pickedIds = $derived(Object.entries(picked).filter(([, v]) => v).map(([k]) => Number(k)))
   const keptIds = $derived(Object.entries(keep).filter(([, v]) => v).map(([k]) => Number(k)))
   const canApprove = $derived(busy === '' && problems.length === 0 && !!detail)
+  // Directories named in confirmation strings come from the running server, not a literal:
+  // the demo uses demo/parsers and demo/pending, the desktop app its data directory's.
+  const pdir = $derived(live.status?.parsers_dir ?? 'parsers')
+  const pendir = $derived(live.status?.pending_dir ?? 'pending')
   // The name the definition will activate under, read from the text being edited.
   const parserName = $derived((definition.match(/^\s*name\s*=\s*"([^"]+)"/m) ?? [])[1] ?? detail?.name ?? id)
 
@@ -99,7 +103,7 @@
         proof: [
           ['written to', d.path],
           ['parsers loaded', fmt.n(d.parsers_loaded)],
-          ...(d.replaced_version != null ? [['replaced version', `v${d.replaced_version}, kept in pending/approved/`]] : []),
+          ...(d.replaced_version != null ? [['replaced version', `v${d.replaced_version}, kept in ${pendir}/approved/`]] : []),
           ['re-detected now', `${fmt.n(d.now_detected?.detected)} of ${fmt.n(d.now_detected?.tested)} buffered lines take the fast path with the new registry`],
         ],
         problems: d.problems ?? [],
@@ -204,7 +208,7 @@
       <section class="stack">
         <div class="head">
           <h2>Definition</h2>
-          <span class="note">{detail.updates ? `overwrites parsers/${detail.updates}.toml on approval` : 'written to the parsers directory on approval'}</span>
+          <span class="note">{detail.updates ? `overwrites ${pdir}/${detail.updates}.toml on approval` : 'written to the parsers directory on approval'}</span>
         </div>
         {#if result?.done}
           <div class="notice {result.kind} arrive" tabindex="-1" {@attach reveal}>
@@ -218,18 +222,18 @@
           <textarea class="editor" bind:value={definition} spellcheck="false" aria-label="Parser definition"></textarea>
           {#if asking === 'approve'}
             <Confirm title="Approve {parserName} as an active parser?" verb="Approve" onconfirm={approve} oncancel={() => (asking = null)}
-                     hint={detail.updates ? 'The replaced file is kept in pending/approved/ and the registry reloads in place. Every event from now on is parsed by the new version.' : 'Generated parsers carry priority -1, so a hand-written parser for the same format still wins. The registry reloads in place; nothing already emitted changes.'}>
+                     hint={detail.updates ? `The replaced file is kept in ${pendir}/approved/ and the registry reloads in place. Every event from now on is parsed by the new version.` : 'Generated parsers carry priority -1, so a hand-written parser for the same format still wins. The registry reloads in place; nothing already emitted changes.'}>
               {#if detail.updates}
-                <span>overwrites <code>parsers/{detail.updates}.toml</code>, version {detail.current_version} to {detail.version}</span>
+                <span>overwrites <code>{pdir}/{detail.updates}.toml</code>, version {detail.current_version} to {detail.version}</span>
               {:else}
-                <span>writes <code>parsers/{parserName}.toml</code> and reloads the registry</span>
+                <span>writes <code>{pdir}/{parserName}.toml</code> and reloads the registry</span>
               {/if}
               <span>re-detects the {fmt.n(ev.lines_seen)} buffered lines from <code>{detail.source}</code> with the new registry and reports how many now take the fast path</span>
             </Confirm>
           {:else if asking === 'reject'}
             <Confirm title="Reject this proposal?" verb="Reject" danger onconfirm={reject} oncancel={() => (asking = null)}
                      hint="Nothing is parsed differently. The engine remembers the template fingerprint and skips an identical later proposal for this source.">
-              <span>moves the three files to <code>pending/rejected/</code></span>
+              <span>moves the three files to <code>{pendir}/rejected/</code></span>
             </Confirm>
           {:else}
             <div class="actions">

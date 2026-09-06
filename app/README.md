@@ -47,6 +47,22 @@ engine keeps ingesting; Quit is what stops the engine. The title reads `ULPF · 
 events · M pending · Balanced · 4 of 8 cores · index on` once a second (the intensity part is
 the next section), or `engine down (exit N)` if the engine stopped.
 
+## The UI's file links
+
+Integrity's **Export attestation** and Live's export **Download** are plain anchors in the
+web UI (`target="_blank"`, one with `download`), and a webview saves neither — on macOS a
+click on either reaches no webview hook at all, so in the app both buttons used to do
+nothing at all. The shell injects one capturing click handler into every page it loads
+(`INTERCEPT` in `src/lib.rs`): a click on a link the page means as a file becomes a
+navigation to `ulpf-save:<url>`, the navigation handler cancels it, and `src/download.rs`
+fetches the URL over loopback and writes it into the user's downloads folder under the name
+the server asked for in `Content-Disposition` — `attestation.json`,
+`out-first-last.jsonl`, `out-first-last.csv` — then says `Saved <name> (<n> bytes) to
+~/Downloads`. The export streams chunked, so the reader de-chunks it; the file is
+byte-identical to the same request through curl. `ui/` is not touched, so the app and the
+browser show the same page, and File > Open in browser (Cmd/Ctrl+Shift+B) is still there for
+anyone who wants the browser's own download.
+
 ## Intensity: how hard the engine works
 
 `File > Intensity` is one setting with three choices. Each label carries this machine's own
@@ -83,15 +99,24 @@ one place the setting lives.
 ## When it does not start
 
 The window never shows a blank page or an endless spinner: every failure lands on the splash
-page as a sentence, the way out, and the file to read.
+page as a sentence, the way out, and the file to read — and a button that starts the engine
+again, because every failure the shell can show is one a fresh start might survive.
 
 | What happened | What the window says |
 |---|---|
 | The engine binary is not beside the app | `ULPF could not start its engine: <error>.` / `The engine ships beside the app as ulpf.exe; reinstalling ULPF replaces it.` (`ulpf` on macOS) |
 | The port is taken | `ULPF could not take port 7913 on 127.0.0.1: <error>.` / `Quit whatever is listening there, or start ULPF with ULPF_APP_PORT unset and it will pick a free port.` |
-| The engine started and died | `The engine stopped (exit 2). Its last words: <the engine's own last line>` / `The whole of its output is in <data>/engine.log` |
-| The store is held by another writer | `The engine's store at <path> is held by ulpf (pid N). Stop it and start again?` / `The whole of its output is in <data>/engine.log`, and one button, **Stop it and start again** |
+| The engine started and died | `The engine stopped (exit 2). Its last words: <the engine's own last line>` / `The whole of its output is in <data>/engine.log`, and **Start again** |
+| The store is held by another writer | `The engine's store at <path> is held by ulpf (pid N). Stop it and start again?` / `The whole of its output is in <data>/engine.log`, and **Stop it and start again** |
 | The engine never answered | `The engine did not answer within two minutes.` |
+
+Every row carries the button; the two labels are the whole difference — **Stop it and start
+again** when a pid was found holding the store, **Start again** everywhere else. Both go
+through the ordinary start path, and both stop whatever child is still around first, so the
+"never answered" row cannot leave a live engine behind for the next one to be refused by. A
+holder that exited on its own between the refusal and the click is a notice, not a refusal:
+the start goes ahead and its own outcome is the answer. The drop hint (`Drop log files or
+folders anywhere in this window…`) is hidden whenever the engine is down.
 
 The title carries the same state (`ULPF · engine down (port in use)`). ULPF picks a free
 port for itself; `ULPF_APP_PORT` pins one, which is how the port case above is provoked.
@@ -99,7 +124,7 @@ Captures, taken from the built app on macOS: `docs/screens/app-error-sidecar.png
 `docs/screens/app-error-port.png`, `docs/screens/app-error-engine.png`,
 `docs/screens/app-error-locked.png`.
 
-The locked-store row is the only clickable thing on the splash page: the engine allows one
+The locked-store row is the one that names a process: the engine allows one
 writer (the store's catalogue is opened in SQLite's exclusive locking mode), so a second
 `ulpf serve` on the same directory is refused and the app would otherwise show that refusal
 as the generic "the engine stopped". The holder is found by its command line (`ps` on macOS,
@@ -135,8 +160,12 @@ the app (D93).
   holds for its whole life, so the kernel terminates the engine when the app's handles close
   — End task on the window, a crash, `Stop-Process -Force`, anything. Windows has no
   process group, so without it a force kill left `ulpf.exe` running with the store's SQLite
-  lock and the next launch was refused (D92). macOS needs nothing: the sidecar is a direct
-  child and dies with its parent. `app-smoke-windows` asserts it: no `ulpf.exe` within five
+  lock and the next launch was refused (D92). macOS has no equivalent: Unix does not kill a
+  child when its parent is SIGKILLed, so a force quit of the app there leaves `ulpf serve`
+  running with the store's lock (measured), and it is the next launch that deals with it —
+  the engine refuses the held store, and the splash page names the pid and offers to stop it
+  and start again. The clean-quit path kills the child on both platforms.
+  `app-smoke-windows` asserts the job object: no `ulpf.exe` within five
   seconds of the window being force-killed, or the job fails. Five seconds is the ceiling,
   not the measurement — the job polls every 500 ms, breaks on the first empty poll and
   prints the elapsed milliseconds, which has been 500 in every run so far.
@@ -184,7 +213,7 @@ external reference.
 
 **The sidecar is found where it is installed.** Verified by unpacking the CI artifact of run
 33990295166 (`7z x ULPF_0.1.0_x64-setup.exe`): the NSIS payload is `ulpf-app.exe`
-(11,983,360 B), `ulpf.exe` (9,519,104 B) and the 12 `parsers/*.toml` + 2 `mappings/*.toml`
+(11,983,360 B), `ulpf.exe` (9,519,104 B) and the 15 `parsers/*.toml` + 2 `mappings/*.toml`
 resources: 21,706,879 B of payload inside a 5,446,983 B installer; the MSI carries the same
 files (`Bin_ulpf.exe`, in a 7,897,088 B installer). So `sidecar("ulpf")` — which resolves to
 `ulpf.exe` beside the running executable — finds it in the installed directory, with no dev

@@ -389,3 +389,72 @@ fn a_million_postings_answer_a_page_in_bounded_time() {
     assert!(elapsed.as_secs_f64() < 1.0, "a 200-event page took {elapsed:?}");
     assert!(page.related["dst_ip"].len() == 10);
 }
+
+/// D81's cursor is (device time, raw id), and the posting list is ordered by raw id: a
+/// device whose clock runs behind the others arrives late and sorts early, so paging is
+/// only exhaustive if a page is chosen by time over every posting row it reads, not over
+/// a fixed candidate window of the newest arrivals. Here arrival order is time order
+/// reversed, which no window narrower than the entity can survive.
+#[test]
+fn paging_visits_every_event_when_device_time_disagrees_with_arrival_order() {
+    let dir = temp("paging-order");
+    let output = dir.join("out.jsonl");
+    std::fs::write(&output, b"{}\n").unwrap();
+    let n = 200u64;
+    let mut writer = PivotWriter::start(&output, 8).unwrap();
+    for chunk in (0..n).collect::<Vec<_>>().chunks(8) {
+        let postings: Vec<Posting> = chunk
+            .iter()
+            .map(|&id| Posting {
+                raw_id: id,
+                time_ms: 1_700_000_000_000 + (n - id) as i64 * 1_000,
+                kind: EntityKind::DstPort,
+                value: b"443",
+                device: b"edge",
+                parser: Some("cisco_asa"),
+                offset: 0,
+                len: 2,
+            })
+            .collect();
+        writer.push_batch(&postings);
+    }
+    writer.finish();
+
+    let index = PivotIndex::open(&output).unwrap();
+    for order in [Order::Desc, Order::Asc] {
+        let limit = 5usize;
+        let mut seen: Vec<u64> = Vec::new();
+        let mut cursor: Option<(i64, u64)> = None;
+        for page_no in 0.. {
+            assert!(page_no < 100, "{order:?}: paging did not reach the last page in 100 pages");
+            let (before, before_id) = match order {
+                Order::Desc => (cursor.map(|c| c.0), cursor.map(|c| c.1)),
+                Order::Asc => (None, None),
+            };
+            let (after, after_id) = match order {
+                Order::Desc => (None, None),
+                Order::Asc => (cursor.map(|c| c.0), cursor.map(|c| c.1)),
+            };
+            let page = index
+                .query(&PivotQuery { kind: EntityKind::DstPort, value: b"443", limit, before, before_id, after, after_id, order })
+                .unwrap();
+            assert_eq!(page.total, n, "{order:?}: total is exact");
+            assert!(page.events.len() <= limit, "{order:?}: a page holds at most limit events, got {}", page.events.len());
+            let times: Vec<i64> = page.events.iter().map(|e| e.time).collect();
+            match order {
+                Order::Desc => assert!(times.windows(2).all(|w| w[0] >= w[1]), "{order:?}: {times:?}"),
+                Order::Asc => assert!(times.windows(2).all(|w| w[0] <= w[1]), "{order:?}: {times:?}"),
+            }
+            seen.extend(page.events.iter().map(|e| e.raw_id));
+            match (page.next_before, page.next_before_id) {
+                (Some(t), Some(id)) => cursor = Some((t, id)),
+                _ => break,
+            }
+        }
+        let mut unique = seen.clone();
+        unique.sort_unstable();
+        unique.dedup();
+        assert_eq!(unique.len(), seen.len(), "{order:?}: paging repeated an event: {} rows, {} distinct", seen.len(), unique.len());
+        assert_eq!(seen.len() as u64, n, "{order:?}: paging must visit every one of the {n} events, saw {}", seen.len());
+    }
+}

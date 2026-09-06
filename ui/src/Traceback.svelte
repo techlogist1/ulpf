@@ -57,6 +57,9 @@
     }
   }
   $effect(() => { input = id; load(id) })
+  // No record chosen: the digits are screen shortcuts everywhere else, so the box takes
+  // focus here and a typed id goes into it instead of navigating to Flow.
+  $effect(() => { if (!id) box?.focus() })
   $effect(() => {
     const measure = () => { if (wrapEl) width = wrapEl.clientWidth }
     measure()
@@ -231,7 +234,7 @@
 {:else if !data && !id}
   <div class="empty">
     <b>No record chosen.</b>
-    <span>Enter a raw id above, press Enter on a row in Live, or follow an event from Pivot or Replay.</span>
+    <span>Type a raw id in the box above (it has the keys; <kbd class="key">/</kbd> puts them back there), press Enter on a row in Live, or follow an event from Pivot or Replay.</span>
     <span class="sm">What you get: the exact stored bytes with every parsed field's range lit, the digest re-checked now, and the record's place in the hash chain.</span>
   </div>
 {:else if data}

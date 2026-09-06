@@ -228,7 +228,7 @@
             <span class="note">newest first, {fmt.n(rows.length)} of {fmt.n(data.total)} loaded, click or Enter traces the event</span>
             {#if noLine}<span class="note">{hasLines ? `${fmt.n(noLine)} rows have left the tail; open one for the stored record` : 'the index carries no emitted line; open a row for the record'}</span>{/if}
           </div>
-          <div style="--cols:11em 10em 9em{hasLines ? ' 8em 6em minmax(0,1fr)' : ' minmax(0,1fr)'} 5em">
+          <div style="--cols:12em 10em 9em{hasLines ? ' 8em 6em minmax(0,1fr)' : ' minmax(0,1fr)'} 5em">
             <VList items={rows} max={Math.max(396, innerHeight - 520)} {sel}>
               {#snippet header()}<div class="vh"><span>time</span><span>device</span><span>parser</span>{#if hasLines}<span>class</span><span>action</span><span>what</span>{:else}<span></span>{/if}<span class="num">raw</span></div>{/snippet}
               {#snippet row(ev, i)}

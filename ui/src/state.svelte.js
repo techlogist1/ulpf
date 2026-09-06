@@ -20,7 +20,8 @@ export function flagsOf(l) {
   return f
 }
 
-// A tail row is flattened the moment it arrives: nine strings, never the nested event.
+// A tail row is flattened the moment it arrives: ten fields (eight strings, the flag
+// list and the raw id), never the nested event.
 // Keeping the whole normalized object in reactive state would proxy every nested field of
 // every row on every frame, which is what locks a browser at full rate. `text` is the whole
 // line once, lowercased, so the filter is a substring test per term and not a walk per field.
@@ -54,7 +55,8 @@ export const live = $state({
   tail: [],
   paused: false,
   held: 0, // events buffered while paused
-  skipped: 0, // events the server's ring evicted before we read them
+  evicted: 0, // events the server's ring dropped before we read them: gone
+  cut: 0, // events a frame did not carry because of its limit: still in the ring
   dropped: 0, // frames superseded before a paint
   latest: null,
   pending: { generation: 0, count: 0 },
@@ -109,7 +111,8 @@ export function connect() {
     live.latest = h.latest_raw_id
     live.pending = { generation: h.pending_generation, count: h.pending_count ?? live.pending.count }
     live.tail = (h.tail?.events ?? []).slice(-TAIL_MAX).reverse().map(row)
-    live.skipped = h.tail?.skipped ?? 0
+    live.cut = h.tail?.cut ?? 0
+    live.evicted = Math.max(0, (h.tail?.skipped ?? 0) - live.cut)
     // hello may carry no count on an older server; take it from the list once.
     if (h.pending_count == null) {
       fetch('/api/pending').then((r) => r.json()).then((l) => { if (Array.isArray(l)) live.pending.count = l.length }).catch(() => {})
@@ -121,7 +124,9 @@ export function connect() {
     if (m.integrity) live.integrity = m.integrity
   })
   on('tail', (t) => {
-    live.skipped += t.skipped ?? 0
+    // `skipped` is the total; `cut` is the part the frame's limit left in the ring.
+    live.cut += t.cut ?? 0
+    live.evicted += Math.max(0, (t.skipped ?? 0) - (t.cut ?? 0))
     if (t.latest_raw_id != null) live.latest = t.latest_raw_id
     // Held: the rows on screen stay where the reader left them; new events are counted,
     // not stacked, so releasing shows the present rather than a backlog.

@@ -111,11 +111,15 @@ main > .screen { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(
 
 .foot { position: fixed; bottom: 0; left: 0; right: 0; height: var(--foot); z-index: 5; display: flex; align-items: center; background: var(--bg-1); border-top: 1px solid var(--line); font: var(--t-1)/1 var(--mono); color: var(--fg-2); padding: 0 var(--gutter); gap: var(--s6); white-space: nowrap; overflow: hidden; }
 .foot b { font-weight: 400; color: var(--fg-1); }
+/* The cut note is the one footer item that may not fit: it ellipsises (its title carries the sentence) instead of
+   overflowing the hidden edge, and below 1100px the gaps tighten to make room for it. */
+.foot .cutnote { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .foot .push { margin-left: auto; }
 .foot .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--line-3); margin-right: var(--s2); vertical-align: 1px; }
 .foot .live .dot { background: var(--ok); }
 .foot .reconnecting .dot, .foot .connecting .dot { background: var(--warn); }
 .foot .is-warn, .foot .is-warn b { color: var(--warn); }
+@media (max-width: 1100px) { .foot { gap: var(--s3); } }
 
 /* ---- section furniture ---- */
 .head { display: flex; align-items: baseline; gap: var(--s4); padding-bottom: var(--s2); border-bottom: 1px solid var(--line); margin-bottom: var(--s3); }
@@ -212,7 +216,7 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .tbl tr.sel td { background: var(--sel); }
 .tbl tr.sel td:first-child { box-shadow: inset 2px 0 0 var(--fg); padding-left: var(--s3); }
 .tbl td.ell { max-width: 60ch; overflow: hidden; text-overflow: ellipsis; }
-.tbl td.tight { max-width: 16ch; overflow: hidden; text-overflow: ellipsis; }
+.tbl td.tight { max-width: 32ch; overflow: hidden; text-overflow: ellipsis; }
 .tbl td.wrap { white-space: normal; overflow-wrap: anywhere; }
 .tbl .fill { width: 100%; }
 .scroll { max-height: 60vh; overflow: auto; }
@@ -365,7 +369,7 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .diff .add { background: var(--ok-bg); color: var(--ok); }
 .diff .del { background: var(--bad-bg); color: var(--bad); }
 .diff .hunk { color: var(--fg-2); background: var(--bg-2); }
-.confirm { border: 1px solid var(--fg); padding: var(--s4) var(--s5); display: grid; gap: var(--s3); background: var(--bg-1); }
+.confirm { border: 1px solid var(--fg); padding: var(--s4) var(--s5); display: grid; gap: var(--s3); background: var(--bg-1); scroll-margin: calc(var(--top) + var(--s5)) 0 calc(var(--foot) + var(--s5)); }
 .confirm.danger { border-color: var(--bad); }
 .confirm.danger > b { color: var(--bad); }
 .confirm:focus-visible { outline-offset: 2px; }
@@ -422,6 +426,9 @@ details summary { cursor: pointer; color: var(--fg-2); font-size: var(--t0); }
 .flow .under { display: grid; gap: var(--s1); align-content: start; min-width: 0; font-size: var(--t-1); }
 .flow .under .lab { display: flex; justify-content: space-between; gap: var(--s3); color: var(--fg-2); font-size: var(--t-1); white-space: nowrap; overflow: hidden; }
 .flow .under .n { font-family: var(--mono); font-size: var(--t-1); color: var(--fg-1); overflow-wrap: anywhere; }
+/* the queue and chain notes sit in adjacent columns: one line each, or the two wrap into
+   a row that reads as one false sentence ("high-water 0 of" + "0 records") */
+.flow .queue .n, .flow .chain .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; overflow-wrap: normal; }
 .flow .queue { min-width: 0; padding-right: var(--s3); }
 .flow .queue .track { height: 8px; background: var(--line); position: relative; }
 .flow .queue .track i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--fg-1); transition: width var(--d2) var(--ease); }
