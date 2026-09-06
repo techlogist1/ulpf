@@ -170,7 +170,9 @@ fn delimiter_byte(d: &[u8]) -> Result<u8, ParseFailure> {
         // A single byte is the delimiter itself, even where it is `x` or `0`.
         [one] => return Ok(*one),
         [b'0', b'x' | b'X', rest @ ..] | [b'x' | b'X', rest @ ..] => rest,
-        [first, ..] => return Ok(*first),
+        // Anything longer without a hex prefix (`09`, a multi-byte character) is outside the
+        // documented forms; taking its first byte would split the attributes on a digit.
+        _ => return Err(ParseFailure::InvalidLeef),
     };
     // The digits must be hex digits: `from_str_radix` alone would read `0x+5` as byte 0x05.
     if !matches!(hex.len(), 1 | 2) || !hex.iter().all(u8::is_ascii_hexdigit) {

@@ -177,8 +177,9 @@ kind = "leef"
         assert_field(&out, "dst", b"10.0.0.2");
         assert_field(&out, "sev", b"9");
     }
-    // A prefix whose digits are not hex digits is a counted failure, not a silent split on tab.
-    for header in ["0xZZ", "0x+5", "x 5"] {
+    // A prefix whose digits are not hex digits, or a multi-character field with no prefix,
+    // is a counted failure, not a silent split on tab or on its first byte.
+    for header in ["0xZZ", "0x+5", "x 5", "09", "\u{b7}"] {
         let line = format!("LEEF:2.0|V|P|1.0|evt|{header}|src=10.0.0.1^dst=10.0.0.2");
         let mut out = Parsed::default();
         assert_eq!(run(&p, line.as_bytes(), &mut out), Err(ParseFailure::InvalidLeef), "{header}");
