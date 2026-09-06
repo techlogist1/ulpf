@@ -155,6 +155,129 @@ stored and recomputed digest, the chain link, and the same bytes through today's
 
 ---
 
+## v5 (2026-09-06 10:00 IST → 2026-09-07, autonomous, on the Mac): the Windows tester's report
+
+### Phase 1: reproduce and diagnose before touching code (written 2026-09-07 01:05 IST)
+
+**Where this ran.** The brief assumed the ROG G615; this session is on the MacBook Pro M1 (8 cores,
+16 GB, macOS 26.3). No Windows host or session is reachable (ssh config, Tailscale and the agent
+list were checked at 10:02 IST). Everything below is measured on this machine with my own hands;
+Windows-only behaviour is diagnosed from source and gets a CI job on `windows-latest` that drives
+the installed app over its WebView2 debugging port (Phase 1b, below). Nothing in this phase touched
+code: two env-gated diagnostic init scripts (an on-screen key log and a frame monitor) were added to
+a debug build of the shell, used, and reverted; the patch is in the session scratchpad.
+
+**The instruments.** `cargo test --workspace` on the tree at 45c7e94: exit 0 (a full log is
+re-run before the first fix commit). Frame budget in headless Chrome 152 (Chromium is WebView2's
+engine) against a release `ulpf serve` on a scratch data directory whose path contains a space,
+`-j 4 --pivot on`, one sample copied into the watch directory every 3 s; requestAnimationFrame
+gaps, long tasks, DOM nodes, JS heap and SSE events by type per screen. The same monitor as an
+init script inside the real WKWebView shell (debug build of `ulpf-app`). Process CPU and RSS from
+`ps` every 10 s. Engine counters from `/api/metrics`. Key routing checked three ways: CDP into
+Chrome, the shell's own on-screen key log, and a bare 40-line WKWebView probe app with NSEvent
+monitors.
+
+**Symptom 1 — "number-key shortcuts, keyboard input generally": cleared on macOS, and the cause of the
+false reproduction is named.**
+- First reproduction (10:20 IST, installed release app, isolated data directory): after `?` opens the
+  key overlay, Escape does nothing and every other key is swallowed; Escape does not blur the Review
+  textarea; Escape does not leave Integrity. The shell's key log showed `keyup:Escape` with no
+  `keydown:Escape` while Shift+Escape, Tab, arrows, Return, F1 and every digit delivered both.
+- Bisect: a debug build launched with no menu and no tray at all still lost the Escape keydown, so
+  the menu (`menu.rs`) and its accelerators are cleared. wry's `WryWebViewParent.keyDown:` only
+  forwards to the main menu, tao's `sendEvent:` override only re-routes Cmd key-ups: neither can
+  drop a plain Escape (read in `wry-0.55.1/src/wkwebview`, `tao-0.35.3/src/platform_impl/macos`).
+- A bare WKWebView probe (`wk.swift`: NSWindow + WKWebView, `NSEvent.addLocalMonitorForEvents` and
+  page listeners posting to stdout) showed the same thing: an Escape posted at the HID tap level
+  never arrives as an NSEvent at all, while digits and Shift+Escape do.
+- `CGGetEventTapList` (`taps.swift`) named the consumer: pid 5439 `claude --resume`, this session's
+  own computer-use tool, holds an ACTIVE filtering event tap on keyDown only (mask 0x400). Wispr
+  Flow holds another active tap on every key event. A keyDown-only filter that eats Escape explains
+  "keyup arrives, keydown never does" exactly.
+- Proof: `CGEvent.postToPid` (bypasses every tap) delivered `keydown:Escape` + `keyup:Escape` to the
+  probe, and to the installed shell: its log read `keydown:8 keyup:8 keydown:Escape` with the
+  overlay closing and `9` routing to Integrity. The same UI through Chrome over CDP passes the
+  27-check keyboard map (`keys.mjs`). Digits 0-7, `t`, `/`, `a`, Enter route in the shell.
+- Verdict: on macOS the shell delivers every key; the "dead keyboard" I saw was the harness's own
+  tap. Cleared. Host-independent and still real: `App.svelte`'s `if (helpOpen) return` makes any
+  environment that loses one Escape look like a dead keyboard, because the overlay then swallows
+  every other key. That trap is the first Phase 2 fix, and the Windows key path (WebView2 focus
+  after `navigate`, `AcceleratorKeyPressed`, `SetAreBrowserAcceleratorKeysEnabled(false)`) is what
+  the CI job measures with OS-level key injection, since it cannot be measured here.
+
+**Symptom 2 — "lags badly": the frame budget holds on this machine; the two costs that grow with a
+session are named.**
+- Chromium, Flow, 60 s, a sample every 3 s: 60.0 fps, gap p50/p95/p99/worst 16.7/16.8/16.8/16.8 ms,
+  0 long tasks, 656 DOM nodes, heap 3.4 MB, SSE hello 1 / metrics 122 / tail 20, 1.35 MB received.
+- Chromium, Live, 60 s: 60.0 fps, worst 16.8 ms, 0 long tasks, 3,489 nodes, heap 4.6 MB, 2.5 MB.
+- Chromium, Live with 340 sources: 59.9 fps, worst 66.7 ms, one 50 ms long task, 12,135 DOM nodes,
+  heap 7-23 MB, 11.2 MB received in 60 s (the metrics frame is 89 KB, twice a second).
+- Chromium, Flow with 360 sources, 40 s: 60 fps, worst 16.8 ms.
+- The WKWebView shell itself (debug build, frame monitor, Low Power Mode off, 10:43 IST): Flow 98 s,
+  60.0 fps, p50 17.0, p95 18.0, p99 18.0, worst 27 ms, 0 frames over 50 ms, 141 nodes, a sample
+  every 3 s. After the machine woke on battery with Low Power Mode on (`pmset -g` lowpowermode 1):
+  Live 1,123 nodes at an exact 33 ms cadence (30.0 fps, p95 35, zero long tasks) and the 22-node
+  splash page at the same cadence, which is WebKit's low-power requestAnimationFrame throttle, not
+  render cost.
+- Engine: `ulpf infer` on 1,000 HPC lines 0.80 s real, 19.8 MB RSS; the 4 MB single-line event
+  paints its first ruler row 53 ms after navigation in Chromium and inside 1.5 s in the shell.
+- Named for Phase 2 (the only measured costs that grow with the session): the Sources and Parsers
+  tables on Live are plain `{#each}` blocks (12,135 nodes at 340 sources), and the metrics frame
+  serialises every source twice a second (89 KB per frame at 340 sources, 11 MB a minute). The
+  tail is already coalesced per animation frame and virtualised (D69-D71).
+- Cleared: inference cost; tail volume (200 rows per 250 ms tick, coalesced); Flow motion (60 fps
+  with the six pulses running; under a 30 fps throttle the Web Animations run on the compositor);
+  the raw view of a multi-MB line.
+
+**Symptom 3 — "crashes": none reproduced in 20 minutes; memory flat.**
+- Soak on the installed release app with an isolated HOME (`soak.sh`, 10:25-10:45 IST): one file
+  into the watch directory every 4 s (samples, nginx, edgerouter; 298 drops), the app and its engine
+  sampled every 10 s: app RSS 88 → 86 MB (peak 100 MB), CPU ≤ 4.2%; engine RSS 12 → 42 MB with 301
+  sources, CPU ≤ 17.6% at inference peaks; emitted 14,474 = framed; no_parser 8,784 (the unseen
+  formats), 35 inference runs, 35 proposals written, backpressure 0, queue never full; nothing in
+  engine.log but the serving line; no panic, no exit.
+- Every event both engines saw in that time reached the tail; "frames skipped 297" on the footer is
+  the per-animation-frame coalescing counter over 1 h 48 min, not lost events (events skipped 0).
+
+**Review screen: proven end to end on macOS.** Double-click a slot name in the pending TOML, type
+`in_if`, Save → "Saved", `pending/mikrotik.toml` on disk carries the edit; `a` opens the
+confirmation, Enter approves; `parsers/mikrotik_inferred.toml` carries `in_if`, `origin =
+"inferred"`, `priority = -1`; the engine hot-reloads (16 parsers, 250/250 re-detected); the next
+drop of `mikrotik.log` is detected by `mikrotik_inferred` and 18 emitted lines carry `in_if`.
+Edit-then-save has no error state beyond "Saved"/the API's message; the Windows rename retry is a
+Phase 2 item.
+
+**Reset: does what its label says, twice, and the app is usable at once.** File > Reset… shows the
+data directory and the one-sentence definition of each button before anything runs. "Reset events,
+keep approved parsers": engine pid 55806 → 65815, store recreated (12.9 MB → 56 KB), `out.jsonl`
+0 B, `watch/` 302 → 0 files, `pending/` 104 → 0 proposals, `parsers/` 16 kept including the
+inferred one, mappings kept; the empty Flow was on screen within 8 s; a sample dropped 20 s later
+was ingested (30 events). "Reset to first launch": engine 65815 → 65957, the directory recreated
+with the 15 bundled parsers (no inferred one) and 2 mappings, toast "Reset to first launch: 15
+parsers", empty Flow on screen within 3 s. Both timed from the click to the screenshot.
+
+**Process lifecycle on macOS.** Close (red button) hides the window; the engine keeps ingesting (44
+events arrived while closed); tray → Show ULPF brings it back. `kill -9` of the shell leaves the
+engine running and serving (open item 7 reproduced; macOS has no job object); the relaunch shows
+the holder page naming the pid, "Stop it and start again" stops it, starts a fresh engine and the
+same store resumes (44 records, same chain head 2815b998…). Quit from the app menu stops the engine
+(verified on the debug shell: 500 ms after Quit, no `ulpf serve` for that data directory).
+Drag-and-drop from a Finder list window onto the Flow screen: "Added 1 file to the watch folder:
+cisco_asa.log", 30 events. Pivot on 203.0.113.9: 910 events across 99 devices, one lane each.
+
+**Cleared and named, one line each.**
+- Menu/tray/accelerators eating keys on macOS: cleared (bisect). Harness event tap: named as the
+  false-reproduction cause. Overlay key trap in App.svelte: named (Phase 2).
+- Inference cost, tail volume, Flow motion, raw view of a 4 MB line, engine memory, app memory:
+  cleared by measurement.
+- Live's Sources/Parsers tables and the per-frame metrics serialisation: named (Phase 2 frame
+  budget), the only costs that grew.
+- macOS force-quit orphan: named (real, item 7).
+- Windows-only candidates (WebView2 focus after navigate and its accelerator handler,
+  `holder::find` through PowerShell, `fs::rename` over an open file, the job object under a real
+  End task, the click interceptor on WebView2): not measurable on this machine; the CI job in
+  Phase 1b runs each against the installed app on `windows-latest`.
+
 ## v4 (2026-09-06, 02:50-09:30 IST, autonomous): the demo morning
 
 ### Cold start (read this first; written 09:40 IST at the close of the session)
