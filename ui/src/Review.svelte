@@ -77,7 +77,7 @@
     const r = await api('PUT', url(), { definition })
     busy = ''
     if (r.ok) { problems = r.data.problems ?? []; result = { kind: problems.length ? 'bad' : 'ok', title: problems.length ? `Saved, ${problems.length} problem${problems.length === 1 ? '' : 's'} remain` : 'Saved' } }
-    else result = { kind: 'bad', title: `Save failed: ${r.data.path ?? `${pendir}/${id}.toml`}`, body: `${r.data.error} (${r.data.reason})` }
+    else result = { kind: 'bad', title: r.data.path ? `Save failed: ${r.data.path}` : 'Save failed', body: `${r.data.error} (${r.data.reason})` }
   }
   async function regenerate(merge = []) {
     busy = 'regen'
