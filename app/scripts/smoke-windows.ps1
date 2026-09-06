@@ -194,6 +194,20 @@ if ($url) {
     Start-Sleep -Milliseconds 500
   }
 
+  # Empty the watch directory and let the count settle before the resume test. A fresh
+  # `serve` scans its watch directories at startup with no memory of what an earlier run
+  # ingested, so a file still in watch/ is ingested again on the relaunch and the count
+  # climbs across the kill for a reason that is not a resume failure. With watch/ empty and
+  # the count stable, after == before is a clean resume and nothing else.
+  Get-ChildItem (Join-Path $data 'watch') -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+  $stable = -1; $same = 0
+  for ($i = 0; $i -lt 40; $i++) {
+    Start-Sleep -Milliseconds 500
+    $n = -1; try { $n = (Invoke-RestMethod -Uri "$url/api/integrity" -TimeoutSec 5).records } catch { $n = -1 }
+    if ($n -ge 0 -and $n -eq $stable) { $same++; if ($same -ge 3) { break } } else { $same = 0; $stable = $n }
+  }
+  Write-Host "watch/ emptied; record count stable at $stable"
+
   # Read before the kill so the relaunch below can prove the store resumed rather than
   # started over.
   $recordsBefore = -1
