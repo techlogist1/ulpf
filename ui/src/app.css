@@ -365,7 +365,7 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .diff .add { background: var(--ok-bg); color: var(--ok); }
 .diff .del { background: var(--bad-bg); color: var(--bad); }
 .diff .hunk { color: var(--fg-2); background: var(--bg-2); }
-.confirm { border: 1px solid var(--fg); padding: var(--s4) var(--s5); display: grid; gap: var(--s3); background: var(--bg-1); scroll-margin: var(--s5) 0 calc(var(--foot) + var(--s5)); }
+.confirm { border: 1px solid var(--fg); padding: var(--s4) var(--s5); display: grid; gap: var(--s3); background: var(--bg-1); scroll-margin: calc(var(--top) + var(--s5)) 0 calc(var(--foot) + var(--s5)); }
 .confirm.danger { border-color: var(--bad); }
 .confirm.danger > b { color: var(--bad); }
 .confirm:focus-visible { outline-offset: 2px; }
