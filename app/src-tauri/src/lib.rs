@@ -133,8 +133,9 @@ fn configured_data_dir(app: &AppHandle) -> PathBuf {
 /// The app-owned layout: watch/, pending/, parsers/ and mappings/ seeded from the bundled
 /// `parsers/*.toml` and `mappings/*.toml` when they hold no definition yet. The engine
 /// creates store/ itself. Resources live in `Contents/Resources` on macOS and beside the
-/// executable on Windows; `resource_dir` knows which.
-fn prepare(app: &AppHandle, data: &Path) -> std::io::Result<()> {
+/// executable on Windows; `resource_dir` knows which. A generated parser is never seeded:
+/// see `is_generated`.
+fn prepare(app: &AppHandle, data: &Path, notes: &mut Vec<String>) -> std::io::Result<()> {
     for d in ["watch", "pending", "parsers", "mappings"] {
         fs::create_dir_all(data.join(d))?;
     }
@@ -144,10 +145,20 @@ fn prepare(app: &AppHandle, data: &Path) -> std::io::Result<()> {
         if fs::read_dir(&dst)?.flatten().any(|e| is_toml(&e.path())) {
             continue;
         }
+        let mut skipped = Vec::new();
         for entry in fs::read_dir(resources.join(d))?.flatten() {
-            if is_toml(&entry.path()) {
-                fs::copy(entry.path(), dst.join(entry.file_name()))?;
+            let src = entry.path();
+            if !is_toml(&src) {
+                continue;
             }
+            if is_generated(&src) {
+                skipped.push(entry.file_name().to_string_lossy().into_owned());
+                continue;
+            }
+            fs::copy(&src, dst.join(entry.file_name()))?;
+        }
+        if !skipped.is_empty() {
+            notes.push(format!("shell: {} generated definition(s) not copied into {}: {}", skipped.len(), dst.display(), skipped.join(", ")));
         }
     }
     Ok(())
@@ -155,6 +166,15 @@ fn prepare(app: &AppHandle, data: &Path) -> std::io::Result<()> {
 
 fn is_toml(p: &Path) -> bool {
     p.extension().is_some_and(|x| x == "toml")
+}
+
+/// A parser the inference engine wrote, `origin = "inferred"` and priority -1. It is never
+/// copied into the data directory: a bundle built after someone approved a proposal would
+/// otherwise arrive already knowing the unseen format, and the app could raise no proposal
+/// of its own. The same test the engine uses in `ulpf demo --reset` (crates/ulpf/src/demo.rs),
+/// on the text and not the parsed TOML so a file this shell cannot parse is still caught.
+fn is_generated(p: &Path) -> bool {
+    fs::read_to_string(p).is_ok_and(|t| t.lines().any(|l| l.trim_start().starts_with("origin") && l.contains("inferred")))
 }
 
 // ---- engine lifecycle -----------------------------------------------------------------
@@ -176,7 +196,7 @@ pub(crate) fn start(app: &AppHandle, data: PathBuf, verb: &'static str) {
 
     // Lines the shell wants in engine.log; written once the file exists, below.
     let mut notes: Vec<String> = Vec::new();
-    if let Err(e) = prepare(app, &data) {
+    if let Err(e) = prepare(app, &data, &mut notes) {
         return fail(app, generation, "start failed", &format!("Cannot prepare {}: {e}", data.display()));
     }
     // Bind port 0, read the kernel's pick, release it, hand it to the engine. The engine
@@ -458,6 +478,41 @@ pub(crate) fn http_get(base: &str, path: &str) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs;
+
+    /// The predicate that keeps a generated parser out of the bundle's first-run copy, on
+    /// the three shapes that matter: the engine's own output, a hand-written parser with a
+    /// slot called `origin`, and a hand-written one whose prose says "inferred".
+    #[test]
+    fn only_the_engines_own_parsers_read_as_generated() {
+        let dir = std::env::temp_dir().join(format!("ulpf-app-generated-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let write = |name: &str, text: &str| {
+            let p = dir.join(name);
+            fs::write(&p, text).unwrap();
+            p
+        };
+        let generated = write("mikrotik_inferred.toml", "[parser]\nname = \"mikrotik_inferred\"\norigin = \"inferred\"\npriority = -1\n");
+        let named_origin = write("cisco_ios.toml", "[parser]\nname = \"cisco_ios\"\npatterns = [\n  '{origin:word}: {message:rest}',\n]\n");
+        let says_inferred = write("prose.toml", "[parser]\nname = \"prose\"\ndescription = \"the fields are not inferred, they are documented\"\n");
+        assert!(super::is_generated(&generated));
+        assert!(!super::is_generated(&named_origin));
+        assert!(!super::is_generated(&says_inferred));
+        assert!(!super::is_generated(&dir.join("no-such-file.toml")));
+        let _ = fs::remove_dir_all(&dir);
+
+        // And no false positive on what the repo actually ships, read where it lives.
+        let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../parsers");
+        let mut seen = 0;
+        for e in fs::read_dir(&repo).expect("the repo's parsers/").flatten() {
+            if super::is_toml(&e.path()) {
+                seen += 1;
+                assert!(!super::is_generated(&e.path()), "{} reads as generated", e.path().display());
+            }
+        }
+        assert!(seen >= 12, "only {seen} parsers found in {}", repo.display());
+    }
+
     #[test]
     fn percent_encoding_keeps_unreserved_and_escapes_the_rest() {
         assert_eq!(super::percent_encode("Starting the engine"), "Starting%20the%20engine");
