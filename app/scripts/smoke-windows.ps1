@@ -49,6 +49,10 @@ if ($LASTEXITCODE -ne 0) { Fail "the installed engine's demo --check exited $LAS
 Get-Process -Name 'ulpf-app', 'ulpf' -ErrorAction SilentlyContinue | Stop-Process -Force
 Remove-Item $urlFile -ErrorAction SilentlyContinue
 
+# WebView2 reads its extra command line from this variable, so the window the job launches
+# exposes CDP on 9222 and app/scripts/drive.mjs can measure what the tester actually hit.
+$env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
+
 $proc = Start-Process -FilePath $app -PassThru
 for ($i = 0; $i -lt 120; $i++) {
   if (Test-Path $urlFile) { $url = (Get-Content $urlFile -Raw).Trim() }
@@ -73,6 +77,84 @@ if ($url) {
   if (-not $child) { Fail 'the engine process ulpf.exe is not running' }
   Write-Host "window pid $($window.Id), engine pid $($child.Id)"
 
+  # ---- the diagnostic: what the Windows tester reported, measured ------------------------
+  # Lag, dead keys, an uneditable review screen and a reset that does nothing were all
+  # reported from Windows and are all fine on macOS. This is the only Windows machine we
+  # have, so the driver measures them here rather than the report being taken on trust.
+  $diag = if ($env:RUNNER_TEMP) { Join-Path $env:RUNNER_TEMP 'ulpf-diagnostic' } else { Join-Path (Get-Location).Path 'diagnostic' }
+  New-Item -ItemType Directory -Force -Path $diag | Out-Null
+  $procsCsv = Join-Path $diag 'procs.csv'
+
+  # Memory and CPU of the three processes every 10 s, for the whole driver run: "it lags"
+  # and "it crashes" are answered by a growing working set as much as by frame gaps.
+  $sampler = Start-Job -ArgumentList $procsCsv -ScriptBlock {
+    param($csv)
+    'time,name,pid,workingsetMB,cpu_s' | Out-File -FilePath $csv -Encoding utf8
+    while ($true) {
+      foreach ($p in Get-Process -Name 'ulpf-app', 'ulpf', 'msedgewebview2' -ErrorAction SilentlyContinue) {
+        $cpu = 0
+        try { $cpu = [math]::Round($p.CPU, 2) } catch { $cpu = '' }
+        ('{0},{1},{2},{3},{4}' -f (Get-Date -Format o), $p.ProcessName, $p.Id, [math]::Round($p.WorkingSet64 / 1MB, 1), $cpu) |
+          Out-File -FilePath $csv -Append -Encoding utf8
+      }
+      Start-Sleep -Seconds 10
+    }
+  }
+
+  $driverExit = 0
+  if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
+    Write-Host '::error::node is not on this runner, so the Windows diagnostic driver could not run (actions/setup-node@v4 is what puts it there)'
+    $driverExit = 1
+  } else {
+    $drive = Join-Path $PSScriptRoot 'drive.mjs'
+    Write-Host "driving the running app: $drive"
+    # 20 s a screen: the frame percentiles are already stable there, and the OS key runs pay
+    # a PowerShell launch each, so this is what keeps the driver inside its own deadline.
+    & node $drive --cdp 'http://127.0.0.1:9222' --url-file $urlFile --data $data --repo $Repo --out $diag --secs 20 --pid $proc.Id
+    $driverExit = $LASTEXITCODE
+  }
+
+  Stop-Job $sampler -ErrorAction SilentlyContinue
+  Receive-Job $sampler -ErrorAction SilentlyContinue | Out-Null
+  Remove-Job $sampler -Force -ErrorAction SilentlyContinue
+  $summary = Join-Path $diag 'summary.txt'
+  if (Test-Path $summary) { Write-Host '--- driver summary ---'; Get-Content $summary | Write-Host }
+  if (Test-Path $procsCsv) { Write-Host "--- procs.csv, $((Get-Content $procsCsv).Count - 1) samples ---"; Get-Content $procsCsv -Tail 12 | Write-Host }
+  Write-Host "driver exit $driverExit"
+
+  # Here, not in the workflow's collect step: every engine start truncates engine.log
+  # (src-tauri/src/reset.rs) and the relaunch below is one more start. This is the engine the
+  # driver's last reset brought up; the log of the run it measured is engine.log.measured-run,
+  # which the driver copied before it reset anything.
+  Copy-Item (Join-Path $data 'engine.log') (Join-Path $diag 'engine.log.after-reset') -ErrorAction SilentlyContinue
+
+  # The driver's last act is "reset to first launch", which empties the store, so drop one
+  # sample in first: comparing 0 with 0 across the kill would prove nothing.
+  # A missing server.url here means the last reset never came back up: say that, rather than
+  # keeping the pre-driver URL and blaming the store forty lines further down.
+  if (-not (Test-Path $urlFile)) {
+    Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+    Fail "server.url is gone after the driver run: the app did not come back from its last reset"
+  }
+  $url = (Get-Content $urlFile -Raw).Trim()
+  if (-not $url) {
+    Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+    Fail 'server.url is empty after the driver run'
+  }
+  $sample = Join-Path $Repo 'samples\cisco_asa.log'
+  New-Item -ItemType Directory -Force -Path (Join-Path $data 'watch') | Out-Null
+  if (Test-Path $sample) { Copy-Item $sample (Join-Path $data 'watch') -ErrorAction SilentlyContinue }
+  for ($i = 0; $i -lt 40; $i++) {
+    try { if ((Invoke-RestMethod -Uri "$url/api/integrity" -TimeoutSec 2).records -gt 0) { break } } catch { }
+    Start-Sleep -Milliseconds 500
+  }
+
+  # Read before the kill so the relaunch below can prove the store resumed rather than
+  # started over.
+  $recordsBefore = -1
+  try { $recordsBefore = (Invoke-RestMethod -Uri "$url/api/integrity" -TimeoutSec 5).records } catch { $recordsBefore = -1 }
+  Write-Host "records before the kill: $recordsBefore"
+
   # A hard kill of the window process is NOT the tray's Quit (that runs the shell's exit
   # handler, which kills the child). It is the shape a tester hit: End task on the window
   # left the engine running and the store locked. The job object with
@@ -95,6 +177,57 @@ if ($url) {
   # ceiling the assertion allows, not the measurement.
   $ms = ($i + 1) * 500
   Write-Host "no ulpf.exe left $ms ms after the window process was force-killed (ceiling 5 s): the job object reaped it"
+
+  # ---- relaunch: the app survives its own force kill --------------------------------------
+  # "It crashes" ends here: after the kill the app must come back to the served UI, not to a
+  # splash naming a held store, and the append-only store must resume where it was.
+  Remove-Item $urlFile -ErrorAction SilentlyContinue
+  $proc2 = Start-Process -FilePath $app -PassThru
+  $url2 = $null
+  for ($i = 0; $i -lt 120; $i++) {
+    if (Test-Path $urlFile) { $url2 = (Get-Content $urlFile -Raw).Trim() }
+    if ($url2 -or $proc2.HasExited) { break }
+    Start-Sleep -Milliseconds 500
+  }
+  if (-not $url2) { Fail "the relaunched app never wrote server.url (exited=$($proc2.HasExited))" }
+  $status2 = $null
+  for ($i = 0; $i -lt 40; $i++) {
+    try { $status2 = Invoke-RestMethod -Uri "$url2/api/status" -TimeoutSec 2 } catch { $status2 = $null }
+    if ($status2 -and $status2.version) { break }
+    Start-Sleep -Milliseconds 500
+  }
+  if (-not ($status2 -and $status2.version)) { Fail "$url2/api/status never answered after the relaunch" }
+  Write-Host "relaunched at $url2"
+
+  # The window must be on the served UI. A splash whose fragment starts with '!' is a
+  # failure page and '*' is the store-held-by-another-writer page (src/lib.rs): either one
+  # means the relaunch did not recover, however healthy /api/status looks.
+  $targets = @()
+  try { $targets = Invoke-RestMethod -Uri 'http://127.0.0.1:9222/json' -TimeoutSec 5 } catch { $targets = @() }
+  $pages = @($targets | Where-Object { $_.type -eq 'page' })
+  foreach ($t in $pages) { Write-Host "  target $($t.url)" }
+  $onEngine = @($pages | Where-Object { $_.url -like "$url2*" }).Count -gt 0
+  $onSplash = @($pages | Where-Object { $_.url -match 'tauri\.localhost' -and ($_.url -match '#!' -or $_.url -match '#\*') }).Count -gt 0
+  if ($pages.Count -eq 0) { Write-Host '::error::no CDP page target after the relaunch: WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS did not take' }
+  if ($onSplash -or -not $onEngine) { Fail "after the relaunch the window is not on the engine URL $url2 (holder or error splash)" }
+
+  $recordsAfter = -1
+  try { $recordsAfter = (Invoke-RestMethod -Uri "$url2/api/integrity" -TimeoutSec 5).records } catch { $recordsAfter = -1 }
+  Write-Host "records after the relaunch: $recordsAfter (before the kill: $recordsBefore)"
+  if ($recordsBefore -le 0) { Fail 'GET /api/integrity reported no records before the kill, so the store could not be compared' }
+  if ($recordsAfter -ne $recordsBefore) { Fail "the store did not resume: $recordsAfter records after the relaunch against $recordsBefore before the kill" }
+
+  Stop-Process -Id $proc2.Id -Force
+  $left2 = $null
+  for ($i = 0; $i -lt 10; $i++) {
+    Start-Sleep -Milliseconds 500
+    $left2 = Get-Process -Name 'ulpf' -ErrorAction SilentlyContinue
+    if (-not $left2) { break }
+  }
+  if ($left2) { $left2 | Stop-Process -Force; Fail 'ulpf.exe outlived the second force kill of the window' }
+  Write-Host 'the relaunched app came back to the served UI, resumed the store and left no engine behind'
+
+  if ($driverExit -ne 0) { Fail "the Windows diagnostic driver reported failing checks (exit $driverExit); the windows-diagnostic artifact has report.json, the screenshots and procs.csv" }
   Write-Host 'SMOKE PATH: app'
   exit 0
 }

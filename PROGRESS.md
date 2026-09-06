@@ -297,6 +297,23 @@ cisco_asa.log", 30 events. Pivot on 203.0.113.9: 910 events across 99 devices, o
       lane-3b-cef-leef (merged; deleted after the next push).
 - [x] Packaging scripts honour a relocated CARGO_TARGET_DIR: proven with a target directory whose path has a
       space, both the missing-binary and the dist-binary cases (sidecar.sh names the directory it looked in).
+- [x] The Windows measurement job (this commit: app/scripts/drive.mjs, oskeys.ps1, smoke-windows.ps1, app.yml).
+      After the NSIS install the smoke job drives the installed app over CDP on its WebView2 and through
+      OS-level SendKeys aimed at the window: the digit run before and after a real click (a keydown
+      recorder in the page separates "no keydown reached the document" from "typed into a box the previous
+      screen focused"), 20 s of frame gaps and long tasks on Flow and Live while samples drop in, a review
+      edit saved and approved with CRLF/LF counted on disk and the newest output lines checked for the
+      renamed slot, both resets from the keyboard (Ctrl+Shift+R first; if WebView2 keeps the chord, which
+      is its own hard reload, the File menu, and the report says which path worked), force-kill, relaunch
+      on the same store with the record count compared, working set of the three processes every 10 s.
+      report.json, the screenshots, procs.csv and the engine logs upload as `windows-diagnostic`; a
+      failing assertion fails the job, a finding is a `::warning::`. Local Chrome-mode run (no shell):
+      keys 11/11 over CDP, Flow 60.1 fps p99 gap 16.8 ms, Live 60.1 fps, review edit in_interface -> in_if
+      on disk (0 CRLF, 17 LF), approved as mikrotik_inferred at priority -1, 116 of the newest 250 output
+      lines carry in_if; the reset phase needs the shell and runs on CI only. Its first CI run is the
+      baseline measurement of the tester's report on the real platform, before the UI fixes land. The one
+      host-independent finding it made here: the Traceback screen focuses its raw-id box when opened with
+      no id, so the digit typed after `3` goes into the box instead of routing (fixed in the next commit).
 
 **In flight.** Two workflows: (1) the Windows measurement job (app/scripts/drive.mjs, oskeys.ps1,
 smoke-windows.ps1, app.yml: OS-level keys through WebView2, frame budget, review edit on disk, reset,

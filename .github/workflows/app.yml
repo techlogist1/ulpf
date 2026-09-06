@@ -23,6 +23,9 @@ jobs:
   app-smoke-windows:
     needs: bundle
     runs-on: windows-latest
+    # The driver has its own deadline; this is the backstop for an install or a webview that
+    # hangs before it, so a stuck run costs 25 minutes and not the default six hours.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -31,15 +34,59 @@ jobs:
           name: windows-x64-nsis
           path: installer
 
-      - name: install it, launch it, quit it
+      # app/scripts/drive.mjs drives the running app over CDP with puppeteer-core, which is
+      # a devDependency of ui/ (the same one ui/perf.mjs uses). Node and that one package
+      # are the whole reason this job needs a JS toolchain at all.
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ui/pnpm-lock.yaml
+
+      # No browser download: the driver attaches to the app's own WebView2, and headless
+      # Chrome is only the local mode nobody runs here.
+      - name: the driver's one dependency
+        run: pnpm install --frozen-lockfile
+        working-directory: ui
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: 1
+
+      - name: install it, launch it, drive it, quit it
         shell: pwsh
         run: |
           $setup = (Get-ChildItem installer -Recurse -Filter '*-setup.exe' | Select-Object -First 1).FullName
           if (-not $setup) { Write-Host '::error::no NSIS installer in the windows-x64-nsis artifact'; exit 1 }
           # -Repo is the checkout: `demo --check` reads samples/, heldout/, mappings/ and
-          # PROGRESS.md from it. The job installs the NSIS setup only (/S); the MSI is built
-          # and attached to the release, but nothing here installs it.
+          # PROGRESS.md from it, and the driver takes samples/ and heldout/mikrotik.log from
+          # it too. The job installs the NSIS setup only (/S); the MSI is built and attached
+          # to the release, but nothing here installs it.
           & .\app\scripts\smoke-windows.ps1 -Installer $setup -Repo $PWD.Path
+
+      # The engine's own log lives in the app data directory, whose path only the runner
+      # knows ($env:APPDATA is not in the `env` expression context), so it is copied rather
+      # than named as a second upload path. Under a different name: every engine start
+      # truncates that file, so the log of the run being diagnosed is the copy the smoke
+      # script took before the reset and the relaunch, and this one is only the last launch.
+      - name: collect the last engine log beside the diagnostic
+        if: always()
+        shell: pwsh
+        run: |
+          $diag = Join-Path $env:RUNNER_TEMP 'ulpf-diagnostic'
+          New-Item -ItemType Directory -Force -Path $diag | Out-Null
+          Copy-Item (Join-Path $env:APPDATA 'dev.ulpf.desktop\engine.log') (Join-Path $diag 'engine.log.last-launch') -ErrorAction SilentlyContinue
+
+      # Always: a failing driver is exactly when the screenshots, report.json and procs.csv
+      # are worth having.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: windows-diagnostic
+          path: ${{ runner.temp }}/ulpf-diagnostic
+          if-no-files-found: warn
 
   bundle:
     strategy:
