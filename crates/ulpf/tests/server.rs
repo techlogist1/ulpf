@@ -225,7 +225,13 @@ fn the_server_is_a_window_onto_a_live_engine() {
 
     // the same format again takes the fast path
     std::fs::copy(repo().join("heldout/mikrotik.log"), dir.join("watch/mikrotik2.log")).unwrap();
-    wait_until("second file processed", || json(&addr, "GET", "/api/metrics", None).1["engine"]["framed"] == 500);
+    // Wait on the value the assertion reads, not on `framed`: a batch is framed by the ingest
+    // thread before a worker detects it, so under load framed reached 500 while the second
+    // source still read fewer than 250 detected (the flake at the old server.rs:209).
+    wait_until("second file processed and detected", || {
+        let m = json(&addr, "GET", "/api/metrics", None).1;
+        m["engine"]["framed"] == 500 && m["sources"].as_array().is_some_and(|s| s.iter().any(|s| s["name"] == "mikrotik2.log" && s["detected"] == 250))
+    });
     let (_, metrics) = json(&addr, "GET", "/api/metrics", None);
     let second = metrics["sources"].as_array().unwrap().iter().find(|s| s["name"] == "mikrotik2.log").unwrap().clone();
     assert_eq!(second["detected"], 250, "{second}");
