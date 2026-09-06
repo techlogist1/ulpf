@@ -278,6 +278,40 @@ cisco_asa.log", 30 events. Pivot on 203.0.113.9: 910 events across 99 devices, o
   End task, the click interceptor on WebView2): not measurable on this machine; the CI job in
   Phase 1b runs each against the installed app on `windows-latest`.
 
+### Checkpoint 01:30 IST, 2026-09-07 (Phases 2 and 3 in flight)
+
+**Done and pushed (main at 2650169 + the two engine commits below).**
+- [x] Phase 1 record (b866554).
+- [x] Reset / stop-holder wait on the engine's pid through the kernel, never a PowerShell listing per poll
+      (753d0d3; app crate 13 tests, clippy clean). The Windows reset hypothesis this fixes: `holder::find`
+      spawns `Get-CimInstance` per 100 ms poll.
+- [x] `serve --exit-with-parent <pid>` and the shell passing its pid (fc8b3d0, 104f84d): kill -9 of the
+      shell, engine gone in 0.61 s, relaunch straight to Flow on the same store (2,576 records). Open item 7
+      closed on macOS; Windows keeps the job object.
+- [x] Lane 8 merged (0e2992f): suite 129/0, clippy, release, demo --check, windows-tests success on the
+      rebased branch and on main after the merge (run 34055897049). The Windows test job now runs on main.
+- [x] Lane 6 merged (9743049): suite 129/0, clippy, release; D76 in its slot.
+- [x] Lane 3b merged (2650169): suite 130/0, clippy, release; cef_severity, LEEF 0xHH delimiter.
+- [x] Remote branches whose every patch is in main deleted: lane-4-releases, lane-7-windows, lane-7b-app,
+      worktree-wf_b664b6d7-603-1. Left: lane-5-xml (rebasing, gate running), lane-6-index, lane-8-windows,
+      lane-3b-cef-leef (merged; deleted after the next push).
+- [x] Packaging scripts honour a relocated CARGO_TARGET_DIR: proven with a target directory whose path has a
+      space, both the missing-binary and the dist-binary cases (sidecar.sh names the directory it looked in).
+
+**In flight.** Two workflows: (1) the Windows measurement job (app/scripts/drive.mjs, oskeys.ps1,
+smoke-windows.ps1, app.yml: OS-level keys through WebView2, frame budget, review edit on disk, reset,
+force-kill, relaunch on the same store, process memory; built, under adversarial review); (2) Phase 2
+UI + review-save lanes (overlay never traps keys; metrics coalesced; budget state; Flow pauses motion on a
+missed budget; Live's Sources/Parsers tables virtualised; Windows rename retry; save failures name the
+path; built, reviewed, being fixed). Lane 5 (xml) rebased onto main with four doc conflicts resolved; its
+gate is running.
+
+**Next action.** Land the two workflows (read the diffs, run the suite here, commit one cause per commit,
+push, watch the Windows job's first measurements), merge lane 5 through the gate, then Phase 4 (D83
+directory include/exclude, tail_per_tick in /api/status, finding 19, the flaky timing assertions, the
+Windows throughput line from the dist build on CI), DECISIONS D102+, the 20-minute session on the final
+build, the isolation script, the aposd and adversarial passes, and the report.
+
 ## v4 (2026-09-06, 02:50-09:30 IST, autonomous): the demo morning
 
 ### Cold start (read this first; written 09:40 IST at the close of the session)
