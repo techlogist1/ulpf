@@ -278,7 +278,10 @@ fn a_reader_mapped_across_a_reopen_keeps_its_records_and_no_file_shrinks() {
     let cut = offset_of(&dir, 45);
     let seg_len = file_len(dir.join("raw.seg"));
     OpenOptions::new().write(true).open(dir.join("raw.seg")).unwrap().set_len(cut).unwrap();
-    assert_eq!(RawReader::open(&dir).unwrap().len(), 45, "a reader on the crashed store stops at the last record the segment holds");
+    let crashed = RawReader::open(&dir).unwrap();
+    assert_eq!(crashed.len(), 51, "a reader on the crashed store still counts the six entries the segment never received");
+    assert_eq!(crashed.verify().first_bad.map(|(id, _)| id), Some(RawId(45)), "and verify names the first of them");
+    drop(crashed);
     let idx_len = file_len(dir.join("raw.idx"));
     {
         let mut s = RawStore::open(&dir).unwrap();

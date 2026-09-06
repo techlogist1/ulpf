@@ -665,10 +665,11 @@ impl RawReader {
         let count = (idx.len() as u64 - IDX_HEADER_LEN) / IDX_ENTRY_LEN;
         let mut reader = RawReader { seg, idx, count, dir: dir.to_path_buf(), store_id, genesis: genesis_of(&store_id) };
         // The file length is not the logical end (D82): behind the last record the index
-        // may hold the zeros recovery left, or entries a crash wrote for records the
-        // segment never received. Only entries that are not a record are dropped; a record
-        // whose bytes or chain value are wrong stays, for `verify` to name.
-        while reader.count > 0 && reader.get(RawId(reader.count - 1)).is_none() {
+        // holds the zeros recovery left, which the writer reclaims as it appends. Only
+        // those are dropped (no record starts below the file magic); an entry whose
+        // record is missing, torn or rewritten stays inside `count` for `verify` to name,
+        // a crash tail no run has recovered yet included.
+        while reader.count > 0 && reader.offset(RawId(reader.count - 1)).is_some_and(|off| off < FILE_MAGIC.len() as u64) {
             reader.count -= 1;
         }
         Ok(reader)

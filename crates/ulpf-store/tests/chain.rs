@@ -143,6 +143,22 @@ fn a_bad_digest_in_the_last_record_survives_recovery_with_its_id() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// A segment that ends before the records the index names (a crash no run has recovered yet,
+/// or a file cut short by hand) is named by `verify`, not trimmed out of the count.
+#[test]
+fn a_segment_cut_short_is_named_not_trimmed() {
+    let dir = temp("cut");
+    fill(&dir, 50);
+    OpenOptions::new().write(true).open(dir.join("raw.seg")).unwrap().set_len(offset_of(&dir, 45)).unwrap();
+    let r = RawReader::open(&dir).unwrap();
+    assert_eq!(r.len(), 50, "the index still names 50 records");
+    let report = r.verify();
+    assert!(!report.ok());
+    assert_eq!(report.first_bad, Some((RawId(45), VerifyReason::Digest)));
+    assert_eq!(report.corrupt.len(), 5);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn one_flipped_byte_is_named_with_reason_digest() {
     let dir = temp("flip");
