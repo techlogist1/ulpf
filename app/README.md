@@ -154,9 +154,11 @@ writer (the store's catalogue is opened in SQLite's exclusive locking mode), so 
 as the generic "the engine stopped". The holder is found by its command line (`ps` on macOS,
 `Get-CimInstance Win32_Process` on Windows) because the lock is the process and the file
 that records the writer's pid is the locked one; the button stops that pid and starts the
-engine again through the ordinary start path. Provoke it by running a second
-`ulpf serve --store "~/Library/Application Support/dev.ulpf.desktop/store"` (Windows:
-`ulpf.exe serve --store "$env:APPDATA\dev.ulpf.desktop\store"`) before launching the app
+engine again through the ordinary start path. Provoke it by running a second engine on the
+app's own store before launching the app: `mkdir -p /tmp/ulpf-idle && ulpf serve /tmp/ulpf-idle
+--store "$HOME/Library/Application Support/dev.ulpf.desktop/store" --listen 127.0.0.1:0`
+(Windows: `ulpf.exe serve $env:TEMP --store "$env:APPDATA\dev.ulpf.desktop\store" --listen
+127.0.0.1:0`); `serve` needs a directory to watch, and the store flag alone is a usage error
 (D93).
 
 ## Platform differences (each one is also a comment where it matters)

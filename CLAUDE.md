@@ -124,9 +124,12 @@ Parsing (1→2) and normalization (2→3) are separate stages with a hard bounda
   v0.1 ships 12: cisco_asa, cisco_ios, fortinet_fortigate, openvpn, palo_alto_panos,
   pfsense_filterlog, check_point, juniper_srx, sonicwall, sophos_xg, squid_access,
   suricata_eve; v4 adds cef, leef and cloudtrail (generic containers and AWS CloudTrail
-  records, written from their specifications), 15 in all. Every one was written from the vendor's log reference, not from a
+  records, written from their specifications), 15 in all; v5 adds windows_event (the Windows
+  Event Log XML, an endpoint family the xml strategy exists for, D75), 16. Every one was written from the vendor's log reference, not from a
   worker's memory; a fixture that passes only proves the code is self-consistent.
-- `mappings/*.toml` — one per output schema (`ocsf.toml`). Same loading rules.
+- `mappings/*.toml` — one per output schema (`ocsf.toml`, `ecs.toml`) plus optional fragments
+  (`ocsf.windows.toml`): every file's `[schema] name` says which schema it merges into. Same
+  loading rules.
 - `samples/<parser>.log` — paired sample for each parser. Synthetic until real samples
   arrive (see `samples/README.md`).
 - `fixtures/<parser>.expected.jsonl` — expected parsed fields and normalized subset per

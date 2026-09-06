@@ -1397,7 +1397,7 @@ unescaping (its reader state and attribute iteration), 4 per parse on a 1 MB tex
 `xmlparser` 0.13.6 allocates 0 per parse in all three cases. `quick-xml` therefore fails
 the constraint before any strategy code is written; `xmlparser` passes and is the
 dependency (`cargo tree -p ulpf-parse` gains one leaf, no transitive crates). The alloc
-test now covers eleven families unchanged, `windows_event` among them, and
+test now covers thirteen families, the twelve unchanged and `windows_event`, and
 `xml_allocates_only_for_entity_bearing_values_after_warm_up` asserts 0 allocations per
 parse of a plain line and exactly 1 per parse of a line with one entity-bearing value.
 Non-UTF-8 input is a counted `invalid_xml` failure (the tokenizer needs `&str`; the check
@@ -2291,7 +2291,7 @@ measurements).
 process listing; the command-line search (`holder::find`) runs only when the holder is not this
 shell's own child. The shell starts the engine with `--exit-with-parent <shell pid>`: on unix the
 engine stops itself within half a second of `getppid()` no longer answering that pid; on Windows
-the job object already reaps it (D82).
+the job object already reaps it (D92).
 **Principle.** A process-lifecycle question is asked of the kernel, which answers in microseconds
 and exactly when the lock is released. `Get-CimInstance` through PowerShell costs seconds per call
 on a cold Windows machine and was asked ten times a second, which is the shape of "reset does
@@ -2303,7 +2303,8 @@ shell's choice).
 **Anchor.** `app/src-tauri/src/holder.rs` (`wait_exit`), `app/src-tauri/src/reset.rs`
 (`stop_and_wait`), `app/src-tauri/src/lib.rs` (`stop`, the sidecar arguments),
 `crates/ulpf/src/engine.rs` (`stop_with_parent`), `crates/ulpf/tests/exit_with_parent.rs` (the
-engine is gone 0.61 s after its parent).
+test waits for the engine to report serving, then asserts only that it goes within ten seconds
+and prints the elapsed time: under a second alone, up to 2.5 s under a loaded suite).
 
 ## D104. A review-screen save retries a transient Windows lock and every failure names the file it failed on
 **Decision.** `atomic_write` (write `<path>.tmp`, fsync, rename over `<path>`) retries both the

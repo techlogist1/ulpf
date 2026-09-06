@@ -119,8 +119,8 @@ labelled; the ninth key wraps and the label disambiguates.
 
 | token | px | use |
 |---|---|---|
-| `--t-1` | 11 | column heads, key caps, the status line, byte offsets |
-| `--t0` | 12 | table cells, list rows, notes, controls, the raw record |
+| `--t-1` | 11 | ordinary table heads (`.tbl thead th`), key caps, the status line, byte offsets |
+| `--t0` | 12 | table cells, list rows, virtual-list heads (`.vh`, one size with `.vr` so the em columns resolve alike), notes, controls, the raw record |
 | `--t1` | 13 | body text, section titles, the base size |
 | `--t2` | 15 | funnel numbers, the replay's why lines |
 | `--t3` | 20 | the entity being pivoted on |
