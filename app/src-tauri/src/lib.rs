@@ -460,21 +460,25 @@ fn down(app: &AppHandle, generation: u64, why: &str, message: &str, retry: Retry
 /// meets the holder again and says so.
 #[tauri::command]
 fn stop_holder(app: AppHandle) -> Result<(), String> {
-    let engine = app.state::<Engine>();
-    let holder = engine.holder.lock().unwrap().take();
-    let data = engine.data.lock().unwrap().clone();
-    if let Some(pid) = holder {
-        if let Err(e) = holder::kill(pid) {
-            toast(&app, &format!("pid {pid} did not stop ({e}); starting anyway"));
-        } else if !holder::wait_exit(pid, EXIT_WAIT) {
-            // The OS drops the SQLite lock when the process goes, but not before it has gone.
-            toast(&app, &format!("pid {pid} is still running {}s after the kill; starting anyway", EXIT_WAIT.as_secs()));
-        }
-    }
-    let app = app.clone();
-    // Stop first: on the "no answer within two minutes" path the child may still be alive,
-    // and a second engine on one store would only be refused by the first.
+    let (holder, data) = {
+        let engine = app.state::<Engine>();
+        let holder = engine.holder.lock().unwrap().take();
+        let data = engine.data.lock().unwrap().clone();
+        (holder, data)
+    };
+    // Everything after the click is off the thread that paints the window: the wait for the
+    // holder to go can take EXIT_WAIT, and `start` waits on the child's first answer.
     thread::spawn(move || {
+        if let Some(pid) = holder {
+            if let Err(e) = holder::kill(pid) {
+                toast(&app, &format!("pid {pid} did not stop ({e}); starting anyway"));
+            } else if !holder::wait_exit(pid, EXIT_WAIT) {
+                // The OS drops the SQLite lock when the process goes, but not before it has gone.
+                toast(&app, &format!("pid {pid} is still running {}s after the kill; starting anyway", EXIT_WAIT.as_secs()));
+            }
+        }
+        // Stop first: on the "no answer within two minutes" path the child may still be
+        // alive, and a second engine on one store would only be refused by the first.
         stop(&app);
         start(&app, data, "Starting");
     });
