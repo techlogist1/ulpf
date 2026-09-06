@@ -2283,6 +2283,26 @@ tooltip false).
 `ui/src/VList.svelte`, `ui/src/app.css` (`.vh`, `.vl`), `ui/uiperf.mjs` and `ui/budget.mjs` (the
 measurements).
 
+## D103. The shell waits on the engine through the kernel, and the engine exits with the shell
+**Decision.** A reset, the stop-holder button and every stop wait for the engine's *pid* to be gone
+(`kill -0` on unix, `WaitForSingleObject` on Windows, 50 ms polls up to `EXIT_WAIT`), never on a
+process listing; the command-line search (`holder::find`) runs only when the holder is not this
+shell's own child. The shell starts the engine with `--exit-with-parent <shell pid>`: on unix the
+engine stops itself within half a second of `getppid()` no longer answering that pid; on Windows
+the job object already reaps it (D82).
+**Principle.** A process-lifecycle question is asked of the kernel, which answers in microseconds
+and exactly when the lock is released. `Get-CimInstance` through PowerShell costs seconds per call
+on a cold Windows machine and was asked ten times a second, which is the shape of "reset does
+nothing". A force quit runs no handler in the shell, so the engine has to notice on its own.
+**Ruled out.** A pid file the engine writes (a stale file after a crash is the problem, not the
+answer). `tasklist` per poll (a process per poll again, and no command line). An unconditional
+parent check in `serve` (a `nohup ulpf serve &` from a closed terminal would die; the flag is the
+shell's choice).
+**Anchor.** `app/src-tauri/src/holder.rs` (`wait_exit`), `app/src-tauri/src/reset.rs`
+(`stop_and_wait`), `app/src-tauri/src/lib.rs` (`stop`, the sidecar arguments),
+`crates/ulpf/src/engine.rs` (`stop_with_parent`), `crates/ulpf/tests/exit_with_parent.rs` (the
+engine is gone 0.61 s after its parent).
+
 ## D104. A review-screen save retries a transient Windows lock and every failure names the file it failed on
 **Decision.** `atomic_write` (write `<path>.tmp`, fsync, rename over `<path>`) retries both the
 create and the rename on Windows — ten attempts, fifty milliseconds apart — when the error is

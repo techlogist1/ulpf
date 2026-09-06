@@ -329,6 +329,41 @@ directory include/exclude, tail_per_tick in /api/status, finding 19, the flaky t
 Windows throughput line from the dist build on CI), DECISIONS D102+, the 20-minute session on the final
 build, the isolation script, the aposd and adversarial passes, and the report.
 
+### Checkpoint 02:25 IST, 2026-09-07 (Phases 2, 3 and most of 4 landed; the first Windows measurement running)
+
+**Landed and green on this machine (worktree suite at c17251b: 143 passed, 0 failed, 2 ignored;
+clippy clean; app crate 13 passed).** One cause per commit, the measurement in each message:
+- 01be28c the Windows measurement job (above). Its first run, on this commit, is the baseline on the
+  real platform: bundle in progress at this checkpoint, `app-smoke-windows` not yet reached.
+- 22aa29f keys never modal + no autofocus on Traceback (D101): `ui/keys.mjs` 31/31 over CDP.
+- d9e1a8d the frame-budget rule (D102): Live at 341 sources 3,916 DOM nodes (was 12,135), worst gap
+  16.8 ms (was 66.7 with a 50 ms task), 60 fps; Flow under drops 60.1 fps; `ui/budget.mjs` 3/3.
+- 95d3683 review saves retry a Windows lock and name the file (D104): server test proves the 500 /
+  `path` contract on a read-only `pending/`; the `cfg(windows)` retry is compiled by CI only.
+- 7238426 replay test waits on the counters, c17251b the generation bump moves inside the lock.
+- a04f291 `ulpf verify` checks the index header by field (finding 19, D56 addendum): magic, version
+  and store id fail by name; an index behind its segment is the D82 recovery and passes; skipped
+  while a writer holds the store, so `verify` beside `serve` cannot flake.
+- 4831b82 directory include/exclude (D83): `run samples` 324 events with README.md named as
+  excluded, `run corpus` 88 files / 25 excluded (was 112 / 1, with 1,559 prose lines as events);
+  the Windows CLI smoke counts `*.log` lines only.
+- 404dac6 `tail_per_tick` in `/api/status` and the footer reads it (item 10); 035a4d9 the server
+  test waits on the value it asserts (item 9); e70ddbc the Windows throughput line from the
+  installed dist build with the thread count (item 2, the number arrives with the next CI run).
+- Also D103 written for 753d0d3/fc8b3d0 (kernel waits, exit-with-parent).
+
+**Open at this checkpoint.** (1) Reset from the keyboard on Windows: `CmdOrCtrl+Shift+R` is
+WebView2's own hard reload, and wry 0.55 subscribes to no `AcceleratorKeyPressed`, so whether the
+shell ever sees a menu accelerator while the webview has focus is unknown from the code (Tauri
+translates accelerators in its message hook, which only sees messages the host window gets). The
+driver's phase e reports which path opened the reset page; the fix waits for that evidence rather
+than a guess. (2) The `POST /api/integrity/verify` half of finding 19 (the UI still calls a
+header-rewritten store clean). (3) Open items 1 (the Windows click-through, now the driver's job),
+5 (rc3 draft: the owner's call), 8 (drag-drop by hand only), 11 and 12 (recorded, not actions).
+(4) The final gate: rebuild, isolation script with `lsof`, `demo --check`, the app on the final
+engine, the 20-minute session on the final installed build, the APOSD and adversarial passes (both
+started at this checkpoint over the whole v5 diff), CI green on both runners.
+
 ## v4 (2026-09-06, 02:50-09:30 IST, autonomous): the demo morning
 
 ### Cold start (read this first; written 09:40 IST at the close of the session)
