@@ -35,14 +35,16 @@ pub(crate) fn install(app: &AppHandle) -> tauri::Result<()> {
     let file = Submenu::with_id_and_items(
         app,
         "file",
-        "File",
+        // `&` marks the Windows mnemonic (Alt+F, then R): the measurement job's fallback
+        // path drives the reset through it. muda strips it on macOS.
+        "&File",
         true,
         &[
             &item("add_files", "Add files…", Some("CmdOrCtrl+O"))?,
             &item("add_folder", "Add folder…", Some("CmdOrCtrl+Shift+O"))?,
             &PredefinedMenuItem::separator(app)?,
             &item("open_output", "Open output folder", Some("CmdOrCtrl+Shift+E"))?,
-            &item("reset", "Reset…", Some("CmdOrCtrl+Shift+R"))?,
+            &item("reset", "&Reset…", Some("CmdOrCtrl+Shift+R"))?,
             &item("open_browser", "Open in browser", Some("CmdOrCtrl+Shift+B"))?,
             &PredefinedMenuItem::separator(app)?,
             &intensity_menu,
