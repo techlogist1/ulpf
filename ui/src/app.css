@@ -212,7 +212,7 @@ kbd.key { display: inline-block; min-width: 1.4em; text-align: center; font-size
 .tbl tr.sel td { background: var(--sel); }
 .tbl tr.sel td:first-child { box-shadow: inset 2px 0 0 var(--fg); padding-left: var(--s3); }
 .tbl td.ell { max-width: 60ch; overflow: hidden; text-overflow: ellipsis; }
-.tbl td.tight { max-width: 16ch; overflow: hidden; text-overflow: ellipsis; }
+.tbl td.tight { max-width: 32ch; overflow: hidden; text-overflow: ellipsis; }
 .tbl td.wrap { white-space: normal; overflow-wrap: anywhere; }
 .tbl .fill { width: 100%; }
 .scroll { max-height: 60vh; overflow: auto; }
