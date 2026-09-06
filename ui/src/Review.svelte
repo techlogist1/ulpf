@@ -11,6 +11,7 @@
   let detail = $state(null)
   let detailErr = $state(null)
   let definition = $state('')
+  let saved = $state('') // the text as the file holds it; an edit is definition !== saved
   let problems = $state([])
   let keep = $state({})
   let picked = $state({}) // templates selected for one merge group
@@ -31,7 +32,7 @@
     const r = await api('GET', `/api/pending/${encodeURIComponent(pid)}`)
     if (!r.ok) { detailErr = r.data; return }
     detail = r.data
-    definition = r.data.definition
+    definition = saved = r.data.definition
     problems = r.data.problems ?? []
     keep = Object.fromEntries((r.data.evidence?.templates ?? []).map((t) => [t.id, t.verified > 0]))
   }
@@ -76,15 +77,18 @@
     busy = 'save'
     const r = await api('PUT', url(), { definition })
     busy = ''
-    if (r.ok) { problems = r.data.problems ?? []; result = { kind: problems.length ? 'bad' : 'ok', title: problems.length ? `Saved, ${problems.length} problem${problems.length === 1 ? '' : 's'} remain` : 'Saved' } }
+    if (r.ok) { saved = definition; problems = r.data.problems ?? []; result = { kind: problems.length ? 'bad' : 'ok', title: problems.length ? `Saved, ${problems.length} problem${problems.length === 1 ? '' : 's'} remain` : 'Saved' } }
     else result = { kind: 'bad', title: r.data.path ? `Save failed: ${r.data.path}` : 'Save failed', body: `${r.data.error} (${r.data.reason})` }
   }
   async function regenerate(merge = []) {
+    // Regenerate replaces the text; an unsaved edit would go with it, so it asks for a save
+    // first rather than deciding. Same guard for the keys and the buttons.
+    if (definition !== saved) { result = { kind: 'bad', title: 'Save (s) or reload the edit first', body: 'Regenerate replaces the definition with a new one; the edit in the box would be lost.' }; return }
     busy = 'regen'
     const r = await api('POST', url('/regenerate'), { keep: keptIds, merge })
     busy = ''
     if (r.ok) {
-      definition = r.data.definition
+      definition = saved = r.data.definition
       problems = r.data.problems ?? []
       result = { kind: 'ok', title: merge.length ? `Merged ${merge[0].length} templates into one and re-emitted the definition` : `Re-emitted from ${keptIds.length} kept template${keptIds.length === 1 ? '' : 's'}` }
       picked = {}
