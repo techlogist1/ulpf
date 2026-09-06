@@ -116,6 +116,9 @@ pub fn run() {
                 api.prevent_close();
                 let _ = window.hide();
             }
+            // The window is in front again after an app switch: the webview needs the key
+            // focus back or the UI's keyboard map stays dead (`focus_webview`).
+            WindowEvent::Focused(true) => focus_webview(window.app_handle()),
             _ => {}
         })
         .build(tauri::generate_context!())
@@ -481,6 +484,20 @@ fn window(app: &AppHandle) -> tauri::Result<()> {
         })
         .build()?;
     Ok(())
+}
+
+/// Makes the webview the key view. A window's own `set_focus` brings the window forward
+/// without restoring the webview's first responder on macOS, so after an app switch the
+/// UI's whole keyboard map (0-7, j/k, a, v, Esc) was dead until a click inside the window.
+/// Called wherever the window comes to the front: the window's own Focused event, the dock
+/// icon (Reopen), and Show from the menu or the tray.
+pub(crate) fn focus_webview(app: &AppHandle) {
+    if let Some(w) = app.get_webview_window("main") {
+        // The window's webview: `Manager::get_webview` is behind Tauri's `unstable` feature,
+        // and a WebviewWindow is both halves already.
+        let webview: &tauri::Webview<_> = w.as_ref();
+        let _ = webview.set_focus();
+    }
 }
 
 pub(crate) fn set_title(app: &AppHandle, title: &str) {

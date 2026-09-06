@@ -164,6 +164,7 @@ pub(crate) fn show(app: &AppHandle) {
         let _ = w.unminimize();
         let _ = w.set_focus();
     }
+    crate::focus_webview(app);
 }
 
 fn to_paths(picked: Vec<FilePath>) -> Vec<PathBuf> {
