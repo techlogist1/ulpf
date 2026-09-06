@@ -335,7 +335,7 @@ look at the captures and a grep of `ui/dist` for external references.
       (https://github.com/techlogist1/ulpf/actions/runs/33995222954), the draft holds eight
       assets and is not published; README rewritten as a front door with one headline (258,411
       events/s, harness median, `-j 7`, output written) and every other figure labelled;
-      `scripts/coverage.sh` and `docs/coverage.md` (12 samples, 17 real, 29 generated corpus
+      `scripts/coverage.sh` and `docs/coverage.md` (15 samples, 17 real, 29 generated corpus
       files, every number from `--report-json`). The Opus verifier's seven findings (numbers one
       format short of the merged tree, the format table, coverage rows, an unlabelled index-on
       figure) closed in the fix round on the merged tree (CI green at 33997822506 and
