@@ -262,7 +262,8 @@ async function keyStep(page, k, label, pred, useOs) {
   // A text box that holds focus owns every key by the UI's own contract (ui/src/keys.js
   // typing()), so a key typed into one is the mild form of "the number keys do nothing". No
   // screen takes focus on its own (D101); if one does, it is named here rather than hidden,
-  // Esc is the way out, and the key is sent once more to say whether the routing itself is alive.
+  // Esc is the way out, and the key is sent once more to say whether the routing itself is
+  // alive. The verdict stays the first result: a repair is a diagnosis, not a pass.
   if (!ok && /^(INPUT|TEXTAREA|SELECT)$/.test(v.active)) {
     row.focus_trap = v.active
     report.findings.push(`${k} was typed into the ${v.active} that ${v.hash} had focused instead of routing (ui/src/keys.js typing()): a screen took focus on its own, which D101 forbids. Esc is the way out; this is the mild form of "the number keys do nothing".`)
@@ -272,8 +273,6 @@ async function keyStep(page, k, label, pred, useOs) {
     const r = await waitView(page, pred)
     row.recovered_with_esc = r.ok
     row.after = r.v.hash
-    ok = r.ok
-    row.ok = ok
     v = r.v
   }
   if (!ok && useOs) {
