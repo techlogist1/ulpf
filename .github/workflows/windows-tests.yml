@@ -1,11 +1,11 @@
-# The whole test suite on Windows: what a Windows tester sees, on every push to the
-# branch that fixes it. The toolchain and cache steps are app.yml's; cargo test needs
-# neither node nor pnpm.
+# The whole test suite on Windows: what a Windows tester sees, on every push to main
+# (it moved here with the store fix from lane-8-windows, D82). The toolchain and cache
+# steps are app.yml's; cargo test needs neither node nor pnpm.
 name: windows-tests
 
 on:
   push:
-    branches: ["lane-8-windows"]
+    branches: ["main", "lane-8-windows"]
   workflow_dispatch:
 
 concurrency:
