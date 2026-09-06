@@ -239,8 +239,13 @@ why the load to gate on is the load *before* a run and the CPU everything else i
 throughput figure without its machine state is not a figure.
 
 **Which build.** Every number in a scorecard is a `--profile dist` number: fat LTO, one
-codegen unit, and what CI ships, what the Docker image holds and what
-`eval/tools/ulpf.toml` builds. `cargo build --release` is deliberately the other profile —
+codegen unit — what the Docker image holds and what `eval/tools/ulpf.toml` builds. (Not,
+today, what CI ships: `.github/workflows/app.yml` builds its release assets with
+`cargo build --release` and overrides no profile. Whether that moves to dist is open.)
+The committed scorecard's own header line reads `cargo build --release -p ulpf` because it
+predates the split, when `[profile.release]` still carried the fat LTO that
+`[profile.dist]` carries now — the same settings under the older name, as Cargo.toml says
+where dist is defined. `cargo build --release` is deliberately the other profile —
 no LTO, so a stranger's first build finishes in about a minute — and it is what the quick
 start above runs and what the harness's cold-start criterion therefore times. The two are
 the same source, so only throughput and memory can differ between them at all, and on this
