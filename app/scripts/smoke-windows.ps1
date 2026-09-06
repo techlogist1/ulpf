@@ -45,6 +45,29 @@ $out = & $engine demo --check --repo $Repo 2>&1 | Out-String
 Write-Host $out
 if ($LASTEXITCODE -ne 0) { Fail "the installed engine's demo --check exited $LASTEXITCODE" }
 
+# The Windows throughput line: the installed engine (the dist profile, the binary a user gets)
+# over a file large enough to outlast startup, with every core the runner has. The samples
+# are repeated rather than fetched: the corpus is not in the checkout CI has, and 2,000
+# copies of sixteen device logs is the shape of a mixed feed. The number is the runner's, not
+# a ROG G615's, and the line says how many threads it had.
+$bench = Join-Path $env:RUNNER_TEMP 'ulpf-bench'
+New-Item -ItemType Directory -Force -Path $bench | Out-Null
+$big = Join-Path $bench 'mixed.log'
+$texts = Get-ChildItem (Join-Path $Repo 'samples') -File -Filter *.log | ForEach-Object { [System.IO.File]::ReadAllText($_.FullName) }
+$w = New-Object System.IO.StreamWriter($big, $false, (New-Object System.Text.UTF8Encoding $false))
+for ($i = 0; $i -lt 2000; $i++) { foreach ($s in $texts) { $w.Write($s); if (-not $s.EndsWith("`n")) { $w.Write("`n") } } }
+$w.Close()
+$cores = [int]$env:NUMBER_OF_PROCESSORS
+Write-Host "throughput input: $((Get-Item $big).Length) bytes, $cores logical processors"
+$t0 = Get-Date
+$out = & $engine run $big --store (Join-Path $bench 'store') --output (Join-Path $bench 'out.jsonl') --pending (Join-Path $bench 'pending') --parsers (Join-Path $Repo 'parsers') --mappings (Join-Path $Repo 'mappings') -j $cores --infer-threshold 0 2>&1 | Out-String
+$wall = [math]::Round(((Get-Date) - $t0).TotalSeconds, 2)
+if ($LASTEXITCODE -ne 0) { Write-Host $out; Fail "the installed engine's throughput run exited $LASTEXITCODE" }
+$line = ($out -split "`n" | Where-Object { $_ -match 'events/s' } | Select-Object -First 1).Trim()
+if (-not $line) { Write-Host $out; Fail 'no events/s line in the throughput run' }
+Write-Host "THROUGHPUT (installed dist build, $cores threads, wall ${wall}s): $line"
+Remove-Item $bench -Recurse -Force -ErrorAction SilentlyContinue
+
 # The installer may have started it already; this job owns the instance it launches.
 Get-Process -Name 'ulpf-app', 'ulpf' -ErrorAction SilentlyContinue | Stop-Process -Force
 Remove-Item $urlFile -ErrorAction SilentlyContinue
