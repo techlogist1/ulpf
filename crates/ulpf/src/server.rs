@@ -652,15 +652,22 @@ async fn export(State(app): State<App>, Query(q): Query<ExportQuery>) -> Result<
 // ---- stream -------------------------------------------------------------------------
 
 async fn replay_get(State(app): State<App>) -> Json<Value> {
-    let live = &app.live;
-    let versions = crate::replay::Versions::new(&live.output).list();
-    let state = live.replay.lock().unwrap_or_else(|e| e.into_inner());
-    Json(json!({
-        "versions": versions,
-        "running": state.running.as_ref().map(|(p, done)| json!({ "version": p.version, "done": done.load(Relaxed), "total": p.total, "started": p.started })),
-        "last": state.last,
-        "last_error": state.last_error,
-    }))
+    // The listing counts the live output's lines (its meta is stale while a serve appends),
+    // a sequential read of the whole file, and the UI asks twice a second during a replay:
+    // off the runtime's workers, like the export.
+    tokio::task::spawn_blocking(move || {
+        let live = &app.live;
+        let versions = crate::replay::Versions::new(&live.output).list();
+        let state = live.replay.lock().unwrap_or_else(|e| e.into_inner());
+        Json(json!({
+            "versions": versions,
+            "running": state.running.as_ref().map(|(p, done)| json!({ "version": p.version, "done": done.load(Relaxed), "total": p.total, "started": p.started })),
+            "last": state.last,
+            "last_error": state.last_error,
+        }))
+    })
+    .await
+    .unwrap_or_else(|_| Json(json!({ "versions": [], "running": null, "last": null, "last_error": "the listing thread panicked" })))
 }
 
 #[derive(Deserialize, Default)]
