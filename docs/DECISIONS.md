@@ -1635,9 +1635,10 @@ the default (nothing measured for it to recover); `dist` as the default with `re
 (the default is what a stranger, README, `scripts/demo.sh` and the cold-start criterion
 type, and every `target/release` path stays correct). Cargo offers no alias for a custom
 profile and no stable output path across profiles, so every shipping caller spells
-`--profile dist` and `target/dist/` (Dockerfile, `eval/run.sh`, `eval/tools/ulpf.toml`;
-CI's release assets and the sidecar build still use `cargo build --release` at this commit
-and move to `--profile dist` with lane 7C, `lane-7b-app`, in flight).
+`--profile dist` and `target/dist/` (Dockerfile, `eval/run.sh`, `eval/tools/ulpf.toml`, and
+since lane 7C the `cli` and `bundle` jobs of `.github/workflows/app.yml`; that workflow's
+`smoke-windows` job stays on `--release` deliberately, because it proves the Windows code
+paths and not the shipped bits).
 
 ## D89. Windows is a first-class target: the installer carries its runtime, a failed start is a sentence, the log has a name
 **Decision.** `bundle.windows.webviewInstallMode` is `offlineInstaller`: the NSIS installer
