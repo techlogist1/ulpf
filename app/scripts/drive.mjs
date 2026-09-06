@@ -228,8 +228,10 @@ function pwsh() {
 function osrun(extra) {
   const sh = pwsh()
   if (!sh || !appPid) return { code: -1, out: '', err: 'no pwsh or no --pid' }
-  const r = spawnSync(sh, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', OSKEYS, '-Pid', String(appPid), ...extra], { encoding: 'utf8' })
-  return { code: r.status, out: (r.stdout ?? '').trim(), err: (r.stderr ?? '').trim() }
+  // Bounded: a SendKeys that never returns would otherwise hold the event loop past the
+  // deadline that writes the report. A timeout lands in the row as os_exit null / ETIMEDOUT.
+  const r = spawnSync(sh, ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', OSKEYS, '-Pid', String(appPid), ...extra], { encoding: 'utf8', timeout: 30000, killSignal: 'SIGKILL' })
+  return { code: r.status, out: (r.stdout ?? '').trim(), err: (r.error?.message ?? r.stderr ?? '').trim() }
 }
 const osKey = (k) => osrun(['-Keys', k])
 
