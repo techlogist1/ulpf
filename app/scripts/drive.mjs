@@ -259,14 +259,13 @@ async function keyStep(page, k, label, pred, useOs) {
     targets: [...new Set(seen.map((x) => x.target))].join(','),
     os_exit: os ? os.code : null, os_err: os ? os.err.slice(0, 200) : null,
   }
-  // A text box the previous screen focused owns every key by the UI's own contract
-  // (ui/src/keys.js typing()); Traceback with no raw id focuses its lookup box, so the digit
-  // after a visit there is typed, not routed. That is the tester's symptom, so it is named
-  // rather than hidden: Esc is the documented way out, and the key is sent once more to say
-  // whether the routing itself is alive.
+  // A text box that holds focus owns every key by the UI's own contract (ui/src/keys.js
+  // typing()), so a key typed into one is the mild form of "the number keys do nothing". No
+  // screen takes focus on its own (D101); if one does, it is named here rather than hidden,
+  // Esc is the way out, and the key is sent once more to say whether the routing itself is alive.
   if (!ok && /^(INPUT|TEXTAREA|SELECT)$/.test(v.active)) {
     row.focus_trap = v.active
-    report.findings.push(`${k} was typed into the ${v.active} that ${v.hash} had already focused instead of routing (ui/src/keys.js typing(); Traceback autofocuses its lookup box when no record is chosen). Esc is the way out — this is the mild form of "the number keys do nothing".`)
+    report.findings.push(`${k} was typed into the ${v.active} that ${v.hash} had focused instead of routing (ui/src/keys.js typing()): a screen took focus on its own, which D101 forbids. Esc is the way out; this is the mild form of "the number keys do nothing".`)
     if (useOs) osKey('{ESC}'); else await pressCdp(page, '{ESC}')
     await sleep(150)
     if (useOs) osKey(k); else await pressCdp(page, k)

@@ -52,7 +52,13 @@
     }
     if (typing(e)) return
     if (e.key === '?') { helpOpen = !helpOpen; e.preventDefault(); return }
-    if (helpOpen) return
+    // Keys are never modal: any other key closes the map and is then handled as if it were
+    // already closed. A host that eats one Escape must not leave the keyboard dead. The keys
+    // that have a job inside the dialog (reach the close button, scroll it, press it) are its own.
+    if (helpOpen) {
+      if (e.key === 'Tab' || e.key === 'Enter' || e.key === ' ' || e.key.startsWith('Arrow') || e.key === 'Home' || e.key === 'End' || e.key === 'PageUp' || e.key === 'PageDown') return
+      helpOpen = false
+    }
     if (e.key === 't') { mode = theme(mode === 'light' ? 'dark' : 'light'); return }
     const s = SCREENS.find((x) => x.key === e.key)
     if (s) { location.hash = `#/${s.view}`; e.preventDefault(); return }
@@ -128,8 +134,8 @@
 
 {#if helpOpen}
   <div class="overlay" role="presentation" onclick={(e) => { if (e.target === e.currentTarget) helpOpen = false }}>
-    <div class="keymap" role="dialog" aria-modal="true" aria-label="Keyboard map" tabindex="-1" {@attach (el) => el.focus()}>
-      <h2>Keys <span class="note">Esc closes</span></h2>
+    <div class="keymap" role="dialog" aria-label="Keyboard map" tabindex="-1" {@attach (el) => el.focus()}>
+      <h2>Keys <span class="note">any key closes it and still does its job</span><button class="btn" onclick={() => (helpOpen = false)}>close<kbd>Esc</kbd></button></h2>
       <section>
         <h3>Anywhere</h3>
         <dl>

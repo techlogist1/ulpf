@@ -454,6 +454,7 @@ details summary { cursor: pointer; color: var(--fg-2); font-size: var(--t0); }
 .keymap { background: var(--bg-1); border: 1px solid var(--line-2); padding: var(--s6); width: min(92vw, 880px); max-height: 86vh; overflow: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s5) var(--s7); }
 .keymap h2 { grid-column: 1 / -1; display: flex; align-items: baseline; gap: var(--s4); }
 .keymap h2 .note { color: var(--fg-2); font-weight: 400; font-size: var(--t0); }
+.keymap h2 .btn { margin-left: auto; }
 .keymap section { display: grid; gap: var(--s2); align-content: start; }
 .keymap h3 { border-bottom: 1px solid var(--line); padding-bottom: var(--s1); }
 .keymap dl { display: grid; grid-template-columns: 7em 1fr; gap: var(--s1) var(--s4); margin: 0; font-size: var(--t0); }

@@ -2174,3 +2174,26 @@ silent reset straight off the menu item — it destroys an approved parser by ac
 thing the operator needs before a destructive act is the directory's name and a choice. Deleting
 while the engine still runs — the store lock is held by the writer, so the removal would half
 succeed and leave the app pointing at a store that no longer matches its index.
+
+## D101. Keys are never modal, and no screen takes the keyboard on its own
+**Decision.** The window key handler in `App.svelte` treats the `?` overlay as a hint, not a mode:
+Escape and `?` close it, the keys that have a job inside the dialog (Tab, Enter, Space, the arrows,
+Home, End, Page Up and Page Down) stay with it, and every other key closes it *and* is handled exactly
+as if it were already closed — digits navigate, `t` flips the theme, the screen's own keys run. The
+overlay carries a close control reachable by pointer and by Tab. No screen focuses a text box on
+arrival: Traceback opened by `3` with no record leaves the keyboard on the screen, and `/` is the one
+way into a box from the keyboard on every screen that has one (Live, Review, Pivot, Traceback);
+Escape leaves it; a box that has focus owns every key (`typing()` in `keys.js`).
+**Principle.** One lost keystroke must never cost the keyboard, and the keyboard must never be taken
+without being asked. The old `if (helpOpen) return` made any host that swallowed a single Escape look
+like a dead keyboard — the Windows tester's report, reproduced on macOS through this session's own
+automation's event tap (PROGRESS v5, Phase 1). Traceback's autofocus was the same symptom by a second
+route: the digit after `3` was typed into its box instead of routing (found by the Windows driver's
+digit run before it ever ran on Windows).
+**Ruled out.** Keeping the trap and fixing Escape delivery host by host (the trap is the amplifier,
+the host only the trigger). Routing digits out of an empty lookup box (a raw id that begins with `1`
+would navigate to Live). A blanket close on every key including Tab (the close control would be
+unreachable by keyboard and the dialog unscrollable, which the review measured).
+**Anchor.** `ui/src/App.svelte` (`onKey`), `ui/src/Traceback.svelte` (the `/` key, no autofocus),
+`ui/src/keys.js` (`typing`), `ui/keys.mjs` (the keyboard map harness over CDP, 31 checks),
+`app/scripts/drive.mjs` (the Windows driver names a screen that takes focus as a finding).

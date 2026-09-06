@@ -57,9 +57,8 @@
     }
   }
   $effect(() => { input = id; load(id) })
-  // No record chosen: the digits are screen shortcuts everywhere else, so the box takes
-  // focus here and a typed id goes into it instead of navigating to Flow.
-  $effect(() => { if (!id) box?.focus() })
+  // The box is never focused on arrival: a digit pressed after `3` must still route (D101).
+  // `/` focuses it, as on every other screen that has a box.
   $effect(() => {
     const measure = () => { if (wrapEl) width = wrapEl.clientWidth }
     measure()

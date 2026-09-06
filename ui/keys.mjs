@@ -12,10 +12,13 @@ const active = () => page.evaluate(() => document.activeElement?.tagName + (docu
 const results = []
 const check = (name, ok, got) => results.push({ name, ok, got })
 for (const [k, view] of [['1', 'live'], ['2', 'review'], ['3', 'trace'], ['4', 'pivot'], ['5', 'replay'], ['6', 'drift'], ['7', 'integrity'], ['0', 'flow']]) {
-  if (k === '3') await page.keyboard.press('Escape') // trace with no id focuses its box; leave it before the next digit
   await page.keyboard.press(k); await new Promise((r) => setTimeout(r, 150))
   const h = await hash(); check(`digit ${k} -> #/${view}`, h.startsWith(`#/${view}`), h)
-  if (k === '3') { const a = await active(); check('trace with no id focuses the raw-id box', a.startsWith('INPUT'), a); await page.keyboard.press('Escape') }
+  if (k === '3') {
+    const a = await active(); check('trace with no id leaves the keys on the screen (no box focused)', !a.startsWith('INPUT'), a)
+    await page.keyboard.press('Slash'); await new Promise((r) => setTimeout(r, 100)); const b = await active(); check('/ focuses the raw-id box on Traceback', b.startsWith('INPUT'), b)
+    await page.keyboard.press('Escape'); await new Promise((r) => setTimeout(r, 100))
+  }
 }
 await page.keyboard.press('?'); await new Promise((r) => setTimeout(r, 150)); check('? opens the overlay', await overlay(), await active())
 await page.keyboard.press('Escape'); await new Promise((r) => setTimeout(r, 150)); check('overlay open, Esc closes it', !(await overlay()), await active())
