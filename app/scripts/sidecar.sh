@@ -16,20 +16,22 @@ case "$triple" in *windows*) ext=".exe" ;; esac
 # A generated parser inside the bundle is a broken demo: the app would arrive already
 # knowing the unseen format and could raise no proposal of its own. This is the first
 # command of the bundle step, so it is where that is refused.
-generated=""
+# Named as it is found: this repo's own path has a space in it, so a list collected in one
+# string and re-split would print two half-paths instead of one file.
+generated=0
 for p in "$root"/parsers/*.toml; do
   [ -f "$p" ] || continue
   # One line carrying both, as sidecar.ps1 and the shell's `is_generated` (src/lib.rs) test
   # it: two greps over the whole file refused a hand-written parser whose prose said
   # "inferred".
   if grep -Eq '^[[:space:]]*origin.*inferred' "$p"; then
-    generated="$generated $p"
+    [ "$generated" -eq 0 ] && echo "sidecar.sh: the bundle would carry a generated parser:" >&2
+    generated=$((generated + 1))
+    echo "  $p" >&2
   fi
 done
-if [ -n "$generated" ]; then
-  echo "sidecar.sh: the bundle would carry a generated parser:" >&2
-  for p in $generated; do echo "  $p" >&2; done
-  echo "sidecar.sh: remove it with: ulpf demo --reset" >&2
+if [ "$generated" -gt 0 ]; then
+  echo "sidecar.sh: remove the $generated of them with: ulpf demo --reset" >&2
   exit 1
 fi
 

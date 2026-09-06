@@ -107,7 +107,7 @@ as the generic "the engine stopped". The holder is found by its command line (`p
 that records the writer's pid is the locked one; the button stops that pid and starts the
 engine again through the ordinary start path. Provoke it by running a second
 `ulpf serve --store "~/Library/Application Support/dev.ulpf.desktop/store"` before launching
-the app (D92).
+the app (D93).
 
 ## Platform differences (each one is also a comment where it matters)
 
@@ -135,7 +135,7 @@ the app (D92).
   holds for its whole life, so the kernel terminates the engine when the app's handles close
   — End task on the window, a crash, `Stop-Process -Force`, anything. Windows has no
   process group, so without it a force kill left `ulpf.exe` running with the store's SQLite
-  lock and the next launch was refused (D91). macOS needs nothing: the sidecar is a direct
+  lock and the next launch was refused (D92). macOS needs nothing: the sidecar is a direct
   child and dies with its parent. `app-smoke-windows` asserts it: no `ulpf.exe` five
   seconds after the window is force-killed, or the job fails.
 - The splash page is served from `tauri://localhost` on macOS and `http://tauri.localhost`
@@ -234,7 +234,7 @@ bundle built after that carries it as a resource — so the app arrives already 
 `sidecar.sh` / `sidecar.ps1` exit 1 naming the file (they are the first command of the
 bundle step), the app's first-run copy of the bundled definitions skips any such file and
 says how many it skipped in `engine.log`, and this paragraph. `ulpf demo --reset` purges
-them from `parsers/`; run it before building a bundle for the demo (D93).
+them from `parsers/`; run it before building a bundle for the demo (D94).
 
 ### Building from source on Windows
 
