@@ -261,7 +261,7 @@ impl Parser {
                     let mark = out.fields.len();
                     let ok = sub.strategy.apply(borrowed, scratch, out).is_ok();
                     if !ok {
-                        out.fields.truncate(mark);
+                        out.rollback(mark);
                     }
                     ok
                 }

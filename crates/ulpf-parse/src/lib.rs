@@ -105,6 +105,16 @@ impl<'a> Parsed<'a> {
         self.keys.push(k);
     }
 
+    /// Drops the fields pushed since `mark`, keeping their pooled key buffers: every
+    /// partial-parse rollback goes through here, so a failing event costs the pool nothing.
+    pub(crate) fn rollback(&mut self, mark: usize) {
+        for f in self.fields.drain(mark..) {
+            if let Cow::Owned(k) = f.key {
+                self.keys.push(k);
+            }
+        }
+    }
+
     #[inline]
     pub fn push(&mut self, key: impl Into<Bytes<'a>>, value: impl Into<Bytes<'a>>) {
         self.fields.push(Field { key: key.into(), value: value.into() });

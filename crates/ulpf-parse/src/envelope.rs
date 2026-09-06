@@ -109,7 +109,7 @@ fn rfc5424<'a>(b: &'a [u8], out: &mut Parsed<'a>) -> Option<&'a [u8]> {
         let tok = &b[i..end];
         if tok.is_empty() {
             {
-                out.fields.truncate(mark);
+                out.rollback(mark);
                 return None;
             }
         }
@@ -138,7 +138,7 @@ fn rfc5424<'a>(b: &'a [u8], out: &mut Parsed<'a>) -> Option<&'a [u8]> {
             out.push(&b"syslog_sd"[..], &b[sd_start..i]);
         } else if b.get(i) != Some(&b'[') {
             {
-                out.fields.truncate(mark);
+                out.rollback(mark);
                 return None;
             }
         }
@@ -189,12 +189,12 @@ fn sd_params<'a>(elem: &'a [u8], out: &mut Parsed<'a>) -> bool {
             break;
         }
         let Some(eq) = memchr::memchr(b'=', &elem[i..]).map(|p| i + p) else {
-            out.fields.truncate(mark);
+            out.rollback(mark);
             return false;
         };
         let name = &elem[i..eq];
         if !sd_name_ok(name) || elem.get(eq + 1) != Some(&b'"') {
-            out.fields.truncate(mark);
+            out.rollback(mark);
             return false;
         }
         let vs = eq + 2;
@@ -208,7 +208,7 @@ fn sd_params<'a>(elem: &'a [u8], out: &mut Parsed<'a>) -> bool {
             k += 1;
         }
         if k >= elem.len() {
-            out.fields.truncate(mark);
+            out.rollback(mark);
             return false;
         }
         let raw = &elem[vs..k];

@@ -280,13 +280,13 @@ pub(crate) fn apply_xml<'a>(text: &'a [u8], scratch: &mut StructuredScratch, out
             }
             Ok(_) => {}
             Err(_) => {
-                out.fields.truncate(mark);
+                out.rollback(mark);
                 return Err(ParseFailure::InvalidXml);
             }
         }
     }
     if elements == 0 || in_tag {
-        out.fields.truncate(mark);
+        out.rollback(mark);
         return Err(ParseFailure::InvalidXml);
     }
     Ok(())

@@ -212,6 +212,9 @@ constants = { event_name = "An account was successfully logged on" }
     assert_eq!(entity_allocs, 100, "one allocation per entity-bearing value, per parse");
     assert_field(&out, "EventData.TargetUserName", b"R&D");
     assert_eq!(out.fields.iter().filter(|f| matches!(f.value, Cow::Owned(_))).count(), 1);
+    // a parse that fails half-way returns its keys to the pool: the next event allocates nothing
+    assert!(p.parse(b"<Event><System><EventID>4624</EventID><Computer>h</Computer><a b='1'>x</a", &ctx(), &mut scratch, &mut out).is_err());
+    assert_eq!(count(&p, plain, &mut scratch, &mut out), 0, "the keys a failed parse took are back in the pool");
     let unnamed_allocs = count(&p, &unnamed, &mut scratch, &mut out);
     assert_eq!(unnamed_allocs, 0, "twenty unnamed siblings, no allocation for the counter");
     assert_field(&out, "EventData.Data", b"v1");
