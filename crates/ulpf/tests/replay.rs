@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use ulpf::engine::{Config, Live, ReplayError};
 use ulpf::pipeline::Pipeline;
-use ulpf::replay::{self, Job, Versions};
+use ulpf::replay::{self, Job, ReplayProgress, Versions};
 
 fn root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..").canonicalize().unwrap()
@@ -151,12 +151,26 @@ fn the_server_replays_through_the_writer_and_reports_progress() {
     assert_eq!(total, live.store().unwrap().len());
     let buggy = std::fs::read_to_string(dir.join("out.jsonl")).unwrap().lines().filter(|l| l.contains("\"dst_addr\"")).count() as u64;
     assert!(buggy > 0);
-    assert!(matches!(live.start_replay(None), Err(ReplayError::Running)) || live.replay_progress().is_none(), "a second replay while one runs is a conflict");
     let started = Instant::now();
-    while live.replay_progress().is_some() {
-        assert!(started.elapsed() < Duration::from_secs(30), "replay did not finish");
+    while let Some(p) = live.replay_progress() {
+        assert!(started.elapsed() < Duration::from_secs(30), "replay v{} stuck at {}/{}", p.version, p.done, p.total);
         std::thread::sleep(Duration::from_millis(20));
     }
+    while live.replay_generation.load(Relaxed) < 2 {
+        assert!(started.elapsed() < Duration::from_secs(30), "replay generation stuck at {}", live.replay_generation.load(Relaxed));
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    // the running slot is held by hand rather than racing the thread above, which may already
+    // have finished: this proves the guard and that `replay_progress` reads the same slot,
+    // not that two genuinely concurrent replays are refused (there is no deterministic way
+    // to hold a real replay open)
+    {
+        let mut state = live.replay.lock().unwrap();
+        state.running = Some((ReplayProgress { version: 99, done: 0, total: 1, started: String::new() }, Arc::new(AtomicU64::new(0))));
+    }
+    assert_eq!(live.replay_progress().map(|p| p.version), Some(99));
+    assert!(matches!(live.start_replay(None), Err(ReplayError::Running)));
+    live.replay.lock().unwrap().running = None;
     let state = live.replay.lock().unwrap();
     let report = state.last.as_ref().expect("report");
     assert_eq!(report.summary.changed, buggy);
@@ -166,7 +180,6 @@ fn the_server_replays_through_the_writer_and_reports_progress() {
     let (page, _) = live.replay_diff(2, None, 500, None).unwrap();
     assert_eq!(page.len() as u64, buggy);
     assert!(matches!(live.replay_diff(9, None, 10, None), Err(ReplayError::Invalid(_))));
-    assert!(live.replay_generation.load(Relaxed) >= 2);
     // the live meta recorded the reload
     let meta = Versions::new(&cfg.output).read_meta(1).unwrap();
     assert_eq!(meta.history.len(), 1, "v1 reloaded once, the previous file set is kept");

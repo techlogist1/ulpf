@@ -411,7 +411,9 @@ as a37af63, delete it. Not merged:
 8. The DragDrop handler in the app was never driven by a real drag with the tools (files went in
    through the watch directory and Add files); the owner dragged files by hand this morning and it
    worked.
-9. Two timing assertions still flake under machine load (`server.rs:209`, `replay.rs:154`).
+9. One timing assertion still flakes under machine load (`server.rs:209`). The replay half is
+   fixed: `crates/ulpf/tests/replay.rs` now waits on `replay_progress` and
+   `replay_generation` instead of the wall clock.
 10. The footer's 200-row frame limit is prose in the UI, not read from the server (a
     `tail_per_tick` in `/api/status` would fix it).
 11. Process lessons for the next session: create every lane worktree from main's head and print
@@ -547,7 +549,9 @@ look at the captures and a grep of `ui/dist` for external references.
       reconnecting capture. Recorded, not done: the 14 `tool-*` and 17 `app-*` captures of the
       desktop app still show the pre-Flow top bar (one index row says so; re-shot if lane 7 or I
       re-captures); `crates/ulpf/tests/replay.rs:154` raced once under load 30 (the first replay
-      finished before the second was asked; passes alone and in the full rerun).
+      finished before the second was asked; passes alone and in the full rerun) -- fixed since:
+      the test polls `replay_progress` and `replay_generation` to a 30 s bound and holds the
+      running slot by hand for the conflict case.
 - [~] L2a. (18fab3e, D77, D78; the lead) API: `queue` and `rate` in the frame, `emitted_from`
       with the output-file lookup (`crates/ulpf/src/outfile.rs`, a binary search on the raw id;
       the file cut to its last terminator is the snapshot), `?bytes=0`, `GET /api/events/{id}/bytes`,
