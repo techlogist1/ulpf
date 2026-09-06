@@ -315,6 +315,8 @@ async fn status(State(app): State<App>) -> Json<Value> {
         "pivot_index": live.index_entities,
         "queue_capacity": live.queue_cap,
         "tail_capacity": live.tail.capacity(),
+        // the most rows one tail frame carries; the footer says so instead of guessing
+        "tail_per_tick": TAIL_PER_TICK,
         "infer_threshold": live.inference.threshold,
         "schema": {
             "name": pipeline.mapping.schema_name(),

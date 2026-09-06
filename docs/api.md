@@ -39,7 +39,9 @@ left it behind (`cut`, below, is that second part). Nothing blocks the engine on
 
 `GET /api/status` → `{ "version", "started_at": rfc3339, "listen", "store", "parsers_dir",
 "pending_dir", "output", "output_format": "jsonl", "parquet": path|null, "watch": [dir],
-"threads", "queue_capacity", "tail_capacity", "infer_threshold" }`. `output_format` is
+"threads", "queue_capacity", "tail_capacity", "tail_per_tick", "infer_threshold" }`.
+`tail_per_tick` is the most rows one `tail` frame carries (200): a burst larger than that
+reaches the ring but not the screen, and the footer quotes this number. `output_format` is
 always `"jsonl"`: Parquet is an additional sink, not a replacement (see below).
 
 `GET /api/metrics` → `MetricsFrame`:

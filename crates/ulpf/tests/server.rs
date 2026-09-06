@@ -126,6 +126,7 @@ fn the_server_is_a_window_onto_a_live_engine() {
 
     // status and the UI are served
     let (st, status) = json(&addr, "GET", "/api/status", None);
+    assert_eq!(status["tail_per_tick"], 200, "the footer reads the frame limit from here: {status}");
     assert_eq!(st, 200);
     assert_eq!(status["infer_threshold"], 20);
     assert_eq!(status["tail_capacity"], 500);

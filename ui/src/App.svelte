@@ -128,7 +128,7 @@
   <span class="push" class:is-warn={live.dropped > 0} title="a frame that arrived before the previous one painted replaced it; nothing queues">frames skipped <b>{fmt.n(live.dropped)}</b></span>
   <span class:is-warn={live.evicted > 0} title="events the server's tail ring dropped before this screen read them: they are gone from the ring (the store still has every one)">events skipped <b>{fmt.n(live.evicted)}</b></span>
   {#if live.cut > 0}
-    <span class="cutnote" title="a burst larger than one frame: a frame carries the newest 200 events, so these older ones were not sent to this screen; the ring still holds the newest {fmt.n(st?.tail_capacity ?? 1000)}">{fmt.n(live.cut)} older rows not shown</span>
+    <span class="cutnote" title="a burst larger than one frame: a frame carries the newest {fmt.n(st?.tail_per_tick ?? 200)} events, so these older ones were not sent to this screen; the ring still holds the newest {fmt.n(st?.tail_capacity ?? 1000)}">{fmt.n(live.cut)} older rows not shown</span>
   {/if}
 </footer>
 
