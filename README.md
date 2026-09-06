@@ -43,24 +43,35 @@ cargo build --release        # about one minute; binary at target/release/ulpf
 One command, on the samples in this repository:
 
 ```
-./target/release/ulpf run samples --store /tmp/s --output /tmp/out.jsonl
+./target/release/ulpf run samples/*.log --store /tmp/s --output /tmp/out.jsonl
 ```
 
 ```
 definitions: 15 parsers loaded, 0 file problems
-ulpf: 16 files (0 failed), 0.11 MB, 354 events in 0.005 s -> 66085 events/s, 19.8 MB/s, 7 worker threads
-stages: framed 354  stored 354  detected 313  no_parser 41  parsed 309  parse_failed 4  normalized 354  emitted 354 (442644 bytes)
-parse_failed by reason: pattern_no_match 3, invalid_json 1
-signals: sub_matched 204  sub_no_match 7  sub_uncovered 5  time_from_receipt 55  time_error [no_match 1]  class_unknown 106  enum_other 6  unmapped_fields 3036  utf8_lossy 13
-queue: 16 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
-inference: buffered 41 (buffer full 0)  runs 1  lines templated 0 unmatched 39  proposals written 0 replaced 0 skipped [no_templates 1]  approved 0  rejected 0  reloads 0
+ulpf: 15 files (0 failed), 0.10 MB, 309 events in 0.005 s -> 59345 events/s, 18.6 MB/s, 7 worker threads
+stages: framed 309  stored 309  detected 307  no_parser 2  parsed 305  parse_failed 2  normalized 309  emitted 309 (410361 bytes)
+parse_failed by reason: pattern_no_match 1, invalid_json 1
+signals: sub_matched 202  sub_no_match 7  sub_uncovered 4  time_from_receipt 10  time_error [no_match 1]  class_unknown 62  enum_other 4  unmapped_fields 3025  utf8_lossy 13
+queue: 15 batches, high-water 1/64, backpressure blocks 0 (engaged: no)
+inference: buffered 2 (buffer full 0)  runs 0  lines templated 0 unmatched 0  proposals written 0 replaced 0 skipped [none]  approved 0  rejected 0  reloads 0
 drift: tripped 0  lines routed 0  update proposals 0  cleared 0
 syslog: udp datagrams 0 (0 bytes)  tcp connections 0 events 0 (0 bytes) partial 0 refused 0  errors 0
-pending: 0 proposals awaiting review (final inference pass 0.003 s)
+pending: 0 proposals awaiting review (final inference pass 0.000 s)
 ```
 
-(The `events/s` on that line is 354 events in five milliseconds — startup noise, not a
+(The `events/s` on that line is 309 events in five milliseconds — startup noise, not a
 throughput measurement. The measured figure is under "Honest numbers" below.)
+
+The input is `samples/*.log`, never the bare `samples` directory: the engine has no
+include filter yet, so a bare directory ingests `samples/README.md` as a log. That is 16
+files and 354 events instead of 15 and 309 — 45 lines of documentation counted as events,
+`no_parser` 41 instead of 2, `class_unknown` 106 instead of 62, and an inference run over
+prose that ends `skipped [no_templates 1]` (the clustering does refuse it, so no proposal
+is written; the counters are wrong, not the review queue). A directory-level include or
+exclude is a post-demo decision (D83), so every documented command in this repository
+names its log files. The container command above is the one exception a shell cannot fix:
+the `scratch` image has no shell to expand a glob, so it takes the mounted directory and
+its counters carry those same 45 lines.
 
 That block is the contract: when the output looks plausible but wrong, read it first.
 `no_parser` means the format was not recognised, `sub_uncovered` means a message id has no
@@ -83,7 +94,8 @@ Then open <http://127.0.0.1:7878> (key `0` for Flow, `1`-`7` for the screens beh
   reason its name was chosen, and the evidence behind every template. Approve activates it.
 - **Traceback** — one event's raw bytes, its stored and recomputed digest and chain link,
   and every normalized field lit up over the bytes it was read from.
-- **Pivot** — one IP, user, host, hash or port across every device, in one timeline.
+- **Pivot** — one entity across every device, in one timeline: a source or destination
+  IP, a user, a device hostname or a destination port (the five kinds the mapping names).
 - **Replay** — every stored event re-run through today's parsers, diffed against the last
   version, with the parser or mapping file whose digest changed named as the reason.
 - **Drift** — a device that changed its format mid-stream, its window miss rate against
@@ -198,7 +210,50 @@ SHA-256 and the integrity chain flushed per batch included. That is the number t
 It was produced by the neutral harness every tool is run through, not by a hand-timed
 loop: `eval/run.sh eval/tools/ulpf.toml`, scorecard committed at
 `eval/results/ulpf-20260905T140426Z-33371/scorecard.md`, 2026-09-05. Run-to-run variance
-is about ±10%.
+is about ±10% on a quiet machine, and both halves of that sentence have now been measured
+again on the merged v4 tree.
+
+Quiet: `eval/run.sh eval/tools/ulpf.toml throughput` on the dist build, started
+2026-09-06 05:28 IST only after three consecutive twenty-second samples put the one-minute
+load under 4 (2.91 at the last) and everything else on the machine at 1.2-1.5 cores' worth
+of CPU (118%, 147%, 130% of one core across those three samples), gave
+**310,849 / 295,928 / 290,478 events/s (median 295,928)** in 16.1-17.2 s per run. That is
+14% above the 258,411 the committed scorecard holds, on the same input, the same harness
+and the same thread count. 258,411 stays the figure to quote because it is the one with a
+committed scorecard behind it (D87) — the newer number is recorded here, not promoted,
+until a scorecard re-pins it. Read the headline as a floor. Those three CPU samples are
+pre-run ones: that run has no valid during-run competition figure, because the sampler
+counted `ulpf`'s own threads as everything else (`ps -o comm` split on this repository's
+spaced path), and a broken instrument is quoted as nothing at all.
+
+Loaded: the identical command, run six times between 05:14 and 05:22 while five other
+build and test lanes shared the laptop, gave 153,247 / 282,646 / 166,196 / 192,197 /
+221,180 / 308,528 events/s — a 2x spread. Those six went as two sets of three, at
+before-run one-minute loads of **4.99** and **5.85** against the quiet set's 2.91, and the
+first set ran on a cold page cache as well: its first run took 32.6 s, the slowest of the
+six, where the later sets read the input once before gating. Load observed across the six
+spanned 4.99 to 21.58, but the top of that range is mostly `ulpf` itself — it alone takes
+the load past 18 while it runs (seven worker threads plus store and output I/O), which is
+why the load to gate on is the load *before* a run and the CPU everything else is using
+*during* it; `docs/evaluation.md`'s 04:00 procedure says the same thing in one line. A
+throughput figure without its machine state is not a figure.
+
+**Which build.** Every number in a scorecard is a `--profile dist` number: fat LTO, one
+codegen unit — what the Docker image holds and what `eval/tools/ulpf.toml` builds. (Not,
+today, what CI ships: `.github/workflows/app.yml` builds its release assets with
+`cargo build --release` and overrides no profile. Whether that moves to dist is open.)
+The committed scorecard's own header line reads `cargo build --release -p ulpf` because it
+predates the split, when `[profile.release]` still carried the fat LTO that
+`[profile.dist]` carries now — the same settings under the older name, as Cargo.toml says
+where dist is defined. `cargo build --release` is deliberately the other profile —
+no LTO, so a stranger's first build finishes in about a minute — and it is what the quick
+start above runs and what the harness's cold-start criterion therefore times. The two are
+the same source, so only throughput and memory can differ between them at all, and on this
+M1 Pro they do not differ measurably: lane P timed both on a 500,000-line slice and got
+best-of-eight 1.791 s for dist against 1.690 s for release, medians 2.120 s and 2.164 s —
+the two orderings disagree, which is what "inside the noise" looks like. Reproduce a
+headline figure with `cargo build --profile dist -p ulpf`; reproduce the quick start with
+`cargo build --release`.
 
 Three other figures exist and each measures something different:
 
@@ -226,27 +281,63 @@ then re-run the same line.
 **Isolation.** The binary makes no outbound connection: every socket the process holds is
 sampled twice a second over a whole run and classified, in three modes —
 `scripts/isolation.sh run bench/mixed-5000000.log`, `scripts/isolation.sh serve demo/watch 20`,
-and `scripts/isolation.sh docker ulpf:static samples` under `--network none`.
+and `scripts/isolation.sh docker ulpf:static samples/cisco_asa.log` under `--network none`.
 
 ## Quick start
 
 ```
 cargo build --release
 ./target/release/ulpf check
-./target/release/ulpf run samples --store /tmp/ulpf-store --output /tmp/out.jsonl --pivot on
+./target/release/ulpf run samples/*.log --store /tmp/ulpf-store --output /tmp/out.jsonl --pivot on
 ./target/release/ulpf verify --store /tmp/ulpf-store                      # every digest and chain link
 ./target/release/ulpf attest --store /tmp/ulpf-store --out /tmp/attest.json  # what a stranger re-verifies offline
 ./target/release/ulpf raw 3 --store /tmp/ulpf-store
 ./target/release/ulpf replay --store /tmp/ulpf-store --output /tmp/out.jsonl   # v2 beside v1, with a diff and why
 ./target/release/ulpf pivot src_ip 203.0.113.9 --output /tmp/out.jsonl --limit 5 # one entity across every device
-./target/release/ulpf run samples --store /tmp/ulpf-ecs --output /tmp/ecs.jsonl --schema ecs --parquet /tmp/ecs.parquet
+./target/release/ulpf run samples/*.log --store /tmp/ulpf-ecs --output /tmp/ecs.jsonl --schema ecs --parquet /tmp/ecs.parquet
 
 mkdir -p demo/watch && ./target/release/ulpf serve demo/watch --store demo/store --output demo/out.jsonl \
     --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514
 cp samples/*.log heldout/mikrotik.log demo/watch/      # then open http://127.0.0.1:7878: Live, Review, Traceback, Pivot, Replay, Drift, Integrity
 ```
 Those nine commands are re-run from this file, in a fresh clone, by the harness's
-cold-start criterion (`docs/evaluation.md`); they are the install path, not an example of one.
+cold-start criterion (`docs/evaluation.md`); they are the install path, not an example of
+one — `eval/lib/extract_fence.py` reads the fenced block above out of this README, so it
+is the only copy of that list and everything below here is prose the harness ignores.
+
+### On Windows
+
+`cargo build --release` is the same command. The rest, in PowerShell — the executable
+takes `.exe`, paths take backslashes and `$env:TEMP`, and the glob has to be expanded by
+the shell because the engine takes file arguments, not patterns:
+
+```
+cargo build --release
+.\target\release\ulpf.exe check
+.\target\release\ulpf.exe run (Get-ChildItem samples\*.log).FullName --store $env:TEMP\ulpf-store --output $env:TEMP\out.jsonl --pivot on
+.\target\release\ulpf.exe verify --store $env:TEMP\ulpf-store
+.\target\release\ulpf.exe attest --store $env:TEMP\ulpf-store --out $env:TEMP\attest.json
+.\target\release\ulpf.exe raw 3 --store $env:TEMP\ulpf-store
+.\target\release\ulpf.exe replay --store $env:TEMP\ulpf-store --output $env:TEMP\out.jsonl
+.\target\release\ulpf.exe pivot src_ip 203.0.113.9 --output $env:TEMP\out.jsonl --limit 5
+.\target\release\ulpf.exe run (Get-ChildItem samples\*.log).FullName --store $env:TEMP\ulpf-ecs --output $env:TEMP\ecs.jsonl --schema ecs --parquet $env:TEMP\ecs.parquet
+
+New-Item -ItemType Directory -Force demo\watch | Out-Null
+.\target\release\ulpf.exe serve demo\watch --store demo\store --output demo\out.jsonl --syslog-udp 127.0.0.1:5514 --syslog-tcp 127.0.0.1:5514
+Copy-Item samples\*.log,heldout\mikrotik.log demo\watch\
+```
+
+**Write the output to a real file, not `NUL`.** On the current release a run whose
+`--output` is the null device still writes a `NUL.v1.meta.json` beside it, with an
+`events` count of 0. Give it a path under `$env:TEMP` instead. The fix (NUL, `\\.\NUL`
+and `\\?\NUL` recognised as sinks, and the count written from what the run emitted) is
+on branch `lane-8-windows` and lands after the demo.
+
+**The shell scripts need Git Bash.** `scripts/isolation.sh` and `scripts/coverage.sh` are
+bash; run them from a Git Bash prompt (they ship with Git for Windows). `scripts/demo.sh`
+is only a wrapper that finds the binary — the runner itself is a subcommand, so on Windows
+skip the script and run `.\target\release\ulpf.exe demo` (or `demo --check`, `--auto`,
+`--reset`) from PowerShell, no shell required (D67).
 
 ## Where things are
 
