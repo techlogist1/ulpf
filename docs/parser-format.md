@@ -93,7 +93,10 @@ rendering collapsed to one line). Rules, with the Windows Event shape as the exa
 * An element whose only attribute is `Name` and which carries text is a named value:
   `<Data Name="LogonType">3</Data>` under `EventData` is `EventData.LogonType`, and the
   `Name` attribute itself is not a field. That is the `EventData` shape of every Windows
-  provider, Sysmon included. An element with a `Name` and no text yields nothing.
+  provider, Sysmon included. `<Data Name="X"></Data>` (a `Name` and no text) yields nothing;
+  the self-closing `<Data Name="X"/>` carries no text to take the name, so it follows the
+  attribute rule above and gives `EventData.Data.Name`, which is what makes
+  `<Provider Name="P"/>` give `System.Provider.Name`.
 * A repeated element without a name is numbered: `<Data>a</Data><Data>b</Data>` is
   `EventData.Data` then `EventData.Data2`, `EventData.Data3`, ... (any key that would
   repeat inside one event gets the counter, so nothing is silently overwritten).
@@ -118,8 +121,8 @@ rendering collapsed to one line). Rules, with the Windows Event shape as the exa
   `System.EventID` with `pattern = "{_:int}"`, which emits nothing and matches.
 
 Not handled: DTD entity declarations (the reference stays as written), UTF-16 input (a
-counted failure; convert at the forwarder), and a document with more than one root (the
-second root's fields are numbered like any repeat).
+counted failure; convert at the forwarder), and a document with more than one root (a
+counted failure: two events glued into one frame are not half an event each).
 
 ## Pattern slot syntax
 
