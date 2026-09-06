@@ -411,6 +411,7 @@ fn play(a: &Args, bin: &Path, srv: &mut Option<Serve>) -> Result<()> {
     let watch = d.join("watch");
     let repo = &a.repo;
 
+    refuse_busy_ports(&a.listen, &a.syslog)?;
     say(TITLES[0]);
     cmd(&c.reset);
     if d.exists() {
@@ -566,6 +567,20 @@ fn port_free(addr: &SocketAddr, udp: bool) -> bool {
     TcpListener::bind(addr).is_ok() && (!udp || UdpSocket::bind(addr).is_ok())
 }
 
+/// A serve left from an earlier rehearsal answers `/api/status` with 200, so without this the
+/// runner would play against it and every drop would land in a directory nobody watches.
+fn refuse_busy_ports(listen: &SocketAddr, syslog: &SocketAddr) -> Result<()> {
+    for (addr, udp) in [(listen, false), (syslog, true)] {
+        if !port_free(addr, udp) {
+            bail!(
+                "port {addr} is in use (a server from an earlier rehearsal?): stop whatever holds it (macOS/Linux `lsof -nP -i :{0}`, Windows `netstat -ano | findstr :{0}`) and run again",
+                addr.port()
+            );
+        }
+    }
+    Ok(())
+}
+
 fn check(a: &Args) -> Result<i32> {
     let repo = &a.repo;
     let mut ok = true;
@@ -638,6 +653,16 @@ pub fn main(a: Args) -> Result<i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_held_port_stops_the_runner_before_it_starts_anything() {
+        let held = TcpListener::bind("127.0.0.1:0").unwrap();
+        let busy = held.local_addr().unwrap();
+        let free: SocketAddr = "127.0.0.1:0".parse().unwrap();
+        let err = refuse_busy_ports(&busy, &free).unwrap_err().to_string();
+        assert!(err.contains(&busy.to_string()) && err.contains("earlier rehearsal"), "{err}");
+        assert!(refuse_busy_ports(&free, &free).is_ok());
+    }
 
     // The check mode's own guarantee, run by `cargo test`: every title and command the runner
     // prints is still the text PROGRESS.md carries.

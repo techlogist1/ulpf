@@ -25,7 +25,10 @@ the drop, approve `now_detected 250/250, parsers_loaded 13`, replay v2 over 1,04
 clean, the drift update proposal 6.1 s after the new lines, attestation 2 of 2 checkpoints over
 2,694 records, the tamper named raw id 0 (digest) with exit 1, reset clean, 53 s end to end.
 The lead's pass on the merged binary is recorded under Verified state. Ports 7878 and 5514 must
-be free.
+be free: the runner refuses to start while either is held, naming the port and the command that
+finds the holder (a serve left from an earlier rehearsal answers `/api/status` with 200, so
+without the refusal the runner would play against it and every drop would land in a directory
+nobody watches); `--check` reports the same two ports.
 
 **Nothing is approved from the CLI before the video is recorded.** A CLI approve writes the
 generated parser (`origin = "inferred"`, priority -1) into the repo's `parsers/`, and a bundle
@@ -471,6 +474,16 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 05:34 IST: the runner's busy-port refusal (lead, on main): with `python3 -m http.server 7878`
+  holding the port, `ulpf demo --auto` exits 1 at once with `port 127.0.0.1:7878 is in use (a
+  server from an earlier rehearsal?): stop whatever holds it (...) and run again` and leaves no
+  `demo/`; before the change it printed the server's `Address already in use (os error 48)` and
+  waited 20 s for `/api/status`, and a stale `ulpf serve` on the port would have been played
+  against. Gate at 12359c6 plus the change: 123 tests 0 failed, clippy clean, release binary
+  12,094,216 bytes, `check` 15 parsers 2 mappings 0 problems, `demo --check` 39 ok, no external
+  reference in `ui/dist`, isolation run PASS, then a full `demo --auto` pass 05:33:20-05:34:16 (56
+  s, exit 0: proposal 0.6 s, approve 250/250 parsers_loaded 16, drift update 6.0 s, attestation 2
+  of 2 over 2,739 records, tamper named raw id 0 with exit 1, reset clean).
 - 05:29 IST: the lead's live look at the UI on the fresh binary, during a `demo --auto` pass
   (05:22:23-05:23:19, 56 s, exit 0) and then on a scratch serve over the fifteen samples plus
   `heldout/mikrotik.log`: Flow at 52 events/s with every station lit, the tray at 1 waiting and
