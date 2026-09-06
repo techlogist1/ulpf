@@ -15,6 +15,9 @@ concurrency:
 jobs:
   test:
     runs-on: windows-latest
+    # app.yml has the same backstop: a wedged join costs 45 minutes (this job also builds
+    # the workspace cold), not the default six hours.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
