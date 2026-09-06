@@ -213,9 +213,11 @@ external reference.
 
 **The sidecar is found where it is installed.** Verified by unpacking the CI artifact of run
 33990295166 (`7z x ULPF_0.1.0_x64-setup.exe`): the NSIS payload is `ulpf-app.exe`
-(11,983,360 B), `ulpf.exe` (9,519,104 B) and the 15 `parsers/*.toml` + 2 `mappings/*.toml`
-resources: 21,706,879 B of payload inside a 5,446,983 B installer; the MSI carries the same
-files (`Bin_ulpf.exe`, in a 7,897,088 B installer). So `sidecar("ulpf")` — which resolves to
+(11,983,360 B), `ulpf.exe` (9,519,104 B) and the 12 `parsers/*.toml` + 2 `mappings/*.toml`
+resources (that run predates cef, leef and cloudtrail; the bundle seeds 15 today and the
+payload is larger by their three files): 21,706,879 B of payload inside a 5,446,983 B
+installer; the MSI carries the same files (`Bin_ulpf.exe`, in a 7,897,088 B installer).
+So `sidecar("ulpf")` — which resolves to
 `ulpf.exe` beside the running executable — finds it in the installed directory, with no dev
 path anywhere. The data directory is `app.path().app_data_dir()` = `%APPDATA%\dev.ulpf.desktop`,
 and every argument the shell hands the engine is an absolute path built with `PathBuf::join`,
