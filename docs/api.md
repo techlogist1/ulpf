@@ -26,8 +26,9 @@ the initial tail snapshot. Keep-alive comment every 15 s. Event kinds, in `event
 
 A client that disconnects is dropped at its next tick; `server.sse_clients` is the live
 count. The tail is a bounded ring (`--tail`, default 1000 events); a client that falls
-behind receives at most 200 events per tick and `skipped` counts what the ring evicted
-before it was read. Nothing blocks the engine on a slow client.
+behind receives at most 200 events per tick and `skipped` counts every line newer than its
+position that the frame did not carry, whether the ring evicted it or the frame's own limit
+left it behind (`cut`, below, is that second part). Nothing blocks the engine on a slow client.
 
 `TailFrame = { "events": [TailEvent], "skipped": u64, "latest_raw_id": u64|null }`
 (v4 adds `"cut": u64` beside `skipped`; see "Tail frame" below)
