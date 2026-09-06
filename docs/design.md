@@ -281,7 +281,7 @@ Every class is in `ui/src/app.css` under a section comment; no component adds it
 |---|---|---|
 | top bar | `.top` | brand, Flow and the seven screens with their digit and a count badge (pending, drift), theme and keys buttons; sticky |
 | flow | `.flow` + `.line` + `.station` + `.link` + `.under` | the front door: six stations on an eleven-column grid (station, link, station, ...), each with its name and key, its counter at `--t3`, its loss in `--warn`; a link is the 2 px track with one pulse element; the sub-row under a link or station is placed by grid column: `.queue` (the bar with the high-water tick), `.chain` (one mark per attestation checkpoint, the newest lit `--ok` while records arrive), `.branch` (the inference node and the tray on a `--pend` rule when lines are buffered or a proposal waits) |
-| status line | `.foot` | stream state with a dot, listen address, schema, syslog sockets, uptime, clients, queue depth/capacity, frames skipped, events skipped; fixed at the bottom |
+| status line | `.foot` | stream state with a dot, listen address, schema, syslog sockets, uptime, clients, queue depth/capacity, frames skipped, events skipped (what the tail ring evicted) and, after a burst larger than one frame, the older rows that frame did not carry; fixed at the bottom |
 | section head | `.head` | title, a note in `--fg-2`, controls pushed right; `.quiet` drops the rule |
 | facts | `.facts` | label/value pairs in one wrapping line (record header, entity header, evidence params) |
 | counters | `.counters` + `.kvs` + `.kv` | grouped counters, label left and number right, dotted rule between; `.on`/`.bad`/`.ok`/`.pend` colour the number |
