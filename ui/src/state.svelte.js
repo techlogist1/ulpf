@@ -71,6 +71,9 @@ let delay = 1000
 let inbox = [] // events waiting for the next frame (plain array: not reactive)
 let nextMetrics = null // the newest metrics frame waiting for the next paint (not reactive)
 let raf = 0
+// A hidden window paints nothing, so every frame supersedes there: that is the operator's
+// alt-tab, not the machine missing frames, and it is not counted.
+const painting = () => typeof document === 'undefined' || !document.hidden
 
 function schedule() {
   if (raf) return // a frame is already booked; each handler counts its own supersede
@@ -147,7 +150,7 @@ export function connect() {
   on('metrics', (m) => {
     if (m.drift) live.drift = m.drift
     if (m.integrity) live.integrity = m.integrity
-    if (nextMetrics) live.dropped++
+    if (nextMetrics && painting()) live.dropped++
     nextMetrics = m
     schedule()
   })
@@ -160,7 +163,7 @@ export function connect() {
     // not stacked, so releasing shows the present rather than a backlog.
     if (live.paused) { live.held += t.events?.length ?? 0; return }
     if (t.events?.length) {
-      if (inbox.length) live.dropped++ // the previous frame never painted; it is superseded, not queued
+      if (inbox.length && painting()) live.dropped++ // the previous frame never painted; it is superseded, not queued
       inbox = t.events.slice(-TAIL_MAX).reverse().map(row).concat(inbox).slice(0, TAIL_MAX)
     }
     schedule()
