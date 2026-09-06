@@ -24,11 +24,12 @@ against a claim.
 - From a release: the assets are `ulpf-<tag>-x86_64-pc-windows-msvc.exe` and
   `ulpf-<tag>-aarch64-apple-darwin`, beside a `SHA256SUMS`, on
   `https://github.com/techlogist1/ulpf/releases` (README, "Get it"). Numbers you measure on
-  a downloaded binary are `--release` numbers too: the workflow's release assets are built
+  a downloaded binary are `dist`-profile numbers: both the `cli` and the `bundle` job build
   with `cargo build --profile dist`, which is `release` plus fat LTO, so a downloaded binary
-  is the profile the throughput numbers were measured on: both the `cli` and the `bundle` job
-  build it (`.github/workflows/app.yml`, both jobs; the `[profile.dist]` comment in
-  `Cargo.toml` names the move; README, "Which build"). Record which build you tested on.
+  is the profile the throughput numbers were measured on (`.github/workflows/app.yml`, both
+  jobs; the `[profile.dist]` comment in `Cargo.toml`; README, "Which build"). The Windows
+  smoke job is deliberately `--release` instead, so a binary out of that job's artifacts is
+  not. Record which build you tested on.
 
 **The desktop app.** From the release page, not from a CI artifact.
 
