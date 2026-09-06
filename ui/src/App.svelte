@@ -185,6 +185,7 @@
           <dt>j / k</dt><dd>walk the diff entries, or the drift alerts</dd>
           <dt>Enter</dt><dd>trace the entry, or open the drift proposal</dd>
           <dt>v</dt><dd>start a verify (Integrity) or a replay (Replay), with confirmation</dd>
+          <dt>m</dt><dd>load more diff entries (Replay)</dd>
         </dl>
       </section>
     </div>
