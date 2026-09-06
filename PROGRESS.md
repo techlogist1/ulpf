@@ -426,6 +426,63 @@ look at the captures and a grep of `ui/dist` for external references.
       are carried by 4B and 7B since the fix round hit the session limit. README's profile
       sentence and CI's `--profile dist` are lanes 4B and 7B. The harness re-run on dist in a
       quiet window is lane 4B's.
+- [x] L4B. (merged 06:02 IST as 87877a4, nine commits d0af71d..61233b3, D91) Every documented
+      command names its log files: README's Run-it command and both Quick start `run` lines, the
+      docker isolation line, scripts/README's isolation and `ULPF_FEED` lines (`grep -n 'run
+      samples' README.md scripts/README.md docs/evaluation.md` returns three hits, all
+      `samples/*.log`). The Run-it counter block was regenerated verbatim from the glob and the
+      verifier diffed it against its own run, identical: 15 files, 309 events, no_parser 2,
+      inference runs 0, against 16 files, 354 events, no_parser 41, class_unknown 106 from the
+      bare directory; the 45 extra events are `samples/README.md`. The correction the lane made
+      to its own brief and measured twice: the bare directory produces NO junk proposal. At the
+      default threshold and at `--infer-threshold 8` the 41 unknown lines give `runs 1  lines
+      templated 0  unmatched 39  proposals written 0  skipped [no_templates 1]` and the pending
+      directory holds only its empty `approved` and `rejected` - the clustering already refuses
+      prose, so the cost is the counter block a reader is asked to trust, not the review queue
+      (D91). `samples/README.md` alone is `no_parser` 39, not 41: 41 is the whole-directory
+      total, 39 plus the 2 the real samples carry, and scripts/README said 41 and was fixed. A
+      `### On Windows` second fence gives a Windows reader the same nine commands in PowerShell
+      (`.exe`, an `$env:TEMP` path rather than `NUL`, `(Get-ChildItem samples\*.log).FullName`
+      because the engine takes files and not patterns); a second fence deliberately, because
+      `eval/run.sh`'s cold_start `eval`s every line of the FIRST fence under "## Quick start" in
+      a fresh clone, so a PowerShell line inside it would fail the criterion - the extraction is
+      1090 bytes before and after, and `docs/evaluation.md` holds no command list to diff
+      against (0 bytes), the README fence being the single source `eval/tools/ulpf.toml`'s
+      `[cold_start]` reads. "Which build" now claims only what it can grep: dist is the Docker
+      image and `eval/tools/ulpf.toml`, not CI, which builds every asset with `cargo build
+      --release` (app.yml:74, 134, 204, no profile override) as both sidecar scripts do; the
+      committed scorecard's `--release` header is answered as pre-split, when release carried
+      dist's fat LTO. The machine state beside each number is now only what a log holds: the
+      quiet run's three pre-run gate samples (118, 147 and 130 percent of one core) and no
+      during-run figure at all, because that sampler counted ulpf's own threads as everything
+      else (`ps -o comm` splits on this repo's spaced path, so ulpf read 0 in all 36 samples);
+      the loaded set carries its before-run loads 4.99 and 5.85 against 2.91 for the quiet one,
+      the observed range 4.99-21.58, and the cold page cache that explains its 32.6 s first run.
+      Re-measurement, recorded and not promoted: the quiet window on the dist build gives
+      310,849 / 295,928 / 290,478 events/s, median 295,928, 14.5 percent above the committed
+      258,411 and outside its 10 percent band (284,252); the verifier's independent run in its
+      own quiet window read 341,018 / 298,936 / 320,369, median 320,369, 8 percent above the
+      lane's and also above the band. The headline stays 258,411 because D87 pins the quoted
+      figure to a committed scorecard, README now reads it as a floor, and no scorecard was
+      committed (`eval/` is lane P's). No contributed Windows throughput line: the tester's
+      report is in neither the repo nor `gh issue list` nor `gh pr list` (`grep -nic contributed
+      README.md` is 0), so no figure was invented and the line shape was returned instead. The
+      pivot line names the five entities `mappings/ocsf.toml`'s `[entities]` actually holds
+      (src_ip, dst_ip, user, dst_port, device); there is no `hash`. Lane gate: 122 tests 0
+      failed over 38 suites, clippy clean, `demo.sh --check` 39 ok and no drift, every
+      executable Unix command in the Quick start run once at exit 0, `isolation.sh docker` PASS.
+      Stated limits: the PowerShell block and the docker isolation were inspected, not executed
+      here (no pwsh on this Mac; the docker run substituted lane P's verify image of the same
+      Dockerfile), so the Windows block is reasoned from PowerShell semantics and lane 7C or the
+      smoke job should paste it once; the container command in "Get it" still names the mounted
+      `/data/samples` because the `scratch` image has no shell to expand a glob, and README says
+      so and names the cost where the command appears (the real fix is D83); `docs/coverage.md`'s
+      header still stamps `commit 0c197bc` and `2026-09-05 23:04 UTC`, three merges stale,
+      unregenerated because `scripts/coverage.sh` already runs one file at a time so its numbers
+      should not have moved. The three out-of-lane repeats of "what CI ships" (D88 in two
+      places, `docs/evaluation.md`, Cargo.toml's `[profile.dist]` comment) are applied in this
+      commit, worded as: CI's release assets and the sidecar build still use `cargo build
+      --release` at this commit and move to `--profile dist` with lane 7C.
 - [x] L3b. (pushed 04:30 IST, `origin/lane-3b-cef-leef` at c6e13ca, a9c8ac6 + 4, never merges
       tonight) CEF's seventh header field is `cef_severity`, bucketed in both mappings on
       ArcSight's own ranges (0-3 Low, 4-6 Medium, 7-8 High, 9-10 Very-High to Critical; 14 of 14
@@ -474,6 +531,16 @@ look at the captures and a grep of `ui/dist` for external references.
 - [ ] Final sequence 08:30-09:30 in order, then the nine-section report plus the stage order.
 
 ### Verified state (v4, rolling; every line was run, not read)
+- 06:02 IST: gate at the lane 4B merge (main 87877a4; the merge is two markdown files, so no Rust
+  changed and the release binary is the 05:31 one the 05:34 entry verified): 123 tests 0 failed,
+  clippy rc 0, `cargo build --release` Finished in 0.17 s (up to date), binary 12,094,216 bytes,
+  `ulpf check --pending pending` 15 parsers, 2 mappings, 0 problems, `ulpf demo --check` 39 ok
+  (rc 0), no external reference in `ui/dist`, and `ULPF_BIN=./target/release/ulpf
+  scripts/isolation.sh run samples/cisco_asa.log` ISOLATION PASS (no network socket observed in
+  any sample). GATE GREEN. No `demo --auto` pass at this merge and none required: it touched
+  neither `crates/` nor `ui/` nor `app/`, so the binary is the one the 05:34 pass drove end to
+  end. The records commit that follows touches PROGRESS.md, docs/DECISIONS.md,
+  docs/evaluation.md and one comment in Cargo.toml.
 - 05:34 IST: the runner's busy-port refusal (lead, on main): with `python3 -m http.server 7878`
   holding the port, `ulpf demo --auto` exits 1 at once with `port 127.0.0.1:7878 is in use (a
   server from an earlier rehearsal?): stop whatever holds it (...) and run again` and leaves no
@@ -545,20 +612,24 @@ look at the captures and a grep of `ui/dist` for external references.
   --workspace` 114 passed, 0 failed.
 
 ### In flight
-- 05:30 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7 (each through the gate; the last
-  four under one gate, 05:07; the binary re-verified 05:11). Branches pushed: lane-5-xml,
+- 06:02 IST: on main: lanes 3, 1, 2P, D, 2T, I, 4, P, 2U, 7, 4B (each through the gate; the four
+  before 4B under one gate, 05:07; the binary re-verified 05:11; 4B's own gate is GATE GREEN in
+  Verified state above). Branches pushed: lane-5-xml,
   lane-6-index, lane-3b-cef-leef, lane-8-windows. Running: 7C (`lane-7b-app`, Opus builder, Fable
-  verifier, ceiling 07:10, dispatched 05:16 on main at f57e652) and 4B (`lane-4b-readme`, Opus,
-  Fable, ceiling 07:00, dispatched 05:05, four commits by 05:27). 7B (dispatched 05:05) was
+  verifier, ceiling 07:10, dispatched 05:16 on main at f57e652) alone; 4B (`lane-4b-readme`,
+  Opus, Fable, dispatched 05:05, nine commits) is merged and recorded above. 7B (dispatched 05:05) was
   stopped at 05:19: its worktree had been created at 14d3b0c, before lane 7's merge, so its
   job-object draft sat on the old `lib.rs`; the diff is kept in the lead's scratch as a
   reference and 7C carries the same items on the right base. The session limit hit at about
   04:55 (resets 08:00): lane 7's builder died before returning, lane 8's verifier and the fix
   rounds of P and 2U never ran; the lead reviewed those diffs and captures directly and carried
   the open findings to 4B and 7C (recorded per lane above). Done by the lead since: lane 8's
-  review and the live UI look (Verified state). Still the lead's: the harness re-run on the
-  dist build on a quiet machine (4B's three runs at load 10 spread 192k-309k events/s), two demo
-  passes, the final sequence, the report.
+  review and the live UI look (Verified state). Still the lead's: two demo
+  passes, the final sequence, the report. The harness re-run on the dist build in a quiet window
+  is done twice over (4B's median 295,928 and its verifier's 320,369, both above the committed
+  258,411 and its 10 percent band) and a separate agent is re-measuring now; whether a scorecard
+  is committed and the headline re-pinned off 258,411 is the final sequence's call, D87
+  unchanged.
 
 ### Tried and abandoned (v4)
 - Lane 2P's headline "cut 4-8x": measured only at load 28-36. The controlled pair on a quiet

@@ -87,8 +87,8 @@ result and never aborts the run -- see `nonzero_exit_behaviour` below.
 
 ## Which build the numbers come from
 
-ULPF has two profiles. `[profile.dist]` (fat LTO, one codegen unit) is what CI
-ships, what the Docker image contains, and what `eval/tools/ulpf.toml`'s
+ULPF has two profiles. `[profile.dist]` (fat LTO, one codegen unit) is what the
+Docker image contains and what `eval/tools/ulpf.toml`'s
 `[build].cmd` builds -- **every number in a scorecard is a dist number**, and
 the scorecard's header line `build declared by <tool.toml>: ...` names it. The
 default `[profile.release]` builds without LTO so a stranger's first build
@@ -96,7 +96,9 @@ finishes in about a minute on any machine; it is what README's quick start
 runs, and therefore what the **cold_start** criterion executes and times. The
 two are the same source, so correctness, raw_preservation, damaged_inputs,
 unknown_format, isolation and kill_recovery read identically on either; only
-throughput and memory can differ, and those are reported on dist.
+throughput and memory can differ, and those are reported on dist. CI's release
+assets and the sidecar build still use `cargo build --release` at this commit and
+move to `--profile dist` with lane 7C (`lane-7b-app`, in flight).
 
 A second tool declares its own optimized build in its own `.toml`; the harness
 has no opinion about profiles beyond running the `[build].cmd` it is given.

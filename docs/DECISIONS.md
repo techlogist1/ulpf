@@ -1616,7 +1616,7 @@ range instead of a median (a range invites the top of it); dropping the `/dev/nu
 ## D88. Two build profiles: `release` builds anywhere, `dist` ships
 **Decision.** `[profile.release]` drops LTO (`lto = false`, default codegen units, `debug =
 1` unchanged); `[profile.dist]` inherits release with `lto = "fat"` and `codegen-units = 1`,
-exactly what release carried, and is what CI ships, what the Docker image contains and what
+exactly what release carried, and is what the Docker image contains and what
 the harness measures (`eval/tools/ulpf.toml` builds it, `eval/run.sh` prints the build it
 declared, `docs/evaluation.md` says which build the numbers come from). Evidence they are the
 same build: the pre-split release binary was 8,777,448 bytes, the dist binary 8,777,544 on a
@@ -1635,7 +1635,9 @@ the default (nothing measured for it to recover); `dist` as the default with `re
 (the default is what a stranger, README, `scripts/demo.sh` and the cold-start criterion
 type, and every `target/release` path stays correct). Cargo offers no alias for a custom
 profile and no stable output path across profiles, so every shipping caller spells
-`--profile dist` and `target/dist/` (Dockerfile, CI, the sidecar script).
+`--profile dist` and `target/dist/` (Dockerfile, `eval/run.sh`, `eval/tools/ulpf.toml`;
+CI's release assets and the sidecar build still use `cargo build --release` at this commit
+and move to `--profile dist` with lane 7C, `lane-7b-app`, in flight).
 
 ## D89. Windows is a first-class target: the installer carries its runtime, a failed start is a sentence, the log has a name
 **Decision.** `bundle.windows.webviewInstallMode` is `offlineInstaller`: the NSIS installer
@@ -1688,3 +1690,29 @@ has not got) or any per-row colour or score (D77); deriving flags per render (ni
 visible row per frame); the old field-by-field filter (cannot promise the export is the
 view); `Confirm.svelte` for the export (reserved for actions that write); a third large rate
 in the hero (it squeezed the funnel's loss labels at 1280).
+
+## D91. A documented command names its input files, not a directory
+**Decision.** Every command in README.md and scripts/README.md names its log files
+(`samples/*.log`), never the bare `samples` directory. The engine reads every file in a
+directory it is given, so a bare `samples` ingests `samples/README.md` as a log: 16 files and
+354 events instead of 15 and 309, `no_parser` 41 instead of 2, `class_unknown` 106 instead of
+62, `unmapped_fields` 3036 instead of 3025, `time_from_receipt` 55 instead of 10. Measured
+also, and against the brief's premise: the inference engine already refuses that input — at
+the default threshold and at `--infer-threshold 8` the 41 unknown lines give `runs 1  lines
+templated 0  unmatched 39  proposals written 0  skipped [no_templates 1]` and `pending/` stays
+empty. The cost is the counter block a reader is asked to trust, not the review queue. Two
+places a shell cannot fix keep the directory and name the consequence where it is read: the
+container command (the `scratch` runtime image has no shell to expand a glob, and a host-side
+glob resolves against host paths) and `scripts/isolation.sh`'s `ULPF_FEED` fallback (it copies
+a directory whole; isolation is a socket verdict, so the extra events change no verdict).
+**Anchor.** README "Run it", "Quick start" and its Windows block, the Isolation paragraph;
+`scripts/README.md`. `scripts/coverage.sh` already iterates `samples/*.log` and `find
+corpus/... ! -name '*.md'`, so `docs/coverage.md` never carried a README row and was not
+regenerated. **Principle.** A documented command names its inputs. A counter block in a README
+is a claim about the tool, so the command that produced it may not quietly include a file that
+is not a log. **Ruled out.** Teaching the engine to skip non-log files tonight — an extension
+test or content sniff in the ingest path is an engine change hours before the demo, and it
+would make the counter block depend on a filename heuristic instead of on what was fed in; the
+directory-level include/exclude option stays D83, post-demo. Moving `samples/README.md` out of
+`samples/` — it is the file a teammate reads before adding a sample, and relocating it hides
+the sharp edge instead of deciding about it.

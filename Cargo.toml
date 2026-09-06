@@ -41,8 +41,10 @@ parquet = { version = "59.3.0", default-features = false, features = ["snap"] }
 lto = false
 debug = 1
 
-# What ships: the CI binaries and installers, the Docker image, and every throughput
-# number the harness reports. Exactly what [profile.release] carried before the split.
+# What ships: the Docker image and every throughput number the harness reports. Exactly
+# what [profile.release] carried before the split. CI's release assets and the sidecar
+# build still use `cargo build --release` at this commit and move to `--profile dist`
+# with lane 7C (lane-7b-app, in flight).
 [profile.dist]
 inherits = "release"
 lto = "fat"
