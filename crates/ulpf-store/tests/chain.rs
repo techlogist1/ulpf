@@ -159,6 +159,21 @@ fn a_segment_cut_short_is_named_not_trimmed() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+/// The header note names a record the next run will re-index. A record beyond the index whose
+/// bytes do not hash to its digest is one recovery reclaims instead, so it is not announced.
+#[test]
+fn a_torn_record_beyond_the_index_is_not_promised_a_reindex() {
+    let dir = temp("torn-beyond");
+    fill(&dir, 50);
+    let at = offset_of(&dir, 49) + REC_HEADER + 2;
+    OpenOptions::new().write(true).open(dir.join("raw.idx")).unwrap().set_len(IDX_HEADER + 49 * IDX_ENTRY).unwrap();
+    let notes = |dir: &std::path::Path| ulpf_store::index_header_against_store(&RawReader::open(dir).unwrap()).notes;
+    assert_eq!(notes(&dir).len(), 1, "a complete record 49 beyond the index is announced");
+    poke(dir.join("raw.seg"), at, b"X");
+    assert!(notes(&dir).is_empty(), "a record recovery will not re-index is not announced");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 #[test]
 fn one_flipped_byte_is_named_with_reason_digest() {
     let dir = temp("flip");

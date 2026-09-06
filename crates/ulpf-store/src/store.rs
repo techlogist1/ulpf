@@ -966,7 +966,9 @@ pub fn index_header_against_store(reader: &RawReader) -> IndexHeader {
     out
 }
 
-/// Whether a complete record carrying `id` starts at `off` in the mapped segment.
+/// Whether a complete record carrying `id`, whose bytes hash to its digest, starts at `off`
+/// in the mapped segment: the record recovery's forward pass would index (an unindexed
+/// record is checked byte for byte there), so the note above promises nothing else.
 fn record_at(seg: &[u8], off: u64, id: u64) -> bool {
     let Ok(off) = usize::try_from(off) else { return false };
     let Some(end) = off.checked_add(HEADER_LEN) else { return false };
@@ -975,7 +977,8 @@ fn record_at(seg: &[u8], off: u64, id: u64) -> bool {
         return false;
     }
     let len = u32::from_le_bytes(hdr[24..28].try_into().expect("4 bytes")) as usize;
-    end.checked_add(len).and_then(|body| seg.get(end..body)).is_some()
+    let Some(body) = end.checked_add(len).and_then(|b| seg.get(end..b)) else { return false };
+    Sha256::digest(body).as_slice() == &hdr[28..60]
 }
 
 /// Whether no writer holds the store: the catalogue is opened in exclusive locking mode for a
