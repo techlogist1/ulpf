@@ -47,6 +47,11 @@ vendor = "Microsoft"
 product = "Windows Event Log"
 description = "Windows Event Log XML (Security auditing 4624/4625/4720, Sysmon 1/3/11)"
 
+# A forwarder that wraps the XML in a syslog line (NXLog, the Windows Event Forwarding to
+# syslog agents) still matches, so the envelope is stripped before the document is read.
+[envelope]
+syslog = true
+
 [match]
 contains = ["<Event xmlns=", "schemas.microsoft.com/win/2004/08/events/event"]
 

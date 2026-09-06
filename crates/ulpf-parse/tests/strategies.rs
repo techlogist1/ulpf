@@ -668,3 +668,19 @@ constants = { event_name = "An account was successfully logged on" }
     assert_eq!(out.sub, ulpf_parse::SubStatus::Uncovered);
     assert!(out.get(b"event_name").is_none());
 }
+
+/// The shipped windows_event parser under a syslog line, the shape a forwarder gives it: the
+/// envelope is stripped before the document is read, so the event parses instead of failing
+/// on the bytes before `<`.
+#[test]
+fn windows_event_parses_under_a_syslog_envelope() {
+    let p = parser(include_str!("../../../parsers/windows_event.toml"));
+    let mut out = Parsed::default();
+    let bare = b"<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><EventID>4624</EventID><TimeCreated SystemTime='2026-09-06T12:00:00.000000000Z'/><Computer>dc1</Computer></System><EventData><Data Name='LogonType'>3</Data></EventData></Event>";
+    run(&p, bare, &mut out).unwrap();
+    assert_field(&out, "System.EventID", b"4624");
+    let wrapped = b"<14>Sep  6 12:00:00 dc1 <Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><EventID>4625</EventID><TimeCreated SystemTime='2026-09-06T12:00:00.000000000Z'/><Computer>dc1</Computer></System><EventData><Data Name='LogonType'>3</Data></EventData></Event>";
+    run(&p, wrapped, &mut out).unwrap();
+    assert_field(&out, "System.EventID", b"4625");
+    assert_field(&out, "EventData.LogonType", b"3");
+}
